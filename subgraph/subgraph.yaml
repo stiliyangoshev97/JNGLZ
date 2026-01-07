@@ -1,0 +1,60 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: PredictionMarket
+    network: chapel # BNB Testnet (BSC Testnet)
+    source:
+      address: "0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336"
+      abi: PredictionMarket
+      startBlock: 83119807
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - Trade
+        - User
+        - Position
+        - Vote
+        - Claim
+        - EmergencyRefund
+        - GlobalStats
+      abis:
+        - name: PredictionMarket
+          file: ./abis/PredictionMarket.json
+      eventHandlers:
+        # Market Lifecycle
+        - event: MarketCreated(indexed uint256,indexed address,string,uint256)
+          handler: handleMarketCreated
+
+        # Trading
+        - event: Trade(indexed uint256,indexed address,bool,bool,uint256,uint256)
+          handler: handleTrade
+
+        # Street Consensus Resolution
+        - event: OutcomeProposed(indexed uint256,indexed address,bool,string,uint256)
+          handler: handleOutcomeProposed
+        - event: ProposalDisputed(indexed uint256,indexed address,uint256)
+          handler: handleProposalDisputed
+        - event: VoteCast(indexed uint256,indexed address,bool,uint256)
+          handler: handleVoteCast
+        - event: MarketResolved(indexed uint256,bool,bool)
+          handler: handleMarketResolved
+
+        # Payouts
+        - event: Claimed(indexed uint256,indexed address,uint256)
+          handler: handleClaimed
+        - event: EmergencyRefunded(indexed uint256,indexed address,uint256)
+          handler: handleEmergencyRefunded
+
+        # Bond Distribution (optional - for analytics)
+        - event: BondDistributed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleBondDistributed
+        - event: JuryFeeDistributed(indexed uint256,indexed address,uint256)
+          handler: handleJuryFeeDistributed
+      file: ./src/mapping.ts

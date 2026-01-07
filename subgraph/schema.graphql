@@ -1,0 +1,188 @@
+# ============================================
+# JunkieFun Subgraph - Entity Schema
+# ============================================
+# Indexes PredictionMarket contract events on BNB Chain
+# Provides GraphQL API for frontend queries
+
+# ============================================
+# Market Entity - Core prediction market data
+# ============================================
+type Market @entity {
+  id: ID! # marketId as string
+  marketId: BigInt! # On-chain market ID
+  # Market Info
+  question: String! # The prediction question
+  evidenceLink: String! # Source of truth URL
+  resolutionRules: String! # How to resolve
+  creator: User! # Creator (relation)
+  creatorAddress: Bytes! # Creator address (for filtering)
+  # Timestamps
+  expiryTimestamp: BigInt! # When trading stops
+  createdAt: BigInt! # Block timestamp
+  createdAtBlock: BigInt! # Block number
+  # Bonding Curve State
+  yesShares: BigInt! # Total YES shares minted
+  noShares: BigInt! # Total NO shares minted
+  poolBalance: BigInt! # Total BNB in pool (wei)
+  # Volume & Stats
+  totalVolume: BigDecimal! # Total BNB volume traded
+  totalTrades: BigInt! # Number of trades
+  # Resolution State
+  status: String! # Active, Expired, Proposed, Disputed, VotingEnded, Resolved
+  resolved: Boolean! # Is market resolved?
+  outcome: Boolean # null if not resolved, true=YES, false=NO
+  # Proposal Info (Street Consensus)
+  proposer: Bytes # Who proposed the outcome
+  proposedOutcome: Boolean # What they proposed
+  proposerBond: BigInt # Bond amount
+  proposalProofLink: String # Proof link
+  proposalTimestamp: BigInt # When proposed
+  # Dispute Info
+  disputer: Bytes # Who disputed
+  disputerBond: BigInt # Disputer's bond
+  disputeTimestamp: BigInt # When disputed
+  # Voting Results
+  proposerVoteWeight: BigInt! # Total votes for proposer
+  disputerVoteWeight: BigInt! # Total votes for disputer
+  totalVoters: BigInt! # Number of voters
+  # Relations
+  trades: [Trade!]! @derivedFrom(field: "market")
+  positions: [Position!]! @derivedFrom(field: "market")
+  votes: [Vote!]! @derivedFrom(field: "market")
+  claims: [Claim!]! @derivedFrom(field: "market")
+}
+
+# ============================================
+# Trade Entity - Buy/Sell transactions
+# ============================================
+type Trade @entity {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  trader: User! # Trader (relation)
+  traderAddress: Bytes! # Trader address (for filtering)
+  # Trade Details
+  isYes: Boolean! # YES or NO side
+  isBuy: Boolean! # Buy or Sell
+  shares: BigInt! # Shares traded
+  bnbAmount: BigDecimal! # BNB amount
+  # Price at time of trade (calculated)
+  pricePerShare: BigDecimal! # BNB per share
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+  logIndex: BigInt! # Log index within tx
+}
+
+# ============================================
+# User Entity - Trader profiles
+# ============================================
+type User @entity {
+  id: ID! # User address as string
+  address: Bytes! # User address
+  # Stats
+  totalTrades: BigInt! # Total number of trades
+  totalVolume: BigDecimal! # Total BNB volume
+  marketsCreated: BigInt! # Markets created by user
+  # P&L Tracking
+  totalClaimed: BigDecimal! # Total winnings claimed
+  totalRefunded: BigDecimal! # Total emergency refunds
+  # Relations
+  positions: [Position!]! @derivedFrom(field: "user")
+  trades: [Trade!]! @derivedFrom(field: "trader")
+  votes: [Vote!]! @derivedFrom(field: "voter")
+  marketsCreatedList: [Market!]! @derivedFrom(field: "creator")
+}
+
+# ============================================
+# Position Entity - User positions per market
+# ============================================
+type Position @entity {
+  id: ID! # marketId-userAddress
+  user: User! # Related user
+  market: Market! # Related market
+  # Share Holdings
+  yesShares: BigInt! # YES shares held
+  noShares: BigInt! # NO shares held
+  # Investment Tracking
+  totalInvested: BigDecimal! # Total BNB invested
+  averageYesPrice: BigDecimal! # Avg price paid for YES
+  averageNoPrice: BigDecimal! # Avg price paid for NO
+  # Claim Status
+  claimed: Boolean! # Has user claimed?
+  claimedAmount: BigDecimal # Amount claimed (if claimed)
+  emergencyRefunded: Boolean! # Has user emergency refunded?
+  refundedAmount: BigDecimal # Amount refunded (if refunded)
+  # Voting
+  hasVoted: Boolean! # Has user voted?
+  votedForProposer: Boolean # null if not voted
+}
+
+# ============================================
+# Vote Entity - Voting records for disputed markets
+# ============================================
+type Vote @entity {
+  id: ID! # marketId-voterAddress
+  market: Market! # Related market
+  voter: User! # Voter (relation)
+  voterAddress: Bytes! # Voter address (for filtering)
+  # Vote Details
+  supportedProposer: Boolean! # true = voted for proposer, false = for disputer
+  weight: BigInt! # Vote weight (total shares)
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# Claim Entity - Payout claims
+# ============================================
+type Claim @entity {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  user: User! # User who claimed
+  userAddress: Bytes! # User address (for filtering)
+  # Claim Details
+  amount: BigDecimal! # Amount claimed in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# EmergencyRefund Entity - Emergency refund records
+# ============================================
+type EmergencyRefund @entity {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  user: User! # User who got refund
+  userAddress: Bytes! # User address (for filtering)
+  # Refund Details
+  amount: BigDecimal! # Amount refunded in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# GlobalStats Entity - Platform-wide statistics
+# ============================================
+type GlobalStats @entity {
+  id: ID! # "global" (singleton)
+  # Market Stats
+  totalMarkets: BigInt! # Total markets created
+  activeMarkets: BigInt! # Markets not yet resolved
+  resolvedMarkets: BigInt! # Markets resolved
+  # Volume Stats
+  totalVolume: BigDecimal! # Total BNB traded
+  totalTrades: BigInt! # Total trades across all markets
+  # User Stats
+  totalUsers: BigInt! # Unique traders
+  # Resolution Stats
+  totalClaimed: BigDecimal! # Total payouts claimed
+  totalRefunded: BigDecimal! # Total emergency refunds
+  disputedMarkets: BigInt! # Markets that were disputed
+}

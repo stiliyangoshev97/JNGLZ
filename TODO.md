@@ -1,6 +1,37 @@
 # Junkie.Fun - Master TODO
 
-> **Last Updated:** January## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (140 tests)
+> **Last Updated:** January 8, 2026  
+> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
+> **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
+
+---
+
+## 🎯 Current Progress Summary
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 0: Project Setup | ✅ Complete | 100% |
+| Phase 1: Smart Contracts | ✅ Complete | 100% (148 tests) |
+| Phase 1.5: Testnet Deploy | ✅ Complete | 100% |
+| Phase 2: Subgraph | ✅ Code Complete | 80% (awaiting deployment) |
+| Phase 3: Frontend | ⬜ Not Started | 0% |
+| Phase 4: Mainnet | ⬜ Not Started | 0% |
+
+### 🚀 BNB Testnet Deployment (January 7, 2026)
+- **Contract:** `0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336`
+- **BscScan:** https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+- **Verified:** ✅ Yes
+- **Gas Used:** ~3.6M (~0.00036 BNB)
+
+### 📊 Subgraph (January 8, 2026)
+- **Status:** Code complete, builds successfully
+- **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
+- **Event Handlers:** 10 (all contract events indexed)
+- **Next Step:** Create Subgraph Studio account & deploy
+
+---
+
+## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (148 tests)
 
 ### Security Audit ✅ COMPLETE
 - [x] **Integration Tests:** 16 tests covering full lifecycle scenarios
@@ -8,9 +39,8 @@
 - [x] **AUDIT.md:** Comprehensive security report created
 - [x] **Reentrancy:** Mitigated by OpenZeppelin ReentrancyGuard
 - [x] **Access Control:** 3-of-3 MultiSig verified
-- [x] **Pre-deployment Checklist:** Documented7, 2026  
-> **Status:** Smart Contracts Complete ✅ | Security Audit Complete ✅ | Frontend Pending  
-> **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
+- [x] **Pre-deployment Checklist:** Documented
+- [x] **Weighted Voting Tests:** 8 tests verifying anti-Sybil protection
 
 ---
 
@@ -186,11 +216,12 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 - [x] Pause/unpause functionality
 - [x] 1-hour action expiry
 
-### Tests ✅ (124 passing)
-- [x] Unit tests (52 tests)
+### Tests ✅ (148 passing)
+- [x] Unit tests (60 tests)
   - Market creation, trading, fees
   - Street Consensus: propose, dispute, vote, finalize
   - Claims, emergency refunds
+  - **Weighted voting security (8 tests - NEW)**
 - [x] Fuzz tests (29 tests)
   - Bonding curve math
   - All 5 configurable parameters
@@ -199,6 +230,16 @@ A decentralized prediction market platform on BNB Chain where anyone can:
   - Reentrancy
   - Overflow
   - Access control
+- [x] Economics tests (31 tests)
+  - Pump & dump verification
+  - Pool solvency
+  - Creator first-mover advantage
+- [x] **Instant Sell Analysis (8 tests)**
+  - Tests what happens when user tries to sell immediately
+  - Tests for `getMaxSellableShares()` contract function
+- [x] **Integration tests (16 tests)**
+  - Full lifecycle testing
+  - Happy path, disputed path, emergency path
 - [x] Economics tests (31 tests)
   - Pump & dump verification
   - Pool solvency
@@ -264,72 +305,63 @@ if (percentage < 100n) {
 
 ### Documentation ✅
 - [x] README.md - Economics in 20 seconds
-- [x] CHANGELOG.md - v2.0.0 Street Consensus
+- [x] CHANGELOG.md - v2.0.0 Street Consensus, v2.3.0 Weighted Voting Tests
 - [x] PROJECT_CONTEXT.md - Architecture reference
 - [x] RUNBOOK.md - Commands guide
+- [x] DeployedContracts.txt - Testnet deployment info
 
-### Deployment
-- [ ] Deployment script for BSC Testnet
-- [ ] Deployment script for BSC Mainnet
-- [ ] Verify contract on BscScan
-- [ ] Document deployed addresses
+### Deployment ✅
+- [x] Deployment script for BSC Testnet
+- [x] Deploy to BNB Testnet (0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336)
+- [x] Verify contract on BscScan
+- [x] Document deployed addresses
+- [ ] Deployment script for BSC Mainnet (after testing)
 
 ---
 
-## 📊 PHASE 2: The Graph (Subgraph)
+## 📊 PHASE 2: The Graph (Subgraph) ✅ CODE COMPLETE
 
-### Setup
-- [ ] Create account on Subgraph Studio (https://thegraph.com/studio)
-- [ ] Create new subgraph for BNB Chain
-- [ ] Install Graph CLI: `npm install -g @graphprotocol/graph-cli`
-- [ ] Initialize subgraph: `graph init`
+### Setup ✅
+- [ ] Create account on Subgraph Studio (https://thegraph.com/studio) **← USER ACTION NEEDED**
+- [ ] Create new subgraph: `junkiefun-bnb-testnet`
+- [x] Install Graph CLI & dependencies
+- [x] Initialize subgraph project structure
+- [x] Generate types (`npm run codegen`)
+- [x] Build subgraph (`npm run build`) - ✅ Compiles successfully
 
-### Schema (`schema.graphql`)
-- [ ] `Market` entity
-  ```graphql
-  type Market @entity {
-    id: ID!
-    marketId: BigInt!
-    question: String!
-    evidenceLink: String!
-    resolutionRules: String!
-    creator: Bytes!
-    expiryTimestamp: BigInt!
-    createdAt: BigInt!
-    yesSupply: BigInt!
-    noSupply: BigInt!
-    totalVolume: BigDecimal!
-    status: String!  # Active, Expired, Proposed, Disputed, Resolved
-    outcome: Boolean
-    proposer: Bytes
-    disputer: Bytes
-    proposerVotes: BigInt
-    disputerVotes: BigInt
-    trades: [Trade!]! @derivedFrom(field: "market")
-    votes: [Vote!]! @derivedFrom(field: "market")
-  }
-  ```
-- [ ] `Trade` entity
-- [ ] `Vote` entity (NEW)
-- [ ] `User` entity
-- [ ] `Position` entity
+### Schema (`schema.graphql`) ✅
+- [x] `Market` entity - Full market data with resolution status, voting
+- [x] `Trade` entity - All buy/sell trades with price tracking
+- [x] `User` entity - Trader profiles with volume stats
+- [x] `Position` entity - User positions per market with avg price
+- [x] `Vote` entity - Voting records with weighted votes
+- [x] `Claim` entity - Payout claim records
+- [x] `EmergencyRefund` entity - Emergency refund records  
+- [x] `GlobalStats` entity - Platform-wide statistics (singleton)
 
-### Mappings
-- [ ] `handleMarketCreated`
-- [ ] `handleTrade`
-- [ ] `handleOutcomeProposed` (NEW)
-- [ ] `handleMarketDisputed` (NEW)
-- [ ] `handleVoteCast` (NEW)
-- [ ] `handleMarketFinalized` (NEW)
-- [ ] `handleMarketResolved`
-- [ ] `handleClaimed`
-- [ ] `handleEmergencyRefunded`
+### Mappings (`src/mapping.ts`) ✅
+- [x] `handleMarketCreated` - Index new markets, create users
+- [x] `handleTrade` - Index trades, update supplies/volume/positions
+- [x] `handleOutcomeProposed` - Track proposals with bonds
+- [x] `handleProposalDisputed` - Track disputes with bonds
+- [x] `handleVoteCast` - Track weighted votes for Street Consensus
+- [x] `handleMarketResolved` - Final outcome
+- [x] `handleClaimed` - Track claims, update positions
+- [x] `handleEmergencyRefunded` - Track refunds, update positions
+- [x] `handleBondDistributed` - Bond distribution analytics
+- [x] `handleJuryFeeDistributed` - Voter reward analytics
 
-### Deployment
-- [ ] Deploy to Subgraph Studio (BSC Testnet)
+### Deployment (Testnet)
+- [ ] Authenticate: `graph auth --studio <DEPLOY_KEY>`
+- [ ] Deploy: `npm run deploy`
 - [ ] Test queries in Playground
-- [ ] Deploy to Subgraph Studio (BSC Mainnet)
 - [ ] Document subgraph URL
+
+### Mainnet (After Testnet Validation)
+- [ ] Deploy contract to BNB Mainnet
+- [ ] Create `subgraph.mainnet.yaml` config
+- [ ] Create mainnet subgraph on Studio: `junkiefun-bnb-mainnet`
+- [ ] Deploy mainnet subgraph
 
 ---
 

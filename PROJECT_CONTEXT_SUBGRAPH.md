@@ -1,8 +1,8 @@
 # 📋 Junkie.Fun - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 6, 2026  
-> **Status:** Not Started
+> **Last Updated:** January 8, 2026  
+> **Status:** ✅ Code Complete - Ready for Deployment
 
 ---
 
@@ -10,20 +10,34 @@
 
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
 
+### Contract Details (Testnet)
+- **Address:** `0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336`
+- **Network:** BNB Testnet (Chapel, Chain ID: 97)
+- **Start Block:** 83119807
+- **BscScan:** https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+
+### Mainnet (Pending)
+- **Address:** TBD (deploy after testnet validation)
+- **Network:** BNB Mainnet (Chain ID: 56)
+- **Start Block:** TBD
+
 ---
 
 ## 📊 Current Status
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Subgraph Studio Account | ⬜ 0% | Create at thegraph.com/studio |
-| Schema Definition | ⬜ 0% | schema.graphql |
-| Subgraph Config | ⬜ 0% | subgraph.yaml |
-| Mappings | ⬜ 0% | AssemblyScript handlers |
-| Testnet Deployment | ⬜ 0% | BSC Testnet |
-| Mainnet Deployment | ⬜ 0% | BSC Mainnet |
+| Schema Definition | ✅ 100% | 8 entities defined |
+| Subgraph Config | ✅ 100% | subgraph.yaml for testnet |
+| Mappings | ✅ 100% | 10 event handlers |
+| Codegen | ✅ 100% | Types generated |
+| Build | ✅ 100% | Compiles successfully |
+| Subgraph Studio Account | ⬜ 0% | **USER ACTION NEEDED** |
+| Testnet Deployment | ⬜ 0% | Waiting for Studio account |
+| Mainnet Subgraph | ⬜ 0% | After testnet validation |
+| Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 
-**Overall Progress: 0%**
+**Overall Progress: 80%** (code complete, awaiting Studio setup & deployment)
 
 ---
 

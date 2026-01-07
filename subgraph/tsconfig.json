@@ -1,0 +1,10 @@
+{
+  "extends": "@graphprotocol/graph-ts/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "build",
+    "rootDir": ".",
+    "strict": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
