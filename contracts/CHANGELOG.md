@@ -5,6 +5,206 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-01-08
+
+### 🚀 Major: Street Consensus Resolution
+
+**BREAKING CHANGE:** Complete replacement of UMA Oracle with Street Consensus mechanism.
+
+#### Why the Change?
+- UMA resolution took 48-72 hours (too slow for degen markets)
+- External dependency on UMA protocol
+- Required WBNB wrapping for bonds
+- Complex dispute flow confusing for users
+
+#### New: Street Consensus
+Fast, trustless resolution where **bettors themselves decide outcomes**.
+
+### Added
+
+#### New Resolution Flow
+- `proposeOutcome(marketId, outcome, proofLink)` - Propose YES/NO with optional proof
+- `dispute(marketId, proofLink)` - Challenge proposal with 2× bond
+- `vote(marketId, supportProposer)` - Vote weighted by share holdings
+- `finalizeMarket(marketId)` - Settle after voting ends
+
+#### New Market States
+```solidity
+enum MarketStatus { Active, Expired, Proposed, Disputed, Resolved }
+```
+
+#### Timing Windows
+- `CREATOR_PRIORITY_WINDOW` = 10 minutes (creator can propose first)
+- `DISPUTE_WINDOW` = 30 minutes (time to challenge)
+- `VOTING_WINDOW` = 1 hour (voting period)
+- `EMERGENCY_REFUND_DELAY` = 24 hours (unchanged)
+
+#### MultiSig-Configurable Parameters
+5 new parameters adjustable via 3-of-3 MultiSig:
+
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| `creatorFeeBps` | 50 (0.5%) | 0-200 | Fee to market creator |
+| `resolutionFeeBps` | 30 (0.3%) | 0-100 | Fee on propose/dispute/vote |
+| `minBondFloor` | 0.02 BNB | 0.01-0.1 | Minimum bond |
+| `dynamicBondBps` | 100 (1%) | 50-500 | Bond as % of pool |
+| `bondWinnerShareBps` | 5000 (50%) | 2000-8000 | Winner's share of loser bond |
+
+#### Voter Jury Fee
+- Voters on winning side split 50% of loser's bond
+- Incentivizes accurate voting participation
+- Proportional to voting weight (share count)
+
+#### New Events
+```solidity
+event OutcomeProposed(uint256 indexed marketId, address indexed proposer, bool outcome, uint256 bond, string proofLink);
+event MarketDisputed(uint256 indexed marketId, address indexed disputer, uint256 bond, string proofLink);
+event VoteCast(uint256 indexed marketId, address indexed voter, bool supportProposer, uint256 weight);
+event MarketFinalized(uint256 indexed marketId, bool outcome, address winner, uint256 winnerBonus, uint256 voterPool);
+event JuryFeePaid(uint256 indexed marketId, address indexed voter, uint256 amount);
+```
+
+#### New Errors
+```solidity
+error NotExpired();
+error AlreadyProposed();
+error ProposalWindowNotOpen();
+error CreatorPriorityActive();
+error InsufficientProposerBond();
+error NotProposed();
+error AlreadyDisputed();
+error DisputeWindowEnded();
+error InsufficientDisputerBond();
+error NotDisputed();
+error VotingNotActive();
+error AlreadyVoted();
+error NotShareHolder();
+error VotingNotEnded();
+error NothingToFinalize();
+```
+
+### Removed
+
+#### UMA Integration (Completely Removed)
+- ❌ `assertOutcome()` - Replaced by `proposeOutcome()`
+- ❌ `assertionResolvedCallback()` - No external callbacks needed
+- ❌ `umaOOv3` address - No oracle dependency
+- ❌ WBNB wrapping for bonds - Uses native BNB
+- ❌ `IOptimisticOracleV3` interface
+- ❌ `OutcomeAsserted` event
+- ❌ 2-hour liveness period (replaced by 30-min dispute window)
+
+#### Asserter Reward (Replaced)
+- ❌ `ASSERTER_REWARD_BPS` - No more 2% asserter reward
+- ❌ `asserterRewardPaid` field - Removed from Market struct
+- ✅ Replaced by bond distribution system
+
+### Changed
+
+#### Market Struct
+```solidity
+// Old (v1.x)
+struct Market {
+    // ...
+    bytes32 assertionId;
+    address asserter;
+    bool asserterRewardPaid;
+}
+
+// New (v2.0)
+struct Market {
+    // ...
+    address proposer;
+    address disputer;
+    uint256 proposerBond;
+    uint256 disputerBond;
+    uint256 proposalTimestamp;
+    uint256 disputeTimestamp;
+    bool proposedOutcome;
+    string proposerProofLink;
+    string disputerProofLink;
+    uint256 proposerVotes;
+    uint256 disputerVotes;
+}
+```
+
+#### Position Struct
+```solidity
+// Old (v1.x)
+struct Position {
+    uint256 yesShares;
+    uint256 noShares;
+    bool claimed;
+    bool emergencyRefunded;
+}
+
+// New (v2.0)
+struct Position {
+    uint256 yesShares;
+    uint256 noShares;
+    bool claimed;
+    bool emergencyRefunded;
+    bool hasVoted;
+    bool votedForProposer;
+}
+```
+
+#### getPosition() Return Value
+- Old: Returns 4 values `(yesShares, noShares, claimed, emergencyRefunded)`
+- New: Returns 6 values `(yesShares, noShares, claimed, emergencyRefunded, hasVoted, votedForProposer)`
+
+#### getMarket() Return Value
+- Updated to include all new resolution fields
+- Returns 10 values total
+
+### Testing
+- **116 tests passing** (was 97)
+  - 52 unit tests (PredictionMarket.t.sol)
+  - 29 fuzz tests (PredictionMarket.fuzz.t.sol)
+  - 4 vulnerability tests (VulnerabilityCheck.t.sol)
+  - 31 pump & dump + feature tests (PumpDump.t.sol)
+- New tests added:
+  - `test_ProposeOutcome_Success`
+  - `test_ProposeOutcome_CreatorPriority`
+  - `test_ProposeOutcome_AfterPriorityWindow`
+  - `test_Dispute_Success`
+  - `test_Dispute_RequiresDoubleBond`
+  - `test_Vote_Success`
+  - `test_Vote_WeightedByShares`
+  - `test_FinalizeMarket_ProposerWins`
+  - `test_FinalizeMarket_DisputerWins`
+  - `test_FinalizeMarket_TieReturnsBonds`
+  - `test_FinalizeMarket_NoDisputeAcceptsProposal`
+  - `test_JuryFee_DistributedToVoters`
+  - Fuzz tests for all 5 configurable parameters
+
+### Migration Guide
+
+#### For Frontend Developers
+```javascript
+// Old (UMA)
+await contract.assertOutcome(marketId, true);
+// Wait 48-72 hours...
+await contract.claim(marketId);
+
+// New (Street Consensus)
+await contract.proposeOutcome(marketId, true, "https://proof.link", { value: bond });
+// Wait 30 min for disputes, or...
+await contract.dispute(marketId, "https://counter-proof.link", { value: bond * 2 });
+// If disputed, wait 1 hour voting...
+await contract.vote(marketId, true); // Vote for proposer
+// After voting ends...
+await contract.finalizeMarket(marketId);
+await contract.claim(marketId);
+```
+
+#### For Deployers
+- Remove UMA OOv3 address from constructor
+- Remove WBNB address (only needed if keeping legacy support)
+- Constructor now simpler: `constructor(address[3] signers, address treasury)`
+
+---
+
 ## [1.1.0] - 2025-01-07
 
 ### Added
@@ -51,18 +251,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 25 fuzz tests (PredictionMarket.fuzz.t.sol)  
   - 4 vulnerability tests (VulnerabilityCheck.t.sol)
   - 31 pump & dump + feature tests (PumpDump.t.sol)
-- New tests added:
-  - `test_EmergencyRefund_AfterTimeout`
-  - `test_EmergencyRefund_RevertTooEarly`
-  - `test_EmergencyRefund_RevertIfAsserted`
-  - `test_EmergencyRefund_RevertIfResolved`
-  - `test_EmergencyRefund_RevertIfAlreadyClaimed`
-  - `test_EmergencyRefund_RevertIfNoPosition`
-  - `test_AsserterReward_PaidOnFirstClaim`
-  - `test_DynamicBond_ReturnsMinFloorForSmallPool`
-  - `test_DynamicBond_ScalesWithPoolSize`
-  - `test_AssertOutcome_UsesDynamicBond`
-  - `test_DynamicBond_AtThreshold`
 
 ---
 
@@ -95,70 +283,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Platform fee adjustable via MultiSig (0-5% range)
   - Creator fee hardcoded (prevents abuse)
 
-- **Resolution via UMA OOv3**
+- **Resolution via UMA OOv3** (Deprecated in v2.0)
   - `assertOutcome()` - Assert market result with WBNB bond
   - `assertionResolvedCallback()` - UMA callback for resolution
   - 2-hour default liveness period
-  - Bond: 0.1 WBNB (configurable 0.01-1 WBNB)
 
-- **Claims**
+- **Claim System**
   - `claim()` - Winners claim proportional share of pool
-  - Prevents double-claiming via `claimed` flag
+  - Pro-rata distribution based on winning side shares
+  - Double-claim protection
 
-- **Governance (3-of-3 MultiSig)**
+- **Security**
+  - ReentrancyGuard on all external functions
+  - CEI (Checks-Effects-Interactions) pattern
+  - Solidity 0.8.24 overflow protection
+  - Access control modifiers
+
+- **Governance**
+  - 3-of-3 MultiSig for admin functions
   - `proposeAction()` / `confirmAction()` / `executeAction()`
-  - Configurable parameters: platformFeeBps, minBet, umaBond, treasury, wbnb, umaOOv3
-  - Pause/unpause functionality
   - 1-hour action expiry
-
-#### Safety Features
-- ReentrancyGuard on all payable functions
-- CEI (Checks-Effects-Interactions) pattern
-- `InsufficientPoolBalance` check prevents over-withdrawal
-- Overflow protection (Solidity 0.8.24)
-- Access control: `onlyUmaOOv3` for callback
-
-#### Events
-- `MarketCreated` - Market creation
-- `Trade` - Buy/sell actions
-- `OutcomeAsserted` - UMA assertion submitted
-- `MarketResolved` - Final resolution
-- `Claimed` - Winner payout
-- `ActionProposed` / `ActionConfirmed` / `ActionExecuted` - Governance
-- `Paused` / `Unpaused` - Emergency controls
-
-#### Constants
-- `UNIT_PRICE` = 0.01 ether
-- `VIRTUAL_LIQUIDITY` = 100 × 1e18
-- `CREATOR_FEE_BPS` = 50 (0.5%)
-- `MAX_FEE_BPS` = 500 (5%)
-- `BPS_DENOMINATOR` = 10000
-- `ACTION_EXPIRY` = 1 hour
-- `MIN_BET_LOWER` = 0.001 ether
-- `MIN_BET_UPPER` = 0.1 ether
-- `UMA_BOND_LOWER` = 0.01 ether
-- `UMA_BOND_UPPER` = 1 ether
+  - Pause/unpause functionality
 
 ### Testing
 - **74 tests passing**
-  - 37 unit tests (PredictionMarket.t.sol)
-  - 25 fuzz tests (PredictionMarket.fuzz.t.sol)
-  - 4 vulnerability tests (VulnerabilityCheck.t.sol)
-  - 8 pump & dump economics tests (PumpDump.t.sol)
-- Test coverage for all core functions
-- Fuzz testing for bonding curve math
-- Rounding tolerance tests with `assertApproxEqAbs`
-- **Pump & Dump Economics Verified:**
-  - Early buyer profits +36.6% when late buyer enters
-  - Late buyer loses ~27% when early buyer dumps
-  - Pool solvency maintained (never goes negative)
-  - InsufficientPoolBalance protection working
-  - Creator first-mover advantage via `createMarketAndBuy()`
-
-### Dependencies
-- OpenZeppelin Contracts (ReentrancyGuard)
-- UMA Optimistic Oracle V3
-- WBNB token interface
+  - Unit tests for all functions
+  - Fuzz tests for bonding curve math
+  - Vulnerability tests (reentrancy, overflow, access control)
+  - Economics verification tests
 
 ---
 
@@ -176,6 +328,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Status |
 |---------|------|--------|
+| 2.0.0 | 2025-01-08 | ✅ Complete |
 | 1.1.0 | 2025-01-07 | ✅ Complete |
 | 1.0.0 | 2025-01-06 | ✅ Complete |
 

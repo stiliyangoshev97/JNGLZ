@@ -1,10 +1,41 @@
 # 🎰 Junkie.Fun - Prediction Market Smart Contracts
 
-> Decentralized prediction markets on BNB Chain with UMA Oracle resolution.
+> Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
+> **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-97%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-116%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
+
+---
+
+## ⚡ 20-Second Economics
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    STREET CONSENSUS IN 20 SECONDS                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  📈 TRADING                          💰 FEES                             │
+│  ─────────                           ──────                              │
+│  • Buy/sell YES or NO shares         • 1.0% platform fee                 │
+│  • Bonding curve pricing             • 0.5% to market creator            │
+│  • P(YES) + P(NO) = 0.01 BNB        • 0.3% on resolution actions         │
+│                                                                          │
+│  ⚖️ RESOLUTION (30-90 min)           🏆 REWARDS                          │
+│  ────────────────────────            ─────────                           │
+│  1. Market expires                   • Correct proposer: gets bond back  │
+│  2. Creator proposes (10 min head    • Voters on winning side: split 50% │
+│     start) with bond                   of loser's bond                   │
+│  3. Anyone can dispute (2x bond)     • Liars: lose their bond            │
+│  4. If disputed → bettors VOTE                                           │
+│  5. Simple majority wins             ⏱️ SPEED                            │
+│                                      ──────                              │
+│  NO ORACLE. NO WAITING 48 HOURS.     • Undisputed: 30 min                │
+│  BETTORS DECIDE THEIR OWN FATE.      • Disputed: +1 hour voting          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -13,8 +44,9 @@
 - [Quick Start](#-quick-start)
 - [How It Works](#-how-it-works)
 - [Economics at a Glance](#-economics-at-a-glance)
-- [UMA Oracle Explained](#-uma-oracle-explained)
+- [Street Consensus Explained](#-street-consensus-explained)
 - [Contract Functions](#-contract-functions)
+- [Configuration](#-configuration)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
 
@@ -50,15 +82,18 @@ forge script script/Deploy.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast
 │  1. CREATE          2. TRADE            3. RESOLVE         4. CLAIM     │
 │  ────────          ───────            ──────────         ───────        │
 │                                                                          │
-│  Anyone creates    Users buy/sell     After expiry,      Winners get    │
-│  market (FREE)     YES/NO shares      someone asserts    proportional   │
-│                    via bonding        the outcome        share of pool  │
+│  Anyone creates    Users buy/sell     Street Consensus:  Winners get    │
+│  market (FREE)     YES/NO shares      propose → dispute  proportional   │
+│                    via bonding        → vote (if needed) share of pool  │
 │                    curve                                                 │
 │                                                                          │
 │  ┌──────────┐     ┌──────────┐       ┌──────────┐       ┌──────────┐   │
-│  │ Question │ ──► │ Trading  │ ──►   │   UMA    │ ──►   │  Payout  │   │
-│  │ + Expiry │     │  Active  │       │  Oracle  │       │          │   │
+│  │ Question │ ──► │ Trading  │ ──►   │  Street  │ ──►   │  Payout  │   │
+│  │ + Expiry │     │  Active  │       │ Consensus│       │          │   │
 │  └──────────┘     └──────────┘       └──────────┘       └──────────┘   │
+│                                                                          │
+│                        STATUS FLOW                                       │
+│        Active → Expired → Proposed → Disputed? → Resolved               │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -80,37 +115,70 @@ Initial State:           After YES Buying:        After NO Buying:
 
 ## 💰 Economics at a Glance
 
-### Fee Structure (1.5% Total)
+### Fee Structure (1.8% Total Max)
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                    USER BETS 100 BNB                        │
+│                    TRADING FEES (1.5%)                      │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
-│   Platform Fee ────► 1.0 BNB ────► Treasury (YOU)          │
-│   Creator Fee  ────► 0.5 BNB ────► Market Creator          │
-│   To Pool      ────► 98.5 BNB ───► Betting Pool            │
+│   Platform Fee ────► 1.0% ────► Treasury                   │
+│   Creator Fee  ────► 0.5% ────► Market Creator             │
+│   To Pool      ────► 98.5% ──► Betting Pool                │
+│                                                             │
+├────────────────────────────────────────────────────────────┤
+│                    RESOLUTION FEE (0.3%)                    │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   • Charged on propose/dispute/vote actions                │
+│   • Prevents spam, generates revenue                       │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 ```
 
-### Asserter Economics (Who Resolves Markets)
+### Proposer/Disputer Economics
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│              ASSERTER RISK vs REWARD                        │
+│              BOND ECONOMICS                                 │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
-│   Pool Size      Bond Required       Reward (2%)    ROI    │
-│   ──────────     ─────────────       ──────────     ───    │
-│   1 BNB          0.02 BNB (floor)    0.02 BNB      100%    │
-│   5 BNB          0.05 BNB (1%)       0.10 BNB      100%    │
-│   50 BNB         0.50 BNB (1%)       1.00 BNB      100%    │
-│   500 BNB        5.00 BNB (1%)       10.00 BNB     100%    │
+│   Pool Size      Bond Required       Disputer Bond         │
+│   ──────────     ─────────────       ──────────────        │
+│   1 BNB          0.02 BNB (floor)    0.04 BNB (2x)         │
+│   5 BNB          0.05 BNB (1%)       0.10 BNB (2x)         │
+│   50 BNB         0.50 BNB (1%)       1.00 BNB (2x)         │
 │                                                             │
 │   Formula: Bond = max(0.02 BNB, Pool × 1%)                 │
-│            Reward = Pool × 2%                               │
-│            ROI = Always ~100% (risk 1%, earn 2%)           │
+│            Disputer must post 2× proposer's bond           │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Bond Distribution After Dispute
+
+```
+┌────────────────────────────────────────────────────────────┐
+│              IF DISPUTE OCCURS (Voting)                     │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   WINNER (proposer or disputer):                           │
+│   • Gets their full bond back                              │
+│   • Gets 50% of loser's bond (bonus)                       │
+│                                                             │
+│   VOTERS ON WINNING SIDE:                                  │
+│   • Split 50% of loser's bond (jury fee)                   │
+│   • Proportional to their voting weight                    │
+│                                                             │
+│   LOSER:                                                   │
+│   • Loses entire bond                                      │
+│                                                             │
+│   Example: Proposer wins after dispute                     │
+│   ─────────────────────────────────────                    │
+│   Proposer bond: 0.5 BNB (gets back + 0.5 BNB bonus)       │
+│   Disputer bond: 1.0 BNB (loses all)                       │
+│   • 0.5 BNB → Proposer (50% winner share)                  │
+│   • 0.5 BNB → Voters who voted with proposer               │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -123,11 +191,10 @@ Initial State:           After YES Buying:        After NO Buying:
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
 │   Total Pool:           100 BNB                            │
-│   Asserter Reward (2%): -2 BNB  ──► Asserter               │
-│   Remaining Pool:       98 BNB                             │
+│   Remaining Pool:       100 BNB                            │
 │                                                             │
-│   Alice (60% of YES):   58.8 BNB                           │
-│   Bob (40% of YES):     39.2 BNB                           │
+│   Alice (60% of YES):   60 BNB                             │
+│   Bob (40% of YES):     40 BNB                             │
 │   Charlie (NO holder):  0 BNB   ──► Lost bet               │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
@@ -140,7 +207,7 @@ Initial State:           After YES Buying:        After NO Buying:
 │         EMERGENCY REFUND (24h after expiry)                 │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
-│   Condition: No assertion for 24 hours after expiry        │
+│   Condition: No proposal for 24 hours after expiry         │
 │                                                             │
 │   Pool: 100 BNB                                            │
 │   Alice (owns 60% of all shares): Gets 60 BNB back         │
@@ -153,126 +220,111 @@ Initial State:           After YES Buying:        After NO Buying:
 
 ---
 
-## 🔮 UMA Oracle Explained
+## ⚖️ Street Consensus Explained
 
-### What is UMA?
+### What is Street Consensus?
 
-UMA (Universal Market Access) is a **decentralized oracle** that resolves real-world outcomes. Instead of trusting a single source, UMA uses **economic incentives** to ensure truthful reporting.
+Street Consensus is a **decentralized resolution mechanism** where the bettors themselves decide the outcome. No external oracles. No waiting 48+ hours. Just the people with skin in the game voting on what happened.
 
 ### The Resolution Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        UMA RESOLUTION FLOW                               │
+│                     STREET CONSENSUS FLOW                                │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │   MARKET EXPIRES                                                         │
 │        │                                                                 │
 │        ▼                                                                 │
 │   ┌─────────────────────────────────────────────┐                       │
-│   │  STEP 1: Someone Asserts Outcome            │                       │
+│   │  STEP 1: Creator Priority (10 min)          │                       │
+│   │  • Market creator can propose first         │                       │
 │   │  • Posts bond (max of 0.02 BNB or pool×1%)  │                       │
 │   │  • Claims "YES won" or "NO won"             │                       │
+│   │  • Optional: Include proof link             │                       │
 │   └─────────────────────────────────────────────┘                       │
 │        │                                                                 │
+│        │  After 10 min, anyone can propose                              │
 │        ▼                                                                 │
 │   ┌─────────────────────────────────────────────┐                       │
-│   │  STEP 2: 2-Hour Challenge Window            │                       │
-│   │  • Anyone can dispute by posting counter-   │                       │
-│   │    bond                                     │                       │
-│   │  • UMA's global network monitors all        │                       │
-│   │    assertions                               │                       │
+│   │  STEP 2: Dispute Window (30 min)            │                       │
+│   │  • Anyone can dispute with 2× bond          │                       │
+│   │  • Only 1 dispute allowed per market        │                       │
+│   │  • Can propose opposite outcome + proof     │                       │
 │   └─────────────────────────────────────────────┘                       │
 │        │                                                                 │
 │        ├──────────────────────┬─────────────────────────┐               │
 │        ▼                      ▼                         ▼               │
 │   ┌─────────────┐      ┌──────────────┐         ┌──────────────┐       │
-│   │ NO DISPUTE  │      │   DISPUTED   │         │ NO ASSERTION │       │
+│   │ NO DISPUTE  │      │   DISPUTED   │         │ NO PROPOSAL  │       │
 │   │             │      │              │         │ FOR 24 HOURS │       │
-│   │ Assertion   │      │ Goes to UMA  │         │              │       │
-│   │ accepted!   │      │ DVM (human   │         │ Emergency    │       │
-│   │             │      │ voting)      │         │ refund       │       │
-│   │ Market      │      │ 48-72 hours  │         │ available    │       │
+│   │ Proposal    │      │ Goes to      │         │              │       │
+│   │ accepted!   │      │ VOTING       │         │ Emergency    │       │
+│   │             │      │ (1 hour)     │         │ refund       │       │
+│   │ Market      │      │              │         │ available    │       │
 │   │ resolved    │      │              │         │              │       │
 │   └─────────────┘      └──────────────┘         └──────────────┘       │
 │                              │                                          │
-│                              ├──────────────────────┐                   │
-│                              ▼                      ▼                   │
-│                        ┌───────────┐         ┌───────────┐             │
-│                        │ ASSERTER  │         │ ASSERTER  │             │
-│                        │ WAS RIGHT │         │ WAS WRONG │             │
-│                        │           │         │ (LIAR)    │             │
-│                        │ Market    │         │           │             │
-│                        │ resolved  │         │ Loses     │             │
-│                        │ Keeps     │         │ bond!     │             │
-│                        │ bond +    │         │           │             │
-│                        │ reward    │         │ Market    │             │
-│                        └───────────┘         │ RESETS    │             │
-│                                              │ New       │             │
-│                                              │ assertion │             │
-│                                              │ possible  │             │
-│                                              └───────────┘             │
+│                              ▼                                          │
+│                        ┌───────────────────────────────┐               │
+│                        │  STEP 3: Voting (1 hour)      │               │
+│                        │                               │               │
+│                        │  • Only share holders vote    │               │
+│                        │  • Vote weight = share count  │               │
+│                        │  • Can't vote twice           │               │
+│                        │  • Simple majority wins       │               │
+│                        └───────────────────────────────┘               │
+│                              │                                          │
+│                              ▼                                          │
+│                        ┌───────────────────────────────┐               │
+│                        │  STEP 4: Finalize             │               │
+│                        │                               │               │
+│                        │  Proposer wins:               │               │
+│                        │  • Gets bond + 50% of         │               │
+│                        │    disputer's bond            │               │
+│                        │  • Voters split 50%           │               │
+│                        │                               │               │
+│                        │  Disputer wins:               │               │
+│                        │  • Gets bond + 50% of         │               │
+│                        │    proposer's bond            │               │
+│                        │  • Voters split 50%           │               │
+│                        │                               │               │
+│                        │  Tie (0 vs 0 votes):          │               │
+│                        │  • Both get bonds back        │               │
+│                        │  • No resolution, retry       │               │
+│                        └───────────────────────────────┘               │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Who Are the Disputers?
+### Why Street Consensus?
 
-**Not from our app** - from UMA's global ecosystem:
+| Feature | UMA Oracle (Old) | Street Consensus (New) |
+|---------|------------------|------------------------|
+| Resolution Time | 48-72 hours | **30-90 minutes** |
+| External Dependency | UMA Protocol | **None** |
+| Who Decides | UMA token holders | **Actual bettors** |
+| Bond Token | WBNB (wrapped) | **Native BNB** |
+| Complexity | High | **Simple** |
+| Proof Required | Yes | **Optional** |
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     UMA DISPUTER NETWORK                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   Our App                           UMA Network                          │
-│   ────────                          ───────────                          │
-│                                                                          │
-│   User asserts ──────────────────►  Public assertion queue               │
-│   "YES wins"                              │                              │
-│                                           ▼                              │
-│                                     UMA Disputers (global)               │
-│                                     • Run monitoring bots                │
-│                                     • Watch all protocols                │
-│                                     • Profit from catching liars         │
-│                                           │                              │
-│                                           ├── Looks correct? Ignore      │
-│                                           │   (passes in 2h)             │
-│                                           │                              │
-│                                           └── Looks wrong? Dispute!      │
-│                                               (win liar's bond)          │
-│                                                                          │
-│   INCENTIVE: Disputers EARN the liar's bond if they catch a lie         │
-│   This creates a "security market" where lies are actively hunted        │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### Timing Constants
+
+| Phase | Duration | Description |
+|-------|----------|-------------|
+| Creator Priority | 10 min | Head start for market creator |
+| Dispute Window | 30 min | Time to challenge proposal |
+| Voting Window | 1 hour | Time for bettors to vote |
+| Emergency Refund | 24 hours | After expiry with no proposal |
 
 ### Bond Economics Table
 
-| Scenario | Asserter | Disputer | Result |
-|----------|----------|----------|--------|
-| ✅ Honest assertion, no dispute | Gets bond back + 2% reward | N/A | **Profit** |
-| ✅ Honest assertion, disputed but wins | Gets bond + disputer's bond + 2% | Loses bond | **Big profit** |
-| ❌ Liar asserts, gets caught | **Loses bond to disputer** | Wins liar's bond | **Loss** |
-| 😈 Liar asserts, no dispute | Keeps bond + 2% reward | N/A | Evil wins (rare) |
-
-### Why Lying is Unprofitable
-
-```
-Liar's Calculation:
-───────────────────
-Bond at risk:    0.50 BNB (for 50 BNB pool)
-Potential gain:  1.00 BNB (2% reward) + steal pool
-
-BUT:
-• UMA disputers actively monitor for profit
-• Getting caught = lose 0.50 BNB
-• DVM (human voters) will vote against obvious lies
-• Reputation damage in crypto community
-
-Expected Value of Lying ≈ NEGATIVE (not worth it)
-```
+| Scenario | Proposer | Disputer | Voters | Result |
+|----------|----------|----------|--------|--------|
+| ✅ No dispute | Gets bond back | N/A | N/A | **Simple resolution** |
+| ✅ Disputed, proposer wins | Bond + 50% of disputer | Loses bond | 50% of disputer bond | **Proposer rewarded** |
+| ❌ Disputed, disputer wins | Loses bond | Bond + 50% of proposer | 50% of proposer bond | **Disputer rewarded** |
+| ⚖️ Tie (0 vs 0 votes) | Gets bond back | Gets bond back | N/A | **Market resets** |
 
 ---
 
@@ -284,7 +336,7 @@ Expected Value of Lying ≈ NEGATIVE (not worth it)
 // Create a market (FREE)
 function createMarket(
     string question,        // "Will BTC hit $100k by Dec 2025?"
-    string evidenceLink,    // "https://coingecko.com/bitcoin"
+    string evidenceLink,    // "https://coingecko.com/bitcoin" (optional)
     string resolutionRules, // "Based on CoinGecko price at midnight UTC"
     uint256 expiryTimestamp // Unix timestamp when market expires
 ) returns (uint256 marketId)
@@ -309,23 +361,26 @@ function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view return
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256 bnbOut)
 ```
 
-### Resolution
+### Resolution (Street Consensus)
 
 ```solidity
-// Assert outcome (requires WBNB bond)
-function assertOutcome(uint256 marketId, bool outcome) returns (bytes32 assertionId)
+// Propose outcome (creator has 10 min priority)
+function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+
+// Dispute proposal (requires 2× bond)
+function dispute(uint256 marketId, string proofLink) payable
+
+// Vote on disputed market (bettors only)
+function vote(uint256 marketId, bool supportProposer)
+
+// Finalize market after voting ends
+function finalizeMarket(uint256 marketId)
 
 // Claim winnings (after resolution)
 function claim(uint256 marketId) returns (uint256 payout)
 
-// Emergency refund (24h after expiry with no assertion)
+// Emergency refund (24h after expiry with no proposal)
 function emergencyRefund(uint256 marketId) returns (uint256 refund)
-
-// Check emergency refund eligibility
-function canEmergencyRefund(uint256 marketId) view returns (bool eligible, uint256 timeUntil)
-
-// Get required bond for assertion
-function getRequiredBond(uint256 marketId) view returns (uint256 bond)
 ```
 
 ### View Functions
@@ -337,11 +392,43 @@ function getPosition(uint256 marketId, address user) view returns (
     uint256 yesShares,
     uint256 noShares,
     bool claimed,
-    bool emergencyRefunded
+    bool emergencyRefunded,
+    bool hasVoted,
+    bool votedForProposer
 )
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
-// MarketStatus: Active, Expired, Asserted, Resolved
+// MarketStatus: Active, Expired, Proposed, Disputed, Resolved
+
+function getRequiredBond(uint256 marketId) view returns (uint256)
+function canEmergencyRefund(uint256 marketId) view returns (bool eligible, uint256 timeUntil)
 ```
+
+---
+
+## ⚙️ Configuration
+
+### MultiSig-Configurable Parameters
+
+All parameters are adjustable via 3-of-3 MultiSig:
+
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| `creatorFeeBps` | 50 (0.5%) | 0-200 (2%) | Fee to market creator |
+| `resolutionFeeBps` | 30 (0.3%) | 0-100 (1%) | Fee on resolution actions |
+| `minBondFloor` | 0.02 BNB | 0.01-0.1 BNB | Minimum bond amount |
+| `dynamicBondBps` | 100 (1%) | 50-500 (5%) | Bond as % of pool |
+| `bondWinnerShareBps` | 5000 (50%) | 2000-8000 | Winner's share of loser bond |
+| `platformFeeBps` | 100 (1%) | 0-500 (5%) | Platform trading fee |
+| `minBet` | 0.005 BNB | Adjustable | Minimum bet amount |
+
+### Timing Constants (Hardcoded)
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `CREATOR_PRIORITY_WINDOW` | 10 min | Creator's head start |
+| `DISPUTE_WINDOW` | 30 min | Time to challenge |
+| `VOTING_WINDOW` | 1 hour | Voting period |
+| `EMERGENCY_REFUND_DELAY` | 24 hours | Refund eligibility |
 
 ---
 
@@ -368,11 +455,11 @@ forge test --match-contract PredictionMarketFuzzTest --fuzz-runs 1000
 
 | Test File | Tests | Description |
 |-----------|-------|-------------|
-| `PredictionMarket.t.sol` | 37 | Core unit tests |
-| `PredictionMarket.fuzz.t.sol` | 25 | Fuzz testing |
+| `PredictionMarket.t.sol` | 52 | Core unit tests |
+| `PredictionMarket.fuzz.t.sol` | 29 | Fuzz testing |
 | `PumpDump.t.sol` | 31 | Economics + features |
 | `VulnerabilityCheck.t.sol` | 4 | Security tests |
-| **Total** | **97** | ✅ All passing |
+| **Total** | **116** | ✅ All passing |
 
 ---
 
@@ -418,6 +505,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## 🔗 Links
 
-- [UMA Documentation](https://docs.uma.xyz/)
 - [BNB Chain](https://www.bnbchain.org/)
 - [Foundry Book](https://book.getfoundry.sh/)

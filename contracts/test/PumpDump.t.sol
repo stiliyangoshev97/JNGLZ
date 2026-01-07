@@ -169,8 +169,6 @@ contract PumpDumpTest is TestHelper {
             uint256 noSupply,
             uint256 poolBalance,
             ,
-            ,
-            ,
 
         ) = market.getMarket(marketId);
 
@@ -181,7 +179,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(alice);
         market.sellYes(marketId, aliceShares, 0);
 
-        (, , , , , , , poolBalance, , , , ) = market.getMarket(marketId);
+        (, , , , , , , poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance after Alice sells:", poolBalance);
         assertGe(poolBalance, 0, "Pool balance should never go negative");
 
@@ -196,7 +194,7 @@ contract PumpDumpTest is TestHelper {
             );
         }
 
-        (, , , , , , , poolBalance, , , , ) = market.getMarket(marketId);
+        (, , , , , , , poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance after Bob tries to sell:", poolBalance);
         assertGe(poolBalance, 0, "Pool balance should never go negative");
     }
@@ -334,9 +332,7 @@ contract PumpDumpTest is TestHelper {
         }
 
         // Verify pool is still >= 0
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         assertGe(poolBalance, 0, "Pool balance must never go negative");
     }
 
@@ -355,7 +351,7 @@ contract PumpDumpTest is TestHelper {
         uint256 bobShares = market.buyYes{value: 0.1 ether}(marketId, 0);
 
         // Get initial pool balance
-        (, , , , , , , uint256 poolBalanceBefore, , , , ) = market.getMarket(
+        (, , , , , , , uint256 poolBalanceBefore, , ) = market.getMarket(
             marketId
         );
         console.log("Pool balance before Alice sells:", poolBalanceBefore);
@@ -368,7 +364,7 @@ contract PumpDumpTest is TestHelper {
             console.log("Alice sold successfully for:", aliceReceived);
 
             // Check pool state after Alice sells
-            (, , , , , , , uint256 poolBalanceAfter, , , , ) = market.getMarket(
+            (, , , , , , , uint256 poolBalanceAfter, , ) = market.getMarket(
                 marketId
             );
             console.log("Pool balance after Alice sells:", poolBalanceAfter);
@@ -391,8 +387,9 @@ contract PumpDumpTest is TestHelper {
             ) {
                 console.log("Bob successfully sold for:", bobReceived);
                 // Verify pool is still >= 0
-                (, , , , , , , uint256 finalPoolBalance, , , , ) = market
-                    .getMarket(marketId);
+                (, , , , , , , uint256 finalPoolBalance, , ) = market.getMarket(
+                    marketId
+                );
                 assertGe(
                     finalPoolBalance,
                     0,
@@ -409,7 +406,7 @@ contract PumpDumpTest is TestHelper {
             );
 
             // Verify pool is still intact
-            (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
+            (, , , , , , , uint256 poolBalance, , ) = market.getMarket(
                 marketId
             );
             assertGe(poolBalance, 0, "Pool should not be negative");
@@ -614,7 +611,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Pool state before dump attempt
-        (, , , , , , , uint256 poolBefore, , , , ) = market.getMarket(marketId);
+        (, , , , , , , uint256 poolBefore, , ) = market.getMarket(marketId);
         console.log("Pool before Alice dump:", poolBefore);
 
         // Alice tries to dump everything - SHOULD FAIL due to InsufficientPoolBalance
@@ -627,7 +624,7 @@ contract PumpDumpTest is TestHelper {
         );
 
         // Verify pool is still intact
-        (, , , , , , , uint256 poolAfter, , , , ) = market.getMarket(marketId);
+        (, , , , , , , uint256 poolAfter, , ) = market.getMarket(marketId);
         assertEq(
             poolAfter,
             poolBefore,
@@ -791,9 +788,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Price after Eve:", market.getYesPrice(marketId));
 
         // Pool state after all buys
-        (, , , , , , , uint256 poolAfterBuys, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(marketId);
         console.log("Pool after all buys:", poolAfterBuys);
 
         // Alice (1st) dumps
@@ -875,9 +870,7 @@ contract PumpDumpTest is TestHelper {
         console.log("NO price after all:", market.getNoPrice(marketId));
 
         // Pool state
-        (, , , , , , , uint256 poolAfterBuys, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(marketId);
         console.log("Pool after all buys:", poolAfterBuys);
 
         // Only Alice dumps (first mover advantage in selling too)
@@ -962,7 +955,7 @@ contract PumpDumpTest is TestHelper {
         console.log("YES price:", market.getYesPrice(marketId));
         console.log("NO price:", market.getNoPrice(marketId));
 
-        (, , , , , , , uint256 pool, , , , ) = market.getMarket(marketId);
+        (, , , , , , , uint256 pool, , ) = market.getMarket(marketId);
         console.log("Pool balance:", pool);
 
         // Alice (first YES buyer) dumps
@@ -1058,8 +1051,8 @@ contract PumpDumpTest is TestHelper {
         assertEq(yesPriceBefore, yesPriceAfter, "Price frozen at expiry");
 
         // Positions should still exist
-        (uint256 alicePos, , , ) = market.getPosition(marketId, alice);
-        (uint256 bobPos, , , ) = market.getPosition(marketId, bob);
+        (uint256 alicePos, , , , , ) = market.getPosition(marketId, alice);
+        (uint256 bobPos, , , , , ) = market.getPosition(marketId, bob);
 
         assertEq(alicePos, aliceShares, "Alice position preserved");
         assertEq(bobPos, bobShares, "Bob position preserved");
@@ -1164,9 +1157,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Get pool balance
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         // Warp to expiry + 24 hours (emergency refund eligible)
@@ -1252,30 +1243,44 @@ contract PumpDumpTest is TestHelper {
     }
 
     /**
-     * @notice Test emergency refund is blocked if assertion exists
+     * @notice Test emergency refund still works even with active proposal
+     * @dev In Street Consensus, emergency refund is only blocked by resolved status, not proposals
      */
-    function test_EmergencyRefund_RevertIfAsserted() public {
+    function test_EmergencyRefund_WorksWithProposal() public {
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
         vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
+        uint256 aliceShares = market.buyYes{value: 1 ether}(marketId, 0);
 
-        // Expire and assert
-        vm.warp(block.timestamp + 7 days + 1);
-        setupWbnbForAssertion(charlie, 0.02 ether);
-        vm.prank(charlie);
-        market.assertOutcome(marketId, true);
+        // Expire market
+        expireMarket(marketId);
 
-        // Warp past emergency deadline
-        vm.warp(block.timestamp + 24 hours + 1);
+        // Propose an outcome (creator priority window)
+        proposeOutcomeFor(marketCreator, marketId, true, "");
 
-        // Check not eligible (has assertion)
+        // Warp past emergency deadline (24 hours after expiry)
+        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+            marketId
+        );
+        vm.warp(expiryTimestamp + 24 hours + 1);
+
+        // Emergency refund should still work - proposal doesn't block it
         (bool eligible, ) = market.canEmergencyRefund(marketId);
-        assertFalse(eligible, "Should not be eligible with assertion");
+        assertTrue(eligible, "Should be eligible for emergency refund");
 
+        uint256 aliceBalanceBefore = alice.balance;
         vm.prank(alice);
-        vm.expectRevert(PredictionMarket.MarketHasAssertion.selector);
-        market.emergencyRefund(marketId);
+        uint256 refund = market.emergencyRefund(marketId);
+
+        assertGt(refund, 0, "Alice should get refund");
+        assertEq(
+            alice.balance,
+            aliceBalanceBefore + refund,
+            "Alice balance should increase"
+        );
+
+        console.log("=== EMERGENCY REFUND WITH PROPOSAL ===");
+        console.log("Alice refund:", refund);
     }
 
     /**
@@ -1342,10 +1347,11 @@ contract PumpDumpTest is TestHelper {
     }
 
     /**
-     * @notice Test asserter reward is paid on first claim
+     * @notice Test proposer gets bond back when outcome is finalized (no dispute)
+     * @dev In Street Consensus, the proposer's bond is returned when finalized without dispute
      */
-    function test_AsserterReward_PaidOnFirstClaim() public {
-        console.log("=== ASSERTER REWARD TEST ===");
+    function test_ProposerReward_BondReturnedOnFinalize() public {
+        console.log("=== PROPOSER BOND RETURN TEST ===");
 
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
@@ -1359,45 +1365,63 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Get pool balance
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
-        // Expire and resolve
+        // Expire market
         expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
+        skipCreatorPriority(marketId);
 
-        // Calculate expected asserter reward (2% of pool)
-        uint256 expectedAsserterReward = (poolBalance * 200) / 10000;
-        console.log("Expected asserter reward:", expectedAsserterReward);
+        // Get required bond
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
 
         uint256 charlieBalanceBefore = charlie.balance;
 
-        // Alice claims first (triggers asserter reward)
+        // Charlie proposes
+        vm.prank(charlie);
+        market.proposeOutcome{value: totalRequired}(marketId, true, "");
+
+        uint256 charlieAfterPropose = charlie.balance;
+        console.log(
+            "Charlie spent on proposal:",
+            charlieBalanceBefore - charlieAfterPropose
+        );
+
+        // Skip dispute window
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+
+        // Finalize market
+        market.finalizeMarket(marketId);
+
+        uint256 charlieAfterFinalize = charlie.balance;
+        uint256 bondReturned = charlieAfterFinalize - charlieAfterPropose;
+
+        console.log("Charlie bond returned:", bondReturned);
+
+        // Proposer should get their bond back (minus the fee that was taken)
+        // Allow 2 wei tolerance for rounding
+        assertApproxEqAbs(
+            bondReturned,
+            requiredBond,
+            2,
+            "Proposer should get bond back on finalize"
+        );
+
+        // Now test claims - pool should be intact
         vm.prank(alice);
-        market.claim(marketId);
+        uint256 alicePayout = market.claim(marketId);
+        assertGt(alicePayout, 0, "Alice should get payout");
 
-        uint256 asserterRewardPaid = charlie.balance - charlieBalanceBefore;
-        assertEq(
-            asserterRewardPaid,
-            expectedAsserterReward,
-            "Asserter reward should be 2% of pool"
-        );
-
-        console.log("Asserter reward paid:", asserterRewardPaid);
-        console.log("Charlie balance increase:", asserterRewardPaid);
-
-        // Bob claims second (no additional asserter reward)
-        uint256 charlieBefore2 = charlie.balance;
         vm.prank(bob);
-        market.claim(marketId);
+        uint256 bobPayout = market.claim(marketId);
+        assertGt(bobPayout, 0, "Bob should get payout");
 
-        assertEq(
-            charlie.balance,
-            charlieBefore2,
-            "No second asserter reward should be paid"
-        );
+        console.log("Alice payout:", alicePayout);
+        console.log("Bob payout:", bobPayout);
     }
 
     // ============ Dynamic Bond Tests ============
@@ -1434,9 +1458,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(bob);
         market.buyNo{value: 10 ether}(marketId, 0);
 
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         uint256 requiredBond = market.getRequiredBond(marketId);
@@ -1454,9 +1476,9 @@ contract PumpDumpTest is TestHelper {
     }
 
     /**
-     * @notice Test assertOutcome uses dynamic bond
+     * @notice Test proposeOutcome uses dynamic bond
      */
-    function test_AssertOutcome_UsesDynamicBond() public {
+    function test_ProposeOutcome_UsesDynamicBond() public {
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
         // Create large pool
@@ -1466,24 +1488,35 @@ contract PumpDumpTest is TestHelper {
         market.buyNo{value: 5 ether}(marketId, 0);
 
         expireMarket(marketId);
+        skipCreatorPriority(marketId);
 
         uint256 requiredBond = market.getRequiredBond(marketId);
-        console.log("Required bond for assertion:", requiredBond);
+        console.log("Required bond for proposal:", requiredBond);
 
-        // Setup WBNB for asserter using helper
-        setupWbnbForAssertion(charlie, requiredBond);
+        // Calculate total required with resolution fee
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
 
-        uint256 wbnbBefore = wbnb.balanceOf(charlie);
+        uint256 charlieBefore = charlie.balance;
 
-        // Assert outcome
+        // Propose outcome with native BNB
         vm.prank(charlie);
-        market.assertOutcome(marketId, true);
+        market.proposeOutcome{value: totalRequired}(marketId, true, "");
 
-        uint256 wbnbAfter = wbnb.balanceOf(charlie);
-        assertEq(
-            wbnbBefore - wbnbAfter,
-            requiredBond,
-            "Should deduct dynamic bond"
+        uint256 charlieAfter = charlie.balance;
+        uint256 spent = charlieBefore - charlieAfter;
+
+        console.log("Charlie spent:", spent);
+        console.log("Required bond + fee:", totalRequired);
+
+        // Charlie should have spent the bond + fee
+        assertApproxEqAbs(
+            spent,
+            totalRequired,
+            2,
+            "Should deduct dynamic bond + fee"
         );
     }
 
@@ -1500,9 +1533,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(bob);
         market.buyNo{value: 1.1 ether}(marketId, 0);
 
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         uint256 requiredBond = market.getRequiredBond(marketId);

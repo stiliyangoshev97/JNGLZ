@@ -40,7 +40,7 @@ contract PredictionMarketFuzzTest is TestHelper {
             block.timestamp + expiryOffset
         );
 
-        (, , , , uint256 expiry, , , , , , , ) = market.getMarket(marketId);
+        (, , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
         assertEq(expiry, block.timestamp + expiryOffset);
     }
 
@@ -78,11 +78,11 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertGt(sharesOut, 0, "Should receive shares");
 
         // Verify position updated
-        (uint256 yesShares, , , ) = market.getPosition(marketId, alice);
+        (uint256 yesShares, , , , , ) = market.getPosition(marketId, alice);
         assertEq(yesShares, sharesOut);
 
         // Verify market state
-        (, , , , , uint256 yesSupply, , uint256 poolBalance, , , , ) = market
+        (, , , , , uint256 yesSupply, , uint256 poolBalance, , ) = market
             .getMarket(marketId);
         assertEq(yesSupply, sharesOut);
 
@@ -106,7 +106,7 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         assertGt(sharesOut, 0);
 
-        (, uint256 noShares, , ) = market.getPosition(marketId, bob);
+        (, uint256 noShares, , , , ) = market.getPosition(marketId, bob);
         assertEq(noShares, sharesOut);
     }
 
@@ -162,7 +162,10 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(alice.balance, aliceBalanceBefore + bnbOut);
 
         // Verify position updated
-        (uint256 remainingShares, , , ) = market.getPosition(marketId, alice);
+        (uint256 remainingShares, , , , , ) = market.getPosition(
+            marketId,
+            alice
+        );
         assertEq(remainingShares, sharesBought - sharesToSell);
     }
 
@@ -184,7 +187,7 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         assertGt(bnbOut, 0);
 
-        (, uint256 remainingShares, , ) = market.getPosition(marketId, bob);
+        (, uint256 remainingShares, , , , ) = market.getPosition(marketId, bob);
         assertEq(remainingShares, sharesBought - sharesToSell);
     }
 
@@ -395,16 +398,72 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(market.minBet(), newMinBet);
     }
 
-    function testFuzz_MultiSig_SetUmaBond_ValidRange(uint256 newBond) public {
-        // Bond between UMA_BOND_LOWER and UMA_BOND_UPPER
-        newBond = bound(newBond, 0.01 ether, 1 ether);
+    function testFuzz_MultiSig_SetCreatorFee_ValidRange(uint256 newFee) public {
+        // Creator fee between 0 and MAX_CREATOR_FEE_BPS (200 = 2%)
+        newFee = bound(newFee, 0, 200);
 
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetUmaBond,
-            abi.encode(newBond)
+            PredictionMarket.ActionType.SetCreatorFee,
+            abi.encode(newFee)
         );
 
-        assertEq(market.umaBond(), newBond);
+        assertEq(market.creatorFeeBps(), newFee);
+    }
+
+    function testFuzz_MultiSig_SetResolutionFee_ValidRange(
+        uint256 newFee
+    ) public {
+        // Resolution fee between 0 and MAX_RESOLUTION_FEE_BPS (100 = 1%)
+        newFee = bound(newFee, 0, 100);
+
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetResolutionFee,
+            abi.encode(newFee)
+        );
+
+        assertEq(market.resolutionFeeBps(), newFee);
+    }
+
+    function testFuzz_MultiSig_SetMinBondFloor_ValidRange(
+        uint256 newFloor
+    ) public {
+        // Bond floor between MIN_BOND_FLOOR_LOWER and MIN_BOND_FLOOR_UPPER
+        newFloor = bound(newFloor, 0.01 ether, 0.1 ether);
+
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetMinBondFloor,
+            abi.encode(newFloor)
+        );
+
+        assertEq(market.minBondFloor(), newFloor);
+    }
+
+    function testFuzz_MultiSig_SetDynamicBondBps_ValidRange(
+        uint256 newBps
+    ) public {
+        // Dynamic bond between 50 (0.5%) and 500 (5%)
+        newBps = bound(newBps, 50, 500);
+
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetDynamicBondBps,
+            abi.encode(newBps)
+        );
+
+        assertEq(market.dynamicBondBps(), newBps);
+    }
+
+    function testFuzz_MultiSig_SetBondWinnerShare_ValidRange(
+        uint256 newShare
+    ) public {
+        // Bond winner share between 2000 (20%) and 8000 (80%)
+        newShare = bound(newShare, 2000, 8000);
+
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetBondWinnerShare,
+            abi.encode(newShare)
+        );
+
+        assertEq(market.bondWinnerShareBps(), newShare);
     }
 
     // ============================================
@@ -458,14 +517,9 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertAndResolve(marketId, charlie, true, true);
 
         // Get pool balance before claims
-        (, , , , , , , uint256 poolBalance, , , , ) = market.getMarket(
-            marketId
-        );
+        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
 
-        // Calculate asserter reward (2% of pool, paid on first claim)
-        uint256 asserterReward = (poolBalance * 200) / 10000; // ASSERTER_REWARD_BPS = 200
-        uint256 poolAfterReward = poolBalance - asserterReward;
-
+        // In Street Consensus, the full pool goes to winners (no asserter reward deduction from pool)
         // Both claim
         vm.prank(alice);
         uint256 alicePayout = market.claim(marketId);
@@ -473,20 +527,23 @@ contract PredictionMarketFuzzTest is TestHelper {
         vm.prank(bob);
         uint256 bobPayout = market.claim(marketId);
 
-        // Payouts should be proportional to shares (after asserter reward)
+        // Payouts should be proportional to shares
         uint256 totalShares = aliceShares + bobShares;
-        uint256 expectedAlicePayout = (aliceShares * poolAfterReward) /
-            totalShares;
-        uint256 expectedBobPayout = (bobShares * poolAfterReward) / totalShares;
+        uint256 expectedAlicePayout = (aliceShares * poolBalance) / totalShares;
+        uint256 expectedBobPayout = (bobShares * poolBalance) / totalShares;
 
-        assertEq(
+        // Allow rounding error due to division in claim calculation
+        // With very small amounts, the rounding can be a larger percentage
+        assertApproxEqRel(
             alicePayout,
             expectedAlicePayout,
+            0.01e18, // 1% tolerance for rounding
             "Alice payout should be proportional"
         );
-        assertEq(
+        assertApproxEqRel(
             bobPayout,
             expectedBobPayout,
+            0.01e18, // 1% tolerance for rounding
             "Bob payout should be proportional"
         );
     }

@@ -1,6 +1,6 @@
 # Junkie.Fun - Master TODO
 
-> **Last Updated:** January 7, 2026  
+> **Last Updated:** January 8, 2025  
 > **Status:** Smart Contracts Complete ✅ | Frontend Pending  
 > **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
 
@@ -11,10 +11,14 @@
 A decentralized prediction market platform on BNB Chain where anyone can:
 - Create prediction markets (free)
 - Trade YES/NO shares via bonding curve (native BNB)
-- Resolve markets using UMA Optimistic Oracle
+- Resolve markets using **Street Consensus** (bettors vote on outcomes)
 - Claim winnings after resolution
 
-**Key Feature:** Pump.fun-style economics where early buyers profit when later buyers enter.
+**Key Features:**
+- Pump.fun-style economics where early buyers profit when later buyers enter
+- **Street Consensus** resolution: Fast (30-90 min), no external oracles
+- Creator priority window for fair resolution
+- Jury fee incentives for voters
 
 ---
 
@@ -31,7 +35,7 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 ### Contracts Setup (Foundry) ✅
 - [x] `forge init contracts`
 - [x] Install OpenZeppelin: `forge install OpenZeppelin/openzeppelin-contracts`
-- [x] Configure `foundry.toml` (solc 0.8.24, BNB Chain)
+- [x] Configure `foundry.toml` (solc 0.8.24, BNB Chain, optimizer enabled)
 - [x] Create `remappings.txt`
 
 ### Frontend Setup (Vite + React)
@@ -49,7 +53,7 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 
 ---
 
-## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (74 tests)
+## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (116 tests)
 
 ### Core Contract: `PredictionMarket.sol` ✅
 
@@ -57,11 +61,24 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 - [x] Market struct (question, evidenceLink, resolutionRules, expiry, creator, etc.)
 - [x] Market ID counter
 - [x] Mapping: marketId → Market
-- [x] Mapping: marketId → user → Position (yesShares, noShares, claimed)
-- [x] Mapping: assertionId → marketId (for UMA callback)
+- [x] Mapping: marketId → user → Position (yesShares, noShares, claimed, hasVoted, etc.)
 - [x] Platform treasury address
-- [x] Constants: UNIT_PRICE (0.01 BNB), MIN_BET (0.005 BNB), FEE_BPS (100), BOND (0.1 WBNB)
-- [x] **ADDED:** CREATOR_FEE_BPS (50) - 0.5% to market creator
+- [x] Configurable parameters via MultiSig
+
+#### Configurable Parameters (via MultiSig) ✅
+- [x] `platformFeeBps` = 100 (1%) - range 0-5%
+- [x] `creatorFeeBps` = 50 (0.5%) - range 0-2%
+- [x] `resolutionFeeBps` = 30 (0.3%) - range 0-1%
+- [x] `minBondFloor` = 0.02 BNB - range 0.01-0.1 BNB
+- [x] `dynamicBondBps` = 100 (1%) - range 0.5-5%
+- [x] `bondWinnerShareBps` = 5000 (50%) - range 20-80%
+- [x] `minBet` = 0.005 BNB
+
+#### Timing Constants ✅
+- [x] `CREATOR_PRIORITY_WINDOW` = 10 minutes
+- [x] `DISPUTE_WINDOW` = 30 minutes
+- [x] `VOTING_WINDOW` = 1 hour
+- [x] `EMERGENCY_REFUND_DELAY` = 24 hours
 
 #### Bonding Curve Math ✅
 - [x] Virtual liquidity: 100 YES + 100 NO at start (scaled to 1e18)
@@ -76,93 +93,113 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 - [x] `createMarket(question, evidenceLink, resolutionRules, expiryTimestamp)`
   - Free (0 BNB + gas)
   - Validates expiry is in future
-  - Validates evidenceLink is not empty
+  - EvidenceLink optional (degen-friendly)
   - Emits `MarketCreated` event
-- [x] `createMarketAndBuy()` - **NEW:** Atomic create + first buy (anti-frontrun)
+- [x] `createMarketAndBuy()` - Atomic create + first buy (anti-frontrun)
 - [x] `buyYes(marketId, minSharesOut) payable`
-  - Requires market Active
-  - Requires msg.value >= MIN_BET
   - Takes 1% platform fee → treasury
   - Takes 0.5% creator fee → market.creator
-  - Calculates shares from bonding curve
   - Slippage protection via minSharesOut
-  - Emits `Trade` event
-- [x] `buyNo(marketId, minSharesOut) payable` (same as buyYes but for NO side)
+- [x] `buyNo(marketId, minSharesOut) payable`
 - [x] `sellYes(marketId, shares, minBnbOut)`
-  - Requires market Active
-  - Requires user has enough shares
-  - Calculates BNB using AVERAGE price formula
-  - Takes 1.5% total fee
-  - InsufficientPoolBalance check
-  - Emits `Trade` event
-- [x] `sellNo(marketId, shares, minBnbOut)` (same as sellYes but for NO side)
+- [x] `sellNo(marketId, shares, minBnbOut)`
 
-#### UMA Integration ✅
-- [x] Interface for UMA OOv3 (assertTruthWithDefaults)
-- [x] `assertOutcome(uint256 marketId, bool outcome)`
-  - Requires market Expired
-  - Requires no pending assertion
-  - Caller must have approved WBNB bond to contract
-  - Transfers WBNB bond from caller
-  - Calls UMA `assertTruthWithDefaults()`
-  - Stores assertionId → marketId mapping
-  - Emits `OutcomeAsserted` event
-- [x] `assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully)`
-  - Only callable by UMA OOv3
-  - If truthful: set market outcome as resolved
-  - If disputed & lost: reset assertion (allow new assertion)
-  - Emits `MarketResolved` event
+#### Street Consensus Resolution ✅
+- [x] `proposeOutcome(marketId, outcome, proofLink) payable`
+  - Creator has 10 min priority window
+  - Posts bond: max(minBondFloor, pool * dynamicBondBps)
+  - Proof link optional
+  - Emits `OutcomeProposed` event
+- [x] `dispute(marketId, proofLink) payable`
+  - Requires 2× proposer's bond
+  - Only 1 dispute per market
+  - Can include counter-proof
+  - Emits `MarketDisputed` event
+- [x] `vote(marketId, supportProposer)`
+  - Only shareholders can vote
+  - Weight = total shares (yes + no)
+  - Can't vote twice
+  - Emits `VoteCast` event
+- [x] `finalizeMarket(marketId)`
+  - Called after voting ends
+  - Simple majority wins
+  - Distributes bonds (winner 50%, voters 50% of loser)
+  - Tie (0 vs 0) returns both bonds
+  - Emits `MarketFinalized`, `MarketResolved`
 
 #### Claim Functions ✅
-- [x] `claim(uint256 marketId)`
-  - Requires market resolved
-  - Calculates pro-rata share of pool based on winning side
-  - Transfers BNB to user
-  - Sets claimed flag to prevent double-claim
-  - Emits `Claimed` event
+- [x] `claim(marketId)`
+  - Pro-rata share of pool based on winning side
+  - Double-claim protection
+- [x] `emergencyRefund(marketId)`
+  - Available 24h after expiry with no proposal
+  - Proportional to total shares
+  - Order-independent fairness
 
 #### View Functions ✅
-- [x] `getMarket(uint256 marketId)` → Full market data
-- [x] `getYesPrice(uint256 marketId)` → uint256
-- [x] `getNoPrice(uint256 marketId)` → uint256
-- [x] `getPosition(uint256 marketId, address user)` → (yesShares, noShares, claimed)
-- [x] `getMarketStatus(uint256 marketId)` → MarketStatus enum
-- [x] `previewBuy(marketId, bnbAmount, isYes)` → shares (for UI)
-- [x] `previewSell(marketId, shares, isYes)` → bnbAmount (for UI)
+- [x] `getMarket(marketId)` → Full market data (10 values)
+- [x] `getYesPrice(marketId)` → uint256
+- [x] `getNoPrice(marketId)` → uint256
+- [x] `getPosition(marketId, user)` → (yesShares, noShares, claimed, emergencyRefunded, hasVoted, votedForProposer)
+- [x] `getMarketStatus(marketId)` → MarketStatus enum (Active/Expired/Proposed/Disputed/Resolved)
+- [x] `previewBuy(marketId, bnbAmount, isYes)` → shares
+- [x] `previewSell(marketId, shares, isYes)` → bnbAmount
+- [x] `getRequiredBond(marketId)` → bond amount
+- [x] `canEmergencyRefund(marketId)` → (eligible, timeUntil)
 
 #### Events ✅
-- [x] `MarketCreated(uint256 indexed marketId, address indexed creator, string question, uint256 expiry)`
-- [x] `Trade(uint256 indexed marketId, address indexed trader, bool isYes, bool isBuy, uint256 shares, uint256 bnbAmount)`
-- [x] `OutcomeAsserted(uint256 indexed marketId, address indexed asserter, bool outcome, bytes32 assertionId)`
-- [x] `MarketResolved(uint256 indexed marketId, bool outcome)`
-- [x] `Claimed(uint256 indexed marketId, address indexed user, uint256 amount)`
-- [x] `ActionProposed` / `ActionConfirmed` / `ActionExecuted` - Governance
-- [x] `Paused` / `Unpaused` - Emergency controls
+- [x] `MarketCreated`
+- [x] `Trade`
+- [x] `OutcomeProposed`
+- [x] `MarketDisputed`
+- [x] `VoteCast`
+- [x] `MarketFinalized`
+- [x] `MarketResolved`
+- [x] `Claimed`
+- [x] `JuryFeePaid`
+- [x] `EmergencyRefunded`
+- [x] `ActionProposed` / `ActionConfirmed` / `ActionExecuted`
+- [x] `Paused` / `Unpaused`
 
 #### Security ✅
 - [x] ReentrancyGuard on all payable functions
 - [x] CEI pattern (Checks-Effects-Interactions)
 - [x] Overflow protection (Solidity 0.8.24)
-- [x] Access control: `onlySigner`, `onlyUmaOOv3`
-- [x] InsufficientPoolBalance check prevents over-withdrawal
+- [x] Access control: `onlySigner`
+- [x] InsufficientPoolBalance check
 - [x] Slippage protection parameters
+- [x] Double-vote prevention
+- [x] Bond validation
 
 #### Governance (3-of-3 MultiSig) ✅
 - [x] `proposeAction()` / `confirmAction()` / `executeAction()`
-- [x] Configurable: platformFeeBps, minBet, umaBond, treasury, wbnb, umaOOv3
+- [x] All parameters configurable
 - [x] Pause/unpause functionality
 - [x] 1-hour action expiry
 
-### Tests ✅ (74 passing)
-- [x] Unit tests for all functions (37 tests)
-- [x] Fuzz tests for bonding curve (25 tests)
+### Tests ✅ (116 passing)
+- [x] Unit tests (52 tests)
+  - Market creation, trading, fees
+  - Street Consensus: propose, dispute, vote, finalize
+  - Claims, emergency refunds
+- [x] Fuzz tests (29 tests)
+  - Bonding curve math
+  - All 5 configurable parameters
+  - Edge cases
 - [x] Vulnerability tests (4 tests)
-- [x] Pump & dump economics tests (8 tests)
-  - [x] Early buyer profits verification (+36.6%)
-  - [x] Late buyer loss verification (-27%)
-  - [x] Pool solvency verification (never negative)
-  - [x] InsufficientPoolBalance protection
-  - [x] Creator first-mover advantage
+  - Reentrancy
+  - Overflow
+  - Access control
+- [x] Economics tests (31 tests)
+  - Pump & dump verification
+  - Pool solvency
+  - Creator first-mover advantage
+
+### Documentation ✅
+- [x] README.md - Economics in 20 seconds
+- [x] CHANGELOG.md - v2.0.0 Street Consensus
+- [x] PROJECT_CONTEXT.md - Architecture reference
+- [x] RUNBOOK.md - Commands guide
 
 ### Deployment
 - [ ] Deployment script for BSC Testnet
@@ -195,60 +232,31 @@ A decentralized prediction market platform on BNB Chain where anyone can:
     yesSupply: BigInt!
     noSupply: BigInt!
     totalVolume: BigDecimal!
+    status: String!  # Active, Expired, Proposed, Disputed, Resolved
     outcome: Boolean
-    resolved: Boolean!
-    assertionId: Bytes
+    proposer: Bytes
+    disputer: Bytes
+    proposerVotes: BigInt
+    disputerVotes: BigInt
     trades: [Trade!]! @derivedFrom(field: "market")
+    votes: [Vote!]! @derivedFrom(field: "market")
   }
   ```
 - [ ] `Trade` entity
-  ```graphql
-  type Trade @entity {
-    id: ID!
-    market: Market!
-    trader: Bytes!
-    isYes: Boolean!
-    isBuy: Boolean!
-    shares: BigInt!
-    bnbAmount: BigDecimal!
-    timestamp: BigInt!
-    txHash: Bytes!
-  }
-  ```
+- [ ] `Vote` entity (NEW)
 - [ ] `User` entity
-  ```graphql
-  type User @entity {
-    id: ID!
-    address: Bytes!
-    totalTrades: BigInt!
-    totalVolume: BigDecimal!
-    positions: [Position!]! @derivedFrom(field: "user")
-  }
-  ```
 - [ ] `Position` entity
-  ```graphql
-  type Position @entity {
-    id: ID!
-    user: User!
-    market: Market!
-    yesShares: BigInt!
-    noShares: BigInt!
-  }
-  ```
 
-### Subgraph Config (`subgraph.yaml`)
-- [ ] Configure dataSources for PredictionMarket contract
-- [ ] Map event handlers:
-  - `MarketCreated` → `handleMarketCreated`
-  - `Trade` → `handleTrade`
-  - `MarketResolved` → `handleMarketResolved`
-  - `Claimed` → `handleClaimed`
-
-### Mappings (`src/mapping.ts`)
-- [ ] `handleMarketCreated` - Create Market entity
-- [ ] `handleTrade` - Create Trade entity, update Market volumes, update User stats
-- [ ] `handleMarketResolved` - Update Market outcome
-- [ ] `handleClaimed` - Update Position
+### Mappings
+- [ ] `handleMarketCreated`
+- [ ] `handleTrade`
+- [ ] `handleOutcomeProposed` (NEW)
+- [ ] `handleMarketDisputed` (NEW)
+- [ ] `handleVoteCast` (NEW)
+- [ ] `handleMarketFinalized` (NEW)
+- [ ] `handleMarketResolved`
+- [ ] `handleClaimed`
+- [ ] `handleEmergencyRefunded`
 
 ### Deployment
 - [ ] Deploy to Subgraph Studio (BSC Testnet)
@@ -270,139 +278,53 @@ frontend/src/
 │   │   ├── hooks/         # useMarkets, useMarket, useTrade
 │   │   ├── pages/         # MarketsPage, MarketDetailPage
 │   │   └── types/
+│   ├── resolution/        # NEW: Street Consensus UI
+│   │   ├── components/    # ProposePanel, DisputePanel, VotePanel
+│   │   └── hooks/         # usePropose, useDispute, useVote
 │   ├── home/
 │   │   └── pages/         # HomePage (hero, featured markets)
 │   └── create/
 │       ├── components/    # CreateMarketForm
 │       └── pages/         # CreateMarketPage
 ├── shared/
-│   ├── api/               # GraphQL client (no axios needed for reads)
 │   ├── components/ui/     # Button, Card, Modal, Input, etc.
 │   ├── config/            # wagmi, env, contracts
-│   ├── hooks/             # useContract hooks
-│   ├── schemas/           # Zod schemas
-│   ├── types/
-│   └── utils/             # cn(), formatters, etc.
+│   └── utils/
 ├── providers/
-│   ├── Web3Provider.tsx
-│   ├── QueryProvider.tsx
-│   └── index.ts
-├── router/
-│   └── index.tsx
-├── App.tsx
-├── main.tsx
-└── index.css
+└── router/
 ```
 
-### Shared Components (Variant-Based Tailwind)
-- [ ] `Button` - primary, secondary, danger, ghost, outline variants
-- [ ] `Card` - default, hover, outlined variants
-- [ ] `Input` - with label, error state
-- [ ] `Modal` - reusable modal with Portal
-- [ ] `Spinner` - loading indicator
-- [ ] `Badge` - for market status
-- [ ] `cn()` utility function
+### Resolution UI Components (Street Consensus)
+- [ ] `ProposeOutcomePanel` - Propose YES/NO with bond
+- [ ] `DisputePanel` - Challenge with 2× bond
+- [ ] `VotingPanel` - Vote for proposer/disputer
+- [ ] `ResolutionTimeline` - Show current phase & countdown
+- [ ] `BondCalculator` - Show required bond
+- [ ] `VoteWeightDisplay` - Show user's voting power
+- [ ] `JuryFeeEstimate` - Estimated earnings for voting
 
-### Providers
-- [ ] `Web3Provider` - Wagmi + RainbowKit (BNB Chain)
-- [ ] `QueryProvider` - TanStack Query
-
-### Config
-- [ ] `wagmi.ts` - Chain config, transports
-- [ ] `env.ts` - Environment variables with Zod validation
-- [ ] `contracts.ts` - ABI + addresses
-
-### Features: Markets
-
-#### API Layer
-- [ ] GraphQL queries for markets list
-- [ ] GraphQL queries for single market
-- [ ] GraphQL queries for user positions
-- [ ] Contract write functions (buyYes, buyNo, sellYes, sellNo, claim)
-
-#### Hooks (TanStack Query)
-- [ ] `useMarkets(filters)` - Fetch markets list
-- [ ] `useMarket(marketId)` - Fetch single market
-- [ ] `useUserPositions(address)` - Fetch user's positions
-- [ ] `useTrade()` - Mutation for buy/sell
-- [ ] `useClaim()` - Mutation for claiming winnings
-
-#### Components
-- [ ] `MarketCard` - Preview card for market list
-- [ ] `MarketDetail` - Full market view
-- [ ] `TradePanel` - Buy/Sell YES/NO interface
-- [ ] `PriceChart` - Visual price display (YES vs NO)
-- [ ] `TradeHistory` - Recent trades feed
-- [ ] `PositionCard` - User's position in a market
-- [ ] `ClaimButton` - Claim winnings after resolution
-- [ ] `FilterPanel` - Filter markets (status, volume, etc.)
-
-#### Pages
-- [ ] `MarketsPage` - List all markets with filters
-- [ ] `MarketDetailPage` - Single market view
-
-### Features: Create Market
-
-#### Components
-- [ ] `CreateMarketForm` - React Hook Form + Zod validation
-  - Question input
-  - Evidence link input (required)
-  - Resolution rules textarea
-  - Expiry date picker
-  - Preview section
-
-#### Pages
-- [ ] `CreateMarketPage` - Form to create new market
-
-### Features: Resolution (UMA)
-
-#### Components
-- [ ] `AssertOutcomeButton` - Assert YES or NO
-- [ ] `DisputeButton` - Big red DISPUTE button during liveness
-- [ ] `LivenessTimer` - 2-hour countdown
-- [ ] `AssertionStatus` - Show current assertion state
-
-### Features: Home
-
-#### Components
-- [ ] `HeroSection` - Retrowave themed hero
-- [ ] `FeaturedMarkets` - Hot/trending markets
-- [ ] `ActivityFeed` - Real-time trades (useWatchContractEvent)
-- [ ] `HowItWorks` - Quick explainer
-
-#### Pages
-- [ ] `HomePage`
-
-### Styling (Retrowave/90s Hacker Theme)
-- [ ] Custom Tailwind color palette
-  - Neon pink, cyan, purple gradients
-  - Dark backgrounds with glow effects
-  - Scanline/CRT effects (optional)
-- [ ] Custom fonts (Press Start 2P, VT323, or similar)
-- [ ] Glow/neon effects on buttons and cards
-- [ ] Grid/matrix background patterns
-
-### Routing
-- [ ] `/` - HomePage
-- [ ] `/markets` - MarketsPage
-- [ ] `/markets/:id` - MarketDetailPage
-- [ ] `/create` - CreateMarketPage
-- [ ] `/portfolio` - User's positions
+### Pages
+- [ ] `MarketsPage` - List all markets
+- [ ] `MarketDetailPage` - Single market + resolution UI
+- [ ] `CreateMarketPage` - Create new market
+- [ ] `PortfolioPage` - User's positions & pending jury fees
 
 ---
 
 ## 🧪 PHASE 4: Testing & Deployment
 
-### Contract Testing
-- [ ] All unit tests passing
-- [ ] All integration tests passing
-- [ ] Fuzz tests passing
-- [ ] Gas optimization review
+### Contract Testing ✅
+- [x] All unit tests passing (52)
+- [x] All fuzz tests passing (29)
+- [x] All feature tests passing (31)
+- [x] All vulnerability tests passing (4)
+- [x] Gas optimization (optimizer enabled)
 
 ### Frontend Testing
 - [ ] Component renders correctly
 - [ ] Wallet connection works
 - [ ] Trade flow works on testnet
+- [ ] Resolution flow works (propose/dispute/vote/finalize)
 - [ ] Claim flow works on testnet
 
 ### Testnet Deployment
@@ -428,17 +350,21 @@ frontend/src/
 |----------|-------|-------------|
 | UNIT_PRICE | 0.01 BNB | P(YES) + P(NO) always equals this |
 | MIN_BET | 0.005 BNB | Minimum bet amount (~$3) |
-| FEE_BPS | 100 (1%) | Platform fee on trades |
-| BOND | 0.1 WBNB | UMA assertion bond (~$60) |
-| LIVENESS | 2 hours | UMA challenge window |
-| VIRTUAL_LIQUIDITY | 100 shares | Starting YES and NO supply |
+| platformFeeBps | 100 (1%) | Platform fee on trades |
+| creatorFeeBps | 50 (0.5%) | Creator fee on trades |
+| resolutionFeeBps | 30 (0.3%) | Fee on resolution actions |
+| minBondFloor | 0.02 BNB | Minimum proposal bond |
+| bondWinnerShareBps | 5000 (50%) | Winner's share of loser bond |
+| CREATOR_PRIORITY | 10 min | Creator's head start |
+| DISPUTE_WINDOW | 30 min | Time to challenge |
+| VOTING_WINDOW | 1 hour | Voting period |
+| EMERGENCY_REFUND | 24 hours | Refund eligibility |
 
 ### External Dependencies
-- UMA OOv3 on BNB Chain: `0x...` (get address from UMA docs)
-- WBNB on BNB Chain: `0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c`
+- **None!** Street Consensus has no external oracle dependencies
+- WBNB no longer needed for bonds (uses native BNB)
 
 ### Resources
-- [UMA OOv3 Docs](https://docs.uma.xyz/developers/optimistic-oracle-v3)
 - [The Graph Docs](https://thegraph.com/docs/)
 - [Wagmi Docs](https://wagmi.sh/)
 - [RainbowKit Docs](https://www.rainbowkit.com/docs)
@@ -451,18 +377,20 @@ frontend/src/
 - Foundry initialized with OpenZeppelin & forge-std
 - Project documentation complete
 
-### Phase 1: Smart Contracts ✅ (74 tests passing)
-- `PredictionMarket.sol` - Complete (1090 lines)
+### Phase 1: Smart Contracts ✅ (116 tests passing)
+- `PredictionMarket.sol` - Complete
+- Street Consensus resolution system
+- 5 configurable parameters via MultiSig
 - Bonding curve with pump & dump economics verified
-- UMA OOv3 integration complete
-- 3-of-3 MultiSig governance complete
 - All tests passing:
-  - 37 unit tests
-  - 25 fuzz tests
-  - 8 pump & dump economics tests
+  - 52 unit tests
+  - 29 fuzz tests
+  - 31 economics + feature tests
   - 4 vulnerability tests
 
 **Key files:**
 - `/contracts/src/PredictionMarket.sol` - Main contract
+- `/contracts/test/PredictionMarket.t.sol` - Unit tests
+- `/contracts/test/PredictionMarket.fuzz.t.sol` - Fuzz tests
+- `/contracts/test/PumpDump.t.sol` - Economics tests
 - `/contracts/PROFIT.txt` - Economics math proof
-- `/contracts/test/PumpDump.t.sol` - Economics verification tests

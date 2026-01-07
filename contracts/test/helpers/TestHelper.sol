@@ -7,15 +7,13 @@ import "../../src/PredictionMarket.sol";
 /**
  * @title TestHelper
  * @notice Base contract for all PredictionMarket tests
- * @dev Deploys the PredictionMarket contract with mock UMA and WBNB
+ * @dev Deploys the PredictionMarket contract for Street Consensus resolution
  */
 contract TestHelper is Test {
     // ============================================
     // CONTRACTS
     // ============================================
     PredictionMarket public market;
-    MockWBNB public wbnb;
-    MockUmaOOv3 public umaOOv3;
 
     // ============================================
     // TEST ACCOUNTS
@@ -34,6 +32,8 @@ contract TestHelper is Test {
     address public bob;
     address public charlie;
     address public marketCreator;
+    address public proposer;
+    address public disputer;
 
     // ============================================
     // CONSTANTS (matching contract defaults)
@@ -54,17 +54,29 @@ contract TestHelper is Test {
     /// @notice Total fee: platform + creator = 1.5% (150 basis points)
     uint256 public constant TOTAL_FEE_BPS = DEFAULT_FEE_BPS + CREATOR_FEE_BPS;
 
+    /// @notice Resolution fee: 0.3% (30 basis points)
+    uint256 public constant RESOLUTION_FEE_BPS = 30;
+
     /// @notice Basis points denominator
     uint256 public constant BPS_DENOMINATOR = 10000;
 
     /// @notice Default minimum bet: 0.005 BNB
     uint256 public constant DEFAULT_MIN_BET = 0.005 ether;
 
-    /// @notice Default UMA bond: 0.1 BNB
-    uint256 public constant DEFAULT_UMA_BOND = 0.1 ether;
-
     /// @notice Action expiry time: 1 hour
     uint256 public constant ACTION_EXPIRY = 1 hours;
+
+    /// @notice Creator priority window: 10 minutes
+    uint256 public constant CREATOR_PRIORITY_WINDOW = 10 minutes;
+
+    /// @notice Dispute window: 30 minutes
+    uint256 public constant DISPUTE_WINDOW = 30 minutes;
+
+    /// @notice Voting window: 1 hour
+    uint256 public constant VOTING_WINDOW = 1 hours;
+
+    /// @notice Minimum bond floor: 0.02 BNB
+    uint256 public constant MIN_BOND_FLOOR = 0.02 ether;
 
     // ============================================
     // SETUP
@@ -83,27 +95,19 @@ contract TestHelper is Test {
         bob = makeAddr("bob");
         charlie = makeAddr("charlie");
         marketCreator = makeAddr("marketCreator");
+        proposer = makeAddr("proposer");
+        disputer = makeAddr("disputer");
 
         // Fund test accounts
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(charlie, 100 ether);
         vm.deal(marketCreator, 100 ether);
+        vm.deal(proposer, 100 ether);
+        vm.deal(disputer, 100 ether);
 
-        // Deploy mock contracts
-        wbnb = new MockWBNB();
-        umaOOv3 = new MockUmaOOv3();
-
-        // Deploy PredictionMarket
-        market = new PredictionMarket(
-            [signer1, signer2, signer3],
-            treasury,
-            address(wbnb),
-            address(umaOOv3)
-        );
-
-        // Set the market address in mock UMA for callbacks
-        umaOOv3.setMarket(address(market));
+        // Deploy PredictionMarket (Street Consensus - no UMA)
+        market = new PredictionMarket([signer1, signer2, signer3], treasury);
     }
 
     // ============================================
@@ -124,6 +128,22 @@ contract TestHelper is Test {
             "Will ETH be above $5000 by end of 2026?",
             "https://coinmarketcap.com/currencies/ethereum/",
             "Resolve YES if ETH price is above $5000 USD at 00:00 UTC on Jan 1, 2027 according to CoinMarketCap",
+            block.timestamp + expiryOffset
+        );
+    }
+
+    /**
+     * @notice Create a degen market (no evidence link)
+     */
+    function createDegenMarket(
+        address creator,
+        uint256 expiryOffset
+    ) internal returns (uint256 marketId) {
+        vm.prank(creator);
+        marketId = market.createMarket(
+            "Will I get a girlfriend tomorrow?",
+            "", // No evidence link - full degen
+            "Resolve YES if creator posts proof of girlfriend",
             block.timestamp + expiryOffset
         );
     }
@@ -210,49 +230,146 @@ contract TestHelper is Test {
      * @notice Fast forward time past market expiry
      */
     function expireMarket(uint256 marketId) internal {
-        (, , , , uint256 expiryTimestamp, , , , , , , ) = market.getMarket(
+        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
         );
         vm.warp(expiryTimestamp + 1);
     }
 
     /**
-     * @notice Setup WBNB for assertion
-     * @param user User who will assert
-     * @param amount Bond amount
+     * @notice Fast forward past creator priority window
      */
-    function setupWbnbForAssertion(address user, uint256 amount) internal {
-        // Give user WBNB
-        wbnb.mint(user, amount);
-
-        // Approve market to spend WBNB
-        vm.prank(user);
-        wbnb.approve(address(market), amount);
+    function skipCreatorPriority(uint256 marketId) internal {
+        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+            marketId
+        );
+        vm.warp(expiryTimestamp + CREATOR_PRIORITY_WINDOW + 1);
     }
 
     /**
-     * @notice Assert and resolve a market (simulates UMA flow)
+     * @notice Propose an outcome for a market
+     * @param _proposer Who proposes
+     * @param marketId The market
+     * @param outcome Proposed outcome (true=YES, false=NO)
+     * @param proofLink Optional proof link
+     */
+    function proposeOutcomeFor(
+        address _proposer,
+        uint256 marketId,
+        bool outcome,
+        string memory proofLink
+    ) internal {
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        // Add 0.3% fee on top
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(_proposer);
+        market.proposeOutcome{value: totalRequired}(
+            marketId,
+            outcome,
+            proofLink
+        );
+    }
+
+    /**
+     * @notice Dispute a proposal
+     * @param _disputer Who disputes
+     * @param marketId The market
+     */
+    function disputeFor(address _disputer, uint256 marketId) internal {
+        uint256 requiredDisputeBond = market.getRequiredDisputeBond(marketId);
+        // Add 0.3% fee on top
+        uint256 totalRequired = requiredDisputeBond +
+            (requiredDisputeBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(_disputer);
+        market.dispute{value: totalRequired}(marketId);
+    }
+
+    /**
+     * @notice Cast a vote
+     * @param voter Who votes
+     * @param marketId The market
+     * @param outcome Vote for YES (true) or NO (false)
+     */
+    function voteFor(address voter, uint256 marketId, bool outcome) internal {
+        vm.prank(voter);
+        market.vote(marketId, outcome);
+    }
+
+    /**
+     * @notice Complete resolution flow: propose, no dispute, finalize
+     */
+    function proposeAndFinalize(
+        address _proposer,
+        uint256 marketId,
+        bool outcome,
+        string memory proofLink
+    ) internal {
+        proposeOutcomeFor(_proposer, marketId, outcome, proofLink);
+
+        // Skip dispute window
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+
+        // Finalize
+        market.finalizeMarket(marketId);
+    }
+
+    /**
+     * @notice Complete disputed resolution flow: propose, dispute, vote, finalize
+     */
+    function proposeDisputeVoteFinalize(
+        address _proposer,
+        uint256 marketId,
+        bool proposedOutcome,
+        address _disputer,
+        address[] memory yesVoters,
+        address[] memory noVoters
+    ) internal {
+        // Propose
+        proposeOutcomeFor(_proposer, marketId, proposedOutcome, "");
+
+        // Dispute
+        disputeFor(_disputer, marketId);
+
+        // Vote
+        for (uint256 i = 0; i < yesVoters.length; i++) {
+            voteFor(yesVoters[i], marketId, true);
+        }
+        for (uint256 i = 0; i < noVoters.length; i++) {
+            voteFor(noVoters[i], marketId, false);
+        }
+
+        // Skip voting window
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+
+        // Finalize
+        market.finalizeMarket(marketId);
+    }
+
+    /**
+     * @notice Assert outcome and resolve (replacement for old UMA flow)
+     * @dev This is a simplified helper that proposes and finalizes without dispute
      * @param marketId The market to resolve
-     * @param asserter Who asserts the outcome
-     * @param outcome The asserted outcome
-     * @param truthful Whether UMA considers it truthful
+     * @param _proposer Who proposes the outcome
+     * @param outcome The outcome to propose
+     * @param skipCreator Whether to skip creator priority window (usually true in tests)
      */
     function assertAndResolve(
         uint256 marketId,
-        address asserter,
+        address _proposer,
         bool outcome,
-        bool truthful
+        bool skipCreator
     ) internal {
-        // Setup WBNB for assertion (use dynamic bond)
-        uint256 requiredBond = market.getRequiredBond(marketId);
-        setupWbnbForAssertion(asserter, requiredBond);
-
-        // Assert outcome
-        vm.prank(asserter);
-        bytes32 assertionId = market.assertOutcome(marketId, outcome);
-
-        // UMA callback (resolve)
-        umaOOv3.resolveAssertion(assertionId, truthful);
+        if (skipCreator) {
+            skipCreatorPriority(marketId);
+        }
+        proposeAndFinalize(_proposer, marketId, outcome, "");
     }
 
     /**
@@ -264,7 +381,7 @@ contract TestHelper is Test {
     ) internal pure returns (uint256) {
         uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
         uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
-        return (UNIT_PRICE * virtualNo) / (virtualYes + virtualNo);
+        return (UNIT_PRICE * virtualYes) / (virtualYes + virtualNo);
     }
 
     /**
@@ -276,109 +393,6 @@ contract TestHelper is Test {
     ) internal pure returns (uint256) {
         uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
         uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
-        return (UNIT_PRICE * virtualYes) / (virtualYes + virtualNo);
-    }
-}
-
-// ============================================
-// MOCK CONTRACTS
-// ============================================
-
-/**
- * @title MockWBNB
- * @notice Simple mock for WBNB (ERC20-like)
- */
-contract MockWBNB {
-    string public name = "Wrapped BNB";
-    string public symbol = "WBNB";
-    uint8 public decimals = 18;
-
-    mapping(address => uint256) public balanceOf;
-    mapping(address => mapping(address => uint256)) public allowance;
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-
-    function mint(address to, uint256 amount) external {
-        balanceOf[to] += amount;
-        emit Transfer(address(0), to, amount);
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
-        balanceOf[msg.sender] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(msg.sender, to, amount);
-        return true;
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool) {
-        require(balanceOf[from] >= amount, "Insufficient balance");
-        require(
-            allowance[from][msg.sender] >= amount,
-            "Insufficient allowance"
-        );
-
-        allowance[from][msg.sender] -= amount;
-        balanceOf[from] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(from, to, amount);
-        return true;
-    }
-}
-
-/**
- * @title MockUmaOOv3
- * @notice Mock UMA Optimistic Oracle V3 for testing
- */
-contract MockUmaOOv3 {
-    address public market;
-    uint256 public assertionCounter;
-
-    mapping(bytes32 => address) public asserters;
-    mapping(bytes32 => bool) public resolved;
-
-    function setMarket(address _market) external {
-        market = _market;
-    }
-
-    function assertTruthWithDefaults(
-        bytes memory /* claim */,
-        address asserter
-    ) external returns (bytes32 assertionId) {
-        assertionCounter++;
-        assertionId = bytes32(assertionCounter);
-        asserters[assertionId] = asserter;
-        return assertionId;
-    }
-
-    /**
-     * @notice Manually resolve an assertion (simulates UMA dispute period completion)
-     * @param assertionId The assertion to resolve
-     * @param truthful Whether the assertion was truthful
-     */
-    function resolveAssertion(bytes32 assertionId, bool truthful) external {
-        require(!resolved[assertionId], "Already resolved");
-        resolved[assertionId] = true;
-
-        // Call back to the market contract
-        PredictionMarket(market).assertionResolvedCallback(
-            assertionId,
-            truthful
-        );
+        return (UNIT_PRICE * virtualNo) / (virtualYes + virtualNo);
     }
 }

@@ -4,6 +4,8 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.24"
 via_ir = true
+optimizer = true
+optimizer_runs = 200
 
 # Allow script to write deployment addresses file
 fs_permissions = [{ access = "read-write", path = "./" }]

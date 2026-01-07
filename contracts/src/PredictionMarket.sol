@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 /**
  * @title PredictionMarket
  * @author Junkie.Fun
- * @notice Decentralized prediction market with bonding curve pricing and UMA Oracle resolution
+ * @notice Decentralized prediction market with bonding curve pricing and Street Consensus resolution
  * @dev Uses linear constant sum bonding curve: P(YES) + P(NO) = UNIT_PRICE (0.01 BNB)
  *      Virtual liquidity of 100 shares each side provides initial pricing
+ *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
  */
 contract PredictionMarket is ReentrancyGuard {
@@ -23,8 +24,11 @@ contract PredictionMarket is ReentrancyGuard {
     /// @notice Maximum platform fee (5%)
     uint256 public constant MAX_FEE_BPS = 500;
 
-    /// @notice Creator fee (0.5%) - paid to market creator on each trade
-    uint256 public constant CREATOR_FEE_BPS = 50;
+    /// @notice Maximum creator fee (2%)
+    uint256 public constant MAX_CREATOR_FEE_BPS = 200;
+
+    /// @notice Maximum resolution fee (1%)
+    uint256 public constant MAX_RESOLUTION_FEE_BPS = 100;
 
     /// @notice Basis points denominator
     uint256 public constant BPS_DENOMINATOR = 10000;
@@ -36,40 +40,53 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public constant MIN_BET_LOWER = 0.001 ether;
     uint256 public constant MIN_BET_UPPER = 0.1 ether;
 
-    /// @notice UMA bond bounds
-    uint256 public constant UMA_BOND_LOWER = 0.01 ether;
-    uint256 public constant UMA_BOND_UPPER = 1 ether;
+    /// @notice Minimum bond floor bounds
+    uint256 public constant MIN_BOND_FLOOR_LOWER = 0.01 ether;
+    uint256 public constant MIN_BOND_FLOOR_UPPER = 0.1 ether;
 
-    /// @notice Minimum bond floor for dynamic bond calculation
-    uint256 public constant MIN_BOND_FLOOR = 0.02 ether;
+    /// @notice Dynamic bond BPS bounds (0.5% to 5%)
+    uint256 public constant DYNAMIC_BOND_BPS_LOWER = 50;
+    uint256 public constant DYNAMIC_BOND_BPS_UPPER = 500;
 
-    /// @notice Dynamic bond percentage (1% of pool)
-    uint256 public constant DYNAMIC_BOND_BPS = 100;
-
-    /// @notice Asserter reward (2% of pool balance)
-    uint256 public constant ASSERTER_REWARD_BPS = 200;
+    /// @notice Bond winner share bounds (20% to 80%)
+    uint256 public constant BOND_WINNER_SHARE_LOWER = 2000;
+    uint256 public constant BOND_WINNER_SHARE_UPPER = 8000;
 
     /// @notice Emergency refund delay after expiry (24 hours)
     uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours;
+
+    // ============ Street Consensus Constants ============
+
+    /// @notice Creator priority window - only creator can propose (10 minutes)
+    uint256 public constant CREATOR_PRIORITY_WINDOW = 10 minutes;
+
+    /// @notice Dispute window - time to dispute a proposal (30 minutes)
+    uint256 public constant DISPUTE_WINDOW = 30 minutes;
+
+    /// @notice Voting window - time for voting after dispute (1 hour)
+    uint256 public constant VOTING_WINDOW = 1 hours;
 
     // ============ Enums ============
 
     enum MarketStatus {
         Active, // Trading open
-        Expired, // Past expiry, awaiting assertion
-        Asserted, // Outcome asserted, in dispute window
+        Expired, // Past expiry, awaiting proposal
+        Proposed, // Outcome proposed, in dispute window
+        Disputed, // Disputed, voting in progress
         Resolved // Final outcome set
     }
 
     enum ActionType {
         SetFee,
         SetMinBet,
-        SetUmaBond,
         SetTreasury,
-        SetWbnb,
-        SetUmaOOv3,
         Pause,
-        Unpause
+        Unpause,
+        SetCreatorFee,
+        SetResolutionFee,
+        SetMinBondFloor,
+        SetDynamicBondBps,
+        SetBondWinnerShare
     }
 
     // ============ Structs ============
@@ -85,10 +102,17 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 poolBalance; // Total BNB in pool
         bool resolved;
         bool outcome; // true = YES wins, false = NO wins
-        bytes32 assertionId;
-        address asserter;
-        bool assertedOutcome;
-        bool asserterRewardPaid; // Track if asserter reward was paid
+        // Street Consensus fields
+        address proposer;
+        bool proposedOutcome;
+        string proofLink;
+        uint256 proposalTime;
+        uint256 proposalBond;
+        address disputer;
+        uint256 disputeTime;
+        uint256 disputeBond;
+        uint256 yesVotes; // Total vote weight for YES
+        uint256 noVotes; // Total vote weight for NO
     }
 
     struct PendingAction {
@@ -105,6 +129,8 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 noShares;
         bool claimed;
         bool emergencyRefunded;
+        bool hasVoted;
+        bool votedOutcome;
     }
 
     // ============ State Variables ============
@@ -116,11 +142,13 @@ contract PredictionMarket is ReentrancyGuard {
 
     // Configurable parameters
     uint256 public platformFeeBps = 100; // 1% default
+    uint256 public creatorFeeBps = 50; // 0.5% default
+    uint256 public resolutionFeeBps = 30; // 0.3% default
     uint256 public minBet = 0.005 ether;
-    uint256 public umaBond = 0.02 ether;
+    uint256 public minBondFloor = 0.02 ether;
+    uint256 public dynamicBondBps = 100; // 1% of pool
+    uint256 public bondWinnerShareBps = 5000; // 50% to winner
     address public treasury;
-    address public wbnb;
-    address public umaOOv3;
 
     // Pause state
     bool public paused;
@@ -130,8 +158,8 @@ contract PredictionMarket is ReentrancyGuard {
     mapping(uint256 => Market) public markets;
     mapping(uint256 => mapping(address => Position)) public positions;
 
-    // UMA assertion tracking
-    mapping(bytes32 => uint256) public assertionToMarket;
+    // Track voters for jury fee distribution
+    mapping(uint256 => address[]) public marketVoters;
 
     // ============ Events ============
 
@@ -151,14 +179,32 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 bnbAmount
     );
 
-    event OutcomeAsserted(
+    event OutcomeProposed(
         uint256 indexed marketId,
-        address indexed asserter,
+        address indexed proposer,
         bool outcome,
-        bytes32 assertionId
+        string proofLink,
+        uint256 bond
     );
 
-    event MarketResolved(uint256 indexed marketId, bool outcome);
+    event ProposalDisputed(
+        uint256 indexed marketId,
+        address indexed disputer,
+        uint256 bond
+    );
+
+    event VoteCast(
+        uint256 indexed marketId,
+        address indexed voter,
+        bool outcome,
+        uint256 weight
+    );
+
+    event MarketResolved(
+        uint256 indexed marketId,
+        bool outcome,
+        bool wasDisputed
+    );
 
     event Claimed(
         uint256 indexed marketId,
@@ -166,9 +212,16 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 amount
     );
 
-    event AsserterRewardPaid(
+    event BondDistributed(
         uint256 indexed marketId,
-        address indexed asserter,
+        address indexed winner,
+        uint256 winnerAmount,
+        uint256 voterPoolAmount
+    );
+
+    event JuryFeeDistributed(
+        uint256 indexed marketId,
+        address indexed voter,
         uint256 amount
     );
 
@@ -197,7 +250,9 @@ contract PredictionMarket is ReentrancyGuard {
     error InvalidAddress();
     error InvalidFee();
     error InvalidMinBet();
-    error InvalidUmaBond();
+    error InvalidMinBondFloor();
+    error InvalidDynamicBondBps();
+    error InvalidBondWinnerShare();
     error ActionExpired();
     error ActionAlreadyExecuted();
     error AlreadyConfirmed();
@@ -207,7 +262,7 @@ contract PredictionMarket is ReentrancyGuard {
     error MarketNotActive();
     error MarketNotExpired();
     error MarketAlreadyResolved();
-    error MarketNotAsserted();
+    error MarketNotResolved();
     error BelowMinBet();
     error SlippageExceeded();
     error InsufficientShares();
@@ -215,15 +270,23 @@ contract PredictionMarket is ReentrancyGuard {
     error AlreadyClaimed();
     error InvalidExpiryTimestamp();
     error EmptyQuestion();
-    error EmptyEvidenceLink();
     error TransferFailed();
-    error OnlyUmaOOv3();
-    error InvalidAssertionId();
     error InsufficientPoolBalance();
     error EmergencyRefundTooEarly();
     error NoPosition();
     error AlreadyEmergencyRefunded();
-    error MarketHasAssertion();
+    // Street Consensus errors
+    error CreatorPriorityActive();
+    error AlreadyProposed();
+    error NotProposed();
+    error AlreadyDisputed();
+    error DisputeWindowExpired();
+    error VotingNotActive();
+    error AlreadyVoted();
+    error VotingNotEnded();
+    error NoSharesForVoting();
+    error InsufficientBond();
+    error MarketStuck();
 
     // ============ Modifiers ============
 
@@ -242,31 +305,16 @@ contract PredictionMarket is ReentrancyGuard {
         _;
     }
 
-    modifier onlyUmaOOv3() {
-        if (msg.sender != umaOOv3) revert OnlyUmaOOv3();
-        _;
-    }
-
     // ============ Constructor ============
 
-    constructor(
-        address[3] memory _signers,
-        address _treasury,
-        address _wbnb,
-        address _umaOOv3
-    ) {
+    constructor(address[3] memory _signers, address _treasury) {
         for (uint256 i = 0; i < 3; i++) {
             if (_signers[i] == address(0)) revert InvalidAddress();
             signers[i] = _signers[i];
         }
 
         if (_treasury == address(0)) revert InvalidAddress();
-        if (_wbnb == address(0)) revert InvalidAddress();
-        if (_umaOOv3 == address(0)) revert InvalidAddress();
-
         treasury = _treasury;
-        wbnb = _wbnb;
-        umaOOv3 = _umaOOv3;
     }
 
     // ============ Market Creation ============
@@ -274,7 +322,7 @@ contract PredictionMarket is ReentrancyGuard {
     /**
      * @notice Create a new prediction market (free)
      * @param question The prediction question
-     * @param evidenceLink URL to source of truth for resolution
+     * @param evidenceLink URL to source of truth for resolution (can be empty for degen markets)
      * @param resolutionRules Clear rules for how to resolve
      * @param expiryTimestamp When trading ends
      */
@@ -295,14 +343,6 @@ contract PredictionMarket is ReentrancyGuard {
     /**
      * @notice Create a new prediction market AND place the first bet atomically
      * @dev This guarantees the creator is the first buyer - impossible to front-run
-     * @param question The prediction question
-     * @param evidenceLink URL to source of truth for resolution
-     * @param resolutionRules Clear rules for how to resolve
-     * @param expiryTimestamp When trading ends
-     * @param buyYesSide If true, buy YES shares; if false, buy NO shares
-     * @param minSharesOut Minimum shares to receive (slippage protection)
-     * @return marketId The ID of the created market
-     * @return sharesOut The number of shares purchased
      */
     function createMarketAndBuy(
         string calldata question,
@@ -318,7 +358,6 @@ contract PredictionMarket is ReentrancyGuard {
         whenNotPaused
         returns (uint256 marketId, uint256 sharesOut)
     {
-        // Create the market
         marketId = _createMarket(
             question,
             evidenceLink,
@@ -326,12 +365,10 @@ contract PredictionMarket is ReentrancyGuard {
             expiryTimestamp
         );
 
-        // Buy shares (must send BNB with this call)
         if (msg.value < minBet) revert BelowMinBet();
 
         Market storage market = markets[marketId];
 
-        // Calculate shares out based on bonding curve
         uint256 fee = (msg.value * platformFeeBps) / BPS_DENOMINATOR;
         uint256 amountAfterFee = msg.value - fee;
 
@@ -343,7 +380,6 @@ contract PredictionMarket is ReentrancyGuard {
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
-        // Update state (CEI pattern)
         if (buyYesSide) {
             market.yesSupply += sharesOut;
             positions[marketId][msg.sender].yesShares += sharesOut;
@@ -353,7 +389,6 @@ contract PredictionMarket is ReentrancyGuard {
         }
         market.poolBalance += amountAfterFee;
 
-        // Transfer fee to treasury
         if (fee > 0) {
             (bool success, ) = treasury.call{value: fee}("");
             if (!success) revert TransferFailed();
@@ -369,9 +404,6 @@ contract PredictionMarket is ReentrancyGuard {
         );
     }
 
-    /**
-     * @notice Internal function to create a market
-     */
     function _createMarket(
         string calldata question,
         string calldata evidenceLink,
@@ -379,7 +411,7 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 expiryTimestamp
     ) internal returns (uint256 marketId) {
         if (bytes(question).length == 0) revert EmptyQuestion();
-        if (bytes(evidenceLink).length == 0) revert EmptyEvidenceLink();
+        // evidenceLink can be empty for degen markets
         if (expiryTimestamp <= block.timestamp) revert InvalidExpiryTimestamp();
 
         marketId = marketCount++;
@@ -390,8 +422,6 @@ contract PredictionMarket is ReentrancyGuard {
         market.resolutionRules = resolutionRules;
         market.creator = msg.sender;
         market.expiryTimestamp = expiryTimestamp;
-        // yesSupply, noSupply, poolBalance start at 0
-        // resolved, outcome default to false
 
         emit MarketCreated(marketId, msg.sender, question, expiryTimestamp);
     }
@@ -400,8 +430,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Buy YES shares
-     * @param marketId The market to trade in
-     * @param minSharesOut Minimum shares to receive (slippage protection)
      */
     function buyYes(
         uint256 marketId,
@@ -413,9 +441,8 @@ contract PredictionMarket is ReentrancyGuard {
         if (_getMarketStatus(market) != MarketStatus.Active)
             revert MarketNotActive();
 
-        // Calculate fees
         uint256 platformFee = (msg.value * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 creatorFee = (msg.value * CREATOR_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 creatorFee = (msg.value * creatorFeeBps) / BPS_DENOMINATOR;
         uint256 totalFee = platformFee + creatorFee;
         uint256 amountAfterFee = msg.value - totalFee;
 
@@ -427,18 +454,15 @@ contract PredictionMarket is ReentrancyGuard {
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
-        // Update state (CEI pattern)
         market.yesSupply += sharesOut;
         market.poolBalance += amountAfterFee;
         positions[marketId][msg.sender].yesShares += sharesOut;
 
-        // Transfer platform fee to treasury
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer creator fee to market creator
         if (creatorFee > 0) {
             (bool success, ) = market.creator.call{value: creatorFee}("");
             if (!success) revert TransferFailed();
@@ -449,8 +473,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Buy NO shares
-     * @param marketId The market to trade in
-     * @param minSharesOut Minimum shares to receive (slippage protection)
      */
     function buyNo(
         uint256 marketId,
@@ -462,9 +484,8 @@ contract PredictionMarket is ReentrancyGuard {
         if (_getMarketStatus(market) != MarketStatus.Active)
             revert MarketNotActive();
 
-        // Calculate fees
         uint256 platformFee = (msg.value * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 creatorFee = (msg.value * CREATOR_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 creatorFee = (msg.value * creatorFeeBps) / BPS_DENOMINATOR;
         uint256 totalFee = platformFee + creatorFee;
         uint256 amountAfterFee = msg.value - totalFee;
 
@@ -476,18 +497,15 @@ contract PredictionMarket is ReentrancyGuard {
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
-        // Update state (CEI pattern)
         market.noSupply += sharesOut;
         market.poolBalance += amountAfterFee;
         positions[marketId][msg.sender].noShares += sharesOut;
 
-        // Transfer platform fee to treasury
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer creator fee to market creator
         if (creatorFee > 0) {
             (bool success, ) = market.creator.call{value: creatorFee}("");
             if (!success) revert TransferFailed();
@@ -498,9 +516,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Sell YES shares
-     * @param marketId The market to trade in
-     * @param shares Number of shares to sell
-     * @param minBnbOut Minimum BNB to receive (slippage protection)
      */
     function sellYes(
         uint256 marketId,
@@ -514,7 +529,6 @@ contract PredictionMarket is ReentrancyGuard {
         Position storage position = positions[marketId][msg.sender];
         if (position.yesShares < shares) revert InsufficientShares();
 
-        // Calculate BNB out based on bonding curve (using average price)
         uint256 grossBnbOut = _calculateSellBnb(
             market.yesSupply,
             market.noSupply,
@@ -522,35 +536,29 @@ contract PredictionMarket is ReentrancyGuard {
             true
         );
 
-        // CRITICAL: Ensure pool has sufficient balance
         if (grossBnbOut > market.poolBalance) revert InsufficientPoolBalance();
 
-        // Calculate fees from gross BNB out
         uint256 platformFee = (grossBnbOut * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 creatorFee = (grossBnbOut * CREATOR_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 creatorFee = (grossBnbOut * creatorFeeBps) / BPS_DENOMINATOR;
         uint256 totalFee = platformFee + creatorFee;
         bnbOut = grossBnbOut - totalFee;
 
         if (bnbOut < minBnbOut) revert SlippageExceeded();
 
-        // Update state (CEI pattern)
         market.yesSupply -= shares;
         market.poolBalance -= grossBnbOut;
         position.yesShares -= shares;
 
-        // Transfer platform fee to treasury
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer creator fee to market creator
         if (creatorFee > 0) {
             (bool success, ) = market.creator.call{value: creatorFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer BNB to seller
         (bool successTransfer, ) = msg.sender.call{value: bnbOut}("");
         if (!successTransfer) revert TransferFailed();
 
@@ -559,9 +567,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Sell NO shares
-     * @param marketId The market to trade in
-     * @param shares Number of shares to sell
-     * @param minBnbOut Minimum BNB to receive (slippage protection)
      */
     function sellNo(
         uint256 marketId,
@@ -575,7 +580,6 @@ contract PredictionMarket is ReentrancyGuard {
         Position storage position = positions[marketId][msg.sender];
         if (position.noShares < shares) revert InsufficientShares();
 
-        // Calculate BNB out based on bonding curve (using average price)
         uint256 grossBnbOut = _calculateSellBnb(
             market.yesSupply,
             market.noSupply,
@@ -583,134 +587,348 @@ contract PredictionMarket is ReentrancyGuard {
             false
         );
 
-        // CRITICAL: Ensure pool has sufficient balance
         if (grossBnbOut > market.poolBalance) revert InsufficientPoolBalance();
 
-        // Calculate fees from gross BNB out
         uint256 platformFee = (grossBnbOut * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 creatorFee = (grossBnbOut * CREATOR_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 creatorFee = (grossBnbOut * creatorFeeBps) / BPS_DENOMINATOR;
         uint256 totalFee = platformFee + creatorFee;
         bnbOut = grossBnbOut - totalFee;
 
         if (bnbOut < minBnbOut) revert SlippageExceeded();
 
-        // Update state (CEI pattern)
         market.noSupply -= shares;
         market.poolBalance -= grossBnbOut;
         position.noShares -= shares;
 
-        // Transfer platform fee to treasury
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer creator fee to market creator
         if (creatorFee > 0) {
             (bool success, ) = market.creator.call{value: creatorFee}("");
             if (!success) revert TransferFailed();
         }
 
-        // Transfer BNB to seller
         (bool successTransfer, ) = msg.sender.call{value: bnbOut}("");
         if (!successTransfer) revert TransferFailed();
 
         emit Trade(marketId, msg.sender, false, false, shares, bnbOut);
     }
 
-    // ============ Resolution Functions ============
+    // ============ Street Consensus Resolution ============
 
     /**
-     * @notice Assert the outcome of an expired market via UMA OOv3
-     * @param marketId The market to assert
-     * @param outcome The claimed outcome (true = YES, false = NO)
-     * @dev Caller must have approved WBNB bond amount to this contract
+     * @notice Propose an outcome for an expired market
+     * @param marketId The market to propose outcome for
+     * @param outcome The proposed outcome (true = YES wins, false = NO wins)
+     * @param proofLink Optional URL to proof/evidence (can be empty)
+     * @dev Requires bond payment. Creator has priority in first 10 minutes.
      */
-    function assertOutcome(
+    function proposeOutcome(
         uint256 marketId,
-        bool outcome
-    ) external whenNotPaused returns (bytes32 assertionId) {
+        bool outcome,
+        string calldata proofLink
+    ) external payable nonReentrant whenNotPaused {
         Market storage market = markets[marketId];
 
         MarketStatus status = _getMarketStatus(market);
-        if (status != MarketStatus.Expired) {
-            if (status == MarketStatus.Active) revert MarketNotExpired();
-            if (
-                status == MarketStatus.Asserted ||
-                status == MarketStatus.Resolved
-            ) revert MarketAlreadyResolved();
+        if (status == MarketStatus.Active) revert MarketNotExpired();
+        if (status != MarketStatus.Expired) revert AlreadyProposed();
+
+        // Creator priority: first 10 minutes only creator can propose
+        if (
+            block.timestamp < market.expiryTimestamp + CREATOR_PRIORITY_WINDOW
+        ) {
+            if (msg.sender != market.creator) revert CreatorPriorityActive();
         }
 
-        // Calculate dynamic bond: max(0.02 BNB, poolBalance * 1%)
+        // Calculate required bond
         uint256 requiredBond = getRequiredBond(marketId);
 
-        // Transfer WBNB bond from asserter
-        IWBNB(wbnb).transferFrom(msg.sender, address(this), requiredBond);
+        // Take 0.3% fee from bond
+        uint256 fee = (msg.value * resolutionFeeBps) / BPS_DENOMINATOR;
+        uint256 bondAfterFee = msg.value - fee;
 
-        // Approve UMA to spend bond
-        IWBNB(wbnb).approve(umaOOv3, requiredBond);
+        if (bondAfterFee < requiredBond) revert InsufficientBond();
 
-        // Build assertion claim string
-        bytes memory assertionClaim = abi.encodePacked(
-            "Market: ",
-            market.question,
-            " | Outcome: ",
-            outcome ? "YES" : "NO",
-            " | Evidence: ",
-            market.evidenceLink
+        // Store proposal
+        market.proposer = msg.sender;
+        market.proposedOutcome = outcome;
+        market.proofLink = proofLink;
+        market.proposalTime = block.timestamp;
+        market.proposalBond = bondAfterFee;
+
+        // Send fee to treasury
+        if (fee > 0) {
+            (bool success, ) = treasury.call{value: fee}("");
+            if (!success) revert TransferFailed();
+        }
+
+        emit OutcomeProposed(
+            marketId,
+            msg.sender,
+            outcome,
+            proofLink,
+            bondAfterFee
         );
-
-        // Assert truth with UMA OOv3
-        assertionId = IOptimisticOracleV3(umaOOv3).assertTruthWithDefaults(
-            assertionClaim,
-            address(this)
-        );
-
-        // Update market state
-        market.assertionId = assertionId;
-        market.asserter = msg.sender;
-        market.assertedOutcome = outcome;
-        assertionToMarket[assertionId] = marketId;
-
-        emit OutcomeAsserted(marketId, msg.sender, outcome, assertionId);
     }
 
     /**
-     * @notice Callback from UMA OOv3 when assertion is resolved
-     * @param assertionId The assertion that was resolved
-     * @param assertedTruthfully Whether the assertion was true
+     * @notice Dispute a proposed outcome
+     * @param marketId The market with the proposal to dispute
+     * @dev Requires 2x the proposal bond. Triggers voting period.
      */
-    function assertionResolvedCallback(
-        bytes32 assertionId,
-        bool assertedTruthfully
-    ) external onlyUmaOOv3 {
-        uint256 marketId = assertionToMarket[assertionId];
+    function dispute(
+        uint256 marketId
+    ) external payable nonReentrant whenNotPaused {
         Market storage market = markets[marketId];
 
-        if (market.assertionId != assertionId) revert InvalidAssertionId();
+        MarketStatus status = _getMarketStatus(market);
+        if (status != MarketStatus.Proposed) revert NotProposed();
 
-        if (assertedTruthfully) {
-            // Assertion was correct, finalize with asserted outcome
-            market.resolved = true;
-            market.outcome = market.assertedOutcome;
-            emit MarketResolved(marketId, market.outcome);
+        // Check we're still in dispute window
+        if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+            revert DisputeWindowExpired();
+        }
+
+        // Dispute bond is 2x proposal bond
+        uint256 requiredDisputeBond = market.proposalBond * 2;
+
+        // Take 0.3% fee from bond
+        uint256 fee = (msg.value * resolutionFeeBps) / BPS_DENOMINATOR;
+        uint256 bondAfterFee = msg.value - fee;
+
+        if (bondAfterFee < requiredDisputeBond) revert InsufficientBond();
+
+        // Store dispute
+        market.disputer = msg.sender;
+        market.disputeTime = block.timestamp;
+        market.disputeBond = bondAfterFee;
+
+        // Send fee to treasury
+        if (fee > 0) {
+            (bool success, ) = treasury.call{value: fee}("");
+            if (!success) revert TransferFailed();
+        }
+
+        emit ProposalDisputed(marketId, msg.sender, bondAfterFee);
+    }
+
+    /**
+     * @notice Cast a vote on a disputed market
+     * @param marketId The market to vote on
+     * @param outcome The outcome to vote for (true = YES, false = NO)
+     * @dev Vote weight equals total shares owned. Free to vote.
+     */
+    function vote(uint256 marketId, bool outcome) external whenNotPaused {
+        Market storage market = markets[marketId];
+
+        MarketStatus status = _getMarketStatus(market);
+        if (status != MarketStatus.Disputed) revert VotingNotActive();
+
+        // Check voting window hasn't expired
+        if (block.timestamp > market.disputeTime + VOTING_WINDOW) {
+            revert VotingNotActive();
+        }
+
+        Position storage position = positions[marketId][msg.sender];
+        if (position.hasVoted) revert AlreadyVoted();
+
+        // Vote weight = total shares owned
+        uint256 voteWeight = position.yesShares + position.noShares;
+        if (voteWeight == 0) revert NoSharesForVoting();
+
+        // Record vote
+        position.hasVoted = true;
+        position.votedOutcome = outcome;
+
+        if (outcome) {
+            market.yesVotes += voteWeight;
         } else {
-            // Assertion was disputed and lost, reset for new assertion
-            market.assertionId = bytes32(0);
-            market.asserter = address(0);
-            // assertedOutcome doesn't matter since assertionId is cleared
+            market.noVotes += voteWeight;
+        }
+
+        // Track voter for jury fee distribution
+        marketVoters[marketId].push(msg.sender);
+
+        emit VoteCast(marketId, msg.sender, outcome, voteWeight);
+    }
+
+    /**
+     * @notice Finalize a market after voting ends or dispute window passes
+     * @param marketId The market to finalize
+     * @dev Can be called by anyone. Distributes bonds to winners.
+     */
+    function finalizeMarket(
+        uint256 marketId
+    ) external nonReentrant whenNotPaused {
+        Market storage market = markets[marketId];
+        MarketStatus status = _getMarketStatus(market);
+
+        if (status == MarketStatus.Proposed) {
+            // No dispute - proposal accepted after dispute window
+            if (block.timestamp <= market.proposalTime + DISPUTE_WINDOW) {
+                revert DisputeWindowExpired(); // Window not expired yet
+            }
+
+            // Resolve with proposed outcome
+            market.resolved = true;
+            market.outcome = market.proposedOutcome;
+
+            // Return bond to proposer
+            (bool success, ) = market.proposer.call{value: market.proposalBond}(
+                ""
+            );
+            if (!success) revert TransferFailed();
+
+            emit MarketResolved(marketId, market.outcome, false);
+        } else if (status == MarketStatus.Disputed) {
+            // Voting ended - determine winner
+            if (block.timestamp <= market.disputeTime + VOTING_WINDOW) {
+                revert VotingNotEnded();
+            }
+
+            // Check for tie (exact same votes = emergency refund scenario)
+            if (market.yesVotes == market.noVotes) {
+                // Tie: return all bonds and allow emergency refund
+                _returnBondsOnTie(market);
+                // Don't resolve - market stays stuck, emergency refund available
+                return;
+            }
+
+            // Simple majority wins
+            bool votedOutcome = market.yesVotes > market.noVotes;
+            market.resolved = true;
+            market.outcome = votedOutcome;
+
+            // Determine who won the dispute
+            bool proposerWins = (market.proposedOutcome == votedOutcome);
+
+            // Distribute bonds
+            _distributeBonds(marketId, market, proposerWins);
+
+            emit MarketResolved(marketId, market.outcome, true);
+        } else {
+            revert MarketNotResolved();
+        }
+    }
+
+    /**
+     * @notice Internal function to return bonds when voting is a tie
+     */
+    function _returnBondsOnTie(Market storage market) internal {
+        // Return proposer bond
+        if (market.proposalBond > 0) {
+            (bool success1, ) = market.proposer.call{
+                value: market.proposalBond
+            }("");
+            if (!success1) revert TransferFailed();
+            market.proposalBond = 0;
+        }
+
+        // Return disputer bond
+        if (market.disputeBond > 0) {
+            (bool success2, ) = market.disputer.call{value: market.disputeBond}(
+                ""
+            );
+            if (!success2) revert TransferFailed();
+            market.disputeBond = 0;
+        }
+    }
+
+    /**
+     * @notice Internal function to distribute bonds after voting
+     * @dev 50% to winner (proposer or disputer), 50% to winning voters
+     */
+    function _distributeBonds(
+        uint256 marketId,
+        Market storage market,
+        bool proposerWins
+    ) internal {
+        uint256 loserBond = proposerWins
+            ? market.disputeBond
+            : market.proposalBond;
+        address winner = proposerWins ? market.proposer : market.disputer;
+        uint256 winnerBond = proposerWins
+            ? market.proposalBond
+            : market.disputeBond;
+
+        // Winner gets their bond back + 50% of loser's bond
+        uint256 winnerShare = (loserBond * bondWinnerShareBps) /
+            BPS_DENOMINATOR;
+        uint256 voterPool = loserBond - winnerShare;
+
+        // Pay winner
+        uint256 winnerPayout = winnerBond + winnerShare;
+        (bool success, ) = winner.call{value: winnerPayout}("");
+        if (!success) revert TransferFailed();
+
+        emit BondDistributed(marketId, winner, winnerPayout, voterPool);
+
+        // Distribute voter pool to winning voters
+        if (voterPool > 0) {
+            _distributeJuryFees(marketId, market, voterPool);
+        }
+
+        // Clear bonds
+        market.proposalBond = 0;
+        market.disputeBond = 0;
+    }
+
+    /**
+     * @notice Internal function to distribute jury fees to winning voters
+     */
+    function _distributeJuryFees(
+        uint256 marketId,
+        Market storage market,
+        uint256 voterPool
+    ) internal {
+        bool winningOutcome = market.outcome;
+        uint256 totalWinningVotes = winningOutcome
+            ? market.yesVotes
+            : market.noVotes;
+
+        if (totalWinningVotes == 0) {
+            // No winning voters - send to treasury
+            (bool success, ) = treasury.call{value: voterPool}("");
+            if (!success) revert TransferFailed();
+            return;
+        }
+
+        // Distribute proportionally to winning voters
+        address[] storage voters = marketVoters[marketId];
+        for (uint256 i = 0; i < voters.length; i++) {
+            address voter = voters[i];
+            Position storage pos = positions[marketId][voter];
+
+            // Only pay winning voters
+            if (pos.hasVoted && pos.votedOutcome == winningOutcome) {
+                uint256 voterWeight = pos.yesShares + pos.noShares;
+                uint256 voterShare = (voterPool * voterWeight) /
+                    totalWinningVotes;
+
+                if (voterShare > 0) {
+                    (bool success, ) = voter.call{value: voterShare}("");
+                    // Don't revert on failed transfer - continue to others
+                    if (success) {
+                        emit JuryFeeDistributed(marketId, voter, voterShare);
+                    }
+                }
+            }
         }
     }
 
     /**
      * @notice Claim winnings from a resolved market
      * @param marketId The market to claim from
+     * @dev Takes 0.3% resolution fee from payout
      */
     function claim(
         uint256 marketId
     ) external nonReentrant returns (uint256 payout) {
         Market storage market = markets[marketId];
-        if (!market.resolved) revert MarketNotAsserted();
+        if (!market.resolved) revert MarketNotResolved();
 
         Position storage position = positions[marketId][msg.sender];
         if (position.claimed) revert AlreadyClaimed();
@@ -720,35 +938,25 @@ contract PredictionMarket is ReentrancyGuard {
             : position.noShares;
         if (winningShares == 0) revert NothingToClaim();
 
-        // Pay asserter reward on first claim (2% of pool)
-        if (!market.asserterRewardPaid && market.asserter != address(0)) {
-            uint256 asserterReward = (market.poolBalance *
-                ASSERTER_REWARD_BPS) / BPS_DENOMINATOR;
-            market.asserterRewardPaid = true;
-            market.poolBalance -= asserterReward; // Deduct from pool
-
-            // Transfer asserter reward
-            if (asserterReward > 0) {
-                (bool rewardSuccess, ) = market.asserter.call{
-                    value: asserterReward
-                }("");
-                if (!rewardSuccess) revert TransferFailed();
-                emit AsserterRewardPaid(
-                    marketId,
-                    market.asserter,
-                    asserterReward
-                );
-            }
-        }
-
-        // Calculate payout: proportional share of remaining pool
+        // Calculate payout: proportional share of pool
         uint256 totalWinningShares = market.outcome
             ? market.yesSupply
             : market.noSupply;
-        payout = (winningShares * market.poolBalance) / totalWinningShares;
+        uint256 grossPayout = (winningShares * market.poolBalance) /
+            totalWinningShares;
 
-        // Update state (CEI pattern)
+        // Take 0.3% resolution fee
+        uint256 fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
+        payout = grossPayout - fee;
+
+        // Update state
         position.claimed = true;
+
+        // Transfer fee to treasury
+        if (fee > 0) {
+            (bool feeSuccess, ) = treasury.call{value: fee}("");
+            if (!feeSuccess) revert TransferFailed();
+        }
 
         // Transfer payout
         (bool success, ) = msg.sender.call{value: payout}("");
@@ -758,9 +966,8 @@ contract PredictionMarket is ReentrancyGuard {
     }
 
     /**
-     * @notice Emergency refund for markets where no assertion was made within 24 hours after expiry
-     * @dev Users can self-claim proportional refund based on their total shares
-     * @param marketId The market to claim emergency refund from
+     * @notice Emergency refund for stuck markets
+     * @dev Available 24h after expiry if: no proposal, or voting resulted in tie
      */
     function emergencyRefund(
         uint256 marketId
@@ -772,28 +979,20 @@ contract PredictionMarket is ReentrancyGuard {
             revert EmergencyRefundTooEarly();
         }
 
-        // Check market is not resolved (check resolved first since it implies assertion existed)
+        // Check market is not resolved
         if (market.resolved) revert MarketAlreadyResolved();
-
-        // Check no assertion exists (market stuck in Expired state)
-        if (market.assertionId != bytes32(0)) revert MarketHasAssertion();
 
         Position storage position = positions[marketId][msg.sender];
         if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
 
-        // User must have some position
         uint256 userTotalShares = position.yesShares + position.noShares;
         if (userTotalShares == 0) revert NoPosition();
 
-        // Calculate proportional refund: (user shares / total shares) * pool balance
-        // Note: We use the CURRENT poolBalance which represents the original pool
-        // since we don't decrease it during emergency refunds (each user can only claim once)
+        // Calculate proportional refund
         uint256 totalShares = market.yesSupply + market.noSupply;
         refund = (userTotalShares * market.poolBalance) / totalShares;
 
-        // Update state (CEI pattern)
-        // Mark as refunded but DON'T decrease poolBalance - this ensures each user
-        // gets their fair proportional share regardless of claim order
+        // Update state
         position.emergencyRefunded = true;
 
         // Transfer refund
@@ -807,8 +1006,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Get current YES price based on bonding curve
-     * @param marketId The market to query
-     * @return price Price in wei for 1 YES share (scaled by 1e18)
      */
     function getYesPrice(
         uint256 marketId
@@ -819,8 +1016,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Get current NO price based on bonding curve
-     * @param marketId The market to query
-     * @return price Price in wei for 1 NO share (scaled by 1e18)
      */
     function getNoPrice(
         uint256 marketId
@@ -831,10 +1026,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Preview how many shares you'd get for a given BNB amount
-     * @param marketId The market to query
-     * @param bnbAmount Amount of BNB to spend
-     * @param isYes Whether buying YES or NO
-     * @return shares Number of shares you'd receive
      */
     function previewBuy(
         uint256 marketId,
@@ -842,7 +1033,7 @@ contract PredictionMarket is ReentrancyGuard {
         bool isYes
     ) external view returns (uint256 shares) {
         Market storage market = markets[marketId];
-        uint256 totalFee = (bnbAmount * (platformFeeBps + CREATOR_FEE_BPS)) /
+        uint256 totalFee = (bnbAmount * (platformFeeBps + creatorFeeBps)) /
             BPS_DENOMINATOR;
         return
             _calculateBuyShares(
@@ -855,10 +1046,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Preview how much BNB you'd get for selling shares
-     * @param marketId The market to query
-     * @param shares Number of shares to sell
-     * @param isYes Whether selling YES or NO
-     * @return bnbOut Amount of BNB you'd receive after fees
      */
     function previewSell(
         uint256 marketId,
@@ -872,14 +1059,13 @@ contract PredictionMarket is ReentrancyGuard {
             shares,
             isYes
         );
-        uint256 totalFee = (grossBnbOut * (platformFeeBps + CREATOR_FEE_BPS)) /
+        uint256 totalFee = (grossBnbOut * (platformFeeBps + creatorFeeBps)) /
             BPS_DENOMINATOR;
         return grossBnbOut - totalFee;
     }
 
     /**
      * @notice Get the current status of a market
-     * @param marketId The market to query
      */
     function getMarketStatus(
         uint256 marketId
@@ -889,8 +1075,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Get a user's position in a market
-     * @param marketId The market to query
-     * @param user The user to query
      */
     function getPosition(
         uint256 marketId,
@@ -902,7 +1086,9 @@ contract PredictionMarket is ReentrancyGuard {
             uint256 yesShares,
             uint256 noShares,
             bool claimed,
-            bool emergencyRefunded
+            bool emergencyRefunded,
+            bool hasVoted,
+            bool votedOutcome
         )
     {
         Position storage pos = positions[marketId][user];
@@ -910,21 +1096,21 @@ contract PredictionMarket is ReentrancyGuard {
             pos.yesShares,
             pos.noShares,
             pos.claimed,
-            pos.emergencyRefunded
+            pos.emergencyRefunded,
+            pos.hasVoted,
+            pos.votedOutcome
         );
     }
 
     /**
      * @notice Check if a market is eligible for emergency refund
-     * @param marketId The market to query
      */
     function canEmergencyRefund(
         uint256 marketId
     ) external view returns (bool eligible, uint256 timeUntilEligible) {
         Market storage market = markets[marketId];
 
-        // Not eligible if resolved or has assertion
-        if (market.resolved || market.assertionId != bytes32(0)) {
+        if (market.resolved) {
             return (false, 0);
         }
 
@@ -937,25 +1123,86 @@ contract PredictionMarket is ReentrancyGuard {
     }
 
     /**
-     * @notice Calculate the required bond for asserting a market outcome
+     * @notice Calculate the required bond for proposing an outcome
      * @dev Dynamic bond: max(MIN_BOND_FLOOR, poolBalance * 1%)
-     * @param marketId The market to query
-     * @return requiredBond The bond amount required in WBNB
      */
     function getRequiredBond(
         uint256 marketId
     ) public view returns (uint256 requiredBond) {
         Market storage market = markets[marketId];
-        uint256 dynamicBond = (market.poolBalance * DYNAMIC_BOND_BPS) /
+        uint256 dynamicBond = (market.poolBalance * dynamicBondBps) /
             BPS_DENOMINATOR;
-        requiredBond = dynamicBond > MIN_BOND_FLOOR
-            ? dynamicBond
-            : MIN_BOND_FLOOR;
+        requiredBond = dynamicBond > minBondFloor ? dynamicBond : minBondFloor;
+    }
+
+    /**
+     * @notice Calculate the required dispute bond (2x proposal bond)
+     */
+    function getRequiredDisputeBond(
+        uint256 marketId
+    ) external view returns (uint256) {
+        Market storage market = markets[marketId];
+        return market.proposalBond * 2;
+    }
+
+    /**
+     * @notice Get proposal details for a market
+     */
+    function getProposal(
+        uint256 marketId
+    )
+        external
+        view
+        returns (
+            address proposer,
+            bool proposedOutcome,
+            string memory proofLink,
+            uint256 proposalTime,
+            uint256 proposalBond,
+            uint256 disputeDeadline
+        )
+    {
+        Market storage m = markets[marketId];
+        return (
+            m.proposer,
+            m.proposedOutcome,
+            m.proofLink,
+            m.proposalTime,
+            m.proposalBond,
+            m.proposalTime + DISPUTE_WINDOW
+        );
+    }
+
+    /**
+     * @notice Get dispute details for a market
+     */
+    function getDispute(
+        uint256 marketId
+    )
+        external
+        view
+        returns (
+            address disputer,
+            uint256 disputeTime,
+            uint256 disputeBond,
+            uint256 votingDeadline,
+            uint256 yesVotes,
+            uint256 noVotes
+        )
+    {
+        Market storage m = markets[marketId];
+        return (
+            m.disputer,
+            m.disputeTime,
+            m.disputeBond,
+            m.disputeTime + VOTING_WINDOW,
+            m.yesVotes,
+            m.noVotes
+        );
     }
 
     /**
      * @notice Get full market data
-     * @param marketId The market to query
      */
     function getMarket(
         uint256 marketId
@@ -972,9 +1219,7 @@ contract PredictionMarket is ReentrancyGuard {
             uint256 noSupply,
             uint256 poolBalance,
             bool resolved,
-            bool outcome,
-            bytes32 assertionId,
-            address asserter
+            bool outcome
         )
     {
         Market storage m = markets[marketId];
@@ -988,18 +1233,21 @@ contract PredictionMarket is ReentrancyGuard {
             m.noSupply,
             m.poolBalance,
             m.resolved,
-            m.outcome,
-            m.assertionId,
-            m.asserter
+            m.outcome
         );
+    }
+
+    /**
+     * @notice Get number of voters for a market
+     */
+    function getVoterCount(uint256 marketId) external view returns (uint256) {
+        return marketVoters[marketId].length;
     }
 
     // ============ MultiSig Governance ============
 
     /**
      * @notice Propose a governance action (any signer can propose)
-     * @param actionType The type of action to perform
-     * @param data ABI-encoded parameters for the action
      */
     function proposeAction(
         ActionType actionType,
@@ -1020,7 +1268,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Confirm a pending action
-     * @param actionId The action to confirm
      */
     function confirmAction(uint256 actionId) external onlySigner {
         PendingAction storage action = pendingActions[actionId];
@@ -1035,7 +1282,6 @@ contract PredictionMarket is ReentrancyGuard {
 
         emit ActionConfirmed(actionId, msg.sender);
 
-        // Auto-execute if 3 confirmations reached
         if (action.confirmations >= 3) {
             _executeAction(actionId);
         }
@@ -1043,7 +1289,6 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Execute a fully confirmed action
-     * @param actionId The action to execute
      */
     function executeAction(uint256 actionId) external onlySigner {
         PendingAction storage action = pendingActions[actionId];
@@ -1069,48 +1314,31 @@ contract PredictionMarket is ReentrancyGuard {
         Market storage market
     ) internal view returns (MarketStatus) {
         if (market.resolved) return MarketStatus.Resolved;
-        if (market.assertionId != bytes32(0)) return MarketStatus.Asserted;
+        if (market.disputer != address(0)) return MarketStatus.Disputed;
+        if (market.proposer != address(0)) return MarketStatus.Proposed;
         if (block.timestamp >= market.expiryTimestamp)
             return MarketStatus.Expired;
         return MarketStatus.Active;
     }
 
-    /**
-     * @notice Calculate YES price using linear constant sum formula
-     * @dev P(YES) = UNIT_PRICE * YES_supply / (YES_supply + NO_supply)
-     *      More YES supply = higher YES price (more likely)
-     */
     function _getYesPrice(
         uint256 yesSupply,
         uint256 noSupply
     ) internal pure returns (uint256) {
         uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
         uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
-        // P(YES) = UNIT_PRICE * virtualYes / (virtualYes + virtualNo)
         return (UNIT_PRICE * virtualYes) / (virtualYes + virtualNo);
     }
 
-    /**
-     * @notice Calculate NO price using linear constant sum formula
-     * @dev P(NO) = UNIT_PRICE * NO_supply / (YES_supply + NO_supply)
-     *      More NO supply = higher NO price (more likely)
-     */
     function _getNoPrice(
         uint256 yesSupply,
         uint256 noSupply
     ) internal pure returns (uint256) {
         uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
         uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
-        // P(NO) = UNIT_PRICE * virtualNo / (virtualYes + virtualNo)
         return (UNIT_PRICE * virtualNo) / (virtualYes + virtualNo);
     }
 
-    /**
-     * @notice Calculate shares received for a given BNB input
-     * @dev Uses average price during the trade to ensure pool solvency
-     *      Shares = bnbAmount / averagePrice
-     *      Where averagePrice is between pre-trade and post-trade price
-     */
     function _calculateBuyShares(
         uint256 yesSupply,
         uint256 noSupply,
@@ -1122,28 +1350,13 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 totalVirtual = virtualYes + virtualNo;
 
         if (isYes) {
-            // P(YES) = UNIT_PRICE * virtualYes / totalVirtual
-            // shares = bnbAmount / price = bnbAmount * totalVirtual / (UNIT_PRICE * virtualYes)
             return
                 (bnbAmount * totalVirtual * 1e18) / (UNIT_PRICE * virtualYes);
         } else {
-            // P(NO) = UNIT_PRICE * virtualNo / totalVirtual
             return (bnbAmount * totalVirtual * 1e18) / (UNIT_PRICE * virtualNo);
         }
     }
 
-    /**
-     * @notice Calculate BNB received for selling shares using AVERAGE price
-     * @dev To ensure pool solvency, we calculate BNB based on the average price
-     *      between current state and post-sell state.
-     *
-     *      Current price: P1 = UNIT_PRICE * virtualSide / totalVirtual
-     *      Post-sell price: P2 = UNIT_PRICE * (virtualSide - shares) / (total - shares)
-     *      Average price: (P1 + P2) / 2
-     *
-     *      This ensures that selling gives back less than or equal to what buying cost,
-     *      preventing pool insolvency.
-     */
     function _calculateSellBnb(
         uint256 yesSupply,
         uint256 noSupply,
@@ -1156,23 +1369,16 @@ contract PredictionMarket is ReentrancyGuard {
 
         uint256 virtualSide = isYes ? virtualYes : virtualNo;
 
-        // Current price (before sell)
-        // P1 = UNIT_PRICE * virtualSide / totalVirtual
         uint256 priceBeforeSell = (UNIT_PRICE * virtualSide) / totalVirtual;
 
-        // Post-sell state
         uint256 virtualSideAfter = virtualSide - shares;
         uint256 totalVirtualAfter = totalVirtual - shares;
 
-        // Price after sell
-        // P2 = UNIT_PRICE * virtualSideAfter / totalVirtualAfter
         uint256 priceAfterSell = (UNIT_PRICE * virtualSideAfter) /
             totalVirtualAfter;
 
-        // Average price = (P1 + P2) / 2
         uint256 avgPrice = (priceBeforeSell + priceAfterSell) / 2;
 
-        // BNB out = shares * avgPrice / 1e18 (to account for share scaling)
         return (shares * avgPrice) / 1e18;
     }
 
@@ -1189,50 +1395,50 @@ contract PredictionMarket is ReentrancyGuard {
             if (newMinBet < MIN_BET_LOWER || newMinBet > MIN_BET_UPPER)
                 revert InvalidMinBet();
             minBet = newMinBet;
-        } else if (action.actionType == ActionType.SetUmaBond) {
-            uint256 newBond = abi.decode(action.data, (uint256));
-            if (newBond < UMA_BOND_LOWER || newBond > UMA_BOND_UPPER)
-                revert InvalidUmaBond();
-            umaBond = newBond;
         } else if (action.actionType == ActionType.SetTreasury) {
             address newTreasury = abi.decode(action.data, (address));
             if (newTreasury == address(0)) revert InvalidAddress();
             treasury = newTreasury;
-        } else if (action.actionType == ActionType.SetWbnb) {
-            address newWbnb = abi.decode(action.data, (address));
-            if (newWbnb == address(0)) revert InvalidAddress();
-            wbnb = newWbnb;
-        } else if (action.actionType == ActionType.SetUmaOOv3) {
-            address newUma = abi.decode(action.data, (address));
-            if (newUma == address(0)) revert InvalidAddress();
-            umaOOv3 = newUma;
         } else if (action.actionType == ActionType.Pause) {
             paused = true;
             emit Paused(msg.sender);
         } else if (action.actionType == ActionType.Unpause) {
             paused = false;
             emit Unpaused(msg.sender);
+        } else if (action.actionType == ActionType.SetCreatorFee) {
+            uint256 newCreatorFee = abi.decode(action.data, (uint256));
+            if (newCreatorFee > MAX_CREATOR_FEE_BPS) revert InvalidFee();
+            creatorFeeBps = newCreatorFee;
+        } else if (action.actionType == ActionType.SetResolutionFee) {
+            uint256 newResolutionFee = abi.decode(action.data, (uint256));
+            if (newResolutionFee > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
+            resolutionFeeBps = newResolutionFee;
+        } else if (action.actionType == ActionType.SetMinBondFloor) {
+            uint256 newMinBondFloor = abi.decode(action.data, (uint256));
+            if (
+                newMinBondFloor < MIN_BOND_FLOOR_LOWER ||
+                newMinBondFloor > MIN_BOND_FLOOR_UPPER
+            ) revert InvalidMinBondFloor();
+            minBondFloor = newMinBondFloor;
+        } else if (action.actionType == ActionType.SetDynamicBondBps) {
+            uint256 newDynamicBondBps = abi.decode(action.data, (uint256));
+            if (
+                newDynamicBondBps < DYNAMIC_BOND_BPS_LOWER ||
+                newDynamicBondBps > DYNAMIC_BOND_BPS_UPPER
+            ) revert InvalidDynamicBondBps();
+            dynamicBondBps = newDynamicBondBps;
+        } else if (action.actionType == ActionType.SetBondWinnerShare) {
+            uint256 newBondWinnerShare = abi.decode(action.data, (uint256));
+            if (
+                newBondWinnerShare < BOND_WINNER_SHARE_LOWER ||
+                newBondWinnerShare > BOND_WINNER_SHARE_UPPER
+            ) revert InvalidBondWinnerShare();
+            bondWinnerShareBps = newBondWinnerShare;
         }
 
         emit ActionExecuted(actionId, action.actionType);
     }
-}
 
-// ============ Interfaces ============
-
-interface IWBNB {
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-}
-
-interface IOptimisticOracleV3 {
-    function assertTruthWithDefaults(
-        bytes memory claim,
-        address asserter
-    ) external returns (bytes32 assertionId);
+    /// @notice Receive BNB for bond payments
+    receive() external payable {}
 }
