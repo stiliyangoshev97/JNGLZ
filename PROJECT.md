@@ -6,13 +6,15 @@
 
 ## 🚨 CRITICAL: How Fees Work (READ THIS FIRST)
 
-### Fee Structure - Total 1.5% on ALL Trades
+### Fee Structure - Total 1.8% Maximum
 
 | Fee Type | Percentage | Recipient | When Charged |
 |----------|------------|-----------|--------------|
 | **Platform Fee** | 1.0% (100 bps) | Treasury (You) | Every buy AND sell |
 | **Creator Fee** | 0.5% (50 bps) | Market Creator | Every buy AND sell |
-| **TOTAL** | **1.5%** | - | - |
+| **Resolution Fee** | 0.3% (30 bps) | Treasury | On propose/dispute/vote |
+| **TOTAL TRADING** | **1.5%** | - | On trades |
+| **TOTAL MAX** | **1.8%** | - | With resolution |
 
 ### Example: $100 Trade
 - Platform gets: $1.00
@@ -22,9 +24,10 @@
 ### Key Points:
 1. **Platform fee (1%)** - Goes to YOUR treasury wallet. This is your revenue.
 2. **Creator fee (0.5%)** - Goes to whoever created the market. Incentivizes market creation.
-3. **Both fees apply on BUY and SELL** - Double dipping for maximum revenue!
-4. **Creator fee is hardcoded** - Cannot be changed (prevents abuse)
-5. **Platform fee is adjustable** - Via 3-of-3 MultiSig (0-5% range)
+3. **Resolution fee (0.3%)** - Charged on propose/dispute/vote actions. Prevents spam.
+4. **Both fees apply on BUY and SELL** - Double dipping for maximum revenue!
+5. **Creator fee is configurable** - Via 3-of-3 MultiSig (0-2% range)
+6. **Platform fee is adjustable** - Via 3-of-3 MultiSig (0-5% range)
 
 ---
 
@@ -160,7 +163,7 @@ Bob's P&L (if he sells now):
 2. **First Buy (Optional):** Creator can atomically buy shares in the same transaction - GUARANTEED first buyer, impossible to front-run.
 3. **Trade:** Degens buy YES or NO shares using BNB. The bonding curve adjusts prices automatically.
 4. **Pump & Dump:** Early buyers can sell at profit when price rises. Late buyers take the loss.
-5. **Resolve:** After expiry, the market moves to an "Optimistic" settlement phase via UMA.
+5. **Resolve:** After expiry, **Street Consensus** handles resolution - bettors vote on outcomes (30-90 min).
 6. **Payout:** Winners claim the BNB vault proportionally.
 
 ---
@@ -232,8 +235,9 @@ This is **CRITICAL** for pool solvency:
 `PredictionMarket.sol` - One contract manages everything:
 - Market creation & storage
 - Trading (buy/sell YES/NO)
-- Resolution (UMA integration)
+- **Street Consensus resolution** (propose → dispute → vote → finalize)
 - Claims (winner payouts)
+- Emergency refunds (24h timeout)
 - Governance (3-of-3 MultiSig)
 
 ### Key Functions
@@ -244,8 +248,12 @@ This is **CRITICAL** for pool solvency:
 | `createMarketAndBuy()` | Create + first buy atomically | Yes |
 | `buyYes()` / `buyNo()` | Buy shares | Yes |
 | `sellYes()` / `sellNo()` | Sell shares | No |
-| `assertOutcome()` | Claim result via UMA | No (needs WBNB approval) |
+| `proposeOutcome()` | Propose result with bond | Yes |
+| `dispute()` | Challenge proposal with 2× bond | Yes |
+| `vote()` | Vote on disputed market | No |
+| `finalizeMarket()` | Settle after voting ends | No |
 | `claim()` | Withdraw winnings | No |
+| `emergencyRefund()` | Refund if no proposal for 24h | No |
 
 ### Safety Mechanisms
 
@@ -254,6 +262,8 @@ This is **CRITICAL** for pool solvency:
 3. **InsufficientPoolBalance** - Prevents over-withdrawal
 4. **Slippage Protection** - `minSharesOut` / `minBnbOut` parameters
 5. **Pause Mechanism** - Emergency stop via MultiSig
+6. **Double-vote Prevention** - Can't vote twice on same market
+7. **Bond Validation** - Ensures correct bond amounts
 
 ---
 
@@ -287,23 +297,115 @@ Net to Pool = 98.5% of trade amount
 
 ---
 
-## Part 5: Resolution (UMA OOv3)
+## Part 5: Resolution (Street Consensus)
+
+### What is Street Consensus?
+
+Street Consensus is a **decentralized resolution mechanism** where the bettors themselves decide the outcome. No external oracles. No waiting 48+ hours. Just the people with skin in the game voting on what happened.
+
+### Why Street Consensus over UMA?
+
+| Feature | UMA Oracle (Old) | Street Consensus (New) |
+|---------|------------------|------------------------|
+| Resolution Time | 48-72 hours | **30-90 minutes** |
+| External Dependency | UMA Protocol | **None** |
+| Who Decides | UMA token holders | **Actual bettors** |
+| Bond Token | WBNB (wrapped) | **Native BNB** |
+| Complexity | High | **Simple** |
+| Proof Required | Yes | **Optional** |
 
 ### How It Works
 
-1. **Market expires** - Trading stops
-2. **Anyone asserts** - "The answer is YES" + stakes WBNB bond (0.1 WBNB)
-3. **Challenge period** - 2 hours for disputes
-4. **If no dispute** - Assertion accepted, market resolves
-5. **If disputed** - UMA token holders vote on truth
-6. **Winners claim** - Proportional share of pool
+```
+MARKET EXPIRES
+      │
+      ▼
+┌─────────────────────────────────────────────┐
+│  STEP 1: Creator Priority (10 min)          │
+│  • Market creator can propose first         │
+│  • Posts bond (max of 0.02 BNB or pool×1%)  │
+│  • Claims "YES won" or "NO won"             │
+│  • Optional: Include proof link             │
+└─────────────────────────────────────────────┘
+      │
+      │  After 10 min, anyone can propose
+      ▼
+┌─────────────────────────────────────────────┐
+│  STEP 2: Dispute Window (30 min)            │
+│  • Anyone can dispute with 2× bond          │
+│  • Only 1 dispute allowed per market        │
+│  • Can include counter-proof link           │
+└─────────────────────────────────────────────┘
+      │
+      ├────────────────┬─────────────────────┐
+      ▼                ▼                     ▼
+┌─────────────┐  ┌──────────────┐    ┌──────────────┐
+│ NO DISPUTE  │  │   DISPUTED   │    │ NO PROPOSAL  │
+│             │  │              │    │ FOR 24 HOURS │
+│ Proposal    │  │ Goes to      │    │              │
+│ accepted!   │  │ VOTING       │    │ Emergency    │
+│             │  │ (1 hour)     │    │ refund       │
+│ Market      │  │              │    │ available    │
+│ resolved    │  │              │    │              │
+└─────────────┘  └──────────────┘    └──────────────┘
+                       │
+                       ▼
+                 ┌───────────────────────────────┐
+                 │  STEP 3: Voting (1 hour)      │
+                 │                               │
+                 │  • Only share holders vote    │
+                 │  • Vote weight = share count  │
+                 │  • Can't vote twice           │
+                 │  • Simple majority wins       │
+                 └───────────────────────────────┘
+                       │
+                       ▼
+                 ┌───────────────────────────────┐
+                 │  STEP 4: Finalize             │
+                 │                               │
+                 │  Proposer wins:               │
+                 │  • Gets bond + 50% of         │
+                 │    disputer's bond            │
+                 │  • Voters split 50%           │
+                 │                               │
+                 │  Disputer wins:               │
+                 │  • Gets bond + 50% of         │
+                 │    proposer's bond            │
+                 │  • Voters split 50%           │
+                 │                               │
+                 │  Tie (0 vs 0 votes):          │
+                 │  • Both get bonds back        │
+                 │  • Market needs new proposal  │
+                 └───────────────────────────────┘
+```
 
 ### Bond Economics
 
-- **Bond amount:** 0.1 WBNB (≈$60)
-- **If truthful:** Bond returned + assertion succeeds
-- **If lying:** Bond lost to disputer
-- **Why anyone asserts:** Winners want their money! They'll pay bond to unlock the pool.
+| Pool Size | Proposer Bond | Disputer Bond (2×) |
+|-----------|---------------|-------------------|
+| 1 BNB | 0.02 BNB (floor) | 0.04 BNB |
+| 5 BNB | 0.05 BNB (1%) | 0.10 BNB |
+| 50 BNB | 0.50 BNB (1%) | 1.00 BNB |
+
+**Formula:** `bond = max(0.02 BNB, poolBalance × 1%)`
+
+### Bond Distribution After Dispute
+
+| Scenario | Proposer | Disputer | Voters |
+|----------|----------|----------|--------|
+| ✅ No dispute | Gets bond back | N/A | N/A |
+| ✅ Proposer wins | Bond + 50% of disputer | Loses bond | 50% of disputer bond |
+| ❌ Disputer wins | Loses bond | Bond + 50% of proposer | 50% of proposer bond |
+| ⚖️ Tie (0 vs 0) | Gets bond back | Gets bond back | N/A |
+
+### Timing Constants
+
+| Phase | Duration | Description |
+|-------|----------|-------------|
+| Creator Priority | 10 min | Head start for market creator |
+| Dispute Window | 30 min | Time to challenge proposal |
+| Voting Window | 1 hour | Time for bettors to vote |
+| Emergency Refund | 24 hours | After expiry with no proposal |
 
 ---
 
@@ -314,9 +416,16 @@ Net to Pool = 98.5% of trade amount
 | UNIT_PRICE | 0.01 BNB | No |
 | VIRTUAL_LIQUIDITY | 100e18 | No |
 | Platform Fee | 1% (100 bps) | Yes (0-5% via MultiSig) |
-| Creator Fee | 0.5% (50 bps) | No (hardcoded) |
+| Creator Fee | 0.5% (50 bps) | Yes (0-2% via MultiSig) |
+| Resolution Fee | 0.3% (30 bps) | Yes (0-1% via MultiSig) |
 | Min Bet | 0.005 BNB | Yes (0.001-0.1 BNB) |
-| UMA Bond | 0.1 WBNB | Yes (0.01-1 WBNB) |
+| Min Bond Floor | 0.02 BNB | Yes (0.01-0.1 BNB) |
+| Dynamic Bond | 1% of pool | Yes (0.5-5% via MultiSig) |
+| Bond Winner Share | 50% | Yes (20-80% via MultiSig) |
+| Creator Priority | 10 min | No |
+| Dispute Window | 30 min | No |
+| Voting Window | 1 hour | No |
+| Emergency Refund | 24 hours | No |
 | MultiSig | 3-of-3 | No |
 | Action Expiry | 1 hour | No |
 
@@ -337,14 +446,15 @@ Net to Pool = 98.5% of trade amount
 ### ✅ Completed
 
 1. **Smart Contracts**
-   - PredictionMarket.sol (fully implemented)
-   - 66 tests passing (unit + fuzz + vulnerability)
+   - PredictionMarket.sol (fully implemented, 1445 lines)
+   - 116 tests passing (52 unit + 29 fuzz + 31 features + 4 vulnerability)
    - All features working:
      - Market creation (free)
      - createMarketAndBuy (atomic first buy)
      - Buy/Sell YES/NO with bonding curve
-     - Platform fee (1%) + Creator fee (0.5%)
-     - UMA OOv3 resolution integration
+     - Platform fee (1%) + Creator fee (0.5%) + Resolution fee (0.3%)
+     - **Street Consensus resolution** (propose/dispute/vote/finalize)
+     - Emergency refund (24h timeout)
      - Winner claims
      - 3-of-3 MultiSig governance
      - Pause/unpause
@@ -363,18 +473,22 @@ Net to Pool = 98.5% of trade amount
 JunkieFun/
 ├── PROJECT.md              # This file
 ├── TODO.md                 # Task tracking
+├── AI-PROMPTS.txt          # AI assistant onboarding prompts
 ├── contracts/
+│   ├── README.md           # Street Consensus documentation
 │   ├── src/
 │   │   └── PredictionMarket.sol
 │   ├── test/
-│   │   ├── PredictionMarket.t.sol      # Unit tests
-│   │   ├── PredictionMarket.fuzz.t.sol # Fuzz tests
-│   │   ├── VulnerabilityCheck.t.sol    # Security tests
+│   │   ├── PredictionMarket.t.sol      # Unit tests (52)
+│   │   ├── PredictionMarket.fuzz.t.sol # Fuzz tests (29)
+│   │   ├── PumpDump.t.sol              # Economics tests (31)
+│   │   ├── VulnerabilityCheck.t.sol    # Security tests (4)
 │   │   └── helpers/TestHelper.sol
 │   ├── script/
 │   │   └── Deploy.s.sol
-│   ├── CHANGELOG.md
-│   └── PROJECT_CONTEXT.md
+│   ├── CHANGELOG.md        # v2.0.0 = Street Consensus
+│   ├── PROJECT_CONTEXT.md
+│   └── PROFIT.txt          # Pump & dump economics proof
 ├── frontend/               # (To be created)
 └── subgraph/               # (To be created)
 ```
@@ -408,16 +522,33 @@ function buyNo(uint256 marketId, uint256 minSharesOut) payable
 function sellYes(uint256 marketId, uint256 shares, uint256 minBnbOut)
 function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut)
 
-// Resolution
-function assertOutcome(uint256 marketId, bool outcome) // needs WBNB approval
+// Street Consensus Resolution
+function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+function dispute(uint256 marketId, string proofLink) payable
+function vote(uint256 marketId, bool supportProposer)
+function finalizeMarket(uint256 marketId)
+
+// Claims
 function claim(uint256 marketId)
+function emergencyRefund(uint256 marketId)
 
 // View
 function getYesPrice(uint256 marketId) view returns (uint256)
 function getNoPrice(uint256 marketId) view returns (uint256)
 function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view
-function getPosition(uint256 marketId, address user) view
+function getPosition(uint256 marketId, address user) view returns (
+    uint256 yesShares,
+    uint256 noShares,
+    bool claimed,
+    bool emergencyRefunded,
+    bool hasVoted,
+    bool votedForProposer
+)
 function getMarket(uint256 marketId) view
+function getMarketStatus(uint256 marketId) view returns (MarketStatus)
+// MarketStatus: Active, Expired, Proposed, Disputed, Resolved
+function getRequiredBond(uint256 marketId) view returns (uint256)
+function canEmergencyRefund(uint256 marketId) view returns (bool, uint256)
 ```
 

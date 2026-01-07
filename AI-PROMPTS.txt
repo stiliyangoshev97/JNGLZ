@@ -3,16 +3,16 @@
 ================================================================================
 # Use these prompts to quickly onboard AI assistants to the project state.
 # Copy and paste the relevant prompt when starting a new chat.
-# Last Updated: January 7, 2026
+# Last Updated: January 8, 2026
 
 ================================================================================
 PROMPT #1: FULL PROJECT CONTEXT (Recommended for new chats)
 ================================================================================
 
-I'm working on Junkie.Fun - a decentralized prediction market platform on BNB Chain. Please review the project to understand the current state.
+I'm working on JunkieFun - a decentralized prediction market platform on BNB Chain. Please review the project to understand the current state.
 
 **PROJECT STATUS:**
-- ✅ Smart Contracts: COMPLETE (74 tests passing)
+- ✅ Smart Contracts: COMPLETE (116 tests passing)
 - ⬜ Frontend: NOT STARTED
 - ⬜ Subgraph: NOT STARTED
 - ⬜ Deployment: NOT STARTED
@@ -21,19 +21,20 @@ I'm working on Junkie.Fun - a decentralized prediction market platform on BNB Ch
 
 1. `/PROJECT.md` - Full business model, bonding curve math, pump & dump economics
 2. `/TODO.md` - Master task list showing completed vs pending items
-3. `/contracts/PROJECT_CONTEXT.md` - Smart contract architecture & test coverage
-4. `/contracts/CHANGELOG.md` - Version history
-5. `/contracts/PROFIT.txt` - Detailed pump & dump profit analysis with math
-6. `/contracts/src/PredictionMarket.sol` - The complete smart contract (1090 lines)
+3. `/contracts/README.md` - Street Consensus resolution explained
+4. `/contracts/PROJECT_CONTEXT.md` - Smart contract architecture & test coverage
+5. `/contracts/CHANGELOG.md` - Version history (v2.0.0 = Street Consensus)
+6. `/contracts/PROFIT.txt` - Detailed pump & dump profit analysis with math
+7. `/contracts/src/PredictionMarket.sol` - The complete smart contract (1445 lines)
 
 **Key things to understand:**
 - Single monolithic contract (not factory pattern)
 - Pump.fun-style economics: early buyers profit when later buyers enter
-- Fee structure: 1% platform + 0.5% creator = 1.5% total on ALL trades
+- **Street Consensus resolution** (NO external oracles, bettors vote on outcomes)
+- Fee structure: 1% platform + 0.5% creator + 0.3% resolution = 1.8% total
 - Dual bonding curve: P(YES) + P(NO) = 0.01 BNB (always)
 - Virtual liquidity: 100 YES + 100 NO shares at start
 - Average price formula for selling (prevents pool insolvency)
-- UMA OOv3 for trustless resolution
 - 3-of-3 MultiSig for governance
 
 After reviewing, summarize where we are and ask what I want to work on.
@@ -44,11 +45,17 @@ PROMPT #2: QUICK STATUS CHECK (For shorter sessions)
 
 Junkie.Fun project quick check:
 
-**STATUS:** Smart contracts 100% complete with 74 tests passing.
+**STATUS:** Smart contracts 100% complete with 116 tests passing.
 
 Please:
 1. Read `/TODO.md` - Focus on Phase 1 (complete) vs Phase 2-4 (pending)
 2. Skim `/contracts/PROJECT_CONTEXT.md` for contract status
+3. Skim `/contracts/README.md` for Street Consensus flow
+
+**Key info:**
+- **Street Consensus** resolution (no external oracles!)
+- Resolution: propose → dispute (optional) → vote (if disputed) → finalize
+- 30-90 min resolution (vs 48h with old UMA system)
 
 **Next tasks:**
 - Create frontend (React 19 + Vite + Wagmi v2 + RainbowKit)
@@ -64,17 +71,32 @@ PROMPT #3: SMART CONTRACTS CONTEXT (For contract work)
 I need help with Junkie.Fun smart contracts. The contracts are COMPLETE but I may need modifications.
 
 **Read:**
-1. `/contracts/PROJECT_CONTEXT.md` - Architecture & test coverage
-2. `/contracts/src/PredictionMarket.sol` - The full contract
-3. `/contracts/PROFIT.txt` - Pump & dump economics proof
+1. `/contracts/README.md` - Street Consensus flow & economics
+2. `/contracts/PROJECT_CONTEXT.md` - Architecture & test coverage
+3. `/contracts/src/PredictionMarket.sol` - The full contract
+4. `/contracts/PROFIT.txt` - Pump & dump economics proof
 
 **Contract Summary:**
-- 1090 lines of Solidity 0.8.24
-- 74 tests passing (37 unit + 25 fuzz + 4 vulnerability + 8 pump/dump)
-- Features: createMarket, createMarketAndBuy, buyYes/No, sellYes/No, assertOutcome, claim
-- Fee: 1% platform + 0.5% creator on all trades
-- Bonding curve: Constant sum linear (P_YES + P_NO = 0.01 BNB)
-- Average price selling formula ensures pool solvency
+- 1445 lines of Solidity 0.8.24
+- 116 tests passing (52 unit + 29 fuzz + 31 features + 4 vulnerability)
+- **Street Consensus resolution** (NO external oracles like UMA)
+
+**Features:**
+- createMarket, createMarketAndBuy, buyYes/No, sellYes/No
+- proposeOutcome, dispute, vote, finalizeMarket
+- claim, emergencyRefund
+
+**Fee: 1.8% total:**
+- 1% platform + 0.5% creator on trades
+- 0.3% on resolution actions
+
+**Resolution Flow:**
+1. Market expires → Creator has 10 min to propose
+2. Anyone can propose with bond (max(0.02, pool×1%))
+3. 30 min dispute window (2× bond to dispute)
+4. If disputed → 1 hour voting (weighted by shares)
+5. Simple majority wins, loser loses bond
+6. If no proposal for 24h → emergency refund
 
 **Key verified behaviors:**
 - Early buyer profits +36.6% when late buyer enters
@@ -105,9 +127,19 @@ I want to start the Junkie.Fun frontend. Smart contracts are complete.
 - `sellYes(marketId, shares, minBnbOut)` / `sellNo()`
 - `getYesPrice(marketId)` / `getNoPrice()`
 - `previewBuy()` / `previewSell()` - For UI previews
-- `getPosition(marketId, user)` - User shares
+- `getPosition(marketId, user)` - User shares (returns 6 values)
 - `getMarket(marketId)` - Full market data
+- `getMarketStatus(marketId)` - Active/Expired/Proposed/Disputed/Resolved
+
+**Street Consensus UI (NEW - critical!):**
+- `proposeOutcome(marketId, outcome, proofLink)` - Propose with bond
+- `dispute(marketId, proofLink)` - Challenge with 2× bond
+- `vote(marketId, supportProposer)` - Vote (weight = share count)
+- `finalizeMarket(marketId)` - Settle after voting
 - `claim(marketId)` - Claim winnings
+- `emergencyRefund(marketId)` - 24h timeout refund
+- `getRequiredBond(marketId)` - Dynamic bond calculation
+- `canEmergencyRefund(marketId)` - Eligibility check
 
 **Reference:** Look at `/ExampleProject/frontend/` for patterns.
 
@@ -126,18 +158,24 @@ I want to start the Junkie.Fun subgraph (The Graph). Smart contracts are complet
 1. `/PROJECT_CONTEXT_SUBGRAPH.md` - Schema & requirements
 2. `/contracts/src/PredictionMarket.sol` - Events to index
 
-**Events to index:**
+**Events to index (Street Consensus):**
 - `MarketCreated(marketId, creator, question, expiryTimestamp)`
 - `Trade(marketId, trader, isYes, isBuy, shares, bnbAmount)`
-- `OutcomeAsserted(marketId, asserter, outcome, assertionId)`
+- `OutcomeProposed(marketId, proposer, outcome, proofLink, bond)`
+- `ProposalDisputed(marketId, disputer, bond)`
+- `VoteCast(marketId, voter, outcome, weight)`
+- `MarketFinalized(marketId, outcome, winner, ...)` 
 - `MarketResolved(marketId, outcome)`
 - `Claimed(marketId, user, amount)`
+- `JuryFeePaid(marketId, voter, amount)`
+- `EmergencyRefunded(marketId, user, amount)`
 
 **Entities needed:**
-- Market (all fields + computed: totalVolume, yesPrice, noPrice)
+- Market (all fields + status: Active/Expired/Proposed/Disputed/Resolved)
 - Trade (link to Market)
+- Vote (NEW - link to Market + voter)
 - User (positions across markets, total volume)
-- Position (user + market + shares)
+- Position (user + market + shares + hasVoted + votedForProposer)
 
 Please initialize the subgraph with proper schema and mappings.
 
@@ -148,15 +186,22 @@ PROMPT #6: CONTINUE FROM LAST SESSION
 Continuing Junkie.Fun development.
 
 **Current status:**
-- ✅ Smart Contracts: COMPLETE (74 tests, see /contracts/CHANGELOG.md)
+- ✅ Smart Contracts: COMPLETE (116 tests, see /contracts/CHANGELOG.md v2.0.0)
 - ⬜ Frontend: NOT STARTED
 - ⬜ Subgraph: NOT STARTED
 - ⬜ Deployment: NOT STARTED
 
 **Last completed:**
-- PredictionMarket.sol with all features
-- 74 tests including pump & dump economics verification
+- PredictionMarket.sol with Street Consensus (replaced UMA Oracle)
+- 116 tests including pump & dump economics verification
 - PROFIT.txt documenting the economics math
+
+**Street Consensus highlights:**
+- 30-90 min resolution (vs 48-72h with UMA)
+- No external dependencies
+- Bettors vote on outcomes
+- Dynamic bond: max(0.02 BNB, pool×1%)
+- Jury fee: 50% of loser's bond to winning voters
 
 **Next priority:** Frontend OR Subgraph (ask me which)
 
@@ -172,8 +217,8 @@ A decentralized prediction market platform on BNB Chain where:
 - Users trade YES/NO shares using native BNB
 - Bonding curve ensures instant liquidity
 - **Early buyers profit when later buyers enter** (Pump.fun mechanics)
-- UMA Optimistic Oracle handles trustless resolution
-- 1.5% total fee (1% platform + 0.5% creator)
+- **Street Consensus** handles resolution (bettors vote, 30-90 min)
+- 1.8% total fee (1% platform + 0.5% creator + 0.3% resolution)
 
 **The Pump & Dump Economics (CRITICAL TO UNDERSTAND):**
 ```
@@ -181,9 +226,33 @@ Alice buys YES with 1 BNB → Gets 197 shares at 0.005 BNB each
 Bob buys YES with 0.5 BNB → Pushes price to 0.0078 BNB
 Alice sells all 197 shares → Gets 1.366 BNB back (+36.6% profit!)
 Bob's shares now worth 0.36 BNB → He's down 27%
-Platform collects 1.5% of all volume
+Platform collects fees on all volume
 ```
 This is BY DESIGN - it creates FOMO and viral growth like Pump.fun.
+
+**Street Consensus Resolution (NEW - replaced UMA):**
+```
+Market expires
+    ↓
+Creator proposes outcome (10 min priority) with bond
+    ↓
+30 min dispute window (anyone can dispute with 2× bond)
+    ↓
+If disputed → 1 hour voting (weight = shares owned)
+    ↓
+Simple majority wins, bonds distributed:
+  - Winner: gets bond back + 50% of loser's bond
+  - Winning voters: split 50% of loser's bond (jury fee)
+  - Loser: loses entire bond
+```
+
+**Why Street Consensus over UMA?**
+| | UMA (Old) | Street Consensus (New) |
+|---|---|---|
+| Speed | 48-72 hours | **30-90 minutes** |
+| Dependencies | UMA Protocol | **None** |
+| Who decides | UMA token holders | **Actual bettors** |
+| Complexity | High (WBNB wrapping) | **Simple (native BNB)** |
 
 **Key Constants:**
 - Unit Price: 0.01 BNB (P_YES + P_NO always equals this)
@@ -191,23 +260,30 @@ This is BY DESIGN - it creates FOMO and viral growth like Pump.fun.
 - Min Bet: 0.005 BNB
 - Platform Fee: 1% (to treasury)
 - Creator Fee: 0.5% (to market creator)
-- UMA Bond: 0.1 WBNB
-- Liveness: 2 hours
+- Resolution Fee: 0.3% (on propose/dispute/vote)
+- Min Bond: 0.02 BNB (or pool×1% if higher)
+- Dispute requires 2× proposer's bond
+- Creator Priority: 10 minutes
+- Dispute Window: 30 minutes
+- Voting Window: 1 hour
+- Emergency Refund: 24 hours after expiry (if no proposal)
 
 **Tech Stack:**
-- Contracts: Foundry, Solidity 0.8.24, OpenZeppelin, UMA OOv3
+- Contracts: Foundry, Solidity 0.8.24, OpenZeppelin
 - Frontend: React 19, Vite, Wagmi v2, RainbowKit, Tailwind, TanStack Query
 - Indexing: The Graph (Subgraph Studio)
 - Theme: Retrowave/90s hacker aesthetic
 
 **NO BACKEND** - The Graph handles all data indexing
+**NO EXTERNAL ORACLES** - Street Consensus is fully self-contained
 
 **Files to understand the project:**
 1. `/PROJECT.md` - Business model & full documentation
 2. `/TODO.md` - Task tracker with completion status
-3. `/contracts/PROJECT_CONTEXT.md` - Contract architecture
-4. `/contracts/PROFIT.txt` - Pump & dump math proof
-5. `/contracts/CHANGELOG.md` - Version history
+3. `/contracts/README.md` - Street Consensus explained
+4. `/contracts/PROJECT_CONTEXT.md` - Contract architecture
+5. `/contracts/PROFIT.txt` - Pump & dump math proof
+6. `/contracts/CHANGELOG.md` - Version history (v2.0.0 = Street Consensus)
 
 ================================================================================
 CONTRACT INTERFACE QUICK REFERENCE
@@ -237,34 +313,63 @@ function buyNo(uint256 marketId, uint256 minSharesOut) payable returns (uint256)
 function sellYes(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (uint256)
 function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (uint256)
 
-// ===== Resolution =====
-function assertOutcome(uint256 marketId, bool outcome) returns (bytes32)
+// ===== Street Consensus Resolution =====
+function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+function dispute(uint256 marketId, string proofLink) payable
+function vote(uint256 marketId, bool supportProposer)
+function finalizeMarket(uint256 marketId)
+
+// ===== Claims =====
 function claim(uint256 marketId) returns (uint256)
+function emergencyRefund(uint256 marketId) returns (uint256)
 
 // ===== Views (for UI) =====
 function getYesPrice(uint256 marketId) view returns (uint256)
 function getNoPrice(uint256 marketId) view returns (uint256)
 function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view returns (uint256)
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256)
-function getPosition(uint256 marketId, address user) view returns (uint256, uint256, bool)
+function getPosition(uint256 marketId, address user) view returns (
+    uint256 yesShares, 
+    uint256 noShares, 
+    bool claimed, 
+    bool emergencyRefunded, 
+    bool hasVoted, 
+    bool votedForProposer
+)
 function getMarket(uint256 marketId) view returns (...)
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
+// MarketStatus: Active, Expired, Proposed, Disputed, Resolved
+function getRequiredBond(uint256 marketId) view returns (uint256)
+function canEmergencyRefund(uint256 marketId) view returns (bool, uint256)
 ```
 
 ================================================================================
-TEST RESULTS SUMMARY (74 tests passing)
+TEST RESULTS SUMMARY (116 tests passing)
 ================================================================================
 
 ```
-╭--------------------------+--------+--------+---------╮
-| Test Suite               | Passed | Failed | Skipped |
-+======================================================+
-| PredictionMarketTest     | 37     | 0      | 0       |  <- Unit tests
-| PredictionMarketFuzzTest | 25     | 0      | 0       |  <- Fuzz tests
-| PumpDumpTest             | 8      | 0      | 0       |  <- Economics tests
-| VulnerabilityCheckTest   | 4      | 0      | 0       |  <- Security tests
-╰--------------------------+--------+--------+---------╯
+╭────────────────────────────────+--------+--------+---------╮
+| Test Suite                     | Passed | Failed | Skipped |
++================================================================+
+| PredictionMarket.t.sol         | 52     | 0      | 0       |  <- Unit tests
+| PredictionMarket.fuzz.t.sol    | 29     | 0      | 0       |  <- Fuzz tests
+| PumpDump.t.sol                 | 31     | 0      | 0       |  <- Economics + Features
+| VulnerabilityCheck.t.sol       | 4      | 0      | 0       |  <- Security tests
+╰────────────────────────────────+--------+--------+---------╯
 ```
+
+**Street Consensus Test Results:**
+- test_ProposeOutcome_Success ✅
+- test_ProposeOutcome_CreatorPriority ✅
+- test_ProposeOutcome_AfterPriorityWindow ✅
+- test_Dispute_Success ✅
+- test_Dispute_RequiresDoubleBond ✅
+- test_Vote_Success ✅
+- test_Vote_WeightedByShares ✅
+- test_FinalizeMarket_ProposerWins ✅
+- test_FinalizeMarket_DisputerWins ✅
+- test_FinalizeMarket_TieReturnsBonds ✅
+- test_JuryFee_DistributedToVoters ✅
 
 **Pump & Dump Test Results:**
 - test_PumpDump_EarlyBuyerProfits: Alice spent 1 BNB, received 1.366 BNB ✅
@@ -273,5 +378,11 @@ TEST RESULTS SUMMARY (74 tests passing)
 - test_PumpDump_InsufficientPoolBalanceProtection: Over-withdrawal blocked ✅
 - test_PumpDump_FeesCollected: 1% platform + 0.5% creator ✅
 - test_PumpDump_CreatorFirstMoverAdvantage: Creator gets more shares ✅
+
+**Emergency Refund Test Results:**
+- test_EmergencyRefund_AfterTimeout ✅
+- test_EmergencyRefund_RevertTooEarly ✅
+- test_EmergencyRefund_RevertIfProposed ✅
+- test_EmergencyRefund_RevertIfResolved ✅
 
 ================================================================================
