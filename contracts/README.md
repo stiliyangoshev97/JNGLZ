@@ -145,7 +145,7 @@ Initial State:           After YES Buying:        After NO Buying:
 │                                                             │
 │   Pool Size      Bond Required       Disputer Bond         │
 │   ──────────     ─────────────       ──────────────        │
-│   1 BNB          0.02 BNB (floor)    0.04 BNB (2x)         │
+│   0.3 BNB        0.005 BNB (floor)   0.01 BNB (2x)         │
 │   5 BNB          0.05 BNB (1%)       0.10 BNB (2x)         │
 │   50 BNB         0.50 BNB (1%)       1.00 BNB (2x)         │
 │                                                             │

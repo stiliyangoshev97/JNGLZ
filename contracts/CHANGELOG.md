@@ -5,6 +5,26 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-01-08
+
+### Changed
+
+#### Lowered Minimum Bond Floor
+- `MIN_BOND_FLOOR_LOWER`: 0.01 BNB → 0.005 BNB (constant)
+- `minBondFloor` default: 0.02 BNB → 0.005 BNB (configurable)
+
+**Why the Change?**
+- Makes resolution accessible for smaller markets
+- 0.005 BNB (~$3) is still sufficient to deter spam
+- Enables more participation in early-stage/low-liquidity markets
+- Disputer bond (2x) is now 0.01 BNB minimum
+
+**Bond Calculation:** `max(minBondFloor, pool × dynamicBondBps)`
+- Small pools (< 0.5 BNB): Uses 0.005 BNB floor
+- Larger pools: Uses 1% of pool (unchanged)
+
+---
+
 ## [2.1.0] - 2025-01-07
 
 ### Added
@@ -71,7 +91,7 @@ enum MarketStatus { Active, Expired, Proposed, Disputed, Resolved }
 |-----------|---------|-------|-------------|
 | `creatorFeeBps` | 50 (0.5%) | 0-200 | Fee to market creator |
 | `resolutionFeeBps` | 30 (0.3%) | 0-100 | Fee on propose/dispute/vote |
-| `minBondFloor` | 0.02 BNB | 0.01-0.1 | Minimum bond |
+| `minBondFloor` | 0.005 BNB | 0.005-0.1 | Minimum bond |
 | `dynamicBondBps` | 100 (1%) | 50-500 | Bond as % of pool |
 | `bondWinnerShareBps` | 5000 (50%) | 2000-8000 | Winner's share of loser bond |
 

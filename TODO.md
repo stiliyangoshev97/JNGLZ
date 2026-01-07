@@ -397,6 +397,47 @@ const canVote = marketStatus === 'Disputed' && hasPosition && !hasVoted;
 - [ ] `CreateMarketPage` - Create new market
 - [ ] `PortfolioPage` - User's positions & pending jury fees
 
+### 🔄 Expired Market Resolution Strategy (PortfolioPage/MarketDetailPage)
+**Scenario:** User has position in an expired market with no proposal yet.
+
+**Show two clear options:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  ⏰ Market Expired - Your Position: 0.5 BNB in YES      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [⚡ Settle Now]              [🕐 Wait for Refund]      │
+│  Bond: 0.005 BNB              FREE                      │
+│  Get BNB in ~30 min           Available in 23h 42m      │
+│  (bond returned after)                                  │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Implementation:**
+```typescript
+// Check if user can settle vs wait
+const { eligible, timeUntil } = await contract.canEmergencyRefund(marketId);
+const requiredBond = await contract.getRequiredBond(marketId);
+
+// Option A: Settle Now (propose outcome)
+// - Costs: requiredBond (returned if no dispute)
+// - Time: ~30 min (dispute window)
+// - Best for: Impatient users, small bond markets
+
+// Option B: Wait for Refund
+// - Costs: FREE
+// - Time: timeUntil (countdown to 24h after expiry)
+// - Best for: Patient users, or if bond is too high
+```
+
+**UI Requirements:**
+- [ ] Show both options side-by-side for expired markets
+- [ ] Display bond amount clearly for "Settle Now"
+- [ ] Show countdown timer for "Wait for Refund"
+- [ ] Explain that bond is returned if no dispute
+- [ ] Default highlight "Wait for Refund" (free option)
+
 ### ⏰ Market Expiry Picker (CreateMarketPage)
 **Contract accepts:** Unix timestamp (any future time - no min/max restrictions)
 

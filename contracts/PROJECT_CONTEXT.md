@@ -65,7 +65,7 @@ PredictionMarket.sol
 │   ├── platformFeeBps = 100 (1% default)
 │   ├── creatorFeeBps = 50 (0.5% default)
 │   ├── resolutionFeeBps = 30 (0.3% default)
-│   ├── minBondFloor = 0.02 ether
+│   ├── minBondFloor = 0.005 ether
 │   ├── dynamicBondBps = 100 (1%)
 │   ├── bondWinnerShareBps = 5000 (50%)
 │   ├── minBet = 0.005 ether
@@ -117,7 +117,7 @@ PredictionMarket.sol
 | `creatorFeeBps` | 50 | 0.5% creator fee (configurable 0-2%) |
 | `resolutionFeeBps` | 30 | 0.3% resolution fee (configurable 0-1%) |
 | `minBet` | 0.005 ether | Minimum bet (~$3) |
-| `minBondFloor` | 0.02 ether | Minimum proposal bond |
+| `minBondFloor` | 0.005 ether | Minimum proposal bond |
 | `dynamicBondBps` | 100 | 1% of pool for bond |
 | `bondWinnerShareBps` | 5000 | 50% of loser's bond to winner |
 | `CREATOR_PRIORITY_WINDOW` | 10 minutes | Creator's head start |

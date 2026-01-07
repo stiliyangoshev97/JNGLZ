@@ -1438,10 +1438,10 @@ contract PumpDumpTest is TestHelper {
 
         uint256 requiredBond = market.getRequiredBond(marketId);
 
-        // 0.1 ether * 1% = 0.001 ether < MIN_BOND_FLOOR (0.02 ether)
+        // 0.1 ether * 1% = 0.001 ether < MIN_BOND_FLOOR (0.005 ether)
         assertEq(
             requiredBond,
-            0.02 ether,
+            0.005 ether,
             "Should return MIN_BOND_FLOOR for small pools"
         );
     }

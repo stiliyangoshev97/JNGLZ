@@ -41,7 +41,7 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public constant MIN_BET_UPPER = 0.1 ether;
 
     /// @notice Minimum bond floor bounds
-    uint256 public constant MIN_BOND_FLOOR_LOWER = 0.01 ether;
+    uint256 public constant MIN_BOND_FLOOR_LOWER = 0.005 ether;
     uint256 public constant MIN_BOND_FLOOR_UPPER = 0.1 ether;
 
     /// @notice Dynamic bond BPS bounds (0.5% to 5%)
@@ -145,7 +145,7 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public creatorFeeBps = 50; // 0.5% default
     uint256 public resolutionFeeBps = 30; // 0.3% default
     uint256 public minBet = 0.005 ether;
-    uint256 public minBondFloor = 0.02 ether;
+    uint256 public minBondFloor = 0.005 ether;
     uint256 public dynamicBondBps = 100; // 1% of pool
     uint256 public bondWinnerShareBps = 5000; // 50% to winner
     address public treasury;
