@@ -1065,6 +1065,78 @@ contract PredictionMarket is ReentrancyGuard {
     }
 
     /**
+     * @notice Calculate maximum shares sellable given current pool liquidity
+     * @dev Uses binary search to find max shares where grossBnbOut <= poolBalance
+     * @param marketId The market ID
+     * @param userShares The user's total shares on this side
+     * @param isYes Whether selling YES or NO shares
+     * @return maxShares Maximum shares that can be sold without exceeding pool balance
+     * @return bnbOut Net BNB the user would receive after fees
+     */
+    function getMaxSellableShares(
+        uint256 marketId,
+        uint256 userShares,
+        bool isYes
+    ) external view returns (uint256 maxShares, uint256 bnbOut) {
+        Market storage market = markets[marketId];
+
+        if (userShares == 0) {
+            return (0, 0);
+        }
+
+        // Check if user can sell all shares
+        uint256 fullSellGross = _calculateSellBnb(
+            market.yesSupply,
+            market.noSupply,
+            userShares,
+            isYes
+        );
+
+        if (fullSellGross <= market.poolBalance) {
+            // Can sell everything
+            uint256 totalFee = (fullSellGross *
+                (platformFeeBps + creatorFeeBps)) / BPS_DENOMINATOR;
+            return (userShares, fullSellGross - totalFee);
+        }
+
+        // Binary search to find max sellable
+        uint256 low = 0;
+        uint256 high = userShares;
+
+        while (low < high) {
+            uint256 mid = (low + high + 1) / 2;
+            uint256 grossBnb = _calculateSellBnb(
+                market.yesSupply,
+                market.noSupply,
+                mid,
+                isYes
+            );
+
+            if (grossBnb <= market.poolBalance) {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        maxShares = low;
+
+        if (maxShares > 0) {
+            uint256 grossBnbOut = _calculateSellBnb(
+                market.yesSupply,
+                market.noSupply,
+                maxShares,
+                isYes
+            );
+            uint256 totalFee = (grossBnbOut *
+                (platformFeeBps + creatorFeeBps)) / BPS_DENOMINATOR;
+            bnbOut = grossBnbOut - totalFee;
+        }
+
+        return (maxShares, bnbOut);
+    }
+
+    /**
      * @notice Get the current status of a market
      */
     function getMarketStatus(

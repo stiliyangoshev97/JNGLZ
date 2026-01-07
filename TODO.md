@@ -144,6 +144,7 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 - [x] `getMarketStatus(marketId)` → MarketStatus enum (Active/Expired/Proposed/Disputed/Resolved)
 - [x] `previewBuy(marketId, bnbAmount, isYes)` → shares
 - [x] `previewSell(marketId, shares, isYes)` → bnbAmount
+- [x] `getMaxSellableShares(marketId, userShares, isYes)` → (maxShares, bnbOut) **NEW**
 - [x] `getRequiredBond(marketId)` → bond amount
 - [x] `canEmergencyRefund(marketId)` → (eligible, timeUntil)
 
@@ -177,7 +178,7 @@ A decentralized prediction market platform on BNB Chain where anyone can:
 - [x] Pause/unpause functionality
 - [x] 1-hour action expiry
 
-### Tests ✅ (116 passing)
+### Tests ✅ (124 passing)
 - [x] Unit tests (52 tests)
   - Market creation, trading, fees
   - Street Consensus: propose, dispute, vote, finalize
@@ -194,6 +195,64 @@ A decentralized prediction market platform on BNB Chain where anyone can:
   - Pump & dump verification
   - Pool solvency
   - Creator first-mover advantage
+- [x] **Instant Sell Analysis (8 tests)** - NEW
+  - Tests what happens when user tries to sell immediately
+  - Tests for `getMaxSellableShares()` contract function
+  - See critical findings below
+
+### ⚠️ Critical Finding: Instant Sell Liquidity Constraint
+
+**Issue Discovered:** When a user is the ONLY buyer in a market (no opposing side liquidity), they CANNOT immediately sell 100% of their position.
+
+| Buy Amount | Max Instant Sellable | Position Stuck |
+|------------|---------------------|----------------|
+| 0.01 BNB (~$5) | 99% | 1% |
+| 0.1 BNB (~$50) | 95% | 5% |
+| 0.5 BNB (~$250) | 83% | 17% |
+| **1 BNB (~$500)** | **74%** | **26%** |
+| 2 BNB (~$1000) | 65% | 35% |
+
+**Root Cause:** The `_calculateSellBnb()` function uses average price between before and after sell. When you're the only buyer, the pool doesn't have enough BNB to cover the average price return for your full position.
+
+**Good News:** When there IS opposing liquidity (buyers on both YES and NO):
+- ✅ Full instant selling WORKS perfectly
+- ✅ The user can even PROFIT if they buy the cheap side and sell immediately
+
+**Mitigation (already working):**
+- Contract reverts with `InsufficientPoolBalance` if sell would drain pool
+- Users can always sell partial positions
+- Healthy markets with both-side activity don't have this issue
+- **NEW:** `getMaxSellableShares()` view function calculates max sellable in one call
+
+**Frontend Implementation (using `getMaxSellableShares()`):**
+```typescript
+// Get user's position
+const { yesShares } = await contract.getPosition(marketId, userAddress);
+
+// Get max sellable (single RPC call!)
+const { maxShares, bnbOut } = await contract.getMaxSellableShares(
+  marketId,
+  yesShares,
+  true // isYes
+);
+
+// Display to user
+const percentage = (maxShares * 100n) / yesShares;
+if (percentage < 100n) {
+  // Show warning: "Low liquidity - can only sell {percentage}% now"
+  // Show "Sell Max Available" button
+}
+```
+
+**Frontend UI Requirements:**
+- [ ] Call `getMaxSellableShares()` when user opens sell panel
+- [ ] Display "Max Sellable Now: X shares (Y%)" 
+- [ ] Show "⚠️ Low Liquidity" warning when < 100%
+- [ ] Add "Sell Max Available" button (uses `maxShares` from contract)
+- [ ] Show "Liquidity Health" indicator (green ≥90%, yellow 50-90%, red <50%)
+- [ ] Update values in real-time as market state changes
+
+**Status:** This is **by design** - the bonding curve protects the pool. The frontend must communicate this clearly to users.
 
 ### Documentation ✅
 - [x] README.md - Economics in 20 seconds
@@ -303,11 +362,109 @@ frontend/src/
 - [ ] `VoteWeightDisplay` - Show user's voting power
 - [ ] `JuryFeeEstimate` - Estimated earnings for voting
 
+### 🗳️ Vote Button Visibility (IMPORTANT!)
+**Requirement:** The Vote button should ONLY be visible/enabled for users who have a position in the market.
+
+**Logic:**
+```typescript
+// Check if user has any shares in this market
+const { yesShares, noShares } = await contract.getPosition(marketId, userAddress);
+const hasPosition = yesShares > 0n || noShares > 0n;
+
+// Only show Vote button if:
+// 1. Market status is DISPUTED (voting phase)
+// 2. User has position (yesShares > 0 OR noShares > 0)
+// 3. User hasn't voted yet (hasVoted === false)
+const canVote = marketStatus === 'Disputed' && hasPosition && !hasVoted;
+```
+
+**UI Requirements:**
+- [ ] Hide Vote button entirely if user has no position (yesShares = 0 AND noShares = 0)
+- [ ] Show "You must hold shares to vote" message if user clicks on disabled voting area
+- [ ] Display user's voting weight prominently: "Your vote weight: {yesShares + noShares} shares"
+- [ ] Grey out Vote button if user has already voted, show "You voted for {Proposer/Disputer}"
+- [ ] Voting weight = total shares (YES + NO combined)
+
+**Why this matters:**
+- Only bettors can vote (they have skin in the game)
+- Prevents vote spam from non-participants
+- Vote weight is proportional to position size
+- Contract will revert `vote()` if user has no shares anyway
+
 ### Pages
 - [ ] `MarketsPage` - List all markets
 - [ ] `MarketDetailPage` - Single market + resolution UI
 - [ ] `CreateMarketPage` - Create new market
 - [ ] `PortfolioPage` - User's positions & pending jury fees
+
+### ⏰ Market Expiry Picker (CreateMarketPage)
+**Contract accepts:** Unix timestamp (any future time - no min/max restrictions)
+
+**Recommended UI:** Preset duration buttons + optional custom picker
+
+```
+┌─────────────────────────────────────┐
+│  When does this resolve?            │
+├─────────────────────────────────────┤
+│  [1 Hour] [4 Hours] [24 Hours]      │
+│  [3 Days] [1 Week]  [Custom...]     │
+└─────────────────────────────────────┘
+```
+
+**Implementation:**
+```typescript
+const durations = {
+  '1h': 60 * 60,
+  '4h': 4 * 60 * 60,
+  '24h': 24 * 60 * 60,
+  '3d': 3 * 24 * 60 * 60,
+  '1w': 7 * 24 * 60 * 60,
+};
+
+// Calculate expiry timestamp
+const expiryTimestamp = Math.floor(Date.now() / 1000) + durations['24h'];
+
+// Or from custom date picker
+const selectedDate = new Date('2026-01-15T15:00:00');
+const expiryTimestamp = Math.floor(selectedDate.getTime() / 1000);
+```
+
+**UI Requirements:**
+- [ ] Preset buttons for common durations (1h, 4h, 24h, 3d, 1w)
+- [ ] "Custom" button opens date/time picker
+- [ ] Show countdown preview: "Expires in 23h 59m"
+- [ ] Validate expiry is in future before submit
+- [ ] Default selection: 24 hours (most common for degen markets)
+
+### 💡 UX/UI: Simplified Trading Display (IMPORTANT!)
+**Goal:** Make the complex bonding curve math invisible. Show 3 simple numbers:
+
+1. **"Buy Price"** - How much it costs to join the fight (per share or for X BNB)
+2. **"Exit Now"** - The dump value (what you'd get if you sold immediately)
+3. **"Potential Payout"** - What you get if you're right and hold until the end
+
+**Implementation Notes:**
+- Use `previewBuy()` for Buy Price calculation
+- Use `previewSell()` for Exit Now calculation  
+- Use share count × UNIT_PRICE for Potential Payout (if you win 100%)
+- Show these 3 numbers prominently on every trade panel
+- Update in real-time as user changes bet amount
+- Color code: Green for profit scenarios, Red for loss scenarios
+
+**Example Display:**
+```
+┌─────────────────────────────────────┐
+│  You're betting: 0.1 BNB on YES     │
+├─────────────────────────────────────┤
+│  📊 Buy Price:      0.0052 BNB/share│
+│  🚪 Exit Now:       0.095 BNB       │
+│  🏆 Potential Win:  0.19 BNB        │
+│                     (+90% if YES)   │
+└─────────────────────────────────────┘
+```
+
+**Rationale:** Users don't need to understand bonding curves, virtual liquidity, 
+or average price formulas. They just need to know: cost, exit, potential win.
 
 ---
 

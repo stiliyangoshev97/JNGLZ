@@ -3,7 +3,7 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-116%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-124%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
@@ -218,6 +218,77 @@ Initial State:           After YES Buying:        After NO Buying:
 └────────────────────────────────────────────────────────────┘
 ```
 
+### 🛡️ Single Shareholder Protection (Game Theory)
+
+**Question:** What happens if you're the ONLY buyer in a market and someone proposes the wrong outcome?
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         SINGLE SHAREHOLDER SCENARIO                         │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   Timeline:                                                 │
+│   ─────────                                                 │
+│   1. You buy YES shares (only buyer)                       │
+│   2. Market expires                                        │
+│   3. Someone proposes "NO" (wrong outcome!)                │
+│   4. You have 30 min to dispute                            │
+│   5. If disputed → voting phase (1 hour)                   │
+│   6. You're the ONLY voter → YOU WIN 100%                  │
+│                                                             │
+│   ⚠️  THE CATCH:                                            │
+│   If you DON'T dispute within 30 minutes:                  │
+│   • Wrong proposal gets accepted automatically             │
+│   • You lose EVERYTHING                                    │
+│                                                             │
+│   ✅ PROTECTION (if you act in time):                       │
+│   • Dispute with 2× bond                                   │
+│   • Vote for yourself (only voter!)                        │
+│   • Win your shares + 50% of proposer's bond               │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+
+SUMMARY: Single shareholders ARE protected IF they:
+• Watch the market after expiry
+• Dispute wrong proposals within 30 min
+• Vote during the 1-hour voting window
+
+The contract does NOT auto-protect passive users!
+```
+
+### 🔍 Who Can Propose vs Who Can Vote
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         PROPOSE vs VOTE PERMISSIONS                         │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   WHO CAN PROPOSE AN OUTCOME?                              │
+│   ──────────────────────────────                           │
+│   • First 10 min: ONLY market creator                      │
+│   • After 10 min: ANYONE (even non-shareholders)           │
+│   • Must post bond (0.02 BNB min or 1% of pool)           │
+│                                                             │
+│   WHY ALLOW NON-SHAREHOLDERS TO PROPOSE?                   │
+│   • Bond requirement = skin in the game                    │
+│   • Ensures markets get resolved if creator disappears     │
+│   • Incentive: Get bond back + 50% of disputer's bond     │
+│                                                             │
+│   WHO CAN VOTE? (Only shareholders!)                       │
+│   ─────────────────────────────────                        │
+│   • ONLY users with yesShares > 0 OR noShares > 0         │
+│   • Vote weight = total shares (YES + NO combined)        │
+│   • Non-shareholders CANNOT vote                           │
+│   • Contract reverts if non-shareholder tries to vote     │
+│                                                             │
+│   WHY THIS MATTERS:                                        │
+│   • Bettors have skin in the game                         │
+│   • Prevents vote manipulation by outsiders               │
+│   • Larger positions = more voting power                  │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## ⚖️ Street Consensus Explained
@@ -359,6 +430,9 @@ function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (ui
 // Preview trades (for UI)
 function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view returns (uint256 shares)
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256 bnbOut)
+
+// Get max sellable shares (for "Sell Max Available" button)
+function getMaxSellableShares(uint256 marketId, uint256 userShares, bool isYes) view returns (uint256 maxShares, uint256 bnbOut)
 ```
 
 ### Resolution (Street Consensus)

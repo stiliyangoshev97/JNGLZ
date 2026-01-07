@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2025  
-> **Status:** ✅ Smart Contracts Complete (116 tests passing)
+> **Status:** ✅ Smart Contracts Complete (124 tests passing)
 
 ---
 
@@ -36,10 +36,11 @@
 | Fuzz Tests | ✅ 100% | 29 tests passing |
 | Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
+| Instant Sell Analysis | ✅ 100% | 8 tests passing |
 | Deployment Scripts | ⬜ 0% | BSC Testnet & Mainnet |
 
 **Overall Progress: 95%** (pending deployment)
-**Total Tests: 116 ✅**
+**Total Tests: 124 ✅**
 
 ---
 
@@ -95,6 +96,7 @@ PredictionMarket.sol
 │   ├── previewBuy() / previewSell()
 │   ├── getRequiredBond() - dynamic bond calculation
 │   ├── canEmergencyRefund() - eligibility check
+│   ├── getMaxSellableShares() - max sellable given pool liquidity (NEW)
 │   └── isSigner()
 │
 └── Governance (3-of-3 MultiSig)
@@ -195,6 +197,26 @@ Prevents pool insolvency. If instant price was used:
 
 Average price ensures: `bnbOut ≤ bnbIn` (approximately)
 
+### ⚠️ Instant Sell Liquidity Constraint
+
+**Important:** When a user is the ONLY buyer in a market (no opposing side liquidity), they CANNOT immediately sell 100% of their position.
+
+| Buy Amount | Max Instant Sellable | Position Stuck |
+|------------|---------------------|----------------|
+| 0.1 BNB | 95% | 5% |
+| 0.5 BNB | 83% | 17% |
+| 1 BNB | 74% | 26% |
+| 2 BNB | 65% | 35% |
+
+**Root Cause:** The average price formula doesn't have enough pool liquidity to cover full position returns when you're the only buyer.
+
+**Good News:** When opposing liquidity exists (buyers on both YES and NO), full instant selling works perfectly.
+
+**Frontend Solution:** Use `getMaxSellableShares(marketId, userShares, isYes)` to:
+1. Show users their max sellable amount
+2. Display "Sell Max Available" button
+3. Show liquidity health indicator
+
 ---
 
 ## ⚖️ Street Consensus Resolution
@@ -281,8 +303,9 @@ Formula: refund = (userShares / totalShares) * poolBalance
 | PredictionMarket.fuzz.t.sol | 29 | ✅ Passing |
 | VulnerabilityCheck.t.sol | 4 | ✅ Passing |
 | PumpDump.t.sol | 31 | ✅ Passing |
+| InstantSellAnalysis.t.sol | 8 | ✅ Passing |
 
-**Total Tests: 116 ✅**
+**Total Tests: 124 ✅**
 
 ### Test Categories
 - **Unit tests:** Market creation, trading, fees, resolution, claims
@@ -392,6 +415,7 @@ function getYesPrice(uint256 marketId) view returns (uint256)
 function getNoPrice(uint256 marketId) view returns (uint256)
 function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view returns (uint256)
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256)
+function getMaxSellableShares(uint256 marketId, uint256 userShares, bool isYes) view returns (uint256 maxShares, uint256 bnbOut)
 function getPosition(uint256 marketId, address user) view returns (uint256, uint256, bool, bool, bool, bool)
 function getMarket(uint256 marketId) view returns (...)
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
@@ -417,6 +441,7 @@ contracts/
 │   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (29)
 │   ├── PumpDump.t.sol               # Economics + feature tests (31)
 │   ├── VulnerabilityCheck.t.sol     # Security tests (4)
+│   ├── InstantSellAnalysis.t.sol    # Instant sell + liquidity tests (8)
 │   └── helpers/
 │       └── TestHelper.sol           # Test utilities
 ├── script/

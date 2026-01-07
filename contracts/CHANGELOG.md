@@ -5,6 +5,31 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-07
+
+### Added
+
+#### New View Function: `getMaxSellableShares()`
+```solidity
+function getMaxSellableShares(uint256 marketId, uint256 userShares, bool isYes) 
+    external view returns (uint256 maxShares, uint256 bnbOut)
+```
+
+**Purpose:** Calculate maximum shares sellable given current pool liquidity constraints.
+
+**Why needed:** When a user is the only buyer in a market, they cannot immediately sell 100% of their position due to bonding curve math. This function lets the frontend:
+- Show "Max Sellable Now" in the UI
+- Power a "Sell Max Available" button
+- Display liquidity health indicators
+
+**Returns:**
+- `maxShares` - Maximum shares that can be sold without exceeding pool balance
+- `bnbOut` - Net BNB the user would receive after fees
+
+**Tests:** 8 new tests in `InstantSellAnalysis.t.sol` (124 total tests now passing)
+
+---
+
 ## [2.0.0] - 2025-01-08
 
 ### 🚀 Major: Street Consensus Resolution
