@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 7, 2025  
-> **Status:** ✅ Smart Contracts Complete (74 tests passing)
+> **Status:** ✅ Smart Contracts Complete (97 tests passing)
 
 ---
 
@@ -13,6 +13,9 @@
 - Trading YES/NO shares via bonding curve
 - UMA OOv3 integration for trustless resolution
 - Winner payouts after resolution
+- Emergency refunds (24h timeout)
+- Asserter reward incentives (2% of pool)
+- Dynamic bond pricing
 - 3-of-3 MultiSig governance
 
 ---
@@ -26,14 +29,17 @@
 | Bonding Curve Math | ✅ 100% | P(yes) + P(no) = 0.01 BNB |
 | Fee System | ✅ 100% | 1% platform + 0.5% creator |
 | UMA Integration | ✅ 100% | OOv3 assertTruthWithDefaults |
+| Emergency Refund | ✅ 100% | 24h timeout, proportional |
+| Asserter Reward | ✅ 100% | 2% of pool |
+| Dynamic Bond | ✅ 100% | max(0.02, pool * 1%) |
 | Unit Tests | ✅ 100% | 37 tests passing |
 | Fuzz Tests | ✅ 100% | 25 tests passing |
+| Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
-| Pump & Dump Tests | ✅ 100% | 8 tests passing |
 | Deployment Scripts | ⬜ 0% | BSC Testnet & Mainnet |
 
 **Overall Progress: 95%** (pending deployment)
-**Total Tests: 74 ✅**
+**Total Tests: 97 ✅**
 
 ---
 
@@ -47,16 +53,20 @@ PredictionMarket.sol
 │   ├── VIRTUAL_LIQUIDITY = 100e18
 │   ├── CREATOR_FEE_BPS = 50 (0.5%)
 │   ├── MAX_FEE_BPS = 500 (5%)
-│   └── ACTION_EXPIRY = 1 hour
+│   ├── ACTION_EXPIRY = 1 hour
+│   ├── ASSERTER_REWARD_BPS = 200 (2%)
+│   ├── EMERGENCY_REFUND_DELAY = 24 hours
+│   ├── MIN_BOND_FLOOR = 0.02 ether
+│   └── DYNAMIC_BOND_BPS = 100 (1%)
 │
 ├── State Variables
 │   ├── signers[3] - MultiSig signers
 │   ├── markets mapping
-│   ├── positions mapping (user shares)
+│   ├── positions mapping (user shares + emergencyRefunded)
 │   ├── assertionToMarket mapping
 │   ├── platformFeeBps = 100 (1% default)
 │   ├── minBet = 0.005 ether
-│   ├── umaBond = 0.1 ether
+│   ├── umaBond = 0.02 ether (fallback)
 │   ├── treasury, wbnb, umaOOv3 addresses
 │   └── paused flag
 │
@@ -65,16 +75,19 @@ PredictionMarket.sol
 │   ├── createMarketAndBuy() - atomic create + buy
 │   ├── buyYes() / buyNo()
 │   ├── sellYes() / sellNo()
-│   ├── assertOutcome() - UMA assertion
+│   ├── assertOutcome() - UMA assertion (dynamic bond)
 │   ├── assertionResolvedCallback() - UMA callback
-│   └── claim() - winner payouts
+│   ├── claim() - winner payouts (pays asserter 2%)
+│   └── emergencyRefund() - 24h timeout refund
 │
 ├── View Functions
 │   ├── getMarket()
 │   ├── getYesPrice() / getNoPrice()
-│   ├── getPosition()
+│   ├── getPosition() - returns (yes, no, claimed, emergencyRefunded)
 │   ├── getMarketStatus()
 │   ├── previewBuy() / previewSell()
+│   ├── getRequiredBond() - dynamic bond calculation
+│   ├── canEmergencyRefund() - eligibility check
 │   └── isSigner()
 │
 └── Governance (3-of-3 MultiSig)
@@ -95,7 +108,10 @@ PredictionMarket.sol
 | `CREATOR_FEE_BPS` | 50 | 0.5% creator fee (hardcoded) |
 | `MAX_FEE_BPS` | 500 | 5% max platform fee |
 | `minBet` | 0.005 ether | Minimum bet (~$3) |
-| `umaBond` | 0.1 ether | UMA assertion bond |
+| `ASSERTER_REWARD_BPS` | 200 | 2% asserter reward |
+| `EMERGENCY_REFUND_DELAY` | 24 hours | Timeout for refunds |
+| `MIN_BOND_FLOOR` | 0.02 ether | Minimum assertion bond |
+| `DYNAMIC_BOND_BPS` | 100 | 1% of pool for bond |
 | `ACTION_EXPIRY` | 1 hour | MultiSig action expiry |
 
 ---
@@ -167,9 +183,51 @@ Average price ensures: `bnbOut ≤ bnbIn` (approximately)
 
 ### UMA OOv3 (Optimistic Oracle V3)
 - **Purpose:** Trustless resolution of market outcomes
-- **Bond:** 0.1 WBNB (configurable)
-- **Liveness:** 2 hours (UMA default)
+- **Bond:** Dynamic: `max(0.02 BNB, poolBalance * 1%)`
+- **Liveness:** 2 hours (UMA default challenge window)
 - **Interface:** `assertTruthWithDefaults()`, `assertionResolvedCallback()`
+
+#### UMA Resolution Flow
+```
+Market Expires
+     │
+     ▼
+Someone asserts outcome (posts bond)
+     │
+     ▼
+2-hour challenge window
+     │
+     ├─ No dispute → Assertion accepted, market resolved
+     │
+     └─ Disputed → Goes to UMA DVM (48-72h human voting)
+                        │
+                        ├─ Asserter was right → Market resolved, asserter keeps bond
+                        │
+                        └─ Asserter was wrong → Market RESETS, liar loses bond
+                                                 │
+                                                 ▼
+                                          Anyone can assert again
+```
+
+#### If Nobody Asserts (24h after expiry)
+```
+No assertion for 24 hours
+     │
+     ▼
+emergencyRefund() becomes available
+     │
+     ▼
+Users self-claim proportional refund
+Formula: refund = (userShares / totalShares) * poolBalance
+```
+
+#### Bond Economics
+| Scenario | Asserter | Disputer | Outcome |
+|----------|----------|----------|---------|
+| Honest, no dispute | Gets bond back + 2% reward | N/A | ✅ Profit |
+| Honest, wins dispute | Gets bond + disputer's bond + 2% | Loses bond | ✅ Big profit |
+| Liar, gets disputed | **Loses bond** | Gets liar's bond | ❌ Loss |
+| Liar, no dispute | Keeps bond + 2% | N/A | 😈 Evil wins |
 
 ### WBNB Addresses
 - **Mainnet:** `0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c`
@@ -202,9 +260,9 @@ Average price ensures: `bnbOut ≤ bnbIn` (approximately)
 | PredictionMarket.t.sol | 37 | ✅ Passing |
 | PredictionMarket.fuzz.t.sol | 25 | ✅ Passing |
 | VulnerabilityCheck.t.sol | 4 | ✅ Passing |
-| PumpDump.t.sol | 8 | ✅ Passing |
+| PumpDump.t.sol | 31 | ✅ Passing |
 
-**Total Tests: 74 ✅**
+**Total Tests: 97 ✅**
 
 ### Test Categories
 - **Unit tests:** Market creation, trading, fees, resolution, claims
@@ -216,6 +274,12 @@ Average price ensures: `bnbOut ≤ bnbIn` (approximately)
   - Pool solvency (never negative)
   - InsufficientPoolBalance protection
   - Creator first-mover advantage
+- **Emergency Refund tests:** 
+  - 24h timeout
+  - Proportional distribution
+  - Order-independent fairness
+- **Asserter Reward tests:** 2% payout on first claim
+- **Dynamic Bond tests:** Scales with pool size
 
 ---
 
@@ -227,6 +291,8 @@ event Trade(uint256 indexed marketId, address indexed trader, bool isYes, bool i
 event OutcomeAsserted(uint256 indexed marketId, address indexed asserter, bool outcome, bytes32 assertionId);
 event MarketResolved(uint256 indexed marketId, bool outcome);
 event Claimed(uint256 indexed marketId, address indexed user, uint256 amount);
+event AsserterRewardPaid(uint256 indexed marketId, address indexed asserter, uint256 amount);
+event EmergencyRefunded(uint256 indexed marketId, address indexed user, uint256 amount);
 event ActionProposed(uint256 indexed actionId, ActionType actionType, address indexed proposer);
 event ActionConfirmed(uint256 indexed actionId, address indexed confirmer);
 event ActionExecuted(uint256 indexed actionId, ActionType actionType);
@@ -278,15 +344,18 @@ function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (ui
 // ===== Resolution =====
 function assertOutcome(uint256 marketId, bool outcome) returns (bytes32 assertionId)
 function claim(uint256 marketId) returns (uint256 payout)
+function emergencyRefund(uint256 marketId) returns (uint256 refund)
 
 // ===== Views =====
 function getYesPrice(uint256 marketId) view returns (uint256)
 function getNoPrice(uint256 marketId) view returns (uint256)
 function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view returns (uint256)
 function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256)
-function getPosition(uint256 marketId, address user) view returns (uint256, uint256, bool)
+function getPosition(uint256 marketId, address user) view returns (uint256, uint256, bool, bool)
 function getMarket(uint256 marketId) view returns (...)
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
+function getRequiredBond(uint256 marketId) view returns (uint256)
+function canEmergencyRefund(uint256 marketId) view returns (bool, uint256)
 
 // ===== Governance =====
 function proposeAction(ActionType actionType, bytes data) returns (uint256 actionId)
@@ -301,11 +370,11 @@ function executeAction(uint256 actionId)
 ```
 contracts/
 ├── src/
-│   └── PredictionMarket.sol    # Main contract (1090 lines)
+│   └── PredictionMarket.sol    # Main contract (~1240 lines)
 ├── test/
 │   ├── PredictionMarket.t.sol       # Unit tests (37)
 │   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (25)
-│   ├── PumpDump.t.sol               # Economics tests (8)
+│   ├── PumpDump.t.sol               # Economics + feature tests (31)
 │   ├── VulnerabilityCheck.t.sol     # Security tests (4)
 │   └── helpers/
 │       └── TestHelper.sol           # Test utilities

@@ -5,6 +5,67 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-07
+
+### Added
+
+#### Emergency Refund Mechanism
+- `emergencyRefund()` - Self-claim refund when no assertion after 24 hours post-expiry
+- `canEmergencyRefund()` - View function to check eligibility and time remaining
+- `EMERGENCY_REFUND_DELAY` = 24 hours constant
+- Fair distribution: Uses original pool balance, order-independent payouts
+- Formula: `refund = (userShares / totalShares) * poolBalance`
+- New errors: `EmergencyRefundTooEarly`, `NoPosition`, `AlreadyEmergencyRefunded`, `MarketHasAssertion`
+- New event: `EmergencyRefunded(marketId, user, amount)`
+- New field: `Position.emergencyRefunded` to prevent double-claiming
+
+#### Asserter Reward Incentive
+- 2% of pool balance paid to asserter on first winner claim
+- `ASSERTER_REWARD_BPS` = 200 constant
+- New field: `Market.asserterRewardPaid` to track payment
+- New event: `AsserterRewardPaid(marketId, asserter, amount)`
+- Reward deducted from pool before calculating winner payouts
+
+#### Dynamic Bond Pricing
+- `getRequiredBond()` - View function returns required bond for assertion
+- Formula: `bond = max(MIN_BOND_FLOOR, poolBalance * 1%)`
+- `MIN_BOND_FLOOR` = 0.02 BNB constant
+- `DYNAMIC_BOND_BPS` = 100 constant (1% of pool)
+- Prevents outsized profits on large pools
+- Asserter ROI capped at ~100% (risks 1%, earns 2%)
+
+#### UMA Oracle Flow Documentation
+- **2-hour challenge window**: Assertions accepted if not disputed
+- **Dispute flow**: Goes to UMA DVM for human voting (~48-72h)
+- **Liar penalty**: Loses bond to disputer, market resets for new assertion
+- **No assertion timeout**: Emergency refund available after 24h
+
+### Changed
+- `assertOutcome()` now uses dynamic bond instead of fixed `umaBond`
+- `getPosition()` now returns 4 values (added `emergencyRefunded`)
+- Default `umaBond` reduced to 0.02 BNB (still exists for admin override)
+
+### Testing
+- **97 tests passing** (was 74)
+  - 37 unit tests (PredictionMarket.t.sol)
+  - 25 fuzz tests (PredictionMarket.fuzz.t.sol)  
+  - 4 vulnerability tests (VulnerabilityCheck.t.sol)
+  - 31 pump & dump + feature tests (PumpDump.t.sol)
+- New tests added:
+  - `test_EmergencyRefund_AfterTimeout`
+  - `test_EmergencyRefund_RevertTooEarly`
+  - `test_EmergencyRefund_RevertIfAsserted`
+  - `test_EmergencyRefund_RevertIfResolved`
+  - `test_EmergencyRefund_RevertIfAlreadyClaimed`
+  - `test_EmergencyRefund_RevertIfNoPosition`
+  - `test_AsserterReward_PaidOnFirstClaim`
+  - `test_DynamicBond_ReturnsMinFloorForSmallPool`
+  - `test_DynamicBond_ScalesWithPoolSize`
+  - `test_AssertOutcome_UsesDynamicBond`
+  - `test_DynamicBond_AtThreshold`
+
+---
+
 ## [1.0.0] - 2025-01-06
 
 ### Added
@@ -115,6 +176,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Status |
 |---------|------|--------|
+| 1.1.0 | 2025-01-07 | ✅ Complete |
 | 1.0.0 | 2025-01-06 | ✅ Complete |
 
 ## Contract Addresses
