@@ -1,0 +1,18 @@
+========================================
+JunkieFun Deployment
+========================================
+
+Network: BNB Testnet (Chain ID: 97)
+Deployed at block: 83119796
+Timestamp: 1767822453
+
+PredictionMarket: 0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+
+MultiSig Signers:
+  Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
+  Signer 2: 0xC119B9152afcC5f40C019aABd78A312d37C63926
+  Signer 3: 0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
+Treasury: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
+
+Resolution: Street Consensus
+========================================

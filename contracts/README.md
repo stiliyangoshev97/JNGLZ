@@ -3,7 +3,7 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-140%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-148%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
@@ -395,6 +395,54 @@ The contract does NOT auto-protect passive users!
 │   • Bettors have skin in the game                         │
 │   • Prevents vote manipulation by outsiders               │
 │   • Larger positions = more voting power                  │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### 🛡️ Weighted Voting Security (Anti-Sybil)
+
+Votes are **weighted by share ownership**, NOT 1-person-1-vote. This prevents Sybil attacks.
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         WEIGHTED VOTING: WHY SYBIL ATTACKS DON'T WORK      │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   HOW VOTE WEIGHT IS CALCULATED:                           │
+│   ─────────────────────────────                            │
+│   voteWeight = position.yesShares + position.noShares      │
+│                                                             │
+│   EXAMPLE: Alice vs Bots                                   │
+│   ──────────────────────                                   │
+│   Alice: 100 YES shares → Vote weight: 100                 │
+│   Bot1:  2 YES shares   → Vote weight: 2                   │
+│   Bot2:  2 YES shares   → Vote weight: 2                   │
+│                                                             │
+│   If Alice votes YES and bots vote NO:                     │
+│   • YES votes: 100                                         │
+│   • NO votes: 4                                            │
+│   • RESULT: YES wins (Alice's vote = 25× each bot!)        │
+│                                                             │
+├────────────────────────────────────────────────────────────┤
+│   WHY MULTIPLE WALLETS DON'T HELP ATTACKERS:               │
+│   ─────────────────────────────────────────                │
+│   • Splitting shares across wallets = same total weight    │
+│   • 100 shares in 1 wallet = 100 shares in 50 wallets     │
+│   • Attackers PAY MORE GAS for no benefit                  │
+│                                                             │
+│   Attack Analysis:                                         │
+│   ────────────────                                         │
+│   Honest: 1 BNB → 1 wallet → ~197 shares → weight: 197    │
+│   Attack: 1 BNB → 10 wallets → ~197 shares → weight: 197  │
+│                              + 10× gas fees!               │
+│                                                             │
+├────────────────────────────────────────────────────────────┤
+│   ADDITIONAL PROTECTIONS:                                  │
+│   ───────────────────────                                  │
+│   ✅ Trading disabled after expiry (can't buy votes)      │
+│   ✅ Double-vote prevention (hasVoted flag)               │
+│   ✅ Non-shareholders can't vote (reverts with error)     │
+│   ✅ Vote weight locked at time of voting                 │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 ```

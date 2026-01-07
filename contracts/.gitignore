@@ -12,10 +12,14 @@ out/
 # ============================================
 # Broadcast (Deployment Logs)
 # ============================================
-# Keep production broadcasts, ignore local/dry-run
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
+# Ignore all broadcast files by default (contain deployment info)
+broadcast/
+
+# ============================================
+# Cache (Contains Sensitive Run Data)
+# ============================================
+# NEVER commit cache - contains private key artifacts
+cache/
 
 # ============================================
 # Documentation (Auto-generated)

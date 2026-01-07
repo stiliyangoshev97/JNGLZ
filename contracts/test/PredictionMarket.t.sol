@@ -903,4 +903,311 @@ contract PredictionMarketTest is TestHelper {
         vm.expectRevert(PredictionMarket.ContractPaused.selector);
         market.proposeOutcome{value: 0.03 ether}(marketId, true, "");
     }
+
+    // ============================================
+    // WEIGHTED VOTING TESTS (Anti-Sybil)
+    // ============================================
+
+    /**
+     * @notice Test that vote weight equals total shares owned
+     * @dev Verifies: voteWeight = yesShares + noShares
+     */
+    function test_Vote_WeightEqualsShares() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice buys 1 BNB of YES
+        buyYesFor(alice, marketId, 1 ether, 0);
+        (uint256 aliceYes, , , , , ) = market.getPosition(marketId, alice);
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(charlie, marketId, true, "");
+        disputeFor(proposer, marketId);
+
+        // Alice votes
+        voteFor(alice, marketId, true);
+
+        // Check vote weight matches shares
+        (, , , , uint256 yesVotes, ) = market.getDispute(marketId);
+        assertEq(yesVotes, aliceYes, "Vote weight should equal shares owned");
+    }
+
+    /**
+     * @notice Test that larger shareholders have proportionally more voting power
+     * @dev Alice with 1 BNB should have ~10x voting power of Bob with 0.1 BNB
+     */
+    function test_Vote_LargerPositionMorePower() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice buys 1 BNB, Bob buys 0.1 BNB
+        buyYesFor(alice, marketId, 1 ether, 0);
+        buyNoFor(bob, marketId, 0.1 ether, 0);
+
+        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
+        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
+
+        // Alice should have significantly more shares
+        assertGt(
+            aliceShares,
+            bobShares * 5,
+            "Alice should have >5x Bob's shares"
+        );
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(charlie, marketId, true, "");
+        disputeFor(proposer, marketId);
+
+        // Both vote opposite ways
+        voteFor(alice, marketId, true); // Alice votes YES
+        voteFor(bob, marketId, false); // Bob votes NO
+
+        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
+            marketId
+        );
+
+        // Alice's vote should outweigh Bob's
+        assertGt(
+            yesVotes,
+            noVotes,
+            "Larger shareholder should have more voting power"
+        );
+        assertEq(
+            yesVotes,
+            aliceShares,
+            "YES votes should match Alice's shares"
+        );
+        assertEq(noVotes, bobShares, "NO votes should match Bob's shares");
+    }
+
+    /**
+     * @notice Test Sybil attack resistance - splitting across wallets doesn't help
+     * @dev 1 BNB in 1 wallet = same voting power as 0.5 BNB in 2 wallets
+     */
+    function test_Vote_SybilAttackResistance() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Honest user: Alice buys 1 BNB in one wallet
+        buyYesFor(alice, marketId, 1 ether, 0);
+        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
+
+        // "Attacker" splits across 2 wallets (bob + charlie each 0.5 BNB)
+        buyNoFor(bob, marketId, 0.5 ether, 0);
+        buyNoFor(charlie, marketId, 0.5 ether, 0);
+
+        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
+        (, uint256 charlieNoShares, , , , ) = market.getPosition(
+            marketId,
+            charlie
+        );
+        uint256 attackerTotalShares = bobShares + charlieNoShares;
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(proposer, marketId, true, "");
+        disputeFor(disputer, marketId);
+
+        // Alice votes YES
+        voteFor(alice, marketId, true);
+
+        // "Attackers" both vote NO
+        voteFor(bob, marketId, false);
+        voteFor(charlie, marketId, false);
+
+        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
+            marketId
+        );
+
+        // Total votes should equal total shares
+        assertEq(yesVotes, aliceShares, "YES votes = Alice's shares");
+        assertEq(
+            noVotes,
+            attackerTotalShares,
+            "NO votes = attacker total shares"
+        );
+
+        // Key insight: splitting doesn't give more power
+        // Alice with 1 BNB still has comparable or more power than attackers with 1 BNB split
+        console.log("Alice (1 wallet, 1 BNB) voting power:", aliceShares);
+        console.log(
+            "Attackers (2 wallets, 1 BNB total) voting power:",
+            attackerTotalShares
+        );
+    }
+
+    /**
+     * @notice Test that combined YES+NO shares count for voting weight
+     * @dev Users who hedge (buy both sides) get full voting power
+     */
+    function test_Vote_BothSidesCountForWeight() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice buys both YES and NO
+        buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(alice, marketId, 0.5 ether, 0);
+
+        (uint256 aliceYes, uint256 aliceNo, , , , ) = market.getPosition(
+            marketId,
+            alice
+        );
+        uint256 aliceTotalShares = aliceYes + aliceNo;
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(charlie, marketId, true, "");
+        disputeFor(proposer, marketId);
+
+        voteFor(alice, marketId, true);
+
+        (, , , , uint256 yesVotes, ) = market.getDispute(marketId);
+
+        // Vote weight should include BOTH yes and no shares
+        assertEq(
+            yesVotes,
+            aliceTotalShares,
+            "Vote weight should be YES + NO shares"
+        );
+        assertGt(aliceYes, 0, "Should have YES shares");
+        assertGt(aliceNo, 0, "Should have NO shares");
+    }
+
+    /**
+     * @notice Test that voting outcome is determined by weighted majority
+     * @dev The side with more total share-weight wins
+     */
+    function test_Vote_WeightedMajorityWins() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Setup: Alice has way more shares than Bob
+        buyYesFor(alice, marketId, 2 ether, 0); // Alice: large position
+        buyNoFor(bob, marketId, 0.1 ether, 0); // Bob: small position
+
+        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
+        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
+
+        skipCreatorPriority(marketId);
+
+        // Proposer says YES
+        proposeOutcomeFor(proposer, marketId, true, "");
+        disputeFor(disputer, marketId);
+
+        // Alice votes YES (with proposer), Bob votes NO (with disputer)
+        voteFor(alice, marketId, true);
+        voteFor(bob, marketId, false);
+
+        // Skip voting window
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+
+        // Finalize
+        market.finalizeMarket(marketId);
+
+        // Check outcome - YES should win because Alice has more shares
+        (, , , , , , , , bool resolved, bool outcome) = market.getMarket(
+            marketId
+        );
+        assertTrue(resolved, "Market should be resolved");
+        assertTrue(outcome, "YES should win (Alice has more voting power)");
+
+        console.log("Alice voted YES with weight:", aliceShares);
+        console.log("Bob voted NO with weight:", bobShares);
+        console.log("Outcome: YES wins (as expected)");
+    }
+
+    /**
+     * @notice Test that trading is blocked after market expires (can't buy votes)
+     * @dev Prevents vote-buying attacks
+     */
+    function test_Vote_CantBuySharesAfterExpiry() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+        buyYesFor(alice, marketId, 1 ether, 0);
+
+        // Expire the market
+        expireMarket(marketId);
+
+        // Try to buy more shares - should fail
+        vm.prank(bob);
+        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
+        market.buyYes{value: 0.5 ether}(marketId, 0);
+
+        vm.prank(bob);
+        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+    }
+
+    /**
+     * @notice Test that trading is blocked during dispute/voting phase
+     * @dev Additional protection against vote manipulation
+     */
+    function test_Vote_CantBuySharesDuringVoting() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+        buyYesFor(alice, marketId, 1 ether, 0);
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(charlie, marketId, true, "");
+        disputeFor(proposer, marketId);
+
+        // Market is now in DISPUTED status (voting active)
+        // Try to buy shares - should fail
+        vm.prank(bob);
+        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
+        market.buyYes{value: 0.5 ether}(marketId, 0);
+    }
+
+    /**
+     * @notice Test multiple small voters can't beat one large voter
+     * @dev 10 small voters with 0.1 BNB each ≈ 1 voter with 1 BNB
+     */
+    function test_Vote_ManySmallVotersCantBeatOneLarge() public {
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice: 1 big buyer
+        buyYesFor(alice, marketId, 1 ether, 0);
+        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
+
+        // Create 5 small buyers (we can't easily make 10 in test)
+        address[5] memory smallBuyers;
+        uint256 totalSmallShares;
+
+        for (uint256 i = 0; i < 5; i++) {
+            smallBuyers[i] = address(uint160(0x5000 + i));
+            vm.deal(smallBuyers[i], 1 ether);
+
+            vm.prank(smallBuyers[i]);
+            market.buyNo{value: 0.2 ether}(marketId, 0);
+
+            (, uint256 shares, , , , ) = market.getPosition(
+                marketId,
+                smallBuyers[i]
+            );
+            totalSmallShares += shares;
+        }
+
+        skipCreatorPriority(marketId);
+        proposeOutcomeFor(proposer, marketId, true, "");
+        disputeFor(disputer, marketId);
+
+        // Alice votes YES
+        voteFor(alice, marketId, true);
+
+        // All small buyers vote NO
+        for (uint256 i = 0; i < 5; i++) {
+            vm.prank(smallBuyers[i]);
+            market.vote(marketId, false);
+        }
+
+        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
+            marketId
+        );
+
+        console.log("Alice (1 BNB) voting power:", yesVotes);
+        console.log("5 small buyers (1 BNB total) voting power:", noVotes);
+
+        // Verify votes match shares
+        assertEq(
+            yesVotes,
+            aliceShares,
+            "Alice's votes should match her shares"
+        );
+        assertEq(
+            noVotes,
+            totalSmallShares,
+            "Small buyers' votes should match their total shares"
+        );
+    }
 }

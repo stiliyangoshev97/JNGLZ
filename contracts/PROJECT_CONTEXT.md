@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2025  
-> **Status:** ✅ Smart Contracts Complete (140 tests passing)
+> **Status:** ✅ Smart Contracts Complete (148 tests passing)
 
 ---
 
@@ -32,15 +32,16 @@
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.02, pool * 1%) |
-| Unit Tests | ✅ 100% | 52 tests passing |
+| Unit Tests | ✅ 100% | 60 tests passing |
 | Fuzz Tests | ✅ 100% | 29 tests passing |
 | Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | Instant Sell Analysis | ✅ 100% | 8 tests passing |
+| Integration Tests | ✅ 100% | 16 tests passing |
 | Deployment Scripts | ⬜ 0% | BSC Testnet & Mainnet |
 
 **Overall Progress: 95%** (pending deployment)
-**Total Tests: 124 ✅**
+**Total Tests: 148 ✅**
 
 ---
 

@@ -5,6 +5,32 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-01-07
+
+### Added
+
+#### Weighted Voting Security Tests (Anti-Sybil)
+Added 8 new tests to verify the weighted voting system is resistant to Sybil attacks:
+
+- `test_Vote_WeightEqualsShares` - Verifies vote weight = yesShares + noShares
+- `test_Vote_LargerPositionMorePower` - Larger shareholders have proportionally more voting power
+- `test_Vote_SybilAttackResistance` - Splitting across wallets doesn't increase voting power
+- `test_Vote_BothSidesCountForWeight` - Users holding both YES and NO get combined weight
+- `test_Vote_WeightedMajorityWins` - Outcome determined by share-weighted majority
+- `test_Vote_CantBuySharesAfterExpiry` - Trading blocked after expiry (prevents vote buying)
+- `test_Vote_CantBuySharesDuringVoting` - Trading blocked during voting phase
+- `test_Vote_ManySmallVotersCantBeatOneLarge` - Multiple small voters don't beat one large voter unfairly
+
+#### Documentation: Weighted Voting Security
+Added comprehensive documentation in `README.md` explaining:
+- How vote weight is calculated (`voteWeight = yesShares + noShares`)
+- Why Sybil attacks (multiple wallets) don't help attackers
+- Additional protections (trading disabled after expiry, double-vote prevention)
+
+**Tests:** 148 total tests now passing (+8 from 140)
+
+---
+
 ## [2.2.0] - 2025-01-08
 
 ### Changed

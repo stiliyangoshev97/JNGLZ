@@ -1,0 +1,47 @@
+# ============================================
+# JunkieFun - Deployed Contracts
+# ============================================
+# Last Updated: January 7, 2026
+# ============================================
+
+## BNB TESTNET (Chain ID: 97)
+## ============================================
+
+### PredictionMarket Contract
+- **Address**: 0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+- **BscScan**: https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+- **Verified**: ✅ Yes
+- **Deployed Block**: 83119807
+- **Deployment TX**: https://testnet.bscscan.com/tx/0xcd29a8a3abcea1e873e3939bb8c5f97107d6901d6e565ac433d4fa27f53892f4
+
+### Contract Configuration
+- **Resolution Method**: Street Consensus (no external oracles)
+- **Platform Fee**: 1% (goes to treasury)
+- **Creator Fee**: 0.5% (goes to market creator)
+- **Resolution Reward**: 0.3% (goes to resolver)
+
+### MultiSig Signers (3-of-3)
+- Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
+- Signer 2: 0xC119B9152afcC5f40C019aABd78A312d37C63926
+- Signer 3: 0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
+
+### Treasury
+- **Address**: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
+- **BscScan**: https://testnet.bscscan.com/address/0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
+
+## ============================================
+## BNB MAINNET (Chain ID: 56)
+## ============================================
+
+Not deployed yet.
+
+## ============================================
+## Deployment History
+## ============================================
+
+### v1.0.0 - BNB Testnet (January 7, 2026)
+- Initial deployment with 148 passing tests
+- Full Street Consensus resolution system
+- Pump.fun-style bonding curve economics
+- Weighted voting (anti-Sybil protection)
+- MultiSig governance (3-of-3)
