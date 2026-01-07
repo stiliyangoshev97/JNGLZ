@@ -183,6 +183,116 @@ Initial State:           After YES Buying:        After NO Buying:
 └────────────────────────────────────────────────────────────┘
 ```
 
+### 💡 Why No "Resolution Sniper" Rewards?
+
+**Q: Proposers get nothing on undisputed markets. Why would anyone resolve?**
+
+The incentive comes from **people with skin in the game**:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         WHO RESOLVES MARKETS & WHY                          │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   👤 THE CREATOR                                            │
+│   • Wants their 0.5% creator fee reputation                │
+│   • Wants markets to resolve cleanly for future users      │
+│   • Has 10-min priority window to propose                  │
+│                                                             │
+│   🏆 THE WINNERS                                            │
+│   • Want their BNB winnings NOW                            │
+│   • Won't wait 24h for emergency refund                    │
+│   • Can get 2x profit in 30 min by proposing truth         │
+│                                                             │
+│   ⚔️ THE "STREET JUSTICE" HUNTERS                           │
+│   • Watch for WRONG proposals                              │
+│   • Dispute liars to STEAL their bond                      │
+│   • Reward: 50% of proposer's bond (not a fixed fee)       │
+│                                                             │
+│   Example "Street Justice" profit:                         │
+│   ─────────────────────────────────                        │
+│   • Liar proposes wrong outcome, posts 0.05 BNB bond       │
+│   • Hunter disputes with 0.10 BNB bond                     │
+│   • Voting happens, hunter wins                            │
+│   • Hunter gets: 0.10 + 0.025 = 0.125 BNB                  │
+│   • NET PROFIT: 0.025 BNB (25% ROI on dispute bond!)       │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+
+BOTTOM LINE: Shareholders resolve markets because they want
+their money. No external "sniper rewards" needed!
+```
+
+### Proposer Scenarios (All Outcomes)
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         PROPOSER ECONOMICS (3 Scenarios)                    │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   SCENARIO A: No Dispute (Most Common - ~90% of markets)   │
+│   ──────────────────────────────────────────────────────   │
+│   • Proposer posts bond: 0.005 BNB                         │
+│   • 30 min passes, no challenge                            │
+│   • Proposer gets bond BACK: 0.005 BNB                     │
+│   • NET: 0 BNB (just gas costs)                            │
+│   • BUT: Proposer likely HAS A POSITION and gets winnings! │
+│                                                             │
+│   SCENARIO B: Disputed & Proposer WINS                     │
+│   ──────────────────────────────────────                   │
+│   • Proposer posts: 0.005 BNB                              │
+│   • Disputer posts: 0.01 BNB (2×)                          │
+│   • Voting happens, proposer wins                          │
+│   • Proposer gets: 0.005 + 50% of 0.01 = 0.01 BNB         │
+│   • NET PROFIT: +0.005 BNB (100% ROI on bond!)             │
+│                                                             │
+│   SCENARIO C: Disputed & Proposer LOSES                    │
+│   ──────────────────────────────────────                   │
+│   • Proposer posts: 0.005 BNB                              │
+│   • Disputer posts: 0.01 BNB                               │
+│   • Voting happens, disputer wins                          │
+│   • Proposer loses entire bond                             │
+│   • NET LOSS: -0.005 BNB                                   │
+│                                                             │
+│   KEY INSIGHT: Proposers are usually BETTORS who want      │
+│   their winnings. The bond is just temporary collateral.   │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Voter Rewards (Jury Fee Example)
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         VOTER JURY FEE CALCULATION                          │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│   When a market is DISPUTED, voters on the winning side    │
+│   split 50% of the loser's bond (jury fee).               │
+│                                                             │
+│   Example Setup:                                            │
+│   ─────────────                                             │
+│   • Disputer loses with 0.10 BNB bond                      │
+│   • 50% to winner (proposer): 0.05 BNB                     │
+│   • 50% to voters: 0.05 BNB                                │
+│                                                             │
+│   Voter Distribution:                                       │
+│   ───────────────────                                       │
+│   • Alice: 5000 shares, voted for proposer ✓               │
+│   • Bob: 3000 shares, voted for proposer ✓                 │
+│   • Charlie: 2000 shares, voted for disputer ✗             │
+│                                                             │
+│   Winning voters total: 5000 + 3000 = 8000 shares          │
+│                                                             │
+│   Alice's jury fee: 0.05 × (5000/8000) = 0.03125 BNB       │
+│   Bob's jury fee: 0.05 × (3000/8000) = 0.01875 BNB         │
+│   Charlie: 0 BNB (voted wrong side)                        │
+│                                                             │
+│   ✅ Incentive: Vote honestly to earn jury fees!            │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
 ### Winner Payout Calculation
 
 ```
