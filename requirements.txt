@@ -1,0 +1,153 @@
+# Junkie.Fun - Dependencies
+
+> **Last Updated:** January 6, 2026  
+> **Status:** Planning Phase  
+
+This file documents all dependencies for deployment and PC migration.
+
+# ============================================================================
+# RUNTIME REQUIREMENTS
+# ============================================================================
+
+Node.js             >= 20.0.0          # Runtime
+npm                 >= 10.0.0          # Package manager
+
+# ============================================================================
+# SMART CONTRACTS (Foundry + Solidity)
+# ============================================================================
+
+Foundry             latest             # forge, cast, anvil, chisel
+Solidity            0.8.24             # Solc compiler version
+OpenZeppelin        5.x.x              # @openzeppelin/contracts
+forge-std           latest             # Foundry standard library
+
+# Installation:
+# curl -L https://foundry.paradigm.xyz | bash
+# foundryup
+# cd contracts && forge install
+
+# ============================================================================
+# FRONTEND DEPENDENCIES (React + Vite + Web3)
+# ============================================================================
+
+# --- Core Framework ---
+react               ^19.x.x            # UI library
+react-dom           ^19.x.x            # React DOM
+react-router-dom    ^7.x.x             # Routing
+vite                ^6.x.x             # Build tool
+typescript          ^5.x.x             # TypeScript
+
+# --- Web3 Stack ---
+wagmi               ^2.x.x             # React hooks for Ethereum
+viem                ^2.x.x             # Ethereum client
+@rainbow-me/rainbowkit ^2.x.x          # Wallet connection UI
+
+# --- State & Data Management ---
+zustand             ^5.x.x             # Global state management
+@tanstack/react-query ^5.x.x           # Server state / data fetching
+
+# --- Forms & Validation ---
+react-hook-form     ^7.x.x             # Form management
+@hookform/resolvers ^3.x.x             # Form resolvers
+zod                 ^3.x.x             # Schema validation
+
+# --- Styling ---
+tailwindcss         ^3.x.x             # Utility-first CSS
+postcss             ^8.x.x             # CSS processing
+autoprefixer        ^10.x.x            # CSS vendor prefixes
+
+# --- HTTP Client (minimal use) ---
+axios               ^1.x.x             # HTTP client (for any non-GraphQL calls)
+
+# --- Dev Dependencies ---
+eslint              ^9.x.x             # Linting
+@vitejs/plugin-react ^4.x.x            # React plugin for Vite
+
+# Type definitions:
+@types/node         ^22.x.x
+@types/react        ^19.x.x
+@types/react-dom    ^19.x.x
+
+# Installation:
+# cd frontend && npm install
+
+# ============================================================================
+# SUBGRAPH (The Graph)
+# ============================================================================
+
+@graphprotocol/graph-cli    latest     # Graph CLI for deployment
+@graphprotocol/graph-ts     latest     # AssemblyScript for mappings
+
+# Installation:
+# npm install -g @graphprotocol/graph-cli
+# cd subgraph && npm install
+
+# ============================================================================
+# EXTERNAL SERVICES
+# ============================================================================
+
+The Graph Studio     -                 # Subgraph hosting (https://thegraph.com/studio)
+WalletConnect        -                 # Wallet connection (Project ID required)
+Vercel               -                 # Frontend hosting (optional)
+
+# ============================================================================
+# BLOCKCHAIN (Target Chains)
+# ============================================================================
+
+BNB Chain Testnet   Chain ID: 97       # Development
+BNB Chain Mainnet   Chain ID: 56       # Production
+
+# RPC URLs:
+# Testnet: https://bsc-testnet-rpc.publicnode.com
+# Mainnet: https://bsc-rpc.publicnode.com
+
+# ============================================================================
+# EXTERNAL CONTRACTS (BNB Chain)
+# ============================================================================
+
+# UMA OOv3 (Optimistic Oracle V3):
+# Mainnet: TBD (check https://docs.uma.xyz)
+# Testnet: TBD
+
+# WBNB (Wrapped BNB):
+# Mainnet: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+# Testnet: 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd
+
+# ============================================================================
+# QUICK SETUP COMMANDS
+# ============================================================================
+
+# 1. Install Node.js 20+ (https://nodejs.org)
+
+# 2. Install Foundry:
+#    curl -L https://foundry.paradigm.xyz | bash && foundryup
+
+# 3. Clone and setup:
+#    git clone <repo>
+#    cd JunkieFun
+
+# 4. Contracts:
+#    cd contracts
+#    forge install
+#    forge build
+#    forge test
+
+# 5. Frontend:
+#    cd frontend
+#    npm install
+#    cp .env.example .env.local
+#    npm run dev
+
+# 6. Subgraph:
+#    cd subgraph
+#    npm install
+#    graph codegen
+#    graph build
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+# - No backend (Express/MongoDB) needed - The Graph handles all indexing
+# - No SIWE/JWT - wallet connection only
+# - Native BNB for trading, WBNB only for UMA bond

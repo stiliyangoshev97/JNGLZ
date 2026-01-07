@@ -1,0 +1,240 @@
+# PUMP & DUMP PROFIT ANALYSIS
+# ============================
+# This document verifies that early buyers profit when later buyers enter.
+# This is the core "Pump.fun" mechanic that makes the platform viral.
+
+## BONDING CURVE FORMULAS (from PredictionMarket.sol)
+
+### Constants:
+- UNIT_PRICE = 0.01 ether (P_YES + P_NO always equals this)
+- VIRTUAL_LIQUIDITY = 100e18 (100 virtual shares per side)
+- Total Fee = 1.5% (1% platform + 0.5% creator)
+
+### Price Formula:
+```
+virtualYes = yesSupply + 100e18
+virtualNo = noSupply + 100e18
+totalVirtual = virtualYes + virtualNo
+
+P(YES) = UNIT_PRICE × virtualYes / totalVirtual
+P(NO) = UNIT_PRICE × virtualNo / totalVirtual
+```
+
+### Buy Formula:
+```
+shares = (bnbAmount × totalVirtual × 1e18) / (UNIT_PRICE × virtualSide)
+```
+
+### Sell Formula (Average Price):
+```
+P1 = price before sell = UNIT_PRICE × virtualSide / totalVirtual
+P2 = price after sell = UNIT_PRICE × (virtualSide - shares) / (totalVirtual - shares)
+avgPrice = (P1 + P2) / 2
+bnbOut = shares × avgPrice / 1e18
+```
+
+================================================================================
+## CONCRETE EXAMPLE: Alice (Early) vs Bob (Late)
+================================================================================
+
+### INITIAL STATE:
+- Virtual YES: 100e18
+- Virtual NO: 100e18  
+- Total Virtual: 200e18
+- YES Price: 0.01 × 100 / 200 = 0.005 BNB (50%)
+- NO Price: 0.005 BNB (50%)
+- Pool Balance: 0 BNB
+
+--------------------------------------------------------------------------------
+### STEP 1: Alice buys YES with 1 BNB
+--------------------------------------------------------------------------------
+
+Input: 1 BNB
+Fee (1.5%): 0.015 BNB
+Amount after fee: 0.985 BNB
+
+Shares calculation:
+  shares = (0.985 × 200e18 × 1e18) / (0.01 × 100e18)
+  shares = (0.985 × 200e18 × 1e18) / (1e18)
+  shares = 197e18
+
+State after Alice's buy:
+- Virtual YES: 100e18 + 197e18 = 297e18
+- Virtual NO: 100e18
+- Total Virtual: 397e18
+- Pool Balance: 0.985 BNB
+- YES Price: 0.01 × 297 / 397 = 0.007481... BNB (74.81%)
+- NO Price: 0.01 × 100 / 397 = 0.002519... BNB (25.19%)
+
+Alice's position:
+- 197e18 YES shares
+- Cost: 1 BNB
+
+--------------------------------------------------------------------------------
+### STEP 2: Bob buys YES with 0.5 BNB
+--------------------------------------------------------------------------------
+
+Input: 0.5 BNB
+Fee (1.5%): 0.0075 BNB
+Amount after fee: 0.4925 BNB
+
+Current state before Bob:
+- Virtual YES: 297e18
+- Total Virtual: 397e18
+- YES Price: 0.007481 BNB
+
+Shares calculation:
+  shares = (0.4925 × 397e18 × 1e18) / (0.01 × 297e18)
+  shares = (195.5225e18 × 1e18) / (2.97e18)
+  shares = 65.83e18 (approximately)
+
+State after Bob's buy:
+- Virtual YES: 297e18 + 65.83e18 = 362.83e18
+- Virtual NO: 100e18
+- Total Virtual: 462.83e18
+- Pool Balance: 0.985 + 0.4925 = 1.4775 BNB
+- YES Price: 0.01 × 362.83 / 462.83 = 0.007839 BNB (78.39%)
+
+Bob's position:
+- 65.83e18 YES shares
+- Cost: 0.5 BNB
+
+--------------------------------------------------------------------------------
+### STEP 3: Alice sells ALL 197e18 shares (THE DUMP)
+--------------------------------------------------------------------------------
+
+State before Alice sells:
+- Virtual YES: 362.83e18
+- Total Virtual: 462.83e18
+- Pool Balance: 1.4775 BNB
+- Alice has: 197e18 shares
+
+Sell calculation using AVERAGE PRICE:
+
+P1 (before sell) = 0.01 × 362.83 / 462.83 = 0.007839 BNB
+
+Simulated state after sell:
+- Virtual YES after: 362.83e18 - 197e18 = 165.83e18
+- Total Virtual after: 462.83e18 - 197e18 = 265.83e18
+
+P2 (after sell) = 0.01 × 165.83 / 265.83 = 0.006238 BNB
+
+Average Price = (0.007839 + 0.006238) / 2 = 0.007039 BNB
+
+Gross BNB out = 197e18 × 0.007039 / 1e18 = 1.3867 BNB
+
+Check: Pool has 1.4775 BNB, gross out is 1.3867 BNB ✓ (pool can pay)
+
+Fee on sell (1.5%): 1.3867 × 0.015 = 0.0208 BNB
+Net BNB to Alice: 1.3867 - 0.0208 = 1.3659 BNB
+
+================================================================================
+## ALICE'S PROFIT & LOSS
+================================================================================
+
+- Invested: 1.0000 BNB
+- Received: 1.3659 BNB
+- PROFIT:  +0.3659 BNB (+36.59%)
+
+✅ ALICE (EARLY BUYER) PROFITS!
+
+================================================================================
+## BOB'S SITUATION AFTER ALICE DUMPS
+================================================================================
+
+State after Alice sells:
+- Virtual YES: 165.83e18
+- Virtual NO: 100e18
+- Total Virtual: 265.83e18
+- Pool Balance: 1.4775 - 1.3867 = 0.0908 BNB
+- YES Price: 0.01 × 165.83 / 265.83 = 0.006238 BNB (62.38%)
+
+Bob has: 65.83e18 shares
+Bob's cost: 0.5 BNB
+
+If Bob tries to sell all shares:
+
+P1 (before) = 0.006238 BNB
+P2 (after) = 0.01 × 100 / 200 = 0.005 BNB (back to initial)
+Average = (0.006238 + 0.005) / 2 = 0.005619 BNB
+
+Gross BNB out = 65.83e18 × 0.005619 / 1e18 = 0.3699 BNB
+
+BUT: Pool only has 0.0908 BNB!
+Bob's sell would trigger InsufficientPoolBalance error!
+
+If Bob sells max possible (capped by pool ~0.0908 BNB gross):
+Net after 1.5% fee: ~0.0894 BNB
+
+================================================================================
+## BOB'S PROFIT & LOSS
+================================================================================
+
+- Invested: 0.5000 BNB
+- Can receive: ~0.0894 BNB (pool limited)
+- LOSS: -0.4106 BNB (-82.12%)
+
+❌ BOB (LATE BUYER) LOSES BIG!
+
+================================================================================
+## SUMMARY TABLE
+================================================================================
+
+| Player | Role | Invested | Received | P&L | % Change |
+|--------|------|----------|----------|-----|----------|
+| Alice | Early Buyer | 1.0 BNB | 1.366 BNB | +0.366 BNB | +36.6% |
+| Bob | Late Buyer | 0.5 BNB | ~0.09 BNB | -0.41 BNB | -82% |
+| Platform | Fees | - | ~0.043 BNB | +0.043 BNB | - |
+| Creator | Fees | - | ~0.022 BNB | +0.022 BNB | - |
+
+================================================================================
+## KEY INSIGHTS
+================================================================================
+
+1. EARLY BUYERS PROFIT when later buyers push the price up
+2. LATE BUYERS LOSE when early buyers dump on them
+3. THE POOL CAN'T GO NEGATIVE - InsufficientPoolBalance protects it
+4. FEES ARE EXTRACTED on both buy AND sell (double dip)
+5. THIS IS BY DESIGN - It's the Pump.fun mechanic that creates FOMO
+
+================================================================================
+## WHY AVERAGE PRICE FOR SELLING?
+================================================================================
+
+The average price formula is CRITICAL for pool solvency:
+
+Without it (instant price selling):
+- Alice buys at low price → gets many shares
+- Price rises
+- Alice sells at HIGH price → drains entire pool + more
+- Pool goes negative = BANKRUPT
+
+With average price:
+- Alice's sell price is averaged between high (before) and low (after)
+- This ensures: bnbOut ≤ (approximately) what was put in
+- Pool stays solvent
+- BUT early buyers still profit from the price delta!
+
+The magic: Average price doesn't eliminate profit, it just prevents
+pool insolvency while still allowing early buyer profits.
+
+================================================================================
+## TEST CASES TO VERIFY
+================================================================================
+
+1. test_PumpDump_EarlyBuyerProfits
+   - Alice buys 1 BNB of YES
+   - Bob buys 0.5 BNB of YES
+   - Alice sells all
+   - Assert: Alice received > Alice spent
+
+2. test_PumpDump_LateBuyerLoses  
+   - Same setup
+   - Assert: Bob's position value < Bob's cost
+
+3. test_PumpDump_PoolNeverNegative
+   - Fuzz test many buy/sell sequences
+   - Assert: pool balance never < 0
+
+4. test_PumpDump_FeesCollected
+   - Verify platform and creator get their cuts
