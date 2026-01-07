@@ -40,6 +40,18 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public constant UMA_BOND_LOWER = 0.01 ether;
     uint256 public constant UMA_BOND_UPPER = 1 ether;
 
+    /// @notice Minimum bond floor for dynamic bond calculation
+    uint256 public constant MIN_BOND_FLOOR = 0.02 ether;
+
+    /// @notice Dynamic bond percentage (1% of pool)
+    uint256 public constant DYNAMIC_BOND_BPS = 100;
+
+    /// @notice Asserter reward (2% of pool balance)
+    uint256 public constant ASSERTER_REWARD_BPS = 200;
+
+    /// @notice Emergency refund delay after expiry (24 hours)
+    uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours;
+
     // ============ Enums ============
 
     enum MarketStatus {
@@ -76,6 +88,7 @@ contract PredictionMarket is ReentrancyGuard {
         bytes32 assertionId;
         address asserter;
         bool assertedOutcome;
+        bool asserterRewardPaid; // Track if asserter reward was paid
     }
 
     struct PendingAction {
@@ -91,6 +104,7 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 yesShares;
         uint256 noShares;
         bool claimed;
+        bool emergencyRefunded;
     }
 
     // ============ State Variables ============
@@ -103,7 +117,7 @@ contract PredictionMarket is ReentrancyGuard {
     // Configurable parameters
     uint256 public platformFeeBps = 100; // 1% default
     uint256 public minBet = 0.005 ether;
-    uint256 public umaBond = 0.1 ether;
+    uint256 public umaBond = 0.02 ether;
     address public treasury;
     address public wbnb;
     address public umaOOv3;
@@ -152,6 +166,18 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 amount
     );
 
+    event AsserterRewardPaid(
+        uint256 indexed marketId,
+        address indexed asserter,
+        uint256 amount
+    );
+
+    event EmergencyRefunded(
+        uint256 indexed marketId,
+        address indexed user,
+        uint256 amount
+    );
+
     event ActionProposed(
         uint256 indexed actionId,
         ActionType actionType,
@@ -194,6 +220,10 @@ contract PredictionMarket is ReentrancyGuard {
     error OnlyUmaOOv3();
     error InvalidAssertionId();
     error InsufficientPoolBalance();
+    error EmergencyRefundTooEarly();
+    error NoPosition();
+    error AlreadyEmergencyRefunded();
+    error MarketHasAssertion();
 
     // ============ Modifiers ============
 
@@ -611,11 +641,14 @@ contract PredictionMarket is ReentrancyGuard {
             ) revert MarketAlreadyResolved();
         }
 
+        // Calculate dynamic bond: max(0.02 BNB, poolBalance * 1%)
+        uint256 requiredBond = getRequiredBond(marketId);
+
         // Transfer WBNB bond from asserter
-        IWBNB(wbnb).transferFrom(msg.sender, address(this), umaBond);
+        IWBNB(wbnb).transferFrom(msg.sender, address(this), requiredBond);
 
         // Approve UMA to spend bond
-        IWBNB(wbnb).approve(umaOOv3, umaBond);
+        IWBNB(wbnb).approve(umaOOv3, requiredBond);
 
         // Build assertion claim string
         bytes memory assertionClaim = abi.encodePacked(
@@ -687,7 +720,28 @@ contract PredictionMarket is ReentrancyGuard {
             : position.noShares;
         if (winningShares == 0) revert NothingToClaim();
 
-        // Calculate payout: proportional share of pool
+        // Pay asserter reward on first claim (2% of pool)
+        if (!market.asserterRewardPaid && market.asserter != address(0)) {
+            uint256 asserterReward = (market.poolBalance *
+                ASSERTER_REWARD_BPS) / BPS_DENOMINATOR;
+            market.asserterRewardPaid = true;
+            market.poolBalance -= asserterReward; // Deduct from pool
+
+            // Transfer asserter reward
+            if (asserterReward > 0) {
+                (bool rewardSuccess, ) = market.asserter.call{
+                    value: asserterReward
+                }("");
+                if (!rewardSuccess) revert TransferFailed();
+                emit AsserterRewardPaid(
+                    marketId,
+                    market.asserter,
+                    asserterReward
+                );
+            }
+        }
+
+        // Calculate payout: proportional share of remaining pool
         uint256 totalWinningShares = market.outcome
             ? market.yesSupply
             : market.noSupply;
@@ -701,6 +755,52 @@ contract PredictionMarket is ReentrancyGuard {
         if (!success) revert TransferFailed();
 
         emit Claimed(marketId, msg.sender, payout);
+    }
+
+    /**
+     * @notice Emergency refund for markets where no assertion was made within 24 hours after expiry
+     * @dev Users can self-claim proportional refund based on their total shares
+     * @param marketId The market to claim emergency refund from
+     */
+    function emergencyRefund(
+        uint256 marketId
+    ) external nonReentrant returns (uint256 refund) {
+        Market storage market = markets[marketId];
+
+        // Check market has expired + 24 hours passed
+        if (block.timestamp < market.expiryTimestamp + EMERGENCY_REFUND_DELAY) {
+            revert EmergencyRefundTooEarly();
+        }
+
+        // Check market is not resolved (check resolved first since it implies assertion existed)
+        if (market.resolved) revert MarketAlreadyResolved();
+
+        // Check no assertion exists (market stuck in Expired state)
+        if (market.assertionId != bytes32(0)) revert MarketHasAssertion();
+
+        Position storage position = positions[marketId][msg.sender];
+        if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
+
+        // User must have some position
+        uint256 userTotalShares = position.yesShares + position.noShares;
+        if (userTotalShares == 0) revert NoPosition();
+
+        // Calculate proportional refund: (user shares / total shares) * pool balance
+        // Note: We use the CURRENT poolBalance which represents the original pool
+        // since we don't decrease it during emergency refunds (each user can only claim once)
+        uint256 totalShares = market.yesSupply + market.noSupply;
+        refund = (userTotalShares * market.poolBalance) / totalShares;
+
+        // Update state (CEI pattern)
+        // Mark as refunded but DON'T decrease poolBalance - this ensures each user
+        // gets their fair proportional share regardless of claim order
+        position.emergencyRefunded = true;
+
+        // Transfer refund
+        (bool success, ) = msg.sender.call{value: refund}("");
+        if (!success) revert TransferFailed();
+
+        emit EmergencyRefunded(marketId, msg.sender, refund);
     }
 
     // ============ View Functions ============
@@ -798,10 +898,59 @@ contract PredictionMarket is ReentrancyGuard {
     )
         external
         view
-        returns (uint256 yesShares, uint256 noShares, bool claimed)
+        returns (
+            uint256 yesShares,
+            uint256 noShares,
+            bool claimed,
+            bool emergencyRefunded
+        )
     {
         Position storage pos = positions[marketId][user];
-        return (pos.yesShares, pos.noShares, pos.claimed);
+        return (
+            pos.yesShares,
+            pos.noShares,
+            pos.claimed,
+            pos.emergencyRefunded
+        );
+    }
+
+    /**
+     * @notice Check if a market is eligible for emergency refund
+     * @param marketId The market to query
+     */
+    function canEmergencyRefund(
+        uint256 marketId
+    ) external view returns (bool eligible, uint256 timeUntilEligible) {
+        Market storage market = markets[marketId];
+
+        // Not eligible if resolved or has assertion
+        if (market.resolved || market.assertionId != bytes32(0)) {
+            return (false, 0);
+        }
+
+        uint256 emergencyTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+        if (block.timestamp >= emergencyTime) {
+            return (true, 0);
+        }
+
+        return (false, emergencyTime - block.timestamp);
+    }
+
+    /**
+     * @notice Calculate the required bond for asserting a market outcome
+     * @dev Dynamic bond: max(MIN_BOND_FLOOR, poolBalance * 1%)
+     * @param marketId The market to query
+     * @return requiredBond The bond amount required in WBNB
+     */
+    function getRequiredBond(
+        uint256 marketId
+    ) public view returns (uint256 requiredBond) {
+        Market storage market = markets[marketId];
+        uint256 dynamicBond = (market.poolBalance * DYNAMIC_BOND_BPS) /
+            BPS_DENOMINATOR;
+        requiredBond = dynamicBond > MIN_BOND_FLOOR
+            ? dynamicBond
+            : MIN_BOND_FLOOR;
     }
 
     /**
@@ -988,7 +1137,7 @@ contract PredictionMarket is ReentrancyGuard {
      * @dev To ensure pool solvency, we calculate BNB based on the average price
      *      between current state and post-sell state.
      *
-     *      Current price: P1 = UNIT_PRICE * virtualSide / total
+     *      Current price: P1 = UNIT_PRICE * virtualSide / totalVirtual
      *      Post-sell price: P2 = UNIT_PRICE * (virtualSide - shares) / (total - shares)
      *      Average price: (P1 + P2) / 2
      *

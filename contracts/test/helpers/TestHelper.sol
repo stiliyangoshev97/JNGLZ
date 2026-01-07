@@ -243,8 +243,9 @@ contract TestHelper is Test {
         bool outcome,
         bool truthful
     ) internal {
-        // Setup WBNB for assertion
-        setupWbnbForAssertion(asserter, DEFAULT_UMA_BOND);
+        // Setup WBNB for assertion (use dynamic bond)
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        setupWbnbForAssertion(asserter, requiredBond);
 
         // Assert outcome
         vm.prank(asserter);

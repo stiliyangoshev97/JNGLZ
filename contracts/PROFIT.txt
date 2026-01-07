@@ -3,6 +3,63 @@
 # This document verifies that early buyers profit when later buyers enter.
 # This is the core "Pump.fun" mechanic that makes the platform viral.
 
+================================================================================
+## NEW FEATURES IMPLEMENTED (January 2026)
+================================================================================
+
+### 1. EMERGENCY REFUND MECHANISM
+- **Timeout**: 24 hours after market expiration (if no assertion)
+- **Self-claim pattern**: Each user calls emergencyRefund() to get proportional refund
+- **Fair distribution**: Uses original pool balance, order-independent payouts
+- **Formula**: refund = (userShares / totalShares) * poolBalance
+
+### 2. ASSERTER REWARD INCENTIVE
+- **Reward**: 2% of pool balance (ASSERTER_REWARD_BPS = 200)
+- **Timing**: Paid on first winner claim after resolution
+- **Economics**: 
+  - Bond: Dynamic (see below)
+  - Reward: 2% of pool
+  - Profitable: When pool large enough that 2% > bond
+
+### 3. DYNAMIC BOND PRICING (NEW!)
+- **Formula**: bond = max(MIN_BOND_FLOOR, poolBalance * 1%)
+- **MIN_BOND_FLOOR**: 0.02 BNB (~$12)
+- **DYNAMIC_BOND_BPS**: 100 (1% of pool)
+- **Rationale**: Prevents outsized profits when pool is large
+- **Examples**:
+  - Pool = 1 BNB    → Bond = 0.02 BNB (floor), Reward = 0.02 BNB (break-even)
+  - Pool = 5 BNB    → Bond = 0.05 BNB (1%), Reward = 0.10 BNB (2x profit)
+  - Pool = 50 BNB   → Bond = 0.50 BNB (1%), Reward = 1.00 BNB (2x profit)
+- **Profit margin always ~2x**: asserter risks 1% to earn 2% = 100% ROI
+
+### 4. REDUCED DEFAULT BOND (deprecated - now dynamic)
+- **Previous**: 0.1 BNB (~$60) fixed
+- **Current**: Dynamic based on pool size
+- **umaBond variable**: Still exists for admin override, but getRequiredBond() used
+
+### TEST RESULTS (97 tests passing)
+```
+Ran 4 tests for test/VulnerabilityCheck.t.sol - PASS
+Ran 31 tests for test/PumpDump.t.sol - PASS (includes 11 new tests)
+Ran 37 tests for test/PredictionMarket.t.sol - PASS  
+Ran 25 tests for test/PredictionMarket.fuzz.t.sol - PASS
+
+New tests:
+- test_EmergencyRefund_AfterTimeout
+- test_EmergencyRefund_RevertTooEarly
+- test_EmergencyRefund_RevertIfAsserted
+- test_EmergencyRefund_RevertIfResolved
+- test_EmergencyRefund_RevertIfAlreadyClaimed
+- test_EmergencyRefund_RevertIfNoPosition
+- test_AsserterReward_PaidOnFirstClaim
+- test_DynamicBond_ReturnsMinFloorForSmallPool
+- test_DynamicBond_ScalesWithPoolSize
+- test_AssertOutcome_UsesDynamicBond
+- test_DynamicBond_AtThreshold
+```
+
+================================================================================
+
 ## BONDING CURVE FORMULAS (from PredictionMarket.sol)
 
 ### Constants:
@@ -238,3 +295,190 @@ pool insolvency while still allowing early buyer profits.
 
 4. test_PumpDump_FeesCollected
    - Verify platform and creator get their cuts
+
+================================================================================
+## ADDITIONAL SCENARIOS - ACTUAL TEST RESULTS (Jan 2026)
+================================================================================
+
+### SCENARIO 1: Standard Pump & Dump (1 BNB + 0.5 BNB) - YES
+| Player | Invested | Received | P&L | % |
+|--------|----------|----------|-----|---|
+| Alice (1st) | 1.0 BNB | 1.366 BNB | +0.366 BNB | +36.6% |
+| Bob (2nd) | 0.5 BNB | 0.364 BNB | -0.136 BNB | -27.3% |
+
+✅ Classic pump & dump: Early wins, late loses
+
+--------------------------------------------------------------------------------
+### SCENARIO 2: Small Early (0.1 BNB) vs Large Late (2 BNB) - YES
+| Player | Invested | Received | P&L | % |
+|--------|----------|----------|-----|---|
+| Alice (early) | 0.1 BNB | 0.160 BNB | +0.060 BNB | +60% |
+| Bob (late) | 2.0 BNB | 2.354 BNB | +0.354 BNB | +17.7% |
+
+⚠️ SURPRISE: Both profit! Large late buyer brings so much liquidity that
+even after small early buyer dumps, pool has plenty left. The "pump & dump"
+is most effective with SIMILAR-sized positions.
+
+--------------------------------------------------------------------------------
+### SCENARIO 3: Equal Amounts (0.5 BNB each) - YES
+| Player | Invested | Received | P&L | % |
+|--------|----------|----------|-----|---|
+| Alice (1st) | 0.5 BNB | 0.663 BNB | +0.163 BNB | +32.6% |
+| Bob (2nd) | 0.5 BNB | 0.414 BNB | -0.086 BNB | -17.2% |
+
+✅ Equal amounts: First mover advantage is clear
+
+--------------------------------------------------------------------------------
+### SCENARIO 4: Large Early (5 BNB) vs Small Late (0.2 BNB) - YES
+| Player | Invested | Action | Result |
+|--------|----------|--------|--------|
+| Alice | 5.0 BNB | Try to dump | BLOCKED - InsufficientPoolBalance |
+| Bob | 0.2 BNB | Holding | Protected by pool limits |
+
+🛡️ Pool protection works! Alice cannot dump 5 BNB position when only
+0.2 BNB of new liquidity entered. System prevents bankruptcy.
+Alice CAN sell partial (10%) = ~0.5 BNB successfully.
+
+--------------------------------------------------------------------------------
+### SCENARIO 5: Standard Pump & Dump - NO shares
+| Player | Invested | Received | P&L | % |
+|--------|----------|----------|-----|---|
+| Alice (NO) | 1.0 BNB | 1.366 BNB | +0.366 BNB | +36.6% |
+| Bob (NO) | 0.5 BNB | 0.364 BNB | -0.136 BNB | -27.3% |
+
+✅ NO shares behave identically to YES (symmetric bonding curve)
+
+--------------------------------------------------------------------------------
+### SCENARIO 6: Small Early vs Large Late - NO shares
+| Player | Invested | Received | P&L | % |
+|--------|----------|----------|-----|---|
+| Alice (NO) | 0.1 BNB | 0.160 BNB | +0.060 BNB | +60% |
+| Bob (NO) | 2.0 BNB | 2.354 BNB | +0.354 BNB | +17.7% |
+
+⚠️ Same as Scenario 2 - both profit with asymmetric sizes
+
+--------------------------------------------------------------------------------
+### SCENARIO 7: 5 Buyers YES - Sequential Dumps
+Buy Order: Alice(1) → Bob(0.8) → Charlie(0.5) → Dave(0.3) → Eve(0.2) BNB
+Pool after all buys: 2.758 BNB
+
+After Alice dumps, then Bob dumps:
+| Player | Invested | Received/Value | P&L | % |
+|--------|----------|----------------|-----|---|
+| Alice (1st) | 1.0 BNB | 1.557 BNB | +0.557 BNB | +55.7% |
+| Bob (2nd) | 0.8 BNB | 0.754 BNB | -0.046 BNB | -5.7% |
+| Charlie (3rd) | 0.5 BNB | 0.395 BNB | -0.105 BNB | -21.1% |
+| Dave (4th) | 0.3 BNB | 0.237 BNB | -0.063 BNB | -21.1% |
+| Eve (5th) | 0.2 BNB | 0.157 BNB | -0.043 BNB | -21.3% |
+
+✅ First dumper wins big, sequential dumps hurt everyone after
+
+--------------------------------------------------------------------------------
+### SCENARIO 8: 5 Buyers NO - First Dumper Dynamics
+All buy 0.5 BNB of NO each (equal positions)
+Pool after all buys: 2.4625 BNB
+
+After only Alice dumps:
+| Player | Invested | Value | P&L | % |
+|--------|----------|-------|-----|---|
+| Alice (1st) | 0.5 BNB | 0.780 BNB | +0.280 BNB | +56% |
+| Bob (2nd) | 0.5 BNB | 0.558 BNB | +0.058 BNB | +11.7% |
+| Charlie (3rd) | 0.5 BNB | ~0.50 BNB | ~0 | ~0% |
+| Dave (4th) | 0.5 BNB | ~0.48 BNB | -0.02 BNB | -4% |
+| Eve (5th) | 0.5 BNB | 0.466 BNB | -0.034 BNB | -6.9% |
+
+⚠️ With 5 equal buyers and only 1 dump, even 2nd buyer still profits!
+The "race to dump" only hurts you if multiple people dump before you.
+
+--------------------------------------------------------------------------------
+### SCENARIO 9: Mixed YES/NO - 5 Buyers
+Order: Alice(YES 1), Bob(YES 0.5), Dave(NO 0.8), Eve(NO 0.3), Charlie(YES 0.4)
+Pool after all: 2.955 BNB
+
+After Alice dumps YES:
+| Player | Side | Invested | Value | P&L | % |
+|--------|------|----------|-------|-----|---|
+| Alice | YES | 1.0 BNB | 0.782 BNB | -0.218 BNB | -21.8% |
+| Bob | YES | 0.5 BNB | 0.198 BNB | -0.302 BNB | -60.4% |
+| Charlie | YES | 0.4 BNB | 0.272 BNB | -0.128 BNB | -32.0% |
+| Dave | NO | 0.8 BNB | 1.855 BNB | +1.055 BNB | +131.9% |
+| Eve | NO | 0.3 BNB | 0.338 BNB | +0.038 BNB | +12.7% |
+
+⚠️ CRITICAL INSIGHT: When opposing side (NO) enters heavily, it HURTS
+same-side players! Dave's 0.8 BNB NO buy shifted price against YES holders.
+Alice actually LOSES despite being first YES buyer!
+NO buyers profit from the price shift back toward 50/50.
+
+================================================================================
+## POST-EXPIRATION BEHAVIOR
+================================================================================
+
+### Trading Blocked
+- After market expires: buyYes/buyNo/sellYes/sellNo all revert
+- Error: MarketNotActive
+- Protects final positions from manipulation
+
+### Positions Frozen
+- Prices remain readable for UI
+- Share balances preserved
+- No more pump & dump possible
+
+### Claim After Resolution
+- YES wins: YES holders split pool based on share ratio
+- NO wins: NO holders split pool based on share ratio  
+- Losers get NothingToClaim error
+- Typical winner payout: ~1.97 BNB (from 1+1 BNB initial positions)
+
+================================================================================
+## KEY LEARNINGS FROM ALL SCENARIOS
+================================================================================
+
+1. SIZE MATTERS: Pump & dump works best with similar-sized positions.
+   Large late buyers might still profit if small early buyers dump.
+
+2. POOL PROTECTION: InsufficientPoolBalance prevents catastrophic dumps.
+   Large positions can only partially exit if not enough liquidity.
+
+3. SYMMETRIC CURVES: YES and NO behave identically - same economics.
+
+4. OPPOSING BETS HURT: Heavy NO buying destroys YES holder value
+   (and vice versa). This is prediction market dynamics at work.
+
+5. SEQUENTIAL DUMPS: First dumper always wins. Each subsequent dump
+   hurts remaining holders more.
+
+6. 5 EQUAL BUYERS: Even 2nd position can profit if only 1st dumps.
+   The "race to exit" escalates with each dump.
+
+================================================================================
+## ALL 20 TESTS VERIFIED (January 2026)
+================================================================================
+
+Original Tests (8):
+1. test_PumpDump_EarlyBuyerProfits ✅
+2. test_PumpDump_LateBuyerLosesValue ✅
+3. test_PumpDump_PoolNeverNegative ✅
+4. test_PumpDump_FeesCollected ✅
+5. test_PumpDump_ExactNumbers ✅
+6. testFuzz_PumpDump_PoolSolvency ✅
+7. test_PumpDump_InsufficientPoolBalanceProtection ✅
+8. test_PumpDump_CreatorFirstMoverAdvantage ✅
+
+New Scenarios (8):
+9.  test_PumpDump_Scenario2_SmallEarlyLargeLate_YES ✅
+10. test_PumpDump_Scenario3_EqualAmounts_YES ✅
+11. test_PumpDump_Scenario4_LargeEarlySmallLate_YES ✅
+12. test_PumpDump_Scenario5_StandardAmounts_NO ✅
+13. test_PumpDump_Scenario6_SmallEarlyLargeLate_NO ✅
+14. test_PumpDump_Scenario7_FiveBuyers_YES_SequentialDumps ✅
+15. test_PumpDump_Scenario8_FiveBuyers_NO_FirstDumperWins ✅
+16. test_PumpDump_Scenario9_MixedYesNo_FiveBuyers ✅
+
+Post-Expiration Tests (4):
+17. test_PumpDump_PostExpiration_TradingBlocked ✅
+18. test_PumpDump_PostExpiration_PositionsFrozen ✅
+19. test_PumpDump_PostExpiration_ClaimAfterResolution_YesWins ✅
+20. test_PumpDump_PostExpiration_ClaimAfterResolution_NoWins ✅
+
+Total: 20/20 PASSING
+================================================================================

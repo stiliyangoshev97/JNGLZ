@@ -115,7 +115,7 @@ contract PredictionMarketTest is TestHelper {
 
         assertGt(sharesOut, 0, "Should receive shares");
 
-        (uint256 yesShares, uint256 noShares, ) = market.getPosition(
+        (uint256 yesShares, uint256 noShares, , ) = market.getPosition(
             marketId,
             alice
         );
@@ -132,7 +132,7 @@ contract PredictionMarketTest is TestHelper {
 
         assertGt(sharesOut, 0, "Should receive shares");
 
-        (uint256 yesShares, uint256 noShares, ) = market.getPosition(
+        (uint256 yesShares, uint256 noShares, , ) = market.getPosition(
             marketId,
             bob
         );
@@ -227,7 +227,7 @@ contract PredictionMarketTest is TestHelper {
         assertGt(bnbOut, 0, "Should receive BNB");
         assertGt(alice.balance, aliceBalanceBefore, "Balance should increase");
 
-        (uint256 yesShares, , ) = market.getPosition(marketId, alice);
+        (uint256 yesShares, , , ) = market.getPosition(marketId, alice);
         assertEq(
             yesShares,
             sharesBought - sharesToSell,
@@ -245,7 +245,7 @@ contract PredictionMarketTest is TestHelper {
 
         assertGt(bnbOut, 0, "Should receive BNB");
 
-        (, uint256 noShares, ) = market.getPosition(marketId, bob);
+        (, uint256 noShares, , ) = market.getPosition(marketId, bob);
         assertEq(
             noShares,
             sharesBought - sharesToSell,
@@ -493,7 +493,7 @@ contract PredictionMarketTest is TestHelper {
         );
 
         // Check position claimed
-        (, , bool claimed) = market.getPosition(marketId, alice);
+        (, , bool claimed, ) = market.getPosition(marketId, alice);
         assertTrue(claimed, "Position should be marked claimed");
     }
 

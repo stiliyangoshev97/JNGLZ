@@ -78,7 +78,7 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertGt(sharesOut, 0, "Should receive shares");
 
         // Verify position updated
-        (uint256 yesShares, , ) = market.getPosition(marketId, alice);
+        (uint256 yesShares, , , ) = market.getPosition(marketId, alice);
         assertEq(yesShares, sharesOut);
 
         // Verify market state
@@ -106,7 +106,7 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         assertGt(sharesOut, 0);
 
-        (, uint256 noShares, ) = market.getPosition(marketId, bob);
+        (, uint256 noShares, , ) = market.getPosition(marketId, bob);
         assertEq(noShares, sharesOut);
     }
 
@@ -162,7 +162,7 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(alice.balance, aliceBalanceBefore + bnbOut);
 
         // Verify position updated
-        (uint256 remainingShares, , ) = market.getPosition(marketId, alice);
+        (uint256 remainingShares, , , ) = market.getPosition(marketId, alice);
         assertEq(remainingShares, sharesBought - sharesToSell);
     }
 
@@ -184,7 +184,7 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         assertGt(bnbOut, 0);
 
-        (, uint256 remainingShares, ) = market.getPosition(marketId, bob);
+        (, uint256 remainingShares, , ) = market.getPosition(marketId, bob);
         assertEq(remainingShares, sharesBought - sharesToSell);
     }
 
@@ -462,6 +462,10 @@ contract PredictionMarketFuzzTest is TestHelper {
             marketId
         );
 
+        // Calculate asserter reward (2% of pool, paid on first claim)
+        uint256 asserterReward = (poolBalance * 200) / 10000; // ASSERTER_REWARD_BPS = 200
+        uint256 poolAfterReward = poolBalance - asserterReward;
+
         // Both claim
         vm.prank(alice);
         uint256 alicePayout = market.claim(marketId);
@@ -469,10 +473,11 @@ contract PredictionMarketFuzzTest is TestHelper {
         vm.prank(bob);
         uint256 bobPayout = market.claim(marketId);
 
-        // Payouts should be proportional to shares
+        // Payouts should be proportional to shares (after asserter reward)
         uint256 totalShares = aliceShares + bobShares;
-        uint256 expectedAlicePayout = (aliceShares * poolBalance) / totalShares;
-        uint256 expectedBobPayout = (bobShares * poolBalance) / totalShares;
+        uint256 expectedAlicePayout = (aliceShares * poolAfterReward) /
+            totalShares;
+        uint256 expectedBobPayout = (bobShares * poolAfterReward) / totalShares;
 
         assertEq(
             alicePayout,
