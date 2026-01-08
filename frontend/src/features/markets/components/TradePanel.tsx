@@ -2,19 +2,30 @@
  * ===== TRADE PANEL COMPONENT =====
  *
  * Trading interface for buying/selling YES/NO shares.
- * Brutalist design with chunky buttons and clear feedback.
+ * Uses actual contract calls via wagmi hooks.
  *
  * @module features/markets/components/TradePanel
  */
 
-import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useState, useEffect, useMemo } from 'react';
+import { useAccount, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { parseEther, formatEther } from 'viem';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import {
+  useBuyYes,
+  useBuyNo,
+  useSellYes,
+  useSellNo,
+  usePreviewBuy,
+  usePreviewSell,
+  usePosition,
+} from '@/shared/hooks';
 import { cn } from '@/shared/utils/cn';
+import { formatBNB, formatShares } from '@/shared/utils/format';
 import type { Market } from '@/shared/schemas';
 
 interface TradePanelProps {
@@ -27,35 +38,117 @@ interface TradePanelProps {
 type TradeDirection = 'yes' | 'no';
 type TradeAction = 'buy' | 'sell';
 
-export function TradePanel({ market: _market, yesPercent, noPercent, isActive }: TradePanelProps) {
-  const { isConnected } = useAccount();
+// Quick amount presets for buying (BNB)
+const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
+
+export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePanelProps) {
+  const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
+  
+  // User's BNB balance
+  const { data: balanceData } = useBalance({ address });
+  
+  // User's position in this market
+  const marketId = BigInt(market.marketId);
+  const { position } = usePosition(marketId, address);
   
   const [direction, setDirection] = useState<TradeDirection>('yes');
   const [action, setAction] = useState<TradeAction>('buy');
   const [amount, setAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Parse amount for contract calls
+  const amountWei = useMemo(() => {
+    try {
+      const parsed = parseFloat(amount);
+      if (isNaN(parsed) || parsed <= 0) return 0n;
+      return parseEther(amount);
+    } catch {
+      return 0n;
+    }
+  }, [amount]);
+
+  // Preview hooks for estimated output
+  const { data: previewBuyData } = usePreviewBuy(
+    marketId,
+    action === 'buy' ? amountWei : undefined,
+    direction === 'yes'
+  );
+
+  const { data: previewSellData } = usePreviewSell(
+    marketId,
+    action === 'sell' ? amountWei : undefined, // shares in 1e18
+    direction === 'yes'
+  );
+
+  // Contract write hooks
+  const { buyYes, isPending: isBuyingYes, isConfirming: isConfirmingBuyYes, isSuccess: isBuyYesSuccess, reset: resetBuyYes } = useBuyYes();
+  const { buyNo, isPending: isBuyingNo, isConfirming: isConfirmingBuyNo, isSuccess: isBuyNoSuccess, reset: resetBuyNo } = useBuyNo();
+  const { sellYes, isPending: isSellingYes, isConfirming: isConfirmingSellYes, isSuccess: isSellYesSuccess, reset: resetSellYes } = useSellYes();
+  const { sellNo, isPending: isSellingNo, isConfirming: isConfirmingSellNo, isSuccess: isSellNoSuccess, reset: resetSellNo } = useSellNo();
+
+  const isPending = isBuyingYes || isBuyingNo || isSellingYes || isSellingNo;
+  const isConfirming = isConfirmingBuyYes || isConfirmingBuyNo || isConfirmingSellYes || isConfirmingSellNo;
+  const isSuccess = isBuyYesSuccess || isBuyNoSuccess || isSellYesSuccess || isSellNoSuccess;
+  const isLoading = isPending || isConfirming;
+
+  // Get user's shares for sell mode
+  const userYesShares = position?.yesShares || 0n;
+  const userNoShares = position?.noShares || 0n;
+  const currentShares = direction === 'yes' ? userYesShares : userNoShares;
+
+  // Reset form on success
+  useEffect(() => {
+    if (isSuccess) {
+      setAmount('');
+      // Reset all write hooks
+      setTimeout(() => {
+        resetBuyYes();
+        resetBuyNo();
+        resetSellYes();
+        resetSellNo();
+      }, 2000);
+    }
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo]);
 
   // Calculate estimated output
-  const estimatedShares = calculateEstimatedShares(
-    amount,
-    direction,
-    action,
-    yesPercent
-  );
+  const estimatedOutput = useMemo(() => {
+    if (action === 'buy' && previewBuyData) {
+      return formatShares(previewBuyData as bigint);
+    }
+    if (action === 'sell' && previewSellData) {
+      return `${formatBNB(previewSellData as bigint)} BNB`;
+    }
+    return '0';
+  }, [action, previewBuyData, previewSellData]);
+
+  // Sell preset buttons (25%, 50%, 75%, MAX)
+  const sellPresets = useMemo(() => {
+    if (currentShares === 0n) return [];
+    return [
+      { label: '25%', shares: currentShares / 4n },
+      { label: '50%', shares: currentShares / 2n },
+      { label: '75%', shares: (currentShares * 3n) / 4n },
+      { label: 'MAX', shares: currentShares },
+    ];
+  }, [currentShares]);
 
   const handleTrade = async () => {
     if (!canTrade || !amount) return;
     
-    setIsLoading(true);
-    try {
-      // TODO: Implement actual trade execution
-      console.log('Trading:', { direction, action, amount });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (error) {
-      console.error('Trade failed:', error);
-    } finally {
-      setIsLoading(false);
+    if (action === 'buy') {
+      if (direction === 'yes') {
+        await buyYes({ marketId, amount });
+      } else {
+        await buyNo({ marketId, amount });
+      }
+    } else {
+      // Sell - amount is in shares (need to convert to 1e18)
+      const sharesToSell = parseEther(amount);
+      if (direction === 'yes') {
+        await sellYes({ marketId, shares: sharesToSell });
+      } else {
+        await sellNo({ marketId, shares: sharesToSell });
+      }
     }
   };
 
@@ -98,11 +191,28 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
     );
   }
 
+  // Success state (briefly show)
+  if (isSuccess) {
+    return (
+      <div className="border border-yes bg-yes/10 p-6">
+        <h3 className="font-bold uppercase mb-4 text-center text-yes">✓ TRADE SUCCESSFUL</h3>
+        <p className="text-text-secondary text-sm text-center">
+          Your trade has been executed
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="border border-dark-600 bg-dark-900">
       {/* Header */}
-      <div className="border-b border-dark-600 px-4 py-3">
+      <div className="border-b border-dark-600 px-4 py-3 flex justify-between items-center">
         <h3 className="font-bold uppercase">TRADE</h3>
+        {balanceData && (
+          <span className="text-xs font-mono text-text-muted">
+            BAL: {formatBNB(balanceData.value)} BNB
+          </span>
+        )}
       </div>
 
       <div className="p-4 space-y-4">
@@ -138,10 +248,27 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
           </button>
         </div>
 
+        {/* User's Position */}
+        {(userYesShares > 0n || userNoShares > 0n) && (
+          <div className="p-2 bg-dark-800 border border-dark-600 text-xs">
+            <div className="flex justify-between">
+              <span className="text-text-muted">Your Position:</span>
+              <span>
+                {userYesShares > 0n && (
+                  <span className="text-yes mr-2">{formatShares(userYesShares)} YES</span>
+                )}
+                {userNoShares > 0n && (
+                  <span className="text-no">{formatShares(userNoShares)} NO</span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Action Selection (Buy/Sell) */}
         <div className="flex border border-dark-600">
           <button
-            onClick={() => setAction('buy')}
+            onClick={() => { setAction('buy'); setAmount(''); }}
             className={cn(
               'flex-1 py-2 text-sm font-bold uppercase transition-colors',
               action === 'buy'
@@ -152,12 +279,14 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
             BUY
           </button>
           <button
-            onClick={() => setAction('sell')}
+            onClick={() => { setAction('sell'); setAmount(''); }}
+            disabled={currentShares === 0n}
             className={cn(
               'flex-1 py-2 text-sm font-bold uppercase transition-colors border-l border-dark-600',
               action === 'sell'
                 ? 'bg-dark-700 text-white'
-                : 'bg-dark-800 text-text-secondary hover:text-white'
+                : 'bg-dark-800 text-text-secondary hover:text-white',
+              currentShares === 0n && 'opacity-50 cursor-not-allowed'
             )}
           >
             SELL
@@ -167,6 +296,7 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
         {/* Amount Input */}
         <Input
           type="number"
+          step="0.01"
           placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -175,28 +305,53 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
 
         {/* Quick amounts */}
         <div className="flex gap-2">
-          {['0.1', '0.5', '1', '5'].map((val) => (
-            <button
-              key={val}
-              onClick={() => setAmount(val)}
-              className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
-            >
-              {val}
-            </button>
-          ))}
+          {action === 'buy' ? (
+            BUY_PRESETS.map((val) => (
+              <button
+                key={val}
+                onClick={() => setAmount(val)}
+                className={cn(
+                  'flex-1 py-1 text-xs font-mono border transition-colors',
+                  amount === val
+                    ? 'border-cyber text-cyber bg-cyber/10'
+                    : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
+                )}
+              >
+                {val}
+              </button>
+            ))
+          ) : (
+            sellPresets.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setAmount(formatEther(preset.shares))}
+                className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
+              >
+                {preset.label}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Estimate */}
-        {amount && (
+        {amount && parseFloat(amount) > 0 && (
           <div className="p-3 bg-dark-800 border border-dark-600">
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">
                 {action === 'buy' ? 'Est. Shares' : 'Est. Return'}
               </span>
               <span className={cn('font-mono', direction === 'yes' ? 'text-yes' : 'text-no')}>
-                {estimatedShares}
+                {estimatedOutput}
               </span>
             </div>
+            {action === 'buy' && (
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-text-muted">Fee (1.5%)</span>
+                <span className="font-mono text-text-secondary">
+                  {(parseFloat(amount) * 0.015).toFixed(4)} BNB
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -205,10 +360,15 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
           variant={direction === 'yes' ? 'yes' : 'no'}
           size="lg"
           onClick={handleTrade}
-          disabled={!amount || isLoading}
+          disabled={!amount || parseFloat(amount) <= 0 || isLoading}
           className="w-full"
         >
-          {isLoading ? (
+          {isPending ? (
+            <span className="flex items-center justify-center gap-2">
+              <Spinner size="sm" variant={direction === 'yes' ? 'yes' : 'no'} />
+              CONFIRM IN WALLET...
+            </span>
+          ) : isConfirming ? (
             <span className="flex items-center justify-center gap-2">
               <Spinner size="sm" variant={direction === 'yes' ? 'yes' : 'no'} />
               PROCESSING...
@@ -218,34 +378,13 @@ export function TradePanel({ market: _market, yesPercent, noPercent, isActive }:
           )}
         </Button>
 
-        {/* Warning */}
+        {/* Info */}
         <p className="text-xs text-text-muted text-center">
-          Trading involves risk. Only trade what you can afford to lose.
+          Min bet: 0.005 BNB • Fee: 1.5% (1% platform + 0.5% creator)
         </p>
       </div>
     </div>
   );
-}
-
-function calculateEstimatedShares(
-  amount: string,
-  direction: TradeDirection,
-  action: TradeAction,
-  yesPercent: number
-): string {
-  const bnbAmount = parseFloat(amount);
-  if (isNaN(bnbAmount) || bnbAmount <= 0) return '0';
-
-  // Simplified estimate - actual calculation would use contract view function
-  const price = direction === 'yes' ? yesPercent / 100 : (100 - yesPercent) / 100;
-  
-  if (action === 'buy') {
-    const shares = bnbAmount / price;
-    return shares.toFixed(4);
-  } else {
-    const bnbReturn = bnbAmount * price;
-    return `${bnbReturn.toFixed(4)} BNB`;
-  }
 }
 
 export default TradePanel;

@@ -136,7 +136,7 @@ export function Header() {
                             <span className="text-white">
                               {account.displayName}
                             </span>
-                            {account.displayBalance && (
+                            {account.displayBalance && !account.displayBalance.includes('NaN') && (
                               <span className="text-text-secondary hidden sm:inline">
                                 {account.displayBalance}
                               </span>

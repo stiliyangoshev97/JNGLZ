@@ -147,15 +147,21 @@ export const FullMarketSchema = MarketSchema.extend({
 export type FullMarket = z.infer<typeof FullMarketSchema>;
 
 /**
- * Create market input
+ * Create market input - matches contract parameters
+ * 
+ * NOTE: No "initial liquidity" - the contract uses virtual shares (100 YES + 100 NO)
+ * Creator can optionally buy first via createMarketAndBuy()
  */
 export const CreateMarketInputSchema = z.object({
   question: z.string().min(10, 'Question must be at least 10 characters').max(500, 'Question too long'),
   evidenceUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  resolutionRules: z.string().max(2000, 'Rules too long').optional(),
+  resolutionRules: z.string().max(2000, 'Rules too long').optional().or(z.literal('')),
   imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  expirationTimestamp: z.number().int().positive('Must be a future date'),
-  initialLiquidity: z.string(), // BNB amount as string
+  expiryTimestamp: z.number().int().positive('Must be a future date'),
+  // Optional first bet
+  wantFirstBet: z.boolean().optional(),
+  firstBetSide: z.enum(['yes', 'no']).optional(),
+  firstBetAmount: z.string().optional(), // BNB amount as string
 });
 
 export type CreateMarketInput = z.infer<typeof CreateMarketInputSchema>;

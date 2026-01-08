@@ -39,10 +39,10 @@ export function TradeHistory({ trades, maxItems = 20 }: TradeHistoryProps) {
 }
 
 function TradeRow({ trade }: { trade: Trade }) {
-  const isBuy = trade.tradeType.startsWith('Buy');
-  const isYes = trade.tradeType.includes('Yes');
-  const amount = formatBNB(BigInt(trade.bnbAmount));
-  const shares = formatBNB(BigInt(trade.sharesAmount));
+  const isBuy = trade.isBuy;
+  const isYes = trade.isYes;
+  const amount = formatBNB(trade.bnbAmount);
+  const shares = formatBNB(trade.shares);
   
   // Format timestamp
   const timestamp = new Date(Number(trade.timestamp) * 1000);
@@ -71,7 +71,7 @@ function TradeRow({ trade }: { trade: Trade }) {
 
       {/* Trader */}
       <div className="hidden sm:block">
-        <AddressDisplay address={trade.trader} iconSize={16} truncateLength={3} />
+        <AddressDisplay address={trade.traderAddress} iconSize={16} truncateLength={3} />
       </div>
 
       {/* Time */}

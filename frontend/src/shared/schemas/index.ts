@@ -7,7 +7,6 @@
 // Market schemas
 export {
   MarketStatusSchema,
-  ProposedOutcomeSchema,
   MarketSchema,
   MarketsResponseSchema,
   MarketResponseSchema,
@@ -16,7 +15,6 @@ export {
   FullMarketSchema,
   CreateMarketInputSchema,
   type MarketStatus,
-  type ProposedOutcome,
   type Market,
   type MarketsResponse,
   type MarketResponse,

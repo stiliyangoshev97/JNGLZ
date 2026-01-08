@@ -13,10 +13,25 @@ import { Badge, YesHolderBadge, NoHolderBadge } from '@/shared/components/ui/Bad
 import { Button } from '@/shared/components/ui/Button';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
 import { cn } from '@/shared/utils/cn';
-import type { Position, Market } from '@/shared/schemas';
 
-interface PositionWithMarket extends Position {
-  market?: Market;
+interface PositionWithMarket {
+  id: string;
+  user: { id: string; address: string };
+  market: {
+    id: string;
+    marketId?: string;
+    question: string;
+    status: string;
+    resolved: boolean;
+    outcome?: boolean | null;
+    expiryTimestamp: string;
+    yesShares?: string;
+    noShares?: string;
+  };
+  yesShares: string;
+  noShares: string;
+  totalInvested: string;
+  claimed: boolean;
 }
 
 interface PositionCardProps {
@@ -64,11 +79,11 @@ export function PositionCard({ position }: PositionCardProps) {
     <Card variant="hover" className="flex flex-col">
       {/* Market Question */}
       <Link 
-        to={`/market/${position.marketId}`}
+        to={`/market/${market.id}`}
         className="block mb-3 group"
       >
         <h3 className="font-semibold text-white line-clamp-2 group-hover:text-cyber transition-colors">
-          {market?.question || `Market #${position.marketId}`}
+          {market.question || `Market #${market.id}`}
         </h3>
       </Link>
 
@@ -142,7 +157,7 @@ export function PositionCard({ position }: PositionCardProps) {
             CLAIM
           </Button>
         ) : (
-          <Link to={`/market/${position.marketId}`} className="flex-1">
+          <Link to={`/market/${market.id}`} className="flex-1">
             <Button variant="cyber" size="sm" className="w-full">
               TRADE
             </Button>

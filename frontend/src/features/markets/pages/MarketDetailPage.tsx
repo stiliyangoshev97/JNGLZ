@@ -25,6 +25,7 @@ import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { TradePanel } from '../components';
 import { TradeHistory } from '../components';
 import { PriceChart } from '../components';
+import { ResolutionPanel } from '../components';
 import { formatBNB, formatTimeRemaining } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
@@ -181,13 +182,14 @@ export function MarketDetailPage() {
 
             {/* Right Column: Trade Panel */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24">
+              <div className="sticky top-24 space-y-4">
                 <TradePanel
                   market={market}
                   yesPercent={yesPercent}
                   noPercent={noPercent}
                   isActive={isActive}
                 />
+                <ResolutionPanel market={market} />
               </div>
             </div>
           </div>

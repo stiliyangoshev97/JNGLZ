@@ -19,10 +19,26 @@ import { Skeleton } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { cn } from '@/shared/utils/cn';
 import { Link } from 'react-router-dom';
-import type { Position, Market } from '@/shared/schemas';
 
-interface PositionWithMarket extends Position {
-  market?: Market;
+// Position with full market data
+interface PositionWithMarket {
+  id: string;
+  user: { id: string; address: string };
+  market: {
+    id: string;
+    marketId?: string;
+    question: string;
+    status: string;
+    resolved: boolean;
+    outcome?: boolean | null;
+    expiryTimestamp: string;
+    yesShares?: string;
+    noShares?: string;
+  };
+  yesShares: string;
+  noShares: string;
+  totalInvested: string;
+  claimed: boolean;
 }
 
 export function PortfolioPage() {

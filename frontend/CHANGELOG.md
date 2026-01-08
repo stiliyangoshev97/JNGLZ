@@ -103,14 +103,84 @@ All notable changes to the JunkieFun frontend will be documented in this file.
 
 ---
 
-## Pending Features (Phase 2+)
+## [0.2.0] - 2026-01-08
 
-### Contract Interaction Hooks (Not Started)
-- useBuyYes, useBuyNo, useSellYes, useSellNo
-- usePreviewTrade
-- useCreateMarket
-- useProposeOutcome, useDispute, useVote
-- useClaim, useEmergencyRefund
+### Added - Contract Integration (Phase 2 Complete)
+
+#### Contract Read Hooks (`src/shared/hooks/useContractReads.ts`)
+- `useMarketCreationFee()` - Get creation fee from contract (usually 0)
+- `useYesPrice()` / `useNoPrice()` - Get current market prices
+- `useMarketPrices()` - Get both prices combined
+- `usePreviewBuy()` - Estimate shares received for BNB amount
+- `usePreviewSell()` - Estimate BNB received for selling shares
+- `usePosition()` - Get user's position (yesShares, noShares, claimed, etc.)
+- `useRequiredBond()` - Get bond required for proposals
+- `useMaxSellableShares()` - Get max shares sellable given pool liquidity
+
+#### Contract Write Hooks (`src/shared/hooks/useContractWrites.ts`)
+- `useCreateMarket()` - Create market (FREE, just gas)
+- `useCreateMarketAndBuy()` - Create + first bet atomically (anti-frontrun)
+- `useBuyYes()` / `useBuyNo()` - Buy YES/NO shares
+- `useSellYes()` / `useSellNo()` - Sell YES/NO shares
+- `useProposeOutcome()` - Propose market resolution with bond
+- `useDispute()` - Dispute a proposal with 2× bond
+- `useVote()` - Vote on disputed outcome (share-weighted)
+- `useFinalizeMarket()` - Settle market after voting ends
+- `useClaim()` - Claim winnings after resolution
+- `useEmergencyRefund()` - Get refund if market stuck 24h+
+
+#### Feature: Create Market (Fully Wired)
+- **Removed "initial liquidity"** - Contract uses virtual shares (100 YES + 100 NO)
+- Working duration presets: 1H, 6H, 1D, 3D, 7D, 30D
+- Optional "First Bet" toggle with side selection (YES/NO)
+- BNB amount presets: 0.01, 0.05, 0.1, 0.5, 1
+- Shows FREE creation when marketCreationFee is 0
+- Uses `createMarketAndBuy()` for atomic first bet
+- Transaction success/error handling with BscScan links
+
+#### Feature: Trade Panel (Fully Wired)
+- Connected to `useBuyYes/No`, `useSellYes/No` hooks
+- Live preview of estimated shares/BNB
+- User position display with shares breakdown
+- Buy presets: 0.01, 0.05, 0.1, 0.5 BNB
+- Sell presets: 25%, 50%, 75%, MAX
+- Loading states during wallet confirmation
+- Success feedback with form reset
+
+#### Feature: Resolution Panel (NEW - `ResolutionPanel.tsx`)
+- Full Street Consensus resolution UI
+- **Propose**: Outcome selection, proof URL, bond display
+- **Dispute**: Counter-proof input, 2× bond requirement, time remaining
+- **Vote**: Agree/Disagree buttons, vote weight display, voting progress
+- **Finalize**: One-click settlement after voting ends
+- **Claim**: Winning detection, claim button, success state
+- **Emergency Refund**: Available after 24h timeout
+- Time window displays for all phases
+- Creator priority window detection (10 min head start)
+
+### Changed
+- `CreateMarketPage.tsx` - Completely rewritten to match contract mechanics
+- `TradePanel.tsx` - Wired to actual contract calls with wagmi
+- `TradeHistory.tsx` - Fixed field mappings (`isBuy`/`isYes` instead of `tradeType`)
+- `PositionCard.tsx` - Fixed type interface, use `market.id` instead of `marketId`
+- `PortfolioPage.tsx` - Fixed position type interface
+
+### Fixed
+- Schema export error (`ProposedOutcomeSchema` removed - didn't exist)
+- NaN balance display in Header (added null check)
+- Trade history trader address display
+- Position card market ID linking
+
+### Technical Notes
+- All contract hooks use `useWriteContract` + `useWaitForTransactionReceipt`
+- Read hooks use `useReadContract` with proper query enabling
+- Position hook returns parsed tuple (6 values from contract)
+- Preview hooks only query when amount > 0
+- Form validation with Zod, proper error display
+
+---
+
+## Pending Features (Phase 3+)
 
 ### Supabase Integration (Not Started)
 - Comments system

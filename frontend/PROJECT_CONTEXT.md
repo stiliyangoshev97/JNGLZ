@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** Phase 1 Complete (Foundation)
+> **Status:** Phase 2 Complete (Contract Integration)
 
 ---
 
@@ -58,13 +58,16 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |
 | Markets Page | ✅ 100% | Grid, filters, live ticker |
-| Market Detail Page | ✅ 100% | Chart placeholder, trade panel UI |
-| Create Market Page | ✅ 100% | Form UI (no contract calls yet) |
-| Portfolio Page | ✅ 100% | Positions grid |
-| Contract Hooks | ⬜ 0% | useBuyYes, useSellYes, etc. |
+| Market Detail Page | ✅ 100% | Chart, trade panel, resolution panel |
+| Create Market Page | ✅ 100% | Fully wired to contract |
+| Portfolio Page | ✅ 100% | Positions grid with claim UI |
+| Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds |
+| Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim |
+| Trade Panel | ✅ 100% | Buy/sell wired to contract |
+| Resolution Panel | ✅ 100% | Propose, dispute, vote, claim |
 | Supabase (Comments) | ⬜ 0% | Future phase |
 
-**Overall Progress: ~70% (UI complete, contract interactions pending)**
+**Overall Progress: ~90% (Contract integration complete, comments pending)**
 
 ---
 
@@ -91,7 +94,10 @@ src/
 │   │   ├── ui/            # Button, Card, Modal, Input, etc.
 │   │   └── WrongNetworkModal.tsx
 │   ├── config/            # wagmi, env, contracts, graphql
-│   ├── hooks/             # useChainValidation
+│   ├── hooks/             # Contract hooks + chain validation
+│   │   ├── useChainValidation.ts
+│   │   ├── useContractReads.ts   # Price, position, preview hooks
+│   │   └── useContractWrites.ts  # Trade, create, resolve hooks
 │   ├── schemas/           # Zod schemas
 │   └── utils/             # cn(), formatters
 ├── providers/

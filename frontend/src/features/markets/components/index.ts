@@ -9,3 +9,4 @@ export { LiveTicker } from './LiveTicker';
 export { TradePanel } from './TradePanel';
 export { TradeHistory } from './TradeHistory';
 export { PriceChart } from './PriceChart';
+export { ResolutionPanel } from './ResolutionPanel';
