@@ -165,6 +165,7 @@ contract PumpDumpTest is TestHelper {
             ,
             ,
             ,
+            ,
             uint256 yesSupply,
             uint256 noSupply,
             uint256 poolBalance,
@@ -179,7 +180,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(alice);
         market.sellYes(marketId, aliceShares, 0);
 
-        (, , , , , , , poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance after Alice sells:", poolBalance);
         assertGe(poolBalance, 0, "Pool balance should never go negative");
 
@@ -194,7 +195,7 @@ contract PumpDumpTest is TestHelper {
             );
         }
 
-        (, , , , , , , poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance after Bob tries to sell:", poolBalance);
         assertGe(poolBalance, 0, "Pool balance should never go negative");
     }
@@ -332,7 +333,7 @@ contract PumpDumpTest is TestHelper {
         }
 
         // Verify pool is still >= 0
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         assertGe(poolBalance, 0, "Pool balance must never go negative");
     }
 
@@ -351,7 +352,7 @@ contract PumpDumpTest is TestHelper {
         uint256 bobShares = market.buyYes{value: 0.1 ether}(marketId, 0);
 
         // Get initial pool balance
-        (, , , , , , , uint256 poolBalanceBefore, , ) = market.getMarket(
+        (, , , , , , , , uint256 poolBalanceBefore, , ) = market.getMarket(
             marketId
         );
         console.log("Pool balance before Alice sells:", poolBalanceBefore);
@@ -364,7 +365,7 @@ contract PumpDumpTest is TestHelper {
             console.log("Alice sold successfully for:", aliceReceived);
 
             // Check pool state after Alice sells
-            (, , , , , , , uint256 poolBalanceAfter, , ) = market.getMarket(
+            (, , , , , , , , uint256 poolBalanceAfter, , ) = market.getMarket(
                 marketId
             );
             console.log("Pool balance after Alice sells:", poolBalanceAfter);
@@ -387,9 +388,8 @@ contract PumpDumpTest is TestHelper {
             ) {
                 console.log("Bob successfully sold for:", bobReceived);
                 // Verify pool is still >= 0
-                (, , , , , , , uint256 finalPoolBalance, , ) = market.getMarket(
-                    marketId
-                );
+                (, , , , , , , , uint256 finalPoolBalance, , ) = market
+                    .getMarket(marketId);
                 assertGe(
                     finalPoolBalance,
                     0,
@@ -406,7 +406,7 @@ contract PumpDumpTest is TestHelper {
             );
 
             // Verify pool is still intact
-            (, , , , , , , uint256 poolBalance, , ) = market.getMarket(
+            (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(
                 marketId
             );
             assertGe(poolBalance, 0, "Pool should not be negative");
@@ -425,6 +425,7 @@ contract PumpDumpTest is TestHelper {
             "Will ETH hit $10k?",
             "https://coingecko.com",
             "Based on CoinGecko price",
+            "", // imageUrl
             block.timestamp + 1 days,
             true, // buy YES
             0 // no slippage protection
@@ -611,7 +612,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Pool state before dump attempt
-        (, , , , , , , uint256 poolBefore, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBefore, , ) = market.getMarket(marketId);
         console.log("Pool before Alice dump:", poolBefore);
 
         // Alice tries to dump everything - SHOULD FAIL due to InsufficientPoolBalance
@@ -624,7 +625,7 @@ contract PumpDumpTest is TestHelper {
         );
 
         // Verify pool is still intact
-        (, , , , , , , uint256 poolAfter, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolAfter, , ) = market.getMarket(marketId);
         assertEq(
             poolAfter,
             poolBefore,
@@ -788,7 +789,9 @@ contract PumpDumpTest is TestHelper {
         console.log("Price after Eve:", market.getYesPrice(marketId));
 
         // Pool state after all buys
-        (, , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(
+            marketId
+        );
         console.log("Pool after all buys:", poolAfterBuys);
 
         // Alice (1st) dumps
@@ -870,7 +873,9 @@ contract PumpDumpTest is TestHelper {
         console.log("NO price after all:", market.getNoPrice(marketId));
 
         // Pool state
-        (, , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolAfterBuys, , ) = market.getMarket(
+            marketId
+        );
         console.log("Pool after all buys:", poolAfterBuys);
 
         // Only Alice dumps (first mover advantage in selling too)
@@ -955,7 +960,7 @@ contract PumpDumpTest is TestHelper {
         console.log("YES price:", market.getYesPrice(marketId));
         console.log("NO price:", market.getNoPrice(marketId));
 
-        (, , , , , , , uint256 pool, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 pool, , ) = market.getMarket(marketId);
         console.log("Pool balance:", pool);
 
         // Alice (first YES buyer) dumps
@@ -1157,7 +1162,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Get pool balance
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         // Warp to expiry + 24 hours (emergency refund eligible)
@@ -1259,7 +1264,7 @@ contract PumpDumpTest is TestHelper {
         proposeOutcomeFor(marketCreator, marketId, true, "");
 
         // Warp past emergency deadline (24 hours after expiry)
-        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+        (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
         );
         vm.warp(expiryTimestamp + 24 hours + 1);
@@ -1365,7 +1370,7 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob shares:", bobShares);
 
         // Get pool balance
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         // Expire market
@@ -1458,7 +1463,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(bob);
         market.buyNo{value: 10 ether}(marketId, 0);
 
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         uint256 requiredBond = market.getRequiredBond(marketId);
@@ -1533,7 +1538,7 @@ contract PumpDumpTest is TestHelper {
         vm.prank(bob);
         market.buyNo{value: 1.1 ether}(marketId, 0);
 
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
         uint256 requiredBond = market.getRequiredBond(marketId);

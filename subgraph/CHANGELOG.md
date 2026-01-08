@@ -2,6 +2,16 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [1.1.0] - 2026-01-08
+
+### Added
+- `imageUrl` field to Market entity for market thumbnail images
+- Updated schema.graphql and mapping.ts to support imageUrl
+- Regenerated types from updated contract ABI
+
+### Changed
+- Updated PredictionMarket.json ABI with imageUrl parameter
+
 ## [1.0.0] - 2026-01-08
 
 ### Added

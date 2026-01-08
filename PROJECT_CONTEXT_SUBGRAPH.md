@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** ✅ Code Complete - Ready for Deployment
+> **Status:** ✅ Code Complete (v1.1.0) - Ready for Deployment
 
 ---
 
@@ -11,10 +11,11 @@
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
 
 ### Contract Details (Testnet)
-- **Address:** `0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336`
+- **Address:** `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83119807
-- **BscScan:** https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+- **Start Block:** 83227353
+- **BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
+- **Contract Version:** v2.4.0 (includes imageUrl support)
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)
@@ -27,8 +28,8 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Schema Definition | ✅ 100% | 8 entities defined |
-| Subgraph Config | ✅ 100% | subgraph.yaml for testnet |
+| Schema Definition | ✅ 100% | 8 entities (includes imageUrl) |
+| Subgraph Config | ✅ 100% | subgraph.yaml updated for v2.4.0 |
 | Mappings | ✅ 100% | 10 event handlers |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
@@ -37,7 +38,7 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 
-**Overall Progress: 80%** (code complete, awaiting Studio setup & deployment)
+**Overall Progress: 95%** (code complete, awaiting Studio setup & deployment)
 
 ---
 
@@ -51,6 +52,7 @@ type Market @entity {
   question: String!                # The prediction question
   evidenceLink: String!            # Source of truth URL
   resolutionRules: String!         # How to resolve
+  imageUrl: String!                # Market thumbnail image URL
   creator: Bytes!                  # Creator address
   expiryTimestamp: BigInt!         # When trading stops
   createdAt: BigInt!               # Block timestamp

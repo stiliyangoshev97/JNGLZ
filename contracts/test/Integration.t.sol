@@ -40,7 +40,7 @@ contract IntegrationTest is TestHelper {
         buyYesFor(charlie, marketId, 0.3 ether, 0);
 
         // Record pool size before resolution
-        (, , , , , , uint256 poolBefore, , , ) = market.getMarket(marketId);
+        (, , , , , , , uint256 poolBefore, , , ) = market.getMarket(marketId);
         assertGt(poolBefore, 0, "Pool should have BNB");
 
         // === EXPIRY ===
@@ -204,7 +204,7 @@ contract IntegrationTest is TestHelper {
         );
 
         // === VERIFY OUTCOME: NO won (disputer's position) ===
-        (, , , , , , , , , bool outcome) = market.getMarket(marketId);
+        (, , , , , , , , , , bool outcome) = market.getMarket(marketId);
         assertEq(outcome, false, "NO should have won");
 
         // === CLAIM: Bob wins, Alice loses ===
@@ -300,7 +300,7 @@ contract IntegrationTest is TestHelper {
         buyYesFor(alice, marketId, dustAmount, 0);
 
         // Check pool size
-        (, , , , , , uint256 pool, , , ) = market.getMarket(marketId);
+        (, , , , , , , uint256 pool, , , ) = market.getMarket(marketId);
         emit log_named_decimal_uint("Pool after dust buy", pool, 18);
 
         // === VERIFY BOND CALCULATION ===
@@ -359,7 +359,7 @@ contract IntegrationTest is TestHelper {
         market.finalizeMarket(marketId);
 
         // === VERIFY: YES won (Alice's position), disputer won the dispute ===
-        (, , , , , , , , , bool outcome) = market.getMarket(marketId);
+        (, , , , , , , , , , bool outcome) = market.getMarket(marketId);
         assertEq(outcome, true, "YES should have won");
 
         // Claim winnings

@@ -14,6 +14,7 @@ type Market @entity {
   question: String! # The prediction question
   evidenceLink: String! # Source of truth URL
   resolutionRules: String! # How to resolve
+  imageUrl: String! # Market thumbnail image URL
   creator: User! # Creator (relation)
   creatorAddress: Bytes! # Creator address (for filtering)
   # Timestamps

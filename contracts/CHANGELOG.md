@@ -5,6 +5,21 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-01-08
+
+### Added
+
+#### Market Image URL Support
+- Added `imageUrl` field to Market struct for market thumbnail images
+- Updated `createMarket` function to accept `imageUrl` parameter
+- Updated `createMarketAndBuy` function to accept `imageUrl` parameter  
+- Updated `getMarket` view function to return `imageUrl` (now returns 11 values)
+- Updated subgraph schema and mapping to index `imageUrl` field
+
+**Breaking Change:** All `createMarket` and `createMarketAndBuy` calls now require an additional `imageUrl` parameter (can be empty string for no image).
+
+**Tests:** All 148 tests updated and passing
+
 ## [2.3.0] - 2026-01-07
 
 ### Added

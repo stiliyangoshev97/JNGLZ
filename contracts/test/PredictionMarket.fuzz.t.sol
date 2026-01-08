@@ -37,10 +37,11 @@ contract PredictionMarketFuzzTest is TestHelper {
             "Fuzz test question?",
             "https://example.com/evidence",
             "Resolution rules here",
+            "", // imageUrl
             block.timestamp + expiryOffset
         );
 
-        (, , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
+        (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
         assertEq(expiry, block.timestamp + expiryOffset);
     }
 
@@ -54,6 +55,7 @@ contract PredictionMarketFuzzTest is TestHelper {
                 string(abi.encodePacked("Question ", vm.toString(i))),
                 "https://example.com",
                 "Rules",
+                "", // imageUrl
                 block.timestamp + 7 days
             );
             assertEq(marketId, i);
@@ -82,7 +84,7 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(yesShares, sharesOut);
 
         // Verify market state
-        (, , , , , uint256 yesSupply, , uint256 poolBalance, , ) = market
+        (, , , , , , uint256 yesSupply, , uint256 poolBalance, , ) = market
             .getMarket(marketId);
         assertEq(yesSupply, sharesOut);
 
@@ -517,7 +519,7 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertAndResolve(marketId, charlie, true, true);
 
         // Get pool balance before claims
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
 
         // In Street Consensus, the full pool goes to winners (no asserter reward deduction from pool)
         // Both claim

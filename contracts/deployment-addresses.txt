@@ -3,10 +3,10 @@ JunkieFun Deployment
 ========================================
 
 Network: BNB Testnet (Chain ID: 97)
-Deployed at block: 83119796
-Timestamp: 1767822453
+Deployed at block: 83227353
+Timestamp: 1767871071
 
-PredictionMarket: 0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+PredictionMarket: 0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
 
 MultiSig Signers:
   Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2

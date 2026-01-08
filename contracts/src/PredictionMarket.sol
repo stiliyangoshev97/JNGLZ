@@ -95,6 +95,7 @@ contract PredictionMarket is ReentrancyGuard {
         string question;
         string evidenceLink;
         string resolutionRules;
+        string imageUrl; // Market thumbnail/banner image (IPFS/HTTP URL)
         address creator;
         uint256 expiryTimestamp;
         uint256 yesSupply; // Total YES shares minted
@@ -324,18 +325,21 @@ contract PredictionMarket is ReentrancyGuard {
      * @param question The prediction question
      * @param evidenceLink URL to source of truth for resolution (can be empty for degen markets)
      * @param resolutionRules Clear rules for how to resolve
+     * @param imageUrl URL to market image/thumbnail (IPFS or HTTP, can be empty)
      * @param expiryTimestamp When trading ends
      */
     function createMarket(
         string calldata question,
         string calldata evidenceLink,
         string calldata resolutionRules,
+        string calldata imageUrl,
         uint256 expiryTimestamp
     ) external whenNotPaused returns (uint256 marketId) {
         marketId = _createMarket(
             question,
             evidenceLink,
             resolutionRules,
+            imageUrl,
             expiryTimestamp
         );
     }
@@ -348,6 +352,7 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata question,
         string calldata evidenceLink,
         string calldata resolutionRules,
+        string calldata imageUrl,
         uint256 expiryTimestamp,
         bool buyYesSide,
         uint256 minSharesOut
@@ -362,6 +367,7 @@ contract PredictionMarket is ReentrancyGuard {
             question,
             evidenceLink,
             resolutionRules,
+            imageUrl,
             expiryTimestamp
         );
 
@@ -408,10 +414,12 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata question,
         string calldata evidenceLink,
         string calldata resolutionRules,
+        string calldata imageUrl,
         uint256 expiryTimestamp
     ) internal returns (uint256 marketId) {
         if (bytes(question).length == 0) revert EmptyQuestion();
         // evidenceLink can be empty for degen markets
+        // imageUrl can be empty (optional)
         if (expiryTimestamp <= block.timestamp) revert InvalidExpiryTimestamp();
 
         marketId = marketCount++;
@@ -420,6 +428,7 @@ contract PredictionMarket is ReentrancyGuard {
         market.question = question;
         market.evidenceLink = evidenceLink;
         market.resolutionRules = resolutionRules;
+        market.imageUrl = imageUrl;
         market.creator = msg.sender;
         market.expiryTimestamp = expiryTimestamp;
 
@@ -1285,6 +1294,7 @@ contract PredictionMarket is ReentrancyGuard {
             string memory question,
             string memory evidenceLink,
             string memory resolutionRules,
+            string memory imageUrl,
             address creator,
             uint256 expiryTimestamp,
             uint256 yesSupply,
@@ -1299,6 +1309,7 @@ contract PredictionMarket is ReentrancyGuard {
             m.question,
             m.evidenceLink,
             m.resolutionRules,
+            m.imageUrl,
             m.creator,
             m.expiryTimestamp,
             m.yesSupply,

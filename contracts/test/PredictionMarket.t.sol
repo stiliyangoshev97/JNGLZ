@@ -20,6 +20,7 @@ contract PredictionMarketTest is TestHelper {
             "Will BTC hit $100k?",
             "https://coinmarketcap.com/currencies/bitcoin/",
             "Resolve YES if BTC > $100,000 USD at expiry",
+            "",
             expiryTime
         );
 
@@ -30,6 +31,7 @@ contract PredictionMarketTest is TestHelper {
             string memory question,
             string memory evidenceLink,
             string memory resolutionRules,
+            string memory imageUrl,
             address creator,
             uint256 expiry,
             uint256 yesSupply,
@@ -69,6 +71,7 @@ contract PredictionMarketTest is TestHelper {
             "Test question",
             "https://example.com",
             "Rules",
+            "",
             expiryTime
         );
     }
@@ -80,6 +83,7 @@ contract PredictionMarketTest is TestHelper {
             "",
             "https://example.com",
             "Rules",
+            "",
             block.timestamp + 1 days
         );
     }
@@ -91,6 +95,7 @@ contract PredictionMarketTest is TestHelper {
             "Will I get a girlfriend tomorrow?",
             "", // Empty evidence link is OK for degen markets
             "Creator posts proof",
+            "",
             block.timestamp + 1 days
         );
 
@@ -104,6 +109,7 @@ contract PredictionMarketTest is TestHelper {
             "Question",
             "https://example.com",
             "Rules",
+            "",
             block.timestamp - 1
         );
     }
@@ -114,7 +120,7 @@ contract PredictionMarketTest is TestHelper {
         vm.prank(alice);
         (uint256 marketId, uint256 shares) = market.createMarketAndBuy{
             value: 1 ether
-        }("Test?", "https://example.com", "Rules", expiryTime, true, 0);
+        }("Test?", "https://example.com", "Rules", "", expiryTime, true, 0);
 
         assertEq(marketId, 0);
         assertGt(shares, 0, "Should receive shares");
@@ -430,7 +436,7 @@ contract PredictionMarketTest is TestHelper {
         market.finalizeMarket(marketId);
 
         // Check resolved
-        (, , , , , , , , bool resolved, bool outcome) = market.getMarket(
+        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
         assertTrue(resolved, "Market should be resolved");
@@ -472,7 +478,7 @@ contract PredictionMarketTest is TestHelper {
         market.finalizeMarket(marketId);
 
         // Check resolved with YES
-        (, , , , , , , , bool resolved, bool outcome) = market.getMarket(
+        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
         assertTrue(resolved);
@@ -502,7 +508,7 @@ contract PredictionMarketTest is TestHelper {
 
         market.finalizeMarket(marketId);
 
-        (, , , , , , , , bool resolved, bool outcome) = market.getMarket(
+        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
         assertTrue(resolved);
@@ -539,7 +545,7 @@ contract PredictionMarketTest is TestHelper {
         market.finalizeMarket(marketId);
 
         // Market should NOT be resolved (tie = stuck)
-        (, , , , , , , , bool resolved, ) = market.getMarket(marketId);
+        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
         assertFalse(resolved, "Market should not resolve on tie");
 
         // Bonds should be returned
@@ -655,7 +661,7 @@ contract PredictionMarketTest is TestHelper {
         buyNoFor(bob, marketId, 0.5 ether, 0);
 
         // Warp past expiry + 24h
-        (, , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
+        (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
         vm.warp(expiry + 24 hours + 1);
 
         uint256 aliceBalanceBefore = alice.balance;
@@ -686,7 +692,7 @@ contract PredictionMarketTest is TestHelper {
         expireMarket(marketId);
         assertAndResolve(marketId, charlie, true, true);
 
-        (, , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
+        (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
         vm.warp(expiry + 24 hours + 1);
 
         vm.prank(alice);
@@ -878,6 +884,7 @@ contract PredictionMarketTest is TestHelper {
             "Question",
             "https://example.com",
             "Rules",
+            "",
             block.timestamp + 1 days
         );
     }
@@ -1098,7 +1105,7 @@ contract PredictionMarketTest is TestHelper {
         market.finalizeMarket(marketId);
 
         // Check outcome - YES should win because Alice has more shares
-        (, , , , , , , , bool resolved, bool outcome) = market.getMarket(
+        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
         assertTrue(resolved, "Market should be resolved");

@@ -139,6 +139,7 @@ export function handleMarketCreated(event: MarketCreated): void {
   market.question = event.params.question;
   market.evidenceLink = ""; // Not in event, could be fetched from contract
   market.resolutionRules = ""; // Not in event
+  market.imageUrl = ""; // Not in event, could be fetched from contract
   market.creatorAddress = event.params.creator;
   market.expiryTimestamp = event.params.expiryTimestamp;
   market.createdAt = event.block.timestamp;

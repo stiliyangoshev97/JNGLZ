@@ -1,7 +1,7 @@
 # 📋 Junkie.Fun - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 6, 2026  
+> **Last Updated:** January 8, 2026  
 > **Status:** Not Started
 
 ---
@@ -12,8 +12,19 @@
 - Create prediction markets (free)
 - Trade YES/NO shares with native BNB
 - View real-time prices via bonding curve
-- Resolve markets via UMA Oracle
+- Resolve markets via Street Consensus (bettors vote)
 - Claim winnings after resolution
+
+---
+
+## 🚀 Contract Addresses (BNB Testnet)
+
+| Contract | Address | Notes |
+|----------|---------|-------|
+| PredictionMarket (v2.4.0) | `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9` | Latest with imageUrl |
+| Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` | Platform fees |
+
+**BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
 
 ---
 

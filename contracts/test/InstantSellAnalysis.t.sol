@@ -32,7 +32,7 @@ contract InstantSellAnalysisTest is TestHelper {
         console.log("Shares bought:", sharesBought);
 
         // Get pool state
-        (, , , , , uint256 yesSupply, , uint256 poolBalance, , ) = market
+        (, , , , , , uint256 yesSupply, , uint256 poolBalance, , ) = market
             .getMarket(marketId);
         console.log("Pool balance after buy:", poolBalance);
 
@@ -103,7 +103,7 @@ contract InstantSellAnalysisTest is TestHelper {
         console.log("Shares bought:", sharesBought);
 
         // Get pool state
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance after buy:", poolBalance);
 
         // Preview sell
@@ -179,7 +179,7 @@ contract InstantSellAnalysisTest is TestHelper {
         console.log("Alice shares:", sharesBought);
 
         // Get pool state
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance (both sides):", poolBalance);
 
         // Preview sell
@@ -224,7 +224,7 @@ contract InstantSellAnalysisTest is TestHelper {
         uint256 sharesBought = buyYesFor(alice, marketId, buyAmount, 0);
         console.log("Shares bought:", sharesBought);
 
-        (, , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
 
         uint256 sellPreviewNet = market.previewSell(
             marketId,
@@ -274,7 +274,7 @@ contract InstantSellAnalysisTest is TestHelper {
             vm.deal(alice, amounts[i]);
             uint256 sharesBought = buyYesFor(alice, marketId, amounts[i], 0);
 
-            (, , , , , , , uint256 poolBalance, , ) = market.getMarket(
+            (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(
                 marketId
             );
 

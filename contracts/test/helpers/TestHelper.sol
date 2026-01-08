@@ -128,6 +128,7 @@ contract TestHelper is Test {
             "Will ETH be above $5000 by end of 2026?",
             "https://coinmarketcap.com/currencies/ethereum/",
             "Resolve YES if ETH price is above $5000 USD at 00:00 UTC on Jan 1, 2027 according to CoinMarketCap",
+            "https://i.imgur.com/test.png", // imageUrl
             block.timestamp + expiryOffset
         );
     }
@@ -144,6 +145,7 @@ contract TestHelper is Test {
             "Will I get a girlfriend tomorrow?",
             "", // No evidence link - full degen
             "Resolve YES if creator posts proof of girlfriend",
+            "", // No image - full degen
             block.timestamp + expiryOffset
         );
     }
@@ -230,7 +232,7 @@ contract TestHelper is Test {
      * @notice Fast forward time past market expiry
      */
     function expireMarket(uint256 marketId) internal {
-        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+        (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
         );
         vm.warp(expiryTimestamp + 1);
@@ -240,7 +242,7 @@ contract TestHelper is Test {
      * @notice Fast forward past creator priority window
      */
     function skipCreatorPriority(uint256 marketId) internal {
-        (, , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+        (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
         );
         vm.warp(expiryTimestamp + CREATOR_PRIORITY_WINDOW + 1);

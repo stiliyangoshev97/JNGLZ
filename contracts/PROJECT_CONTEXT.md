@@ -1,15 +1,25 @@
 # 📋 Junkie.Fun - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 8, 2025  
-> **Status:** ✅ Smart Contracts Complete (148 tests passing)
+> **Last Updated:** January 8, 2026  
+> **Status:** ✅ Smart Contracts Complete & Deployed (v2.4.0, 148 tests)
+
+---
+
+## 🚀 Deployment (BNB Testnet)
+
+| Contract | Address | Status |
+|----------|---------|--------|
+| PredictionMarket (v2.4.0) | `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9` | ✅ Verified |
+
+**BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
 
 ---
 
 ## 🎯 Contract Overview
 
 **PredictionMarket.sol** is a single monolithic smart contract that handles:
-- Market creation (free, 0 BNB)
+- Market creation (free, 0 BNB) with **imageUrl** support for thumbnails
 - Trading YES/NO shares via bonding curve
 - **Street Consensus** resolution (bettors vote on outcomes)
 - Winner payouts after resolution
@@ -31,16 +41,17 @@
 | Street Consensus | ✅ 100% | Propose → Dispute → Vote → Finalize |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
-| Dynamic Bond | ✅ 100% | max(0.02, pool * 1%) |
+| Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
+| Image URL | ✅ 100% | Market thumbnail support (v2.4.0) |
 | Unit Tests | ✅ 100% | 60 tests passing |
 | Fuzz Tests | ✅ 100% | 29 tests passing |
 | Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | Instant Sell Analysis | ✅ 100% | 8 tests passing |
 | Integration Tests | ✅ 100% | 16 tests passing |
-| Deployment Scripts | ⬜ 0% | BSC Testnet & Mainnet |
+| Testnet Deployment | ✅ 100% | v2.4.0 deployed & verified |
 
-**Overall Progress: 95%** (pending deployment)
+**Overall Progress: 100%** ✅
 **Total Tests: 148 ✅**
 
 ---

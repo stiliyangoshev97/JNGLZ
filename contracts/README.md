@@ -6,6 +6,15 @@
 [![Tests](https://img.shields.io/badge/tests-148%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
+[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-success)]()
+
+---
+
+## 🚀 Deployed Contracts (BNB Testnet)
+
+| Contract | Address | Version |
+|----------|---------|---------|
+| **PredictionMarket** | [`0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`](https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9) | v2.4.0 |
 
 ---
 

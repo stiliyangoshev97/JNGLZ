@@ -1,7 +1,7 @@
 # Junkie.Fun - Master TODO
 
 > **Last Updated:** January 8, 2026  
-> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
+> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.4.0) | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
 > **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
 
 ---
@@ -12,22 +12,23 @@
 |-------|--------|----------|
 | Phase 0: Project Setup | ✅ Complete | 100% |
 | Phase 1: Smart Contracts | ✅ Complete | 100% (148 tests) |
-| Phase 1.5: Testnet Deploy | ✅ Complete | 100% |
-| Phase 2: Subgraph | ✅ Code Complete | 80% (awaiting deployment) |
+| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.4.0 with imageUrl) |
+| Phase 2: Subgraph | ✅ Code Complete | 95% (awaiting deploy) |
 | Phase 3: Frontend | ⬜ Not Started | 0% |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
-### 🚀 BNB Testnet Deployment (January 7, 2026)
-- **Contract:** `0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336`
-- **BscScan:** https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
+### 🚀 BNB Testnet Deployment (January 8, 2026)
+- **Contract (v2.4.0):** `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`
+- **BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
 - **Verified:** ✅ Yes
-- **Gas Used:** ~3.6M (~0.00036 BNB)
+- **Block:** 83227353
+- **Features:** imageUrl support for market thumbnails
 
-### 📊 Subgraph (January 8, 2026)
-- **Status:** Code complete, builds successfully
+### 📊 Subgraph v1.1.0 (January 8, 2026)
+- **Status:** Code complete with imageUrl support, builds successfully
 - **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
 - **Event Handlers:** 10 (all contract events indexed)
-- **Next Step:** Create Subgraph Studio account & deploy
+- **Next Step:** Update subgraph.yaml with new contract address, deploy to Subgraph Studio
 
 ---
 
@@ -366,6 +367,86 @@ if (percentage < 100n) {
 ---
 
 ## 💻 PHASE 3: Frontend
+
+### 🔒 SECURITY: URL Sanitization (CRITICAL!)
+
+**Problem:** Anyone can call the smart contract directly and store malicious URLs in `imageUrl` or `evidenceLink` fields. SVG files can contain JavaScript that executes when rendered.
+
+**Solution:** Frontend must sanitize ALL user-provided URLs before display.
+
+#### Image URL Protection (`imageUrl` field)
+- [ ] Create `shared/utils/sanitize.ts` with URL validation functions
+- [ ] **Whitelist allowed domains:** IPFS gateways, Imgur, known hosts only
+- [ ] **Check file extensions:** Only allow `.jpg`, `.jpeg`, `.png` (NO `.svg`)
+- [ ] **Always use `<img>` tag:** Never use `<object>`, `<embed>`, or `dangerouslySetInnerHTML`
+- [ ] **Fallback to placeholder:** Show default image if URL fails validation
+- [ ] **Add `onError` handler:** Fallback if image fails to load
+
+```typescript
+// Example: SafeImage component
+const ALLOWED_HOSTS = [
+  'ipfs.io',
+  'gateway.pinata.cloud', 
+  'i.imgur.com',
+  'cloudflare-ipfs.com'
+];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostAllowed = ALLOWED_HOSTS.some(h => parsed.hostname.endsWith(h));
+    const extAllowed = ALLOWED_EXTENSIONS.some(e => parsed.pathname.toLowerCase().endsWith(e));
+    return hostAllowed && extAllowed;
+  } catch {
+    return false;
+  }
+}
+```
+
+#### Evidence Link Protection (`evidenceLink` field)
+- [ ] **Never render as image:** Always display as clickable text link
+- [ ] **Validate URL format:** Must be valid `http://` or `https://` URL
+- [ ] **Use `rel="noopener noreferrer"`:** Prevent window.opener attacks
+- [ ] **Open in new tab:** Use `target="_blank"`
+- [ ] **Show domain only in UI:** Display "coingecko.com" not full URL (cleaner + safer)
+
+```typescript
+// Example: SafeLink component
+function SafeLink({ url }: { url: string }) {
+  const isValid = /^https?:\/\/.+/.test(url);
+  if (!isValid) return <span className="text-gray-500">{url}</span>;
+  
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {new URL(url).hostname}
+    </a>
+  );
+}
+```
+
+#### Content Security Policy (CSP) Headers
+- [ ] Configure CSP headers in Vercel/deployment config
+- [ ] Restrict `img-src` to allowed domains
+- [ ] Set `object-src 'none'` to block SVG script execution
+- [ ] Set `script-src 'self'` to prevent inline script injection
+
+```
+Content-Security-Policy: 
+  default-src 'self';
+  img-src 'self' https://ipfs.io https://gateway.pinata.cloud https://i.imgur.com data:;
+  script-src 'self';
+  object-src 'none';
+```
+
+#### Text Field Protection (question, resolutionRules)
+- [ ] **Never use `dangerouslySetInnerHTML`:** React auto-escapes by default
+- [ ] **Sanitize if rendering HTML:** Use DOMPurify if absolutely needed
+- [ ] **Validate max lengths:** Prevent UI overflow attacks
+
+**Why this matters:** Smart contracts are public APIs. Anyone can bypass the frontend and store malicious data directly. The frontend is the ONLY security layer for display.
+
+---
 
 ### Project Structure
 ```
