@@ -1,7 +1,7 @@
 # Junkie.Fun - Master TODO
 
-> **Last Updated:** January 8, 2026  
-> **Status:** Smart Contracts 🔄 Refactoring | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Deployed | Frontend ✅ ~95% Complete  
+> **Last Updated:** January 9, 2026  
+> **Status:** Smart Contracts ✅ v3.1.0 Complete | Testnet Deployed ✅ (v3.1.0) | Subgraph ✅ v0.0.3 Deployed | Frontend ✅ ~95% Complete  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -21,51 +21,60 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 
 ### Implementation Checklist
 
-#### 1. Smart Contract (v3.0.0) - IN PROGRESS
-- [ ] Add `HeatLevel` enum: `CRACK`, `HIGH`, `PRO`
-- [ ] Add `virtualLiquidity` field to Market struct
-- [ ] Add configurable defaults: `heatLevelCrack`, `heatLevelHigh`, `heatLevelPro`
-- [ ] Add `defaultHeatLevel = 20 * 1e18` as fallback
-- [ ] Update `createMarket()` signature to accept `HeatLevel`
-- [ ] Update `createMarketAndBuy()` signature to accept `HeatLevel`
-- [ ] Update `_getYesPrice()` to use `markets[marketId].virtualLiquidity`
-- [ ] Update `_getNoPrice()` to use `markets[marketId].virtualLiquidity`
-- [ ] Update `_calculateBuyShares()` to use per-market liquidity
-- [ ] Update `_calculateSellBnb()` to use per-market liquidity
-- [ ] Add MultiSig governance for updating heat level defaults (NEW markets only)
-- [ ] Add `MarketCreated` event with `virtualLiquidity` field
-- [ ] Add getter `getHeatLevelDefaults()` for frontend
+#### 1. Smart Contract (v3.1.0) ✅ COMPLETE
+- [x] Add `HeatLevel` enum: `CRACK`, `HIGH`, `PRO`
+- [x] Add `virtualLiquidity` field to Market struct
+- [x] Add configurable defaults: `heatLevelCrack`, `heatLevelHigh`, `heatLevelPro`
+- [x] Add `defaultHeatLevel = 20 * 1e18` as fallback
+- [x] Update `createMarket()` signature to accept `HeatLevel`
+- [x] Update `createMarketAndBuy()` signature to accept `HeatLevel`
+- [x] Update `_getYesPrice()` to use `markets[marketId].virtualLiquidity`
+- [x] Update `_getNoPrice()` to use `markets[marketId].virtualLiquidity`
+- [x] Update `_calculateBuyShares()` to use per-market liquidity
+- [x] Update `_calculateSellBnb()` to use per-market liquidity
+- [x] Add MultiSig governance for updating heat level defaults (NEW markets only)
+- [x] Add `MarketCreated` event with `virtualLiquidity` field
+- [x] Add getter `getHeatLevelDefaults()` for frontend
+- [x] Add `SweepFunds` ActionType for surplus recovery
 
-#### 2. Tests - PENDING
-- [ ] Update all existing tests to pass `HeatLevel.HIGH` as default
-- [ ] Add tests for `HeatLevel.CRACK` (high volatility)
-- [ ] Add tests for `HeatLevel.PRO` (low slippage)
-- [ ] Add tests for invalid heat level (should default to HIGH)
-- [ ] Add tests for MultiSig updating heat level defaults
-- [ ] Verify existing markets unaffected by default changes
-- [ ] Add price impact verification tests
+#### 2. Tests ✅ COMPLETE (173 tests passing)
+- [x] Update all existing tests to pass `HeatLevel.HIGH` as default
+- [x] Add tests for `HeatLevel.CRACK` (high volatility)
+- [x] Add tests for `HeatLevel.PRO` (low slippage)
+- [x] Add tests for invalid heat level (should default to HIGH)
+- [x] Add tests for MultiSig updating heat level defaults
+- [x] Verify existing markets unaffected by default changes
+- [x] Add price impact verification tests
+- [x] Add 15 heat level specific tests
 
-#### 3. Subgraph (v0.0.3) - PENDING
-- [ ] Add `virtualLiquidity: BigInt!` to Market entity
-- [ ] Add `heatLevel: String!` to Market entity (CRACK/HIGH/PRO)
-- [ ] Update `handleMarketCreated` to read virtualLiquidity
-- [ ] Fresh deployment (don't need migration)
+#### 3. Subgraph (v0.0.3) ✅ COMPLETE
+- [x] Add `virtualLiquidity: BigInt!` to Market entity
+- [x] Add `heatLevel: Int!` to Market entity (0=CRACK, 1=HIGH, 2=PRO)
+- [x] Update `handleMarketCreated` to read virtualLiquidity
+- [x] Add `FundsSweep` entity for SweepFunds tracking
+- [x] Add `handleFundsSwept` event handler
+- [x] Remove `proposalProofLink` from schema
+- [x] Fresh deployment to The Graph Studio
 
-#### 4. Frontend - PENDING
+#### 4. Frontend - PARTIAL (Core Complete, UI Pending)
+- [x] Update `createMarket` ABI with heatLevel parameter
+- [x] Add `heatLevel` and `virtualLiquidity` to GraphQL queries
+- [x] Add `heatLevel` and `virtualLiquidity` to Zod schemas
+- [x] Remove `proposalProofLink` from queries and schemas
+- [x] Update `ResolutionPanel` to remove proof link display
 - [ ] Add `HeatLevel` enum type
-- [ ] Update `createMarket` ABI with heatLevel parameter
 - [ ] Create `HeatLevelSelector` component (3 cards side-by-side)
 - [ ] Update `CreateMarketPage` with heat level selection
 - [ ] Show heat level badge on `MarketCard`
 - [ ] Show heat level in `MarketDetailPage` info section
 - [ ] Update `calculateYesPercent`/`calculateNoPercent` to accept virtualLiquidity
 
-#### 5. Deploy & Test
-- [ ] Deploy contract v3.0.0 to BNB Testnet
-- [ ] Verify on BscScan
-- [ ] Deploy subgraph v0.0.3
-- [ ] Update frontend `.env` with new addresses
-- [ ] End-to-end testing all heat levels
+#### 5. Deploy & Test ✅ COMPLETE
+- [x] Deploy contract v3.1.0 to BNB Testnet
+- [x] Verify on BscScan
+- [x] Deploy subgraph v0.0.3
+- [x] Update frontend `.env` with new addresses
+- [ ] End-to-end testing all heat levels (manual testing pending)
 
 ---
 
