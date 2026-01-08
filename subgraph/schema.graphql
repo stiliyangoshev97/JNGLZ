@@ -7,7 +7,7 @@
 # ============================================
 # Market Entity - Core prediction market data
 # ============================================
-type Market @entity {
+type Market @entity(immutable: false) {
   id: ID! # marketId as string
   marketId: BigInt! # On-chain market ID
   # Market Info
@@ -56,7 +56,7 @@ type Market @entity {
 # ============================================
 # Trade Entity - Buy/Sell transactions
 # ============================================
-type Trade @entity {
+type Trade @entity(immutable: true) {
   id: ID! # txHash-logIndex
   market: Market! # Related market
   trader: User! # Trader (relation)
@@ -78,7 +78,7 @@ type Trade @entity {
 # ============================================
 # User Entity - Trader profiles
 # ============================================
-type User @entity {
+type User @entity(immutable: false) {
   id: ID! # User address as string
   address: Bytes! # User address
   # Stats
@@ -98,7 +98,7 @@ type User @entity {
 # ============================================
 # Position Entity - User positions per market
 # ============================================
-type Position @entity {
+type Position @entity(immutable: false) {
   id: ID! # marketId-userAddress
   user: User! # Related user
   market: Market! # Related market
@@ -122,7 +122,7 @@ type Position @entity {
 # ============================================
 # Vote Entity - Voting records for disputed markets
 # ============================================
-type Vote @entity {
+type Vote @entity(immutable: true) {
   id: ID! # marketId-voterAddress
   market: Market! # Related market
   voter: User! # Voter (relation)
@@ -139,7 +139,7 @@ type Vote @entity {
 # ============================================
 # Claim Entity - Payout claims
 # ============================================
-type Claim @entity {
+type Claim @entity(immutable: true) {
   id: ID! # txHash-logIndex
   market: Market! # Related market
   user: User! # User who claimed
@@ -155,7 +155,7 @@ type Claim @entity {
 # ============================================
 # EmergencyRefund Entity - Emergency refund records
 # ============================================
-type EmergencyRefund @entity {
+type EmergencyRefund @entity(immutable: true) {
   id: ID! # txHash-logIndex
   market: Market! # Related market
   user: User! # User who got refund
@@ -171,7 +171,7 @@ type EmergencyRefund @entity {
 # ============================================
 # GlobalStats Entity - Platform-wide statistics
 # ============================================
-type GlobalStats @entity {
+type GlobalStats @entity(immutable: false) {
   id: ID! # "global" (singleton)
   # Market Stats
   totalMarkets: BigInt! # Total markets created
