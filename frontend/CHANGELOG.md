@@ -2,6 +2,65 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.4.0] - 2026-01-08
+
+### Fixed
+
+#### Issue #6: Proposal failing with InsufficientBond
+- **Root Cause**: Contract takes 0.3% fee from bond deposit, so net bond was below minimum
+- **Solution**: Added 0.5% buffer to bond calculation: `bondAmount = baseBond * 1005n / 1000n`
+- **File**: `ResolutionPanel.tsx`
+
+#### Issue #7: Dispute failing with InsufficientBond
+- **Root Cause 1**: Frontend ABI had wrong signature `dispute(marketId, proofLink)` but contract is `dispute(marketId)` 
+- **Root Cause 2**: Dispute bond calculation wasn't using actual proposerBond from market
+- **Solution**: 
+  - Fixed ABI in `contracts.ts` - removed proofLink parameter
+  - Updated `useDispute` hook to only pass marketId
+  - Removed proofLink input field from dispute section
+  - Use `market.proposerBond * 2n` plus fee buffer for dispute bond
+- **Files**: `contracts.ts`, `useContractWrites.ts`, `ResolutionPanel.tsx`
+
+#### Issue #8: Voting UI unclear
+- Users didn't understand what they were voting for
+- **Improvements**:
+  - Show Proposer outcome (YES/NO) and Disputer outcome (opposite) with color coding
+  - Added prominent "🗳️ YOUR VOTE MATTERS!" banner with vote weight
+  - Added "💰 No bond required! Only pay gas (~$0.01). Correct voters share jury fees." message
+  - Changed button labels from "AGREE/DISAGREE" to "VOTE YES/VOTE NO"
+- **File**: `ResolutionPanel.tsx`
+
+### Changed
+
+#### Issue #9: Markets page filters restructured
+- **Before**: Only "Active" and "All" tabs
+- **After**: "Active", "Expired", and "Resolved" tabs with counts
+- Changed from `GET_ACTIVE_MARKETS` to `GET_MARKETS` to fetch all markets
+- Client-side filtering with `useMemo` for better UX
+- Each tab shows count badge (e.g., "ACTIVE (5)")
+- **File**: `MarketsPage.tsx`
+
+#### Issue #10: Portfolio page filters restructured  
+- **Before**: Static non-functional filter buttons
+- **After**: Dynamic filter categories with proper state management
+- **Categories**:
+  - `All` - All positions
+  - `Active` - Positions in non-expired, non-resolved markets
+  - `Needs Action` (⚡ animated) - Positions where user can vote on disputed markets
+  - `Claimable` (💰) - Resolved markets where user has winning shares
+- Filter tabs only appear when relevant (Needs Action hidden if count = 0)
+- Proper empty states for each filter with helpful messages
+- Fixed claimable value calculation: `0.01 BNB × winning shares`
+- **File**: `PortfolioPage.tsx`
+
+### Technical Notes
+- Bond fee buffer: Contract takes 0.3%, we send 0.5% extra to be safe
+- Dispute bond formula: `(proposerBond * 2n * 1005n) / 1000n`
+- Position categorization considers: expiry, resolution status, dispute status, hasVoted flag
+- Client-side filtering maintains server data freshness while providing instant filter switching
+
+---
+
 ## [0.2.0] - 2026-01-08
 
 ### Fixed

@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** Phase 2 Complete (Contract Integration)
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish)
 
 ---
 
@@ -57,17 +57,17 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | Chain Validation | ✅ 100% | WrongNetworkModal, prevents Phantom stuck issue |
 | Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |
-| Markets Page | ✅ 100% | Grid, filters, live ticker |
+| Markets Page | ✅ 100% | Grid, filters (Active/Expired/Resolved with counts) |
 | Market Detail Page | ✅ 100% | Chart, trade panel, resolution panel |
 | Create Market Page | ✅ 100% | Fully wired to contract |
-| Portfolio Page | ✅ 100% | Positions grid with claim UI |
+| Portfolio Page | ✅ 100% | Positions with filters (All/Active/Needs Action/Claimable) |
 | Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds |
 | Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim |
 | Trade Panel | ✅ 100% | Buy/sell wired to contract |
-| Resolution Panel | ✅ 100% | Propose, dispute, vote, claim |
+| Resolution Panel | ✅ 100% | Propose, dispute, vote, claim (bond fees fixed) |
 | Supabase (Comments) | ⬜ 0% | Future phase |
 
-**Overall Progress: ~90% (Contract integration complete, comments pending)**
+**Overall Progress: ~95% (Contract integration complete, comments pending)**
 
 ---
 
@@ -262,6 +262,34 @@ import { ApolloProvider } from '@apollo/client/react';
 ### 3. BigDecimal vs BigInt
 - **Problem**: Subgraph returns `BigDecimal` as strings, not wei
 - **Solution**: `formatBNB()` handles both `bigint` and `string` inputs
+
+### 4. Bond Fee Buffer (FIXED in v0.4.0)
+- **Problem**: Contract takes 0.3% fee from bond deposit, causing InsufficientBond errors
+- **Solution**: Add 0.5% buffer: `bondAmount = baseBond * 1005n / 1000n`
+
+### 5. Dispute ABI Mismatch (FIXED in v0.4.0)
+- **Problem**: Frontend ABI had `dispute(marketId, proofLink)` but contract only takes `marketId`
+- **Solution**: Fixed ABI in `contracts.ts`, removed proofLink from `useDispute` hook
+
+---
+
+## 🆕 Recent Changes (v0.4.0)
+
+### Markets Page Filters
+- Changed from Active/All to **Active/Expired/Resolved** tabs
+- Each tab shows count badge
+- Uses `GET_MARKETS` (all markets) with client-side filtering
+
+### Portfolio Page Filters  
+- Categories: **All, Active, Needs Action, Claimable**
+- "Needs Action" (⚡) shows when user can vote on disputed markets
+- "Claimable" (💰) shows resolved markets with winning shares
+- Dynamic visibility based on counts
+
+### Resolution Panel Improvements
+- Clear voting UI showing Proposer vs Disputer outcomes
+- "No bond required! Only pay gas" message for voting
+- Proper bond calculations with fee buffer
 
 ---
 
