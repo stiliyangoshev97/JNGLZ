@@ -11,7 +11,9 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/shared/components/ui/Card';
 import { Badge, YesHolderBadge, NoHolderBadge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
+import { Spinner } from '@/shared/components/ui/Spinner';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
+import { useSmartClaim } from '@/shared/hooks';
 import { cn } from '@/shared/utils/cn';
 import { calculateYesPercent } from '@/shared/utils/format';
 
@@ -42,6 +44,9 @@ interface PositionCardProps {
 
 export function PositionCard({ position }: PositionCardProps) {
   const market = position.market;
+  
+  // Smart claim hook for auto-finalize + claim
+  const { smartClaim, step, isPending, isConfirming, isSuccess } = useSmartClaim();
   
   // Parse share amounts - subgraph returns BigInt strings for shares
   const yesShares = Number(BigInt(position.yesShares || '0')) / 1e18;
@@ -75,6 +80,30 @@ export function PositionCard({ position }: PositionCardProps) {
   // Status checks
   const isResolved = market?.status === 'Resolved';
   const canClaim = isResolved && (hasYes || hasNo);
+
+  // Handle claim action
+  const handleClaim = () => {
+    const marketId = BigInt(market.marketId || market.id);
+    smartClaim(marketId);
+  };
+
+  // Get claim button state
+  const getClaimButtonContent = () => {
+    if (isSuccess) return '✓ CLAIMED';
+    if (isPending) return (
+      <span className="flex items-center justify-center gap-2">
+        <Spinner size="sm" variant="yes" />
+        {step === 'finalizing' ? 'FINALIZING...' : 'CONFIRM...'}
+      </span>
+    );
+    if (isConfirming) return (
+      <span className="flex items-center justify-center gap-2">
+        <Spinner size="sm" variant="yes" />
+        {step === 'finalizing' ? 'FINALIZING...' : 'CLAIMING...'}
+      </span>
+    );
+    return 'CLAIM';
+  };
 
   return (
     <Card variant="hover" className="group flex flex-col overflow-hidden">
@@ -167,8 +196,14 @@ export function PositionCard({ position }: PositionCardProps) {
       {/* Actions */}
       <div className="mt-auto flex gap-2">
         {canClaim ? (
-          <Button variant="yes" size="sm" className="flex-1">
-            CLAIM
+          <Button 
+            variant="yes" 
+            size="sm" 
+            className="flex-1"
+            onClick={handleClaim}
+            disabled={isPending || isConfirming || isSuccess}
+          >
+            {getClaimButtonContent()}
           </Button>
         ) : (
           <Link to={`/market/${market.id}`} className="flex-1">

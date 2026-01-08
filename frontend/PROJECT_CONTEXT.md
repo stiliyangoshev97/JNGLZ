@@ -1,14 +1,14 @@
-# 📋 Junkie.Fun - Frontend Project Context
+# 📋 JunkieFun - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 8, 2026  
+> **Last Updated:** January 9, 2026  
 > **Status:** Phase 2+ Complete (Contract Integration + UX Polish)
 
 ---
 
 ## 🎯 Platform Overview
 
-**Junkie.Fun** is a decentralized prediction market platform with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
+**JunkieFun** is a decentralized prediction market platform with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
 - Create prediction markets (free)
 - Trade YES/NO shares with native BNB
 - View real-time prices via bonding curve
@@ -202,6 +202,8 @@ For real-time data:
 | `/market/:marketId` | MarketDetailPage | ✅ Complete |
 | `/create` | CreateMarketPage | ✅ UI Complete |
 | `/portfolio` | PortfolioPage | ✅ Complete |
+| `/terms` | TermsPage | ✅ Complete |
+| `/privacy` | PrivacyPage | ✅ Complete |
 
 ---
 

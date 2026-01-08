@@ -1,6 +1,35 @@
-# Junkie.Fun - Master Blueprint
+# JunkieFun - Master Blueprint
 
 > **The "Pump.fun for Predictions"** - A decentralized prediction market where early buyers profit when others buy after them. Built on BNB Chain.
+
+---
+
+## 🌐 DECENTRALIZED PROTOCOL
+
+**JunkieFun is a fully decentralized, non-custodial prediction market protocol.**
+
+### What This Means:
+
+1. **Anyone Can Use It** - No KYC, no accounts, no permissions needed. Just connect a wallet.
+2. **Anyone Can Create Markets** - Market creation is FREE. Ask any yes/no question.
+3. **No Central Authority** - Markets are resolved via **Street Consensus** (shareholder voting), not by us.
+4. **Non-Custodial** - You interact directly with smart contracts. We never hold your funds.
+5. **Transparent** - All code is open source. All transactions are on-chain.
+6. **Censorship Resistant** - Once deployed, the protocol runs autonomously.
+
+### Street Consensus Resolution:
+
+Markets aren't resolved by a central oracle. Instead, **the people who have skin in the game decide**:
+
+1. **Propose** - Anyone can propose an outcome by posting a bond
+2. **Dispute** - If someone disagrees, they can dispute with 2× bond
+3. **Vote** - Shareholders vote weighted by their position size
+4. **Finalize** - Majority wins. Losing bonder forfeits bond to winners.
+
+This creates a self-regulating system where:
+- Honest resolution is incentivized (keep your bond + earn dispute fees)
+- Manipulation is expensive (need to buy majority stake)
+- Speed is prioritized (30-90 minute resolution windows)
 
 ---
 

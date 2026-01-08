@@ -79,7 +79,7 @@ export function ErrorBoundary() {
 
           {/* Description */}
           <p className="text-text-secondary font-mono mb-6 leading-relaxed">
-            A new version of JUNKIE.FUN is available. Hit refresh to get the latest 
+            A new version of JUNKIEFUN is available. Hit refresh to get the latest 
             updates and continue trading.
           </p>
 

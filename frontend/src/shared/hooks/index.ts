@@ -41,3 +41,6 @@ export {
   useClaim,
   useEmergencyRefund,
 } from './useContractWrites';
+
+// Smart Hooks
+export { useSmartClaim } from './useSmartClaim';

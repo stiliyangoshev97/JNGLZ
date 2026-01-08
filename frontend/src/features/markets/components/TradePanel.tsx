@@ -96,6 +96,17 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
   const userNoShares = position?.noShares || 0n;
   const currentShares = direction === 'yes' ? userYesShares : userNoShares;
 
+  // Check if selling all shares
+  const isSellAll = useMemo(() => {
+    if (action !== 'sell' || !amount || currentShares === 0n) return false;
+    try {
+      const sharesToSell = parseEther(amount);
+      return sharesToSell >= currentShares;
+    } catch {
+      return false;
+    }
+  }, [action, amount, currentShares]);
+
   // Reset form on success
   useEffect(() => {
     if (isSuccess) {
@@ -357,6 +368,22 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
           </div>
         )}
 
+        {/* Sell All Warning */}
+        {isSellAll && (
+          <div className="p-3 bg-warning/10 border border-warning text-sm">
+            <div className="flex gap-2">
+              <span className="text-warning">⚠️</span>
+              <div>
+                <p className="text-warning font-bold text-xs mb-1">SELLING ALL SHARES</p>
+                <p className="text-text-secondary text-xs">
+                  You will not receive any payout when the market resolves. 
+                  You are cashing out your current value now.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Trade Button */}
         <Button
           variant={direction === 'yes' ? 'yes' : 'no'}
@@ -382,7 +409,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
 
         {/* Info */}
         <p className="text-xs text-text-muted text-center">
-          Min bet: 0.005 BNB • Fee: 1.5% (1% platform + 0.5% creator)
+          Min bet: 0.005 BNB • Platform fee: 1% • Creator fee: 0.5%
         </p>
       </div>
     </div>

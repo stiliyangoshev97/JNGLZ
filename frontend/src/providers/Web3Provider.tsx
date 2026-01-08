@@ -94,7 +94,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         modalSize="compact"
         appInfo={{
           appName: 'JunkieFun',
-          learnMoreUrl: 'https://junkie.fun/about',
+          learnMoreUrl: 'https://junkiefun.xyz/about',
         }}
       >
         {children}

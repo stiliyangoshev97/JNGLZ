@@ -7,9 +7,10 @@
  * @module router/RootLayout
  */
 
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { Header } from './Header';
 import { WrongNetworkModal, WrongNetworkBanner } from '@/shared/components/WrongNetworkModal';
+import { EntryModal, CookieBanner } from '@/shared/components/legal';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
 
 export function RootLayout() {
@@ -17,6 +18,12 @@ export function RootLayout() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Entry Modal (first-time visitors) */}
+      <EntryModal />
+
+      {/* Cookie Banner */}
+      <CookieBanner />
+
       {/* Wrong Network Modal (blocks interaction) */}
       <WrongNetworkModal />
 
@@ -71,14 +78,18 @@ function Footer() {
             >
               TWITTER
             </a>
-            <a
-              href="https://docs.junkie.fun"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/terms"
               className="text-text-secondary hover:text-cyber transition-colors"
             >
-              DOCS
-            </a>
+              TERMS
+            </Link>
+            <Link
+              to="/privacy"
+              className="text-text-secondary hover:text-cyber transition-colors"
+            >
+              PRIVACY
+            </Link>
           </div>
 
           {/* Network indicator */}

@@ -19,6 +19,8 @@ const MarketsPage = lazy(() => import('@/features/markets/pages/MarketsPage'));
 const MarketDetailPage = lazy(() => import('@/features/markets/pages/MarketDetailPage'));
 const PortfolioPage = lazy(() => import('@/features/portfolio/pages/PortfolioPage'));
 const CreateMarketPage = lazy(() => import('@/features/create/pages/CreateMarketPage'));
+const TermsPage = lazy(() => import('@/features/legal/pages/TermsPage'));
+const PrivacyPage = lazy(() => import('@/features/legal/pages/PrivacyPage'));
 
 /**
  * Suspense wrapper for lazy-loaded pages
@@ -69,6 +71,22 @@ export const router = createBrowserRouter([
         element: (
           <PageLoader>
             <CreateMarketPage />
+          </PageLoader>
+        ),
+      },
+      {
+        path: 'terms',
+        element: (
+          <PageLoader>
+            <TermsPage />
+          </PageLoader>
+        ),
+      },
+      {
+        path: 'privacy',
+        element: (
+          <PageLoader>
+            <PrivacyPage />
           </PageLoader>
         ),
       },

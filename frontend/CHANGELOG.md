@@ -2,6 +2,62 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.5.0] - 2026-01-09
+
+### Added
+
+#### Legal & Compliance
+- **Entry Modal** - First-time visitor modal with:
+  - 3-step "How It Works" guide (Create, Trade, Street Consensus)
+  - Age verification checkbox (18+/21+)
+  - Terms & Privacy acceptance requirement
+  - Fee structure breakdown (Platform 1%, Creator 0.5%, Resolution 0.3%)
+  - Risk disclaimer
+  - Gated entry (must confirm to proceed)
+
+- **Terms of Service Page** (`/terms`)
+  - Full legal terms covering eligibility, fees, prohibited jurisdictions
+  - Information protocol / gambling disclaimer
+  - Risk acknowledgment section
+  - Contact information
+
+- **Privacy Policy Page** (`/privacy`)
+  - Blockchain data transparency notice
+  - Cookie policy (essential cookies only)
+  - Third-party services disclosure
+  - GDPR/CCPA compliance notes
+
+- **Cookie Banner** - Non-intrusive bottom-right notification
+  - Essential cookies only messaging
+  - Link to privacy policy
+  - Dismissible with localStorage persistence
+
+#### UX Improvements
+- **Smart Claim Hook** (`useSmartClaim`) - Automatically finalizes market before claiming if needed
+  - Seamless UX: User clicks "Claim" once, backend handles finalize+claim
+  - Step tracking: idle → finalizing → claiming → success
+
+- **Sell Warning Tooltip** - Warning shown when selling all shares:
+  - "You will not receive any payout when the market resolves"
+  - Helps prevent accidental full exits
+
+- **Portfolio Claim Button** - PositionCard now uses smart claim with loading states
+
+### Changed
+- **Branding**: Updated all instances of "Junkie.fun" to "JunkieFun" (no dot)
+- **Footer Links**: Added Terms and Privacy links
+- **Fee Display**: Separated into "Platform fee: 1%" and "Creator fee: 0.5%" instead of combined "Trading fee: 1.5%"
+
+### Technical
+- New legal components: `EntryModal`, `CookieBanner` in `shared/components/legal/`
+- New feature: `features/legal/` with TermsPage and PrivacyPage
+- Updated routes.tsx with `/terms` and `/privacy` routes
+- RootLayout now includes EntryModal and CookieBanner
+- Added `useSmartClaim` hook for seamless claim UX
+- CSS animation `slide-up` for cookie banner
+
+---
+
 ## [0.4.0] - 2026-01-08
 
 ### Fixed

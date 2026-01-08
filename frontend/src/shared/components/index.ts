@@ -10,3 +10,6 @@ export * from './ui';
 // App-wide components
 export { WrongNetworkModal, WrongNetworkBanner } from './WrongNetworkModal';
 export { ErrorBoundary } from './ErrorBoundary';
+
+// Legal components
+export * from './legal';
