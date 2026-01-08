@@ -13,19 +13,18 @@ I'm working on JunkieFun - a decentralized prediction market platform on BNB Cha
 
 **PROJECT STATUS:**
 - ✅ Smart Contracts: COMPLETE (116 tests passing)
-- ⬜ Frontend: NOT STARTED
-- ⬜ Subgraph: NOT STARTED
-- ⬜ Deployment: NOT STARTED
+- ✅ Subgraph: COMPLETE (deployed to The Graph)
+- 🟡 Frontend: IN PROGRESS (~70% - UI complete, contract hooks pending)
+- ⬜ Deployment: NOT STARTED (mainnet)
 
 **Read these files in order:**
 
 1. `/PROJECT.md` - Full business model, bonding curve math, pump & dump economics
 2. `/TODO.md` - Master task list showing completed vs pending items
-3. `/contracts/README.md` - Street Consensus resolution explained
-4. `/contracts/PROJECT_CONTEXT.md` - Smart contract architecture & test coverage
-5. `/contracts/CHANGELOG.md` - Version history (v2.0.0 = Street Consensus)
-6. `/contracts/PROFIT.txt` - Detailed pump & dump profit analysis with math
-7. `/contracts/src/PredictionMarket.sol` - The complete smart contract (1445 lines)
+3. `/PROJECT_CONTEXT_FRONTEND.md` - Frontend architecture & current status
+4. `/frontend/CHANGELOG.md` - Frontend version history
+5. `/contracts/README.md` - Street Consensus resolution explained
+6. `/contracts/PROJECT_CONTEXT.md` - Smart contract architecture & test coverage
 
 **Key things to understand:**
 - Single monolithic contract (not factory pattern)
@@ -34,8 +33,7 @@ I'm working on JunkieFun - a decentralized prediction market platform on BNB Cha
 - Fee structure: 1% platform + 0.5% creator + 0.3% resolution = 1.8% total
 - Dual bonding curve: P(YES) + P(NO) = 0.01 BNB (always)
 - Virtual liquidity: 100 YES + 100 NO shares at start
-- Average price formula for selling (prevents pool insolvency)
-- 3-of-3 MultiSig for governance
+- **Frontend uses "High-Energy Brutalism" design** (black bg, harsh borders, no rounded corners)
 
 After reviewing, summarize where we are and ask what I want to work on.
 
@@ -45,22 +43,26 @@ PROMPT #2: QUICK STATUS CHECK (For shorter sessions)
 
 Junkie.Fun project quick check:
 
-**STATUS:** Smart contracts 100% complete with 116 tests passing.
+**STATUS:**
+- ✅ Smart contracts: 100% complete (116 tests)
+- ✅ Subgraph: Deployed to The Graph
+- 🟡 Frontend: ~70% complete (UI done, contract hooks pending)
 
 Please:
-1. Read `/TODO.md` - Focus on Phase 1 (complete) vs Phase 2-4 (pending)
-2. Skim `/contracts/PROJECT_CONTEXT.md` for contract status
-3. Skim `/contracts/README.md` for Street Consensus flow
+1. Read `/TODO.md` - Focus on what's complete vs pending
+2. Skim `/PROJECT_CONTEXT_FRONTEND.md` for frontend status
+3. Skim `/frontend/CHANGELOG.md` for recent changes
 
-**Key info:**
-- **Street Consensus** resolution (no external oracles!)
-- Resolution: propose → dispute (optional) → vote (if disputed) → finalize
-- 30-90 min resolution (vs 48h with old UMA system)
+**Frontend Stack:**
+- React 19 + Vite + TypeScript
+- Wagmi v3 + RainbowKit (brutalist theme)
+- Apollo Client v4 + The Graph
+- Tailwind CSS ("High-Energy Brutalism" design)
 
 **Next tasks:**
-- Create frontend (React 19 + Vite + Wagmi v2 + RainbowKit)
-- Create subgraph (The Graph)
-- Deploy contracts to BSC Testnet
+- Contract interaction hooks (useBuyYes, useSellYes, etc.)
+- Wire up TradePanel to actual contract
+- Add Supabase for comments (future)
 
 Ask what I want to work on.
 
@@ -106,78 +108,75 @@ I need help with Junkie.Fun smart contracts. The contracts are COMPLETE but I ma
 What contract work do you need?
 
 ================================================================================
-PROMPT #4: START FRONTEND (For starting frontend development)
+PROMPT #4: CONTINUE FRONTEND (For continuing frontend development)
 ================================================================================
 
-I want to start the Junkie.Fun frontend. Smart contracts are complete.
+I want to continue the Junkie.Fun frontend. UI is ~70% complete.
 
-**Tech Stack (from /PROJECT_CONTEXT_FRONTEND.md):**
-- React 19 + Vite (NO Next.js)
-- Wagmi v2 + RainbowKit for wallet connection
-- TanStack Query for server state
-- Tailwind CSS (Retrowave/90s hacker theme)
-- Zustand for global state
-- React Hook Form + Zod for forms
-- The Graph for data fetching (no backend)
-
-**Contract interface needed:**
-- `createMarket()` - Free market creation
-- `createMarketAndBuy()` - Atomic create + first buy
-- `buyYes(marketId, minSharesOut)` / `buyNo()`
-- `sellYes(marketId, shares, minBnbOut)` / `sellNo()`
-- `getYesPrice(marketId)` / `getNoPrice()`
-- `previewBuy()` / `previewSell()` - For UI previews
-- `getPosition(marketId, user)` - User shares (returns 6 values)
-- `getMarket(marketId)` - Full market data
-- `getMarketStatus(marketId)` - Active/Expired/Proposed/Disputed/Resolved
-
-**Street Consensus UI (NEW - critical!):**
-- `proposeOutcome(marketId, outcome, proofLink)` - Propose with bond
-- `dispute(marketId, proofLink)` - Challenge with 2× bond
-- `vote(marketId, supportProposer)` - Vote (weight = share count)
-- `finalizeMarket(marketId)` - Settle after voting
-- `claim(marketId)` - Claim winnings
-- `emergencyRefund(marketId)` - 24h timeout refund
-- `getRequiredBond(marketId)` - Dynamic bond calculation
-- `canEmergencyRefund(marketId)` - Eligibility check
-
-**Reference:** Look at `/ExampleProject/frontend/` for patterns.
-
-Please:
-1. Read `/PROJECT_CONTEXT_FRONTEND.md` for requirements
-2. Initialize the frontend with proper structure
-3. Set up wallet connection with RainbowKit
-
-================================================================================
-PROMPT #5: START SUBGRAPH (For starting subgraph development)
-================================================================================
-
-I want to start the Junkie.Fun subgraph (The Graph). Smart contracts are complete.
+**Current State:**
+- ✅ Project setup (Vite + React 19 + TypeScript)
+- ✅ Tailwind with "High-Energy Brutalism" theme
+- ✅ All UI components (Button, Card, Modal, Badge, HeatBar, ChanceDisplay)
+- ✅ Web3 setup (Wagmi v3 + RainbowKit with brutalist theme)
+- ✅ GraphQL setup (Apollo Client v4 + The Graph)
+- ✅ All pages (Markets, MarketDetail, Create, Portfolio)
+- ✅ Chain validation (WrongNetworkModal prevents Phantom stuck issue)
+- ⬜ Contract interaction hooks (useBuyYes, useSellYes, etc.)
+- ⬜ Wire TradePanel to actual contract
+- ⬜ Supabase for comments (future)
 
 **Read:**
-1. `/PROJECT_CONTEXT_SUBGRAPH.md` - Schema & requirements
-2. `/contracts/src/PredictionMarket.sol` - Events to index
+1. `/PROJECT_CONTEXT_FRONTEND.md` - Full frontend architecture
+2. `/frontend/CHANGELOG.md` - What's been built
+3. `/frontend/TO-DO-FRONTEND.md` - Task list
 
-**Events to index (Street Consensus):**
-- `MarketCreated(marketId, creator, question, expiryTimestamp)`
-- `Trade(marketId, trader, isYes, isBuy, shares, bnbAmount)`
-- `OutcomeProposed(marketId, proposer, outcome, proofLink, bond)`
-- `ProposalDisputed(marketId, disputer, bond)`
-- `VoteCast(marketId, voter, outcome, weight)`
-- `MarketFinalized(marketId, outcome, winner, ...)` 
-- `MarketResolved(marketId, outcome)`
-- `Claimed(marketId, user, amount)`
-- `JuryFeePaid(marketId, voter, amount)`
-- `EmergencyRefunded(marketId, user, amount)`
+**Tech Stack:**
+- React 19 + Vite + TypeScript
+- Wagmi v3 + RainbowKit (brutalist theme)
+- Apollo Client v4 (import from `@apollo/client/react`)
+- Tailwind CSS (black bg, harsh borders, no rounded corners)
+- Zod v4 for validation
 
-**Entities needed:**
-- Market (all fields + status: Active/Expired/Proposed/Disputed/Resolved)
-- Trade (link to Market)
-- Vote (NEW - link to Market + voter)
-- User (positions across markets, total volume)
-- Position (user + market + shares + hasVoted + votedForProposer)
+**Important Notes:**
+- GraphQL queries use subgraph field names: `expiryTimestamp`, `poolBalance`, `evidenceLink`
+- `formatBNB()` handles both BigInt and string inputs
+- Chain validation prevents wrong-network issues
 
-Please initialize the subgraph with proper schema and mappings.
+**Contract to Frontend:**
+| Contract | Address |
+|----------|---------|
+| PredictionMarket | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` |
+
+**Subgraph:**
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1` |
+
+What do you want to work on?
+
+================================================================================
+PROMPT #5: SUBGRAPH CONTEXT (Subgraph is DEPLOYED)
+================================================================================
+
+The Junkie.Fun subgraph is DEPLOYED and working.
+
+**Deployed to:**
+- GraphQL: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1`
+- Studio: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+
+**Read:**
+1. `/PROJECT_CONTEXT_SUBGRAPH.md` - Schema & architecture
+2. `/subgraph/schema.graphql` - Entity definitions
+3. `/subgraph/src/prediction-market.ts` - Event handlers
+
+**Key Entities:**
+- `Market` - Fields: expiryTimestamp, poolBalance, evidenceLink, status, resolved, outcome
+- `Trade` - Fields: isYes, isBuy, shares, bnbAmount, pricePerShare, traderAddress
+- `Position` - Fields: yesShares, noShares, claimed, hasVoted, votedForProposer
+- `User` - Fields: totalTrades, totalVolume, marketsCreated
+- `GlobalStats` - Platform-wide statistics
+
+**Important:** Frontend queries must use exact field names from schema!
+
+What subgraph work do you need?
 
 ================================================================================
 PROMPT #6: CONTINUE FROM LAST SESSION
@@ -186,26 +185,28 @@ PROMPT #6: CONTINUE FROM LAST SESSION
 Continuing Junkie.Fun development.
 
 **Current status:**
-- ✅ Smart Contracts: COMPLETE (116 tests, see /contracts/CHANGELOG.md v2.0.0)
-- ⬜ Frontend: NOT STARTED
-- ⬜ Subgraph: NOT STARTED
-- ⬜ Deployment: NOT STARTED
+- ✅ Smart Contracts: COMPLETE (116 tests, v2.5.0)
+- ✅ Subgraph: DEPLOYED (The Graph Studio)
+- 🟡 Frontend: ~70% COMPLETE (UI done, contract hooks pending)
+- ⬜ Mainnet Deployment: NOT STARTED
 
-**Last completed:**
-- PredictionMarket.sol with Street Consensus (replaced UMA Oracle)
-- 116 tests including pump & dump economics verification
-- PROFIT.txt documenting the economics math
+**Frontend completed:**
+- All UI components (brutalist theme)
+- All pages (Markets, MarketDetail, Create, Portfolio)
+- GraphQL queries (Apollo Client)
+- Chain validation (wrong network handling)
 
-**Street Consensus highlights:**
-- 30-90 min resolution (vs 48-72h with UMA)
-- No external dependencies
-- Bettors vote on outcomes
-- Dynamic bond: max(0.02 BNB, pool×1%)
-- Jury fee: 50% of loser's bond to winning voters
+**Frontend pending:**
+- Contract interaction hooks (useBuyYes, useSellYes, etc.)
+- Wire TradePanel to contract
+- Supabase comments (future)
 
-**Next priority:** Frontend OR Subgraph (ask me which)
+**Read:**
+1. `/PROJECT_CONTEXT_FRONTEND.md` - Frontend status
+2. `/frontend/CHANGELOG.md` - What's built
+3. `/TODO.md` - Full task list
 
-Read `/TODO.md` for the detailed task list.
+What do you want to work on?
 
 ================================================================================
 PROJECT SUMMARY (Quick Reference)

@@ -1,0 +1,272 @@
+/**
+ * JunkieFun Global Styles
+ * 
+ * Design: "High-Energy Brutalism"
+ * - True black background (#000000)
+ * - Harsh borders, no shadows, no rounded corners
+ * - Neon glow effects for accents
+ * - Monospace numbers, bold sans-serif headlines
+ */
+
+/* Google Fonts - JetBrains Mono (numbers) + Inter (UI) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== BASE LAYER ===== */
+@layer base {
+  :root {
+    /* Core colors as CSS variables for JS access */
+    --color-yes: #39FF14;
+    --color-no: #FF3131;
+    --color-cyber: #00E0FF;
+    --color-bg: #000000;
+    --color-border: #262626;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-black text-white font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  /* Brutalist scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-black;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-600;
+    border: 1px solid #262626;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-500;
+  }
+
+  /* Selection color */
+  ::selection {
+    @apply bg-cyber/30 text-white;
+  }
+}
+
+/* ===== COMPONENT LAYER ===== */
+@layer components {
+  /* Brutalist Card */
+  .card {
+    @apply bg-dark-800 border border-dark-600 p-4;
+  }
+
+  .card-hover {
+    @apply card transition-colors duration-150;
+  }
+
+  .card-hover:hover {
+    @apply border-dark-500;
+  }
+
+  /* Brutalist Input */
+  .input-brutalist {
+    @apply w-full px-4 py-3 bg-black border border-dark-600 
+           text-white font-mono placeholder-dark-400
+           focus:outline-none focus:border-cyber
+           transition-colors duration-150;
+  }
+
+  .input-brutalist:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Neon Glow Text */
+  .text-glow-yes {
+    text-shadow: 0 0 10px rgba(57, 255, 20, 0.5), 0 0 20px rgba(57, 255, 20, 0.3);
+  }
+
+  .text-glow-no {
+    text-shadow: 0 0 10px rgba(255, 49, 49, 0.5), 0 0 20px rgba(255, 49, 49, 0.3);
+  }
+
+  .text-glow-cyber {
+    text-shadow: 0 0 10px rgba(0, 224, 255, 0.5), 0 0 20px rgba(0, 224, 255, 0.3);
+  }
+
+  /* Chance Display - Big glowing percentage */
+  .chance-display {
+    @apply font-mono font-bold text-6xl md:text-8xl tracking-tight;
+  }
+
+  .chance-display-yes {
+    @apply chance-display text-yes text-glow-yes animate-flicker;
+  }
+
+  .chance-display-no {
+    @apply chance-display text-no text-glow-no animate-flicker;
+  }
+
+  /* Heat Bar (liquidity gauge) */
+  .heat-bar {
+    @apply h-1 bg-dark-700 overflow-hidden;
+  }
+
+  .heat-bar-fill {
+    @apply h-full transition-all duration-300;
+    background: linear-gradient(90deg, #39FF14 0%, #FFB800 50%, #FF3131 100%);
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 inline-block;
+  }
+
+  .status-dot-active {
+    @apply status-dot bg-yes animate-pulse-glow;
+  }
+
+  .status-dot-expired {
+    @apply status-dot bg-no;
+  }
+
+  .status-dot-disputed {
+    @apply status-dot bg-status-disputed animate-pulse;
+  }
+
+  /* Market image with grayscale filter */
+  .market-image {
+    @apply grayscale transition-all duration-300;
+  }
+
+  .market-image:hover,
+  .group:hover .market-image {
+    @apply grayscale-0;
+  }
+
+  /* Brutalist button base */
+  .btn {
+    @apply px-4 py-2 font-semibold border transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-offset-0;
+  }
+
+  .btn-yes {
+    @apply btn bg-yes/10 text-yes border-yes
+           hover:bg-yes hover:text-black
+           focus:ring-yes/50;
+  }
+
+  .btn-no {
+    @apply btn bg-no/10 text-no border-no
+           hover:bg-no hover:text-black
+           focus:ring-no/50;
+  }
+
+  .btn-cyber {
+    @apply btn bg-cyber/10 text-cyber border-cyber
+           hover:bg-cyber hover:text-black
+           focus:ring-cyber/50;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-text-secondary border-dark-600
+           hover:bg-dark-800 hover:text-white hover:border-dark-500
+           focus:ring-dark-500;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-mono font-semibold uppercase tracking-wider;
+  }
+
+  .badge-yes {
+    @apply badge bg-yes/20 text-yes border border-yes/50;
+  }
+
+  .badge-no {
+    @apply badge bg-no/20 text-no border border-no/50;
+  }
+
+  .badge-whale {
+    @apply badge bg-whale/20 text-whale border border-whale/50;
+  }
+
+  .badge-admin {
+    @apply badge bg-admin/20 text-admin border border-admin/50;
+  }
+
+  .badge-neutral {
+    @apply badge bg-dark-700 text-text-secondary border border-dark-600;
+  }
+
+  /* Live ticker */
+  .ticker-container {
+    @apply overflow-hidden whitespace-nowrap border-y border-dark-600 bg-dark-900;
+  }
+
+  .ticker-content {
+    @apply inline-flex animate-ticker;
+  }
+
+  .ticker-item {
+    @apply inline-flex items-center gap-2 px-4 py-2 font-mono text-sm;
+  }
+
+  /* Scanner line effect for charts */
+  .scanner-line {
+    @apply absolute inset-0 overflow-hidden pointer-events-none;
+  }
+
+  .scanner-line::after {
+    content: '';
+    @apply absolute top-0 bottom-0 w-px bg-cyber/50 animate-scanner;
+    box-shadow: 0 0 10px rgba(0, 224, 255, 0.5);
+  }
+}
+
+/* ===== UTILITY LAYER ===== */
+@layer utilities {
+  /* Force no border radius anywhere */
+  .no-radius {
+    border-radius: 0 !important;
+  }
+
+  /* Glow utilities */
+  .glow-yes {
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.5), 0 0 40px rgba(57, 255, 20, 0.3);
+  }
+
+  .glow-no {
+    box-shadow: 0 0 20px rgba(255, 49, 49, 0.5), 0 0 40px rgba(255, 49, 49, 0.3);
+  }
+
+  .glow-cyber {
+    box-shadow: 0 0 20px rgba(0, 224, 255, 0.5), 0 0 40px rgba(0, 224, 255, 0.3);
+  }
+
+  /* Mono numbers utility */
+  .font-mono-numbers {
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
+  /* Terminal cursor blink */
+  .cursor-blink::after {
+    content: '█';
+    @apply animate-pulse text-cyber ml-0.5;
+  }
+}
+
+/* ===== RAINBOWKIT OVERRIDES ===== */
+/* Force brutalist style on RainbowKit modal */
+[data-rk] {
+  --rk-radii-modal: 0 !important;
+  --rk-radii-menuButton: 0 !important;
+  --rk-radii-connectButton: 0 !important;
+  --rk-radii-actionButton: 0 !important;
+}

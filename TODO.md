@@ -1,8 +1,8 @@
 # Junkie.Fun - Master TODO
 
 > **Last Updated:** January 8, 2026  
-> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
-> **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
+> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Deployed | Frontend 🟡 ~70% Complete  
+> **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
@@ -14,7 +14,7 @@
 | Phase 1: Smart Contracts | ✅ Complete | 100% (163 tests) |
 | Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.5.0 with marketCreationFee) |
 | Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.1) |
-| Phase 3: Frontend | ⬜ Not Started | 0% |
+| Phase 3: Frontend | 🟡 In Progress | ~70% (UI complete, contract hooks pending) |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
 ### 🚀 BNB Testnet Deployment (January 8, 2026)
@@ -32,6 +32,12 @@
 - **Start Block:** 83243447
 - **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
 - **Event Handlers:** 10 (all contract events indexed)
+
+### 🎨 Frontend v0.1.0 (January 8, 2026)
+- **Status:** 🟡 UI Complete, Contract Hooks Pending
+- **Design:** "High-Energy Brutalism" (black bg, harsh borders, no rounded corners)
+- **Completed:** All pages, components, GraphQL queries, chain validation
+- **Pending:** Contract interaction hooks, Supabase comments
 
 ---
 

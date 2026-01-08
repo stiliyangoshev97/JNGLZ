@@ -1,61 +1,24 @@
-# ============================================
-# Junkie.Fun - Frontend Git Ignore
-# ============================================
-# React + Vite + TypeScript patterns
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# ============================================
-# Dependencies
-# ============================================
-node_modules/
-.pnp
-.pnp.js
-
-# ============================================
-# Build Output
-# ============================================
-dist/
-dist-ssr/
-build/
+node_modules
+dist
+dist-ssr
 *.local
 
-# ============================================
-# Environment
-# ============================================
-.env
-.env.*
-!.env.example
-
-# ============================================
-# Vite
-# ============================================
-*.local
-vite.config.ts.timestamp-*
-
-# ============================================
-# Testing
-# ============================================
-coverage/
-.nyc_output/
-
-# ============================================
-# TypeScript
-# ============================================
-*.tsbuildinfo
-
-# ============================================
-# ESLint & Prettier
-# ============================================
-.eslintcache
-.prettiercache
-
-# ============================================
-# Wagmi CLI (Generated Types)
-# ============================================
-# Uncomment if you want to regenerate on each build
-# src/generated.ts
-
-# ============================================
-# Misc
-# ============================================
-*.bak
-.turbo/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

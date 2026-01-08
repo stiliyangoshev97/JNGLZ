@@ -2,13 +2,13 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** Not Started
+> **Status:** Phase 1 Complete (Foundation)
 
 ---
 
 ## 🎯 Platform Overview
 
-**Junkie.Fun** is a decentralized prediction market platform with a **retrowave/90s hacker** aesthetic where users can:
+**Junkie.Fun** is a decentralized prediction market platform with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
 - Create prediction markets (free)
 - Trade YES/NO shares with native BNB
 - View real-time prices via bonding curve
@@ -39,6 +39,7 @@ VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
 VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
+VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
 ```
 
 ---
@@ -47,20 +48,23 @@ VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Project Setup | ⬜ 0% | Vite not initialized yet |
-| Tailwind Theme | ⬜ 0% | Retrowave/90s hacker colors |
-| Base UI Components | ⬜ 0% | Button, Card, Modal, Input |
-| Web3 Integration | ⬜ 0% | Wagmi + RainbowKit |
-| Providers Setup | ⬜ 0% | Query, Web3 |
-| Router Setup | ⬜ 0% | React Router |
-| Home Page | ⬜ 0% | Hero, featured markets |
-| Markets Page | ⬜ 0% | List with filters |
-| Market Detail Page | ⬜ 0% | Trade panel, chart |
-| Create Market Page | ⬜ 0% | Form with validation |
-| Portfolio Page | ⬜ 0% | User's positions |
-| GraphQL Integration | ⬜ 0% | Queries from The Graph |
+| Project Setup | ✅ 100% | Vite + React 19 + TypeScript |
+| Tailwind Theme | ✅ 100% | "High-Energy Brutalism" - black bg, harsh borders |
+| Base UI Components | ✅ 100% | Button, Card, Modal, Input, Badge, HeatBar, ChanceDisplay |
+| Web3 Integration | ✅ 100% | Wagmi + RainbowKit (brutalist theme) |
+| Providers Setup | ✅ 100% | Query, Web3, GraphQL |
+| Router Setup | ✅ 100% | React Router with lazy loading |
+| Chain Validation | ✅ 100% | WrongNetworkModal, prevents Phantom stuck issue |
+| Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
+| GraphQL Queries | ✅ 100% | All queries match subgraph schema |
+| Markets Page | ✅ 100% | Grid, filters, live ticker |
+| Market Detail Page | ✅ 100% | Chart placeholder, trade panel UI |
+| Create Market Page | ✅ 100% | Form UI (no contract calls yet) |
+| Portfolio Page | ✅ 100% | Positions grid |
+| Contract Hooks | ⬜ 0% | useBuyYes, useSellYes, etc. |
+| Supabase (Comments) | ⬜ 0% | Future phase |
 
-**Overall Progress: 0%**
+**Overall Progress: ~70% (UI complete, contract interactions pending)**
 
 ---
 
@@ -71,34 +75,39 @@ VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 src/
 ├── features/
 │   ├── markets/
-│   │   ├── api/           # GraphQL queries, contract writes
-│   │   ├── components/    # MarketCard, TradePanel, etc.
-│   │   ├── hooks/         # useMarkets, useMarket, useTrade
+│   │   ├── components/    # MarketCard, TradePanel, LiveTicker, etc.
 │   │   ├── pages/         # MarketsPage, MarketDetailPage
-│   │   └── types/
-│   ├── home/
-│   │   ├── components/    # HeroSection, FeaturedMarkets
-│   │   └── pages/         # HomePage
+│   │   └── index.ts
 │   ├── create/
-│   │   ├── components/    # CreateMarketForm
-│   │   └── pages/         # CreateMarketPage
+│   │   ├── pages/         # CreateMarketPage
+│   │   └── index.ts
 │   └── portfolio/
 │       ├── components/    # PositionCard
-│       └── pages/         # PortfolioPage
+│       ├── pages/         # PortfolioPage
+│       └── index.ts
 ├── shared/
-│   ├── api/               # GraphQL client
-│   ├── components/ui/     # Button, Card, Modal, Input, etc.
-│   ├── config/            # wagmi, env, contracts
-│   ├── hooks/             # Shared hooks
+│   ├── api/               # GraphQL queries + types
+│   ├── components/
+│   │   ├── ui/            # Button, Card, Modal, Input, etc.
+│   │   └── WrongNetworkModal.tsx
+│   ├── config/            # wagmi, env, contracts, graphql
+│   ├── hooks/             # useChainValidation
 │   ├── schemas/           # Zod schemas
-│   ├── types/             # Shared TypeScript types
-│   └── utils/             # cn(), formatters, etc.
+│   └── utils/             # cn(), formatters
 ├── providers/
-│   ├── Web3Provider.tsx
-│   ├── QueryProvider.tsx
+│   ├── Web3Provider.tsx   # Wagmi + RainbowKit (brutalist theme)
+│   ├── QueryProvider.tsx  # React Query
+│   ├── GraphQLProvider.tsx # Apollo Client
 │   └── index.ts
 ├── router/
-│   └── index.tsx
+│   ├── Header.tsx         # Navigation
+│   ├── RootLayout.tsx     # Layout wrapper
+│   ├── routes.tsx         # Route definitions
+│   └── index.ts
+├── App.tsx
+├── main.tsx
+└── index.css              # Global styles, fonts, animations
+```
 ├── App.tsx
 ├── main.tsx
 └── index.css
@@ -106,153 +115,108 @@ src/
 
 ---
 
-## 🎨 Design System (Retrowave/90s Hacker Theme)
+## 🎨 Design System ("High-Energy Brutalism")
 
 ### Color Palette
 ```javascript
 colors: {
-  // Neon accents
-  neon: {
-    pink: '#FF00FF',      // Magenta
-    cyan: '#00FFFF',      // Cyan
-    purple: '#9D00FF',    // Purple
-    green: '#00FF00',     // Matrix green
-  },
-  // Backgrounds
+  // Primary actions
+  yes: '#39FF14',         // Electric Lime (YES/Bullish)
+  no: '#FF3131',          // Neon Crimson (NO/Bearish)
+  cyber: '#00E0FF',       // Cyber Blue (Actions/Links)
+  
+  // Backgrounds (TRUE BLACK)
   dark: {
-    900: '#0A0A0F',       // Darkest (main bg)
-    800: '#12121A',       // Cards
-    700: '#1A1A25',       // Elevated
-    600: '#252532',       // Borders
+    900: '#000000',       // Main background
+    800: '#0a0a0a',       // Cards
+    700: '#141414',       // Elevated
+    600: '#262626',       // Borders
   },
+  
   // Text
   text: {
     primary: '#FFFFFF',
-    secondary: '#A0A0B0',
-    muted: '#606070',
+    secondary: '#A0A0A0',
+    muted: '#666666',
   },
-  // Status
-  success: '#00FF00',
-  error: '#FF0055',
-  warning: '#FFAA00',
 }
 ```
 
 ### Typography
-- Headers: "Press Start 2P" or "VT323" (pixel/retro fonts)
-- Body: "Space Mono" or "JetBrains Mono"
+- **Numbers/Data**: JetBrains Mono (monospace)
+- **Headlines**: Inter (bold sans-serif)
 
-### Effects
-- Neon glow on hover (box-shadow with neon colors)
-- Subtle scanlines overlay (optional)
-- Grid/matrix background patterns
-- Gradient borders
+### Design Rules
+- ❌ NO rounded corners (0px radius everywhere)
+- ❌ NO shadows
+- ✅ 1px harsh borders
+- ✅ Neon glow effects on important elements
+- ✅ Grayscale → color transitions on hover
 
 ---
 
 ## 🔗 Data Sources
 
-### The Graph (GraphQL)
+### The Graph (GraphQL via Apollo Client)
 Primary data source for:
-- Market listings
-- Trade history
-- User positions
-- Volume statistics
+- Market listings (GET_MARKETS, GET_ACTIVE_MARKETS)
+- Trade history (GET_RECENT_TRADES, GET_MARKET_TRADES)
+- User positions (GET_USER_POSITIONS)
+- Global stats (GET_GLOBAL_STATS)
 
-### Smart Contract (Direct Reads)
+**Important Schema Mappings:**
+| Frontend | Subgraph Field |
+|----------|----------------|
+| expirationTimestamp | `expiryTimestamp` |
+| liquidity | `poolBalance` |
+| evidenceUrl | `evidenceLink` |
+| trader (string) | `traderAddress` |
+| creator (object) | `{ id, address }` |
+
+### Smart Contract (Direct Reads - Pending)
 For real-time data:
 - Current prices (getYesPrice, getNoPrice)
-- User balances
-- Market state
+- Preview calculations (previewBuy, previewSell)
+- Required bond (getRequiredBond)
 
-### Smart Contract (Writes via Wagmi)
-- createMarket()
+### Smart Contract (Writes - Pending)
 - buyYes() / buyNo()
 - sellYes() / sellNo()
-- assertOutcome()
-- claim()
-
----
-
-## 🪝 Custom Hooks Pattern
-
-### Query Key Factory
-```typescript
-export const marketKeys = {
-  all: ['markets'] as const,
-  lists: () => [...marketKeys.all, 'list'] as const,
-  list: (filters: MarketFilters) => [...marketKeys.lists(), filters] as const,
-  details: () => [...marketKeys.all, 'detail'] as const,
-  detail: (id: string) => [...marketKeys.details(), id] as const,
-};
-```
-
-### Hook Example
-```typescript
-export function useMarkets(filters: MarketFilters = {}) {
-  return useQuery({
-    queryKey: marketKeys.list(filters),
-    queryFn: () => fetchMarkets(filters),
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-}
-```
-
----
-
-## 🧩 UI Components (Variant-Based)
-
-### Button Variants
-```typescript
-const variants = {
-  primary: 'bg-neon-pink text-white hover:shadow-neon-pink',
-  secondary: 'bg-dark-700 text-white hover:bg-dark-600',
-  danger: 'bg-error text-white hover:brightness-110',
-  ghost: 'bg-transparent text-neon-cyan hover:bg-dark-800',
-  outline: 'border border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10',
-};
-```
-
-### Card Variants
-```typescript
-const variants = {
-  default: 'bg-dark-800 border border-dark-600',
-  hover: 'bg-dark-800 border border-dark-600 hover:border-neon-pink transition-all',
-  glow: 'bg-dark-800 border border-neon-pink shadow-neon',
-};
-```
+- createMarket() / createMarketAndBuy()
+- proposeOutcome() / dispute() / vote()
+- finalizeMarket() / claim() / emergencyRefund()
 
 ---
 
 ## 🛣️ Routes
 
-| Path | Page | Description |
-|------|------|-------------|
-| `/` | HomePage | Hero, featured markets, how it works |
-| `/markets` | MarketsPage | All markets with filters |
-| `/markets/:id` | MarketDetailPage | Single market, trade panel |
-| `/create` | CreateMarketPage | Create new market form |
-| `/portfolio` | PortfolioPage | User's positions |
+| Path | Page | Status |
+|------|------|--------|
+| `/` | MarketsPage | ✅ Complete |
+| `/market/:marketId` | MarketDetailPage | ✅ Complete |
+| `/create` | CreateMarketPage | ✅ UI Complete |
+| `/portfolio` | PortfolioPage | ✅ Complete |
 
 ---
 
 ## ⚙️ Environment Variables
 
 ```env
-# Wallet Connect
-VITE_WALLETCONNECT_PROJECT_ID=
+# WalletConnect (REQUIRED)
+VITE_WALLETCONNECT_PROJECT_ID=your-project-id
 
 # The Graph
-VITE_SUBGRAPH_URL=
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
 
-# Contract Addresses
-VITE_PREDICTION_MARKET_ADDRESS=
+# Contract
+VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
 
-# Chain (97 for testnet, 56 for mainnet)
+# Chain (97 = testnet, 56 = mainnet)
 VITE_CHAIN_ID=97
-
-# Enable testnet in production
 VITE_ENABLE_TESTNET=true
+
+# Admin addresses (comma-separated MultiSig signers)
+VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,...
 ```
 
 ---
@@ -262,15 +226,36 @@ VITE_ENABLE_TESTNET=true
 | Package | Version | Purpose |
 |---------|---------|---------|
 | react | ^19.x | UI library |
-| wagmi | ^2.x | Web3 React hooks |
+| wagmi | ^3.x | Web3 React hooks |
 | viem | ^2.x | Ethereum client |
 | @rainbow-me/rainbowkit | ^2.x | Wallet modal |
-| @tanstack/react-query | ^5.x | Data fetching |
-| zustand | ^5.x | Client state |
+| @tanstack/react-query | ^5.x | Server state |
+| @apollo/client | ^4.x | GraphQL client |
 | react-hook-form | ^7.x | Forms |
-| zod | ^3.x | Validation |
+| zod | ^4.x | Validation |
 | tailwindcss | ^3.x | Styling |
 | react-router-dom | ^7.x | Routing |
+
+---
+
+## 🚨 Known Issues & Solutions
+
+### 1. Apollo Client v4 Import
+```typescript
+// ❌ Wrong
+import { ApolloProvider } from '@apollo/client';
+
+// ✅ Correct
+import { ApolloProvider } from '@apollo/client/react';
+```
+
+### 2. Phantom Wallet Stuck on Wrong Network
+- **Problem**: Phantom doesn't support BNB Chain, users get stuck
+- **Solution**: `useChainValidation` hook + `WrongNetworkModal` always shows disconnect button
+
+### 3. BigDecimal vs BigInt
+- **Problem**: Subgraph returns `BigDecimal` as strings, not wei
+- **Solution**: `formatBNB()` handles both `bigint` and `string` inputs
 
 ---
 
@@ -278,6 +263,6 @@ VITE_ENABLE_TESTNET=true
 
 - [Wagmi Documentation](https://wagmi.sh/)
 - [RainbowKit Documentation](https://www.rainbowkit.com/docs)
-- [TanStack Query](https://tanstack.com/query/latest)
+- [Apollo Client](https://www.apollographql.com/docs/react/)
 - [Tailwind CSS](https://tailwindcss.com/docs)
-- [Zustand](https://zustand-demo.pmnd.rs/)
+- [The Graph](https://thegraph.com/docs/)
