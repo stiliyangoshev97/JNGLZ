@@ -13,6 +13,7 @@ import { Badge, YesHolderBadge, NoHolderBadge } from '@/shared/components/ui/Bad
 import { Button } from '@/shared/components/ui/Button';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
 import { cn } from '@/shared/utils/cn';
+import { calculateYesPercent } from '@/shared/utils/format';
 
 interface PositionWithMarket {
   id: string;
@@ -50,22 +51,17 @@ export function PositionCard({ position }: PositionCardProps) {
   const hasYes = yesShares > 0;
   const hasNo = noShares > 0;
   
-  // Calculate current prices from market
+  // Calculate current prices from market using bonding curve
   let yesPercent = 50;
   let currentValue = 0;
   
   if (market) {
-    const marketYes = BigInt(market.yesShares || '0');
-    const marketNo = BigInt(market.noShares || '0');
-    const total = marketYes + marketNo;
+    // Use proper bonding curve calculation with virtual liquidity
+    yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0');
+    const yesPrice = yesPercent / 100;
+    const noPrice = 1 - yesPrice;
     
-    if (total > 0n) {
-      yesPercent = Number((marketNo * 100n) / total);
-      const yesPrice = Number(marketNo) / Number(total);
-      const noPrice = Number(marketYes) / Number(total);
-      
-      currentValue = (yesShares * yesPrice) + (noShares * noPrice);
-    }
+    currentValue = (yesShares * yesPrice) + (noShares * noPrice);
   }
   
   const pnl = currentValue - invested;

@@ -16,7 +16,7 @@ import { Card } from '@/shared/components/ui/Card';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
 import { HeatBar } from '@/shared/components/ui/HeatBar';
 import { Badge } from '@/shared/components/ui/Badge';
-import { formatTimeRemaining } from '@/shared/utils/format';
+import { formatTimeRemaining, calculateYesPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 
@@ -26,26 +26,21 @@ interface MarketCardProps {
 }
 
 export function MarketCard({ market, className }: MarketCardProps) {
-  // Calculate YES price percentage
-  const yesShares = BigInt(market.yesShares || '0');
-  const noShares = BigInt(market.noShares || '0');
-  const total = yesShares + noShares;
-  const yesPercent = total > 0n 
-    ? Number((noShares * 100n) / total) // Price = opposite shares / total
-    : 50;
+  // Calculate YES price percentage using bonding curve formula
+  const yesPercent = calculateYesPercent(market.yesShares, market.noShares);
 
   // Calculate time remaining
-  const expirationMs = Number(market.expiryTimestamp) * 1000;
-  const now = Date.now();
-  const isExpired = expirationMs < now;
-  const timeRemaining = formatTimeRemaining(expirationMs - now);
+  const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
+  const isExpired = expirationTimestamp * 1000 < Date.now();
+  const timeRemaining = formatTimeRemaining(expirationTimestamp);
 
   // Calculate liquidity for heat bar (0-100 scale)
-  const poolBalanceBNB = Number(market.poolBalance || '0') / 1e18;
+  // poolBalance from subgraph is BigDecimal (already in BNB)
+  const poolBalanceBNB = parseFloat(market.poolBalance || '0');
   const heatValue = Math.min(poolBalanceBNB * 10, 100); // 10 BNB = 100%
 
-  // Volume display
-  const volumeBNB = Number(market.totalVolume || '0');
+  // Volume display - totalVolume from subgraph is BigDecimal (already in BNB)
+  const volumeBNB = parseFloat(market.totalVolume || '0');
   const volumeDisplay = volumeBNB >= 1000 
     ? `${(volumeBNB / 1000).toFixed(1)}K` 
     : volumeBNB.toFixed(2);

@@ -25,13 +25,13 @@ export function MarketsPage() {
   // Fetch markets
   const { data, loading, error } = useQuery<GetActiveMarketsResponse>(GET_ACTIVE_MARKETS, {
     variables: { first: 50 },
-    pollInterval: 30000, // Refresh every 30 seconds
+    pollInterval: 60000, // Refresh every 60 seconds
   });
 
   // Fetch recent trades for ticker
   const { data: tradesData } = useQuery<GetRecentTradesResponse>(GET_RECENT_TRADES, {
     variables: { first: 20 },
-    pollInterval: 10000, // Refresh every 10 seconds
+    pollInterval: 30000, // Refresh every 30 seconds
   });
 
   const markets = data?.markets || [];
@@ -243,13 +243,13 @@ function EmptyState() {
 }
 
 function calculateTotalVolume(markets: Market[]): string {
+  // totalVolume from subgraph is BigDecimal string (already in BNB, not wei)
   const total = markets.reduce(
-    (sum, m) => sum + Number(m.totalVolume || 0),
+    (sum, m) => sum + parseFloat(m.totalVolume || '0'),
     0
   );
-  const bnb = total / 1e18;
-  if (bnb >= 1000) return `${(bnb / 1000).toFixed(1)}K BNB`;
-  return `${bnb.toFixed(1)} BNB`;
+  if (total >= 1000) return `${(total / 1000).toFixed(1)}K BNB`;
+  return `${total.toFixed(1)} BNB`;
 }
 
 export default MarketsPage;

@@ -8,6 +8,7 @@
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from './RootLayout';
+import { ErrorBoundary } from '@/shared/components';
 
 // Lazy load pages for code splitting
 import { lazy, Suspense } from 'react';
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
+    errorElement: <ErrorBoundary />,
     children: [
       {
         index: true,

@@ -1,7 +1,7 @@
 # Junkie.Fun - Master TODO
 
 > **Last Updated:** January 8, 2026  
-> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Deployed | Frontend ✅ ~90% Complete  
+> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Deployed | Frontend ✅ ~95% Complete  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -14,7 +14,7 @@
 | Phase 1: Smart Contracts | ✅ Complete | 100% (163 tests) |
 | Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.5.0 with marketCreationFee) |
 | Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.1) |
-| Phase 3: Frontend | ✅ Complete | ~90% (contract integration done, comments pending) |
+| Phase 3: Frontend | ✅ Complete | ~95% (bug fixes done, comments pending) |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
 ### 🚀 BNB Testnet Deployment (January 8, 2026)
@@ -33,10 +33,11 @@
 - **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
 - **Event Handlers:** 10 (all contract events indexed)
 
-### 🎨 Frontend v0.2.0 (January 8, 2026)
-- **Status:** ✅ Contract Integration Complete
+### 🎨 Frontend v0.3.0 (January 8, 2026)
+- **Status:** ✅ Bug Fixes & Error Handling Complete
 - **Design:** "High-Energy Brutalism" (black bg, harsh borders, no rounded corners)
-- **Completed:** All pages, contract hooks, trading, resolution UI
+- **Completed:** All pages, contract hooks, trading, resolution UI, error boundary
+- **Fixed:** Price calculation (bonding curve), BigDecimal parsing, time display
 - **Pending:** Supabase comments (future phase)
 
 ---

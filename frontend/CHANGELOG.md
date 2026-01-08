@@ -180,6 +180,63 @@ All notable changes to the JunkieFun frontend will be documented in this file.
 
 ---
 
+## [0.3.0] - 2026-01-08
+
+### Added - Error Handling & Bug Fixes
+
+#### Error Boundary (`src/shared/components/ErrorBoundary.tsx`)
+- Catches and displays runtime errors with brutalist UI
+- **Chunk Load Errors** (after deployments): Shows "Update Available" with refresh button
+- **General Errors**: Shows error message + stack trace (expandable) with retry/home options
+- Integrated with React Router as `errorElement`
+- Prevents blank screen crashes, provides actionable recovery
+
+#### Price Calculation Fix (`src/shared/utils/format.ts`)
+- **NEW**: `calculateYesPercent()` - Correct bonding curve formula with virtual liquidity
+- **NEW**: `calculateNoPercent()` - Complement function
+- Formula: `P(YES) = (yesShares + 100e18) / (yesShares + noShares + 200e18)`
+- Matches contract's `_getYesPrice()` exactly with `VIRTUAL_LIQUIDITY = 100 * 1e18`
+
+### Fixed
+
+#### Critical Bug: Price Calculation Inverted (#2, #5)
+- **Before**: `yesPercent = noShares / total` (WRONG - showed 0% after buying YES)
+- **After**: `yesPercent = virtualYes / (virtualYes + virtualNo)` (matches contract)
+- Fixed in: `MarketDetailPage.tsx`, `MarketCard.tsx`
+
+#### Critical Bug: BigDecimal vs BigInt (#6, browser crash)
+- Subgraph returns `totalVolume`, `poolBalance` as `BigDecimal` (e.g., "0.02")
+- Subgraph returns `yesShares`, `noShares` as `BigInt` (e.g., "100000000000000000000")
+- **Before**: Code tried `BigInt("0.02")` → crash
+- **After**: Use `parseFloat()` for BigDecimal fields, `BigInt()` for BigInt fields
+- Fixed in: `MarketsPage.tsx`, `MarketCard.tsx`, `MarketDetailPage.tsx`
+
+#### Bug: Time Display Issues (#3, #4)
+- Fixed `formatTimeRemaining()` being called with wrong parameter format
+- Now correctly passes Unix timestamp (seconds), not duration (milliseconds)
+- Fixed "ENDS EXPIRED" showing for non-expired markets
+
+#### Bug: Image Not Displayed (#7)
+- Added image rendering to `MarketDetailPage.tsx` in MarketInfo section
+- MarketCard already had image support (was working if imageUrl provided)
+
+#### Bug: Evidence Link Not Displayed (#8)
+- Verified evidenceLink IS displayed in MarketInfo component
+- Issue was likely empty `evidenceLink` from subgraph data
+
+### Changed
+- Reduced poll interval from 10s to 30s for trades ticker (prevents excessive refetching)
+- Market detail page poll interval remains 15s for responsiveness
+- Router now includes `errorElement={<ErrorBoundary />}` for global error catching
+
+### Technical Notes
+- Subgraph field types: `BigInt` = "123456..." (wei), `BigDecimal` = "0.02" (BNB)
+- Always use `parseFloat()` for `totalVolume`, `bnbAmount`, `poolBalance`
+- Always use `BigInt()` for `yesShares`, `noShares`, `shares`, timestamps
+- Virtual liquidity constant must match contract: `100n * 10n ** 18n`
+
+---
+
 ## Pending Features (Phase 3+)
 
 ### Supabase Integration (Not Started)

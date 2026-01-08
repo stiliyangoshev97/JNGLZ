@@ -26,7 +26,7 @@ import { TradePanel } from '../components';
 import { TradeHistory } from '../components';
 import { PriceChart } from '../components';
 import { ResolutionPanel } from '../components';
-import { formatBNB, formatTimeRemaining } from '@/shared/utils/format';
+import { formatTimeRemaining, calculateYesPercent, calculateNoPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 
@@ -35,7 +35,7 @@ export function MarketDetailPage() {
 
   const { data, loading, error } = useQuery<GetMarketResponse>(GET_MARKET, {
     variables: { id: marketId },
-    pollInterval: 15000, // Refresh every 15 seconds
+    pollInterval: 30000, // Refresh every 30 seconds
     skip: !marketId,
   });
 
@@ -63,17 +63,14 @@ export function MarketDetailPage() {
   const market = data.market;
   const trades = data.market.trades || [];
 
-  // Calculate prices
-  const yesShares = BigInt(market.yesShares || '0');
-  const noShares = BigInt(market.noShares || '0');
-  const total = yesShares + noShares;
-  const yesPercent = total > 0n ? Number((noShares * 100n) / total) : 50;
-  const noPercent = 100 - yesPercent;
+  // Calculate prices using bonding curve formula (with virtual liquidity)
+  const yesPercent = calculateYesPercent(market.yesShares, market.noShares);
+  const noPercent = calculateNoPercent(market.yesShares, market.noShares);
 
   // Time calculations
-  const expirationMs = Number(market.expiryTimestamp) * 1000;
-  const isExpired = expirationMs < Date.now();
-  const timeRemaining = formatTimeRemaining(expirationMs - Date.now());
+  const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
+  const isExpired = expirationTimestamp * 1000 < Date.now();
+  const timeRemaining = formatTimeRemaining(expirationTimestamp);
 
   // Status
   const isActive = market.status === 'Active' && !isExpired;
@@ -200,8 +197,9 @@ export function MarketDetailPage() {
 }
 
 function MarketInfo({ market }: { market: Market }) {
-  const volumeBNB = formatBNB(market.totalVolume || '0');
-  const poolBalanceBNB = formatBNB(market.poolBalance || '0');
+  // totalVolume and poolBalance from subgraph are BigDecimal (already in BNB)
+  const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
+  const poolBalanceBNB = parseFloat(market.poolBalance || '0').toFixed(4);
 
   return (
     <div className="border border-dark-600 bg-dark-900">
@@ -209,6 +207,17 @@ function MarketInfo({ market }: { market: Market }) {
         <h2 className="font-bold uppercase">MARKET INFO</h2>
       </div>
       <div className="p-4 space-y-4">
+        {/* Market Image */}
+        {market.imageUrl && (
+          <div className="relative -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
+            <img
+              src={market.imageUrl}
+              alt=""
+              className="w-full h-48 object-cover"
+            />
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div>

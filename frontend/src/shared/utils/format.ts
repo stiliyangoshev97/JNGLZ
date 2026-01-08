@@ -9,6 +9,47 @@
 
 import { formatUnits } from 'viem';
 
+// ============ Bonding Curve Constants ============
+// Must match contract constants exactly
+const VIRTUAL_LIQUIDITY = 100n * 10n ** 18n; // 100 shares with 18 decimals
+
+/**
+ * Calculate YES price percentage from share supplies
+ * Uses the bonding curve formula: P(YES) = virtualYes / (virtualYes + virtualNo)
+ * 
+ * @param yesShares - YES share supply (BigInt string from subgraph)
+ * @param noShares - NO share supply (BigInt string from subgraph)
+ * @returns YES price as percentage (0-100)
+ * 
+ * @example calculateYesPercent("100000000000000000000", "100000000000000000000") => 50
+ */
+export function calculateYesPercent(yesShares: string, noShares: string): number {
+  const yes = BigInt(yesShares || '0');
+  const no = BigInt(noShares || '0');
+  
+  // Add virtual liquidity to both sides (matches contract)
+  const virtualYes = yes + VIRTUAL_LIQUIDITY;
+  const virtualNo = no + VIRTUAL_LIQUIDITY;
+  const total = virtualYes + virtualNo;
+  
+  if (total === 0n) return 50;
+  
+  // YES price = virtualYes / total (as percentage)
+  return Number((virtualYes * 100n) / total);
+}
+
+/**
+ * Calculate NO price percentage from share supplies
+ * Uses the bonding curve formula: P(NO) = virtualNo / (virtualYes + virtualNo)
+ * 
+ * @param yesShares - YES share supply (BigInt string from subgraph)
+ * @param noShares - NO share supply (BigInt string from subgraph)
+ * @returns NO price as percentage (0-100)
+ */
+export function calculateNoPercent(yesShares: string, noShares: string): number {
+  return 100 - calculateYesPercent(yesShares, noShares);
+}
+
 /**
  * Shorten an Ethereum address for display
  * @param address - Full Ethereum address (0x...)
