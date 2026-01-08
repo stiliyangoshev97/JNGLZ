@@ -194,14 +194,6 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 {market.proposedOutcome ? 'YES' : 'NO'}
               </span>
             </div>
-            {market.proposalProofLink && (
-              <div className="text-xs">
-                <span className="text-text-muted">Proof: </span>
-                <a href={market.proposalProofLink} target="_blank" rel="noopener noreferrer" className="text-cyber hover:underline break-all">
-                  {market.proposalProofLink}
-                </a>
-              </div>
-            )}
           </div>
         )}
 

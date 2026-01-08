@@ -10,7 +10,7 @@ import { gql } from '@apollo/client';
 
 /**
  * Market fragment - common fields
- * Matches subgraph schema exactly
+ * Matches subgraph schema exactly (v3.1.0)
  */
 export const MARKET_FRAGMENT = gql`
   fragment MarketFields on Market {
@@ -25,6 +25,8 @@ export const MARKET_FRAGMENT = gql`
     evidenceLink
     resolutionRules
     imageUrl
+    heatLevel
+    virtualLiquidity
     expiryTimestamp
     status
     resolved
@@ -32,7 +34,6 @@ export const MARKET_FRAGMENT = gql`
     proposedOutcome
     proposer
     proposalTimestamp
-    proposalProofLink
     proposerBond
     disputer
     disputerBond

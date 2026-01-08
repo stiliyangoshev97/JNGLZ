@@ -33,7 +33,7 @@ export const CreatorSchema = z.object({
 
 /**
  * Market entity from the subgraph
- * Matches subgraph schema exactly
+ * Matches subgraph schema exactly (v3.1.0)
  */
 export const MarketSchema = z.object({
   id: z.string(), // Market ID (uint256 as string)
@@ -44,6 +44,8 @@ export const MarketSchema = z.object({
   evidenceLink: z.string().optional().nullable(),
   resolutionRules: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  heatLevel: z.number(), // 0=CRACK, 1=HIGH, 2=PRO (v3.1.0)
+  virtualLiquidity: z.string(), // BigInt as string (v3.1.0)
   expiryTimestamp: z.string(), // BigInt as string
   status: z.string(),
   resolved: z.boolean(),
@@ -53,7 +55,6 @@ export const MarketSchema = z.object({
   proposedOutcome: z.boolean().optional().nullable(),
   proposer: z.string().optional().nullable(),
   proposerBond: z.string().optional().nullable(),
-  proposalProofLink: z.string().optional().nullable(),
   proposalTimestamp: z.string().optional().nullable(),
   
   // Dispute info
