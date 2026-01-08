@@ -1,5 +1,5 @@
 # ============================================
-# JunkieFun Subgraph - Entity Schema
+# JunkieFun Subgraph - Entity Schema (v3.1.0)
 # ============================================
 # Indexes PredictionMarket contract events on BNB Chain
 # Provides GraphQL API for frontend queries
@@ -17,6 +17,9 @@ type Market @entity(immutable: false) {
   imageUrl: String! # Market thumbnail image URL
   creator: User! # Creator (relation)
   creatorAddress: Bytes! # Creator address (for filtering)
+  # Heat Level (v3.1.0)
+  heatLevel: Int! # 0=CRACK, 1=HIGH, 2=PRO
+  virtualLiquidity: BigInt! # Virtual liquidity (5e18, 20e18, or 50e18)
   # Timestamps
   expiryTimestamp: BigInt! # When trading stops
   createdAt: BigInt! # Block timestamp
@@ -36,7 +39,6 @@ type Market @entity(immutable: false) {
   proposer: Bytes # Who proposed the outcome
   proposedOutcome: Boolean # What they proposed
   proposerBond: BigInt # Bond amount
-  proposalProofLink: String # Proof link
   proposalTimestamp: BigInt # When proposed
   # Dispute Info
   disputer: Bytes # Who disputed
@@ -186,4 +188,21 @@ type GlobalStats @entity(immutable: false) {
   totalClaimed: BigDecimal! # Total payouts claimed
   totalRefunded: BigDecimal! # Total emergency refunds
   disputedMarkets: BigInt! # Markets that were disputed
+  # Governance Stats (v3.1.0)
+  totalSwept: BigDecimal! # Total BNB swept by MultiSig
+}
+
+# ============================================
+# FundsSweep Entity - MultiSig sweep records (v3.1.0)
+# ============================================
+type FundsSweep @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  # Sweep Details
+  amount: BigDecimal! # Amount swept in BNB
+  totalLocked: BigDecimal! # Total locked funds at time of sweep
+  contractBalance: BigDecimal! # Contract balance at time of sweep
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
 }

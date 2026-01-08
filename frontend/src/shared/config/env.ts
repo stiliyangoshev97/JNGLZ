@@ -24,7 +24,7 @@ export const env = {
   CHAIN_ID: Number(import.meta.env.VITE_CHAIN_ID) || 97, // Default to BNB Testnet
   
   // Contract
-  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x3988808940d027a70FE2D0938Cf06580bbad19F9',
+  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x4C1508BA973856125a4F42c343560DB918c9EB2b',
   
   // The Graph
   SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2',

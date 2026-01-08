@@ -157,10 +157,10 @@ I want to continue the Junkie.Fun frontend. UI is ~95% complete.
 **Contract to Frontend:**
 | Contract | Address |
 |----------|---------|
-| PredictionMarket | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` |
+| PredictionMarket | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` |
 
 **Subgraph:**
-| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2` |
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3` |
 
 What do you want to work on?
 

@@ -15,9 +15,9 @@
 
 | Contract | Address | Version |
 |----------|---------|---------|
-| **PredictionMarket** | [`0x3988808940d027a70FE2D0938Cf06580bbad19F9`](https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9) | v2.5.0 |
+| **PredictionMarket** | [`0x4C1508BA973856125a4F42c343560DB918c9EB2b`](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) | v3.1.0 |
 
-> **Note:** v3.1.0 not yet deployed. Testnet deployment pending.
+> **v3.1.0 Features:** Heat Levels (CRACK/HIGH/PRO), SweepFunds, removed proofLink
 
 ---
 

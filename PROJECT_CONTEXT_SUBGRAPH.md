@@ -1,8 +1,8 @@
 # 📋 Junkie.Fun - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 8, 2026  
-> **Status:** ✅ Deployed (v0.0.1)
+> **Last Updated:** January 9, 2026  
+> **Status:** ✅ Deployed (v0.0.3)
 
 ---
 
@@ -12,15 +12,15 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 ### GraphQL Endpoint (Testnet)
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
 ```
 
 ### Contract Details (Testnet)
-- **Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
+- **Address:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83243447
-- **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
-- **Contract Version:** v2.5.0 (includes imageUrl + marketCreationFee)
+- **Start Block:** 83314823
+- **BscScan:** https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
+- **Contract Version:** v3.1.0 (Heat Levels + SweepFunds)
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)
@@ -33,12 +33,12 @@ https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Schema Definition | ✅ 100% | 8 entities (includes imageUrl) |
-| Subgraph Config | ✅ 100% | subgraph.yaml updated for v2.5.0 |
-| Mappings | ✅ 100% | 10 event handlers |
+| Schema Definition | ✅ 100% | 9 entities (includes heatLevel, virtualLiquidity) |
+| Subgraph Config | ✅ 100% | subgraph.yaml updated for v3.1.0 |
+| Mappings | ✅ 100% | 11 event handlers (includes FundsSwept) |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Testnet Deployment | ✅ 100% | v0.0.1 deployed to The Graph Studio |
+| Testnet Deployment | ✅ 100% | v0.0.3 deployed to The Graph Studio |
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 

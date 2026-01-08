@@ -115,8 +115,8 @@ BNB Chain Testnet   Chain ID: 97       # Development ✅ Contract deployed
 BNB Chain Mainnet   Chain ID: 56       # Production (pending)
 
 # Deployed Contracts:
-# - PredictionMarket v2.5.0: 0x3988808940d027a70FE2D0938Cf06580bbad19F9
-# - BscScan: https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
+# - PredictionMarket v3.1.0: 0x4C1508BA973856125a4F42c343560DB918c9EB2b
+# - BscScan: https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
 
 # RPC URLs:
 # Testnet: https://bsc-testnet-rpc.publicnode.com
@@ -126,8 +126,8 @@ BNB Chain Mainnet   Chain ID: 56       # Production (pending)
 # EXTERNAL CONTRACTS (BNB Chain)
 # ============================================================================
 
-# JunkieFun PredictionMarket (v2.5.0):
-# Testnet: 0x3988808940d027a70FE2D0938Cf06580bbad19F9 ✅
+# JunkieFun PredictionMarket (v3.1.0):
+# Testnet: 0x4C1508BA973856125a4F42c343560DB918c9EB2b ✅
 # Mainnet: TBD
 
 # WBNB (Wrapped BNB):

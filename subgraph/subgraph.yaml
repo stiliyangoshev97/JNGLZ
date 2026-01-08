@@ -8,9 +8,9 @@ dataSources:
     name: PredictionMarket
     network: chapel # BNB Testnet (BSC Testnet)
     source:
-      address: "0x3988808940d027a70FE2D0938Cf06580bbad19F9"
+      address: "0x4C1508BA973856125a4F42c343560DB918c9EB2b"
       abi: PredictionMarket
-      startBlock: 83243447
+      startBlock: 83314823
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -24,20 +24,21 @@ dataSources:
         - Claim
         - EmergencyRefund
         - GlobalStats
+        - FundsSweep
       abis:
         - name: PredictionMarket
           file: ./abis/PredictionMarket.json
       eventHandlers:
-        # Market Lifecycle
-        - event: MarketCreated(indexed uint256,indexed address,string,uint256)
+        # Market Lifecycle (v3.1.0 - added heatLevel and virtualLiquidity)
+        - event: MarketCreated(indexed uint256,indexed address,string,uint256,uint8,uint256)
           handler: handleMarketCreated
 
         # Trading
         - event: Trade(indexed uint256,indexed address,bool,bool,uint256,uint256)
           handler: handleTrade
 
-        # Street Consensus Resolution
-        - event: OutcomeProposed(indexed uint256,indexed address,bool,string,uint256)
+        # Street Consensus Resolution (v3.1.0 - removed proofLink from OutcomeProposed)
+        - event: OutcomeProposed(indexed uint256,indexed address,bool,uint256)
           handler: handleOutcomeProposed
         - event: ProposalDisputed(indexed uint256,indexed address,uint256)
           handler: handleProposalDisputed
@@ -57,4 +58,8 @@ dataSources:
           handler: handleBondDistributed
         - event: JuryFeeDistributed(indexed uint256,indexed address,uint256)
           handler: handleJuryFeeDistributed
+
+        # Governance (v3.1.0 - new SweepFunds)
+        - event: FundsSwept(uint256,uint256,uint256)
+          handler: handleFundsSwept
       file: ./src/mapping.ts

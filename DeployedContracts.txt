@@ -1,18 +1,23 @@
 # ============================================
 # JunkieFun - Deployed Contracts
 # ============================================
-# Last Updated: January 8, 2026
+# Last Updated: January 9, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v2.5.0 - with marketCreationFee)
+### PredictionMarket Contract (v3.1.0 - Heat Levels + SweepFunds)
+- **Address**: 0x4C1508BA973856125a4F42c343560DB918c9EB2b
+- **BscScan**: https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
+- **Verified**: ✅ Yes
+- **Deployed Block**: 83314823
+- **Features**: Heat Levels (CRACK/HIGH/PRO), SweepFunds, removed proofLink
+
+### Previous Deployment (v2.5.0 - deprecated)
 - **Address**: 0x3988808940d027a70FE2D0938Cf06580bbad19F9
 - **BscScan**: https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
-- **Verified**: ✅ Yes
-- **Deployed Block**: 83243447
-- **Deployment TX**: 0x13ece6f5de84ddfc5d1f0b016508897414405ce055a8ee8dad4485e3b96982f7
+- **Status**: ⚠️ Deprecated (no Heat Levels)
 
 ### Previous Deployment (v2.4.0 - deprecated)
 - **Address**: 0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
@@ -29,6 +34,7 @@
 - **Platform Fee**: 1% (goes to treasury)
 - **Creator Fee**: 0.5% (goes to market creator)
 - **Resolution Reward**: 0.3% (goes to resolver)
+- **Heat Levels**: CRACK (5), HIGH (20), PRO (50) virtual liquidity
 - **Market Creation Fee**: 0 (free by default, MultiSig configurable)
 
 ### Subgraph (The Graph)

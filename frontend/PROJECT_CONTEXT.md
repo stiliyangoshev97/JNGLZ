@@ -22,21 +22,21 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` |
+| PredictionMarket (v3.1.0) | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9 |
+| BscScan | https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2` |
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3` |
 | Studio Dashboard | https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet
-VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
+# BNB Testnet (v3.1.0)
+VITE_CONTRACT_ADDRESS=0x4C1508BA973856125a4F42c343560DB918c9EB2b
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
@@ -211,11 +211,11 @@ For real-time data:
 # WalletConnect (REQUIRED)
 VITE_WALLETCONNECT_PROJECT_ID=your-project-id
 
-# The Graph
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
+# The Graph (v0.0.3)
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
 
-# Contract
-VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
+# Contract (v3.1.0)
+VITE_CONTRACT_ADDRESS=0x4C1508BA973856125a4F42c343560DB918c9EB2b
 
 # Chain (97 = testnet, 56 = mainnet)
 VITE_CHAIN_ID=97

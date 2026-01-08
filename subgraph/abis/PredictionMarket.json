@@ -16,10 +16,6 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "receive",
-    "stateMutability": "payable"
-  },
-  {
     "type": "function",
     "name": "ACTION_EXPIRY",
     "inputs": [],
@@ -164,6 +160,19 @@
   },
   {
     "type": "function",
+    "name": "MAX_HEAT_LEVEL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_MARKET_CREATION_FEE",
     "inputs": [],
     "outputs": [
@@ -242,7 +251,7 @@
   },
   {
     "type": "function",
-    "name": "UNIT_PRICE",
+    "name": "MIN_HEAT_LEVEL",
     "inputs": [],
     "outputs": [
       {
@@ -255,7 +264,7 @@
   },
   {
     "type": "function",
-    "name": "VIRTUAL_LIQUIDITY",
+    "name": "UNIT_PRICE",
     "inputs": [],
     "outputs": [
       {
@@ -437,6 +446,11 @@
         "name": "expiryTimestamp",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "heatLevel",
+        "type": "uint8",
+        "internalType": "enum PredictionMarket.HeatLevel"
       }
     ],
     "outputs": [
@@ -476,6 +490,11 @@
         "name": "expiryTimestamp",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "heatLevel",
+        "type": "uint8",
+        "internalType": "enum PredictionMarket.HeatLevel"
       },
       {
         "name": "buyYesSide",
@@ -842,11 +861,6 @@
         "internalType": "bool"
       },
       {
-        "name": "proofLink",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
         "name": "proposalTime",
         "type": "uint256",
         "internalType": "uint256"
@@ -904,6 +918,29 @@
   },
   {
     "type": "function",
+    "name": "getSweepableAmount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "surplus",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalLocked",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "contractBalance",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getVoterCount",
     "inputs": [
       {
@@ -934,6 +971,45 @@
     "outputs": [
       {
         "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "heatLevelCrack",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "heatLevelHigh",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "heatLevelPro",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1047,6 +1123,16 @@
         "internalType": "uint256"
       },
       {
+        "name": "virtualLiquidity",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "heatLevel",
+        "type": "uint8",
+        "internalType": "enum PredictionMarket.HeatLevel"
+      },
+      {
         "name": "resolved",
         "type": "bool",
         "internalType": "bool"
@@ -1065,11 +1151,6 @@
         "name": "proposedOutcome",
         "type": "bool",
         "internalType": "bool"
-      },
-      {
-        "name": "proofLink",
-        "type": "string",
-        "internalType": "string"
       },
       {
         "name": "proposalTime",
@@ -1344,11 +1425,6 @@
         "name": "outcome",
         "type": "bool",
         "internalType": "bool"
-      },
-      {
-        "name": "proofLink",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "outputs": [],
@@ -1621,6 +1697,31 @@
   },
   {
     "type": "event",
+    "name": "FundsSwept",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalLocked",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contractBalance",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "JuryFeeDistributed",
     "inputs": [
       {
@@ -1668,6 +1769,18 @@
       },
       {
         "name": "expiryTimestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "heatLevel",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum PredictionMarket.HeatLevel"
+      },
+      {
+        "name": "virtualLiquidity",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1721,12 +1834,6 @@
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
-      },
-      {
-        "name": "proofLink",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       },
       {
         "name": "bond",
@@ -2050,6 +2157,11 @@
   {
     "type": "error",
     "name": "NothingToClaim",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToSweep",
     "inputs": []
   },
   {

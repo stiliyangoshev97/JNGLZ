@@ -16,6 +16,7 @@ import {
   EmergencyRefunded,
   BondDistributed,
   JuryFeeDistributed,
+  FundsSwept,
   PredictionMarket,
 } from "../generated/PredictionMarket/PredictionMarket";
 import {
@@ -27,6 +28,7 @@ import {
   Claim,
   EmergencyRefund,
   GlobalStats,
+  FundsSweep,
 } from "../generated/schema";
 
 // ============================================
@@ -117,6 +119,7 @@ function getOrCreateGlobalStats(): GlobalStats {
     stats.totalClaimed = ZERO_BD;
     stats.totalRefunded = ZERO_BD;
     stats.disputedMarkets = ZERO_BI;
+    stats.totalSwept = ZERO_BD; // v3.1.0
     stats.save();
   }
 
@@ -142,6 +145,10 @@ export function handleMarketCreated(event: MarketCreated): void {
   market.expiryTimestamp = event.params.expiryTimestamp;
   market.createdAt = event.block.timestamp;
   market.createdAtBlock = event.block.number;
+
+  // Heat Level (v3.1.0) - from event params
+  market.heatLevel = event.params.heatLevel;
+  market.virtualLiquidity = event.params.virtualLiquidity;
 
   // Fetch additional market data from contract (evidenceLink, resolutionRules, imageUrl)
   // These fields are not in the event but stored in contract storage
@@ -177,7 +184,7 @@ export function handleMarketCreated(event: MarketCreated): void {
   // outcome left unset (null) until resolved
 
   // proposal/dispute fields left unset (null) until proposed/disputed
-  // proposer, proposedOutcome, proposerBond, proposalProofLink, proposalTimestamp
+  // proposer, proposedOutcome, proposerBond, proposalTimestamp
   // disputer, disputerBond, disputeTimestamp
 
   // Initialize voting
@@ -324,6 +331,7 @@ export function handleTrade(event: TradeEvent): void {
 /**
  * Handle OutcomeProposed event
  * Updates Market with proposal info
+ * v3.1.0: proofLink removed from event
  */
 export function handleOutcomeProposed(event: OutcomeProposed): void {
   let marketId = event.params.marketId.toString();
@@ -337,7 +345,7 @@ export function handleOutcomeProposed(event: OutcomeProposed): void {
   market.proposer = event.params.proposer;
   market.proposedOutcome = event.params.outcome;
   market.proposerBond = event.params.bond;
-  market.proposalProofLink = event.params.proofLink;
+  // proofLink removed in v3.1.0
   market.proposalTimestamp = event.block.timestamp;
 
   market.save();
@@ -542,4 +550,28 @@ export function handleJuryFeeDistributed(event: JuryFeeDistributed): void {
   // This event tracks individual voter rewards
   // Could add a JuryReward entity if detailed tracking needed
   // For now, the Vote entity captures participation
+}
+
+/**
+ * Handle FundsSwept event (v3.1.0)
+ * Creates FundsSweep entity and updates GlobalStats
+ */
+export function handleFundsSwept(event: FundsSwept): void {
+  let sweepId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+
+  // Create FundsSweep entity
+  let sweep = new FundsSweep(sweepId);
+  sweep.amount = toBigDecimal(event.params.amount);
+  sweep.totalLocked = toBigDecimal(event.params.totalLocked);
+  sweep.contractBalance = toBigDecimal(event.params.contractBalance);
+  sweep.timestamp = event.block.timestamp;
+  sweep.txHash = event.transaction.hash;
+  sweep.blockNumber = event.block.number;
+  sweep.save();
+
+  // Update global stats
+  let stats = getOrCreateGlobalStats();
+  stats.totalSwept = stats.totalSwept.plus(sweep.amount);
+  stats.save();
 }

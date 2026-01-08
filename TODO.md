@@ -74,27 +74,27 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Project Setup | ✅ Complete | 100% |
-| Phase 1: Smart Contracts | ✅ Complete | 100% (163 tests) |
-| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.5.0 with marketCreationFee) |
-| Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.1) |
+| Phase 1: Smart Contracts | ✅ Complete | 100% (173 tests, v3.1.0) |
+| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v3.1.0 with Heat Levels + SweepFunds) |
+| Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.3) |
 | Phase 3: Frontend | ✅ Complete | ~95% (bug fixes done, comments pending) |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
-### 🚀 BNB Testnet Deployment (January 8, 2026)
-- **Contract (v2.5.0):** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
-- **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
+### 🚀 BNB Testnet Deployment (January 9, 2026)
+- **Contract (v3.1.0):** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
+- **BscScan:** https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
 - **Verified:** ✅ Yes
-- **Block:** 83243447
-- **Features:** imageUrl + marketCreationFee (defaults to 0 = free)
+- **Block:** 83314823
+- **Features:** Heat Levels (CRACK/HIGH/PRO) + SweepFunds + removed proofLink
 
-### 📊 Subgraph v0.0.1 (January 8, 2026)
+### 📊 Subgraph v0.0.3 (January 9, 2026)
 - **Status:** ✅ Deployed to The Graph Studio
-- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2`
+- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3`
 - **Studio URL:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
-- **Contract Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
-- **Start Block:** 83243447
-- **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
-- **Event Handlers:** 10 (all contract events indexed)
+- **Contract Address:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
+- **Start Block:** 83314823
+- **Entities:** 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep)
+- **Event Handlers:** 11 (all contract events indexed, includes FundsSwept)
 
 ### 🎨 Frontend v0.3.0 (January 8, 2026)
 - **Status:** ✅ Bug Fixes & Error Handling Complete
