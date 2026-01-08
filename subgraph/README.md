@@ -16,7 +16,7 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 **Testnet:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 ```
 
 **Studio Dashboard:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
@@ -228,7 +228,7 @@ subgraph/
 
 | Network | URL |
 |---------|-----|
-| BNB Testnet | `https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/v0.0.1` |
+| BNB Testnet | `https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/0.0.2` |
 | BNB Mainnet | TBD |
 
 ## 📚 Resources

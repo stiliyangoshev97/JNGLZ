@@ -2,6 +2,22 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [1.2.0] - 2026-01-08
+
+### Fixed
+- **Evidence link, resolution rules, and imageUrl not being indexed**
+  - Root cause: `MarketCreated` event does not emit these fields (only stored in contract storage)
+  - Solution: Added contract call to `getMarket()` in `handleMarketCreated` to fetch these fields
+  - Now correctly populates `evidenceLink`, `resolutionRules`, and `imageUrl` for all new markets
+
+### Changed
+- Updated `handleMarketCreated` mapping to call contract's `getMarket()` function
+- Deployed as version `0.0.2` to The Graph Studio
+
+### Technical
+- Uses `contract.try_getMarket()` with fallback to empty strings if call fails
+- Fields are fetched from contract storage since they're not in the event parameters
+
 ## [1.1.0] - 2026-01-08
 
 ### Added

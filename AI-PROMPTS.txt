@@ -148,7 +148,7 @@ I want to continue the Junkie.Fun frontend. UI is ~70% complete.
 | PredictionMarket | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` |
 
 **Subgraph:**
-| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1` |
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2` |
 
 What do you want to work on?
 
@@ -159,7 +159,7 @@ PROMPT #5: SUBGRAPH CONTEXT (Subgraph is DEPLOYED)
 The Junkie.Fun subgraph is DEPLOYED and working.
 
 **Deployed to:**
-- GraphQL: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1`
+- GraphQL: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2`
 - Studio: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
 
 **Read:**

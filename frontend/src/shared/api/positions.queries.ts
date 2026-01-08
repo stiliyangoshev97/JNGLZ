@@ -26,6 +26,9 @@ export const POSITION_FRAGMENT = gql`
       resolved
       outcome
       expiryTimestamp
+      imageUrl
+      yesShares
+      noShares
     }
     yesShares
     noShares

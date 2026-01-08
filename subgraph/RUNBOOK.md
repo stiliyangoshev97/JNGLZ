@@ -81,7 +81,7 @@ npm run deploy
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"query": "{ markets(first: 5) { id question totalVolume } }"}' \
-  https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/v0.0.1
+  https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/0.0.2
 ```
 
 ## 📊 Useful Queries for Testing

@@ -26,6 +26,7 @@ interface PositionWithMarket {
     resolved: boolean;
     outcome?: boolean | null;
     expiryTimestamp: string;
+    imageUrl?: string;
     yesShares?: string;
     noShares?: string;
   };
@@ -42,10 +43,11 @@ interface PositionCardProps {
 export function PositionCard({ position }: PositionCardProps) {
   const market = position.market;
   
-  // Parse share amounts
-  const yesShares = Number(position.yesShares || '0') / 1e18;
-  const noShares = Number(position.noShares || '0') / 1e18;
-  const invested = Number(position.totalInvested || '0') / 1e18;
+  // Parse share amounts - subgraph returns BigInt strings for shares
+  const yesShares = Number(BigInt(position.yesShares || '0')) / 1e18;
+  const noShares = Number(BigInt(position.noShares || '0')) / 1e18;
+  // totalInvested is BigDecimal (already in BNB from subgraph)
+  const invested = parseFloat(position.totalInvested || '0');
   
   // Determine position type
   const hasYes = yesShares > 0;
@@ -58,8 +60,11 @@ export function PositionCard({ position }: PositionCardProps) {
   if (market) {
     // Use proper bonding curve calculation with virtual liquidity
     yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0');
-    const yesPrice = yesPercent / 100;
-    const noPrice = 1 - yesPrice;
+    // Price is a fraction of UNIT_PRICE (0.01 BNB), not 1 BNB
+    // YES price = 0.01 * yesPercent / 100, NO price = 0.01 * (100 - yesPercent) / 100
+    const UNIT_PRICE = 0.01; // BNB
+    const yesPrice = UNIT_PRICE * yesPercent / 100;
+    const noPrice = UNIT_PRICE * (100 - yesPercent) / 100;
     
     currentValue = (yesShares * yesPrice) + (noShares * noPrice);
   }
@@ -72,11 +77,24 @@ export function PositionCard({ position }: PositionCardProps) {
   const canClaim = isResolved && (hasYes || hasNo);
 
   return (
-    <Card variant="hover" className="flex flex-col">
+    <Card variant="hover" className="group flex flex-col overflow-hidden">
+      {/* Market Image */}
+      {market.imageUrl && (
+        <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
+          <img
+            src={market.imageUrl}
+            alt=""
+            className="w-full h-full object-cover market-image"
+          />
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
+        </div>
+      )}
+
       {/* Market Question */}
       <Link 
         to={`/market/${market.id}`}
-        className="block mb-3 group"
+        className="block mb-3"
       >
         <h3 className="font-semibold text-white line-clamp-2 group-hover:text-cyber transition-colors">
           {market.question || `Market #${market.id}`}

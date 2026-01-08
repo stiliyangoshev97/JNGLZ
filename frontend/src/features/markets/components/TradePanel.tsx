@@ -50,7 +50,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
   
   // User's position in this market
   const marketId = BigInt(market.marketId);
-  const { position } = usePosition(marketId, address);
+  const { position, refetch: refetchPosition } = usePosition(marketId, address);
   
   const [direction, setDirection] = useState<TradeDirection>('yes');
   const [action, setAction] = useState<TradeAction>('buy');
@@ -100,6 +100,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
   useEffect(() => {
     if (isSuccess) {
       setAmount('');
+      // Refetch position after successful trade
+      refetchPosition();
       // Reset all write hooks
       setTimeout(() => {
         resetBuyYes();

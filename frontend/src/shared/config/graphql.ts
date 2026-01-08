@@ -14,7 +14,7 @@ import { env } from './env';
  * Apollo Client for The Graph
  * 
  * Connected to: junkiefun-bnb-testnet subgraph
- * Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+ * Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
  */
 export const apolloClient = new ApolloClient({
   link: new HttpLink({

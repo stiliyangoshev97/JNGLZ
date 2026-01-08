@@ -12,7 +12,7 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 ### GraphQL Endpoint (Testnet)
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 ```
 
 ### Contract Details (Testnet)

@@ -34,7 +34,7 @@
 ### Subgraph (The Graph)
 - **Subgraph Name**: junkiefun-bnb-testnet
 - **Version**: v0.0.1
-- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 - **Studio URL**: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
 - **Status**: ✅ Deployed (indexing from block 83243447)
 

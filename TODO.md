@@ -26,7 +26,7 @@
 
 ### 📊 Subgraph v0.0.1 (January 8, 2026)
 - **Status:** ✅ Deployed to The Graph Studio
-- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1`
+- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2`
 - **Studio URL:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
 - **Contract Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
 - **Start Block:** 83243447

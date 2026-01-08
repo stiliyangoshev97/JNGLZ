@@ -94,6 +94,18 @@ export function MarketDetailPage() {
       {/* Hero Section */}
       <section className="border-b border-dark-600 py-8">
         <div className="max-w-7xl mx-auto px-4">
+          {/* Market Image - Full width if exists */}
+          {market.imageUrl && (
+            <div className="group relative -mx-4 mb-6 h-48 md:h-64 overflow-hidden">
+              <img
+                src={market.imageUrl}
+                alt=""
+                className="w-full h-full object-cover market-image"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/50 to-transparent" />
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left: Question & Info */}
             <div className="lg:col-span-2">
@@ -197,9 +209,10 @@ export function MarketDetailPage() {
 }
 
 function MarketInfo({ market }: { market: Market }) {
-  // totalVolume and poolBalance from subgraph are BigDecimal (already in BNB)
+  // totalVolume is BigDecimal (already in BNB), poolBalance is BigInt (wei)
   const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
-  const poolBalanceBNB = parseFloat(market.poolBalance || '0').toFixed(4);
+  const poolBalanceWei = BigInt(market.poolBalance || '0');
+  const poolBalanceBNB = (Number(poolBalanceWei) / 1e18).toFixed(4);
 
   return (
     <div className="border border-dark-600 bg-dark-900">
@@ -207,17 +220,6 @@ function MarketInfo({ market }: { market: Market }) {
         <h2 className="font-bold uppercase">MARKET INFO</h2>
       </div>
       <div className="p-4 space-y-4">
-        {/* Market Image */}
-        {market.imageUrl && (
-          <div className="relative -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
-            <img
-              src={market.imageUrl}
-              alt=""
-              className="w-full h-48 object-cover"
-            />
-          </div>
-        )}
-
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -230,10 +232,10 @@ function MarketInfo({ market }: { market: Market }) {
           </div>
         </div>
 
-        {/* Evidence Link */}
-        {market.evidenceLink && (
-          <div>
-            <p className="text-xs text-text-muted font-mono uppercase mb-1">Evidence</p>
+        {/* Evidence Link - Always show section */}
+        <div>
+          <p className="text-xs text-text-muted font-mono uppercase mb-1">Evidence Source</p>
+          {market.evidenceLink ? (
             <a
               href={market.evidenceLink}
               target="_blank"
@@ -242,18 +244,22 @@ function MarketInfo({ market }: { market: Market }) {
             >
               {market.evidenceLink}
             </a>
-          </div>
-        )}
+          ) : (
+            <p className="text-text-muted text-sm font-mono">Not provided</p>
+          )}
+        </div>
 
-        {/* Resolution Rules */}
-        {market.resolutionRules && (
-          <div>
-            <p className="text-xs text-text-muted font-mono uppercase mb-1">Resolution Rules</p>
+        {/* Resolution Rules - Always show section */}
+        <div>
+          <p className="text-xs text-text-muted font-mono uppercase mb-1">Resolution Rules</p>
+          {market.resolutionRules ? (
             <p className="text-sm text-text-secondary whitespace-pre-wrap">
               {market.resolutionRules}
             </p>
-          </div>
-        )}
+          ) : (
+            <p className="text-text-muted text-sm font-mono">Not provided</p>
+          )}
+        </div>
       </div>
     </div>
   );

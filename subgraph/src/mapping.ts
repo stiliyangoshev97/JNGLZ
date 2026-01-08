@@ -16,6 +16,7 @@ import {
   EmergencyRefunded,
   BondDistributed,
   JuryFeeDistributed,
+  PredictionMarket,
 } from "../generated/PredictionMarket/PredictionMarket";
 import {
   Market,
@@ -137,15 +138,31 @@ export function handleMarketCreated(event: MarketCreated): void {
   let market = new Market(marketId);
   market.marketId = event.params.marketId;
   market.question = event.params.question;
-  market.evidenceLink = ""; // Not in event, could be fetched from contract
-  market.resolutionRules = ""; // Not in event
-  market.imageUrl = ""; // Not in event, could be fetched from contract
   market.creatorAddress = event.params.creator;
   market.expiryTimestamp = event.params.expiryTimestamp;
   market.createdAt = event.block.timestamp;
   market.createdAtBlock = event.block.number;
 
+  // Fetch additional market data from contract (evidenceLink, resolutionRules, imageUrl)
+  // These fields are not in the event but stored in contract storage
+  let contract = PredictionMarket.bind(event.address);
+  let marketData = contract.try_getMarket(event.params.marketId);
+  
+  if (marketData.reverted) {
+    // Fallback if contract call fails
+    market.evidenceLink = "";
+    market.resolutionRules = "";
+    market.imageUrl = "";
+  } else {
+    market.evidenceLink = marketData.value.getEvidenceLink();
+    market.resolutionRules = marketData.value.getResolutionRules();
+    market.imageUrl = marketData.value.getImageUrl();
+  }
+
   // Initialize bonding curve state
+  market.yesShares = ZERO_BI;
+  market.noShares = ZERO_BI;
+  market.poolBalance = ZERO_BI;
   market.yesShares = ZERO_BI;
   market.noShares = ZERO_BI;
   market.poolBalance = ZERO_BI;

@@ -29,14 +29,14 @@
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1` |
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2` |
 | Studio Dashboard | https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet |
 
 ### Environment Variables (.env)
 ```env
 # BNB Testnet
 VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
@@ -212,7 +212,7 @@ For real-time data:
 VITE_WALLETCONNECT_PROJECT_ID=your-project-id
 
 # The Graph
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 
 # Contract
 VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9

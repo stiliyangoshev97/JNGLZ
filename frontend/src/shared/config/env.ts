@@ -27,7 +27,7 @@ export const env = {
   CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x3988808940d027a70FE2D0938Cf06580bbad19F9',
   
   // The Graph
-  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1',
+  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2',
   
   // Feature flags
   ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true' || true,

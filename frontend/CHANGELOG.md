@@ -2,6 +2,31 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.2.0] - 2026-01-08
+
+### Fixed
+- **Pool Balance showing wrong value (e.g., "90000000000000000.00 BNB")**
+  - Root cause: `poolBalance` from subgraph is `BigInt` in wei, but code treated it as already-converted BNB
+  - Solution: Changed `parseFloat(market.poolBalance)` to `Number(BigInt(market.poolBalance)) / 1e18`
+  - Fixed in: `MarketCard.tsx`, `MarketDetailPage.tsx`
+
+- **Evidence Source and Resolution Rules not showing**
+  - Root cause: Subgraph wasn't fetching these fields (fixed in subgraph v0.0.2)
+  - Also updated UI to always show these sections (displays "Not provided" if empty)
+
+- **Market images not visible**
+  - Root cause: Same as above - subgraph now fetches `imageUrl` from contract
+  - Images now display with grayscale filter effect on MarketCard, MarketDetailPage, and PositionCard
+
+### Added
+- **Grayscale image effect** on MarketDetailPage (matches MarketCard style)
+- **Market images in Portfolio** - PositionCard now displays market images with same grayscale hover effect
+- Added `imageUrl`, `yesShares`, `noShares` to position GraphQL query fragment
+
+### Changed
+- Updated subgraph URL to version `0.0.2` in `env.ts`
+- Updated `POSITION_FRAGMENT` in `positions.queries.ts` to include market image and share data
+
 ## [0.1.0] - 2026-01-08
 
 ### Added - Initial Foundation (Phase 1 Complete)

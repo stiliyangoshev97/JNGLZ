@@ -87,7 +87,7 @@ assemblyscript              ^0.19.x    # AssemblyScript compiler (peer dep)
 # Deployed Subgraph:
 # - Name: junkiefun-bnb-testnet
 # - Version: v0.0.1
-# - Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+# - Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
 # - Studio: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
 
 # Installation:

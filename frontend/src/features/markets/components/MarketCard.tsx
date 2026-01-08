@@ -35,8 +35,9 @@ export function MarketCard({ market, className }: MarketCardProps) {
   const timeRemaining = formatTimeRemaining(expirationTimestamp);
 
   // Calculate liquidity for heat bar (0-100 scale)
-  // poolBalance from subgraph is BigDecimal (already in BNB)
-  const poolBalanceBNB = parseFloat(market.poolBalance || '0');
+  // poolBalance from subgraph is BigInt in wei, need to convert to BNB
+  const poolBalanceWei = BigInt(market.poolBalance || '0');
+  const poolBalanceBNB = Number(poolBalanceWei) / 1e18;
   const heatValue = Math.min(poolBalanceBNB * 10, 100); // 10 BNB = 100%
 
   // Volume display - totalVolume from subgraph is BigDecimal (already in BNB)
@@ -101,13 +102,17 @@ export function MarketCard({ market, className }: MarketCardProps) {
           </div>
         </div>
 
-        {/* Heat Bar */}
-        <HeatBar
-          value={heatValue}
-          label="LIQUIDITY"
-          size="sm"
-          className="mb-3"
-        />
+        {/* Heat Bar with Liquidity */}
+        <div className="mb-3">
+          <div className="flex justify-between items-center text-xs font-mono mb-1">
+            <span className="text-text-secondary uppercase">LIQUIDITY</span>
+            <span className="text-text-muted">{poolBalanceBNB.toFixed(2)} BNB</span>
+          </div>
+          <HeatBar
+            value={heatValue}
+            size="sm"
+          />
+        </div>
 
         {/* Footer */}
         <div className="mt-auto pt-3 border-t border-dark-700 flex items-center justify-between text-xs font-mono">
