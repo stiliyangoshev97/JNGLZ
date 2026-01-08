@@ -468,6 +468,98 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(market.bondWinnerShareBps(), newShare);
     }
 
+    function testFuzz_MultiSig_SetMarketCreationFee_ValidRange(
+        uint256 newFee
+    ) public {
+        // Market creation fee between 0 and MAX_MARKET_CREATION_FEE (0.1 ether)
+        newFee = bound(newFee, 0, 0.1 ether);
+
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetMarketCreationFee,
+            abi.encode(newFee)
+        );
+
+        assertEq(market.marketCreationFee(), newFee);
+    }
+
+    function testFuzz_CreateMarket_WithVariableFee(uint256 creationFee) public {
+        // Bound fee to valid range
+        creationFee = bound(creationFee, 0, 0.1 ether);
+
+        // Set creation fee via MultiSig
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetMarketCreationFee,
+            abi.encode(creationFee)
+        );
+
+        uint256 treasuryBalanceBefore = treasury.balance;
+        uint256 creatorBalanceBefore = marketCreator.balance;
+
+        vm.prank(marketCreator);
+        uint256 marketId = market.createMarket{value: creationFee}(
+            "Will BTC hit $100k?",
+            "https://coinmarketcap.com/currencies/bitcoin/",
+            "Resolve YES if BTC > $100,000 USD at expiry",
+            "",
+            block.timestamp + 7 days
+        );
+
+        assertEq(marketId, 0, "First market should have ID 0");
+        assertEq(
+            treasury.balance,
+            treasuryBalanceBefore + creationFee,
+            "Treasury should receive creation fee"
+        );
+        assertEq(
+            marketCreator.balance,
+            creatorBalanceBefore - creationFee,
+            "Creator balance should decrease by fee"
+        );
+    }
+
+    function testFuzz_CreateMarketAndBuy_WithVariableFee(
+        uint256 creationFee,
+        uint256 betAmount
+    ) public {
+        // Bound to valid ranges
+        creationFee = bound(creationFee, 0, 0.1 ether);
+        betAmount = bound(betAmount, MIN_BNB_AMOUNT, 10 ether);
+
+        // Set creation fee via MultiSig
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetMarketCreationFee,
+            abi.encode(creationFee)
+        );
+
+        uint256 totalSent = creationFee + betAmount;
+        uint256 treasuryBalanceBefore = treasury.balance;
+
+        vm.prank(marketCreator);
+        (uint256 marketId, uint256 sharesOut) = market.createMarketAndBuy{
+            value: totalSent
+        }(
+            "Will BTC hit $100k?",
+            "",
+            "Rules",
+            "",
+            block.timestamp + 7 days,
+            true, // Buy YES
+            0 // minSharesOut
+        );
+
+        assertEq(marketId, 0, "First market should have ID 0");
+        assertGt(sharesOut, 0, "Should receive shares");
+
+        // Verify treasury received creation fee + platform fee
+        uint256 platformFee = (betAmount * DEFAULT_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 expectedTreasuryIncrease = creationFee + platformFee;
+        assertEq(
+            treasury.balance,
+            treasuryBalanceBefore + expectedTreasuryIncrease,
+            "Treasury should receive creation fee + platform fee"
+        );
+    }
+
     // ============================================
     // RESOLUTION & CLAIM FUZZ TESTS
     // ============================================

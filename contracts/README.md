@@ -3,7 +3,7 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-148%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-163%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-success)]()
@@ -14,7 +14,7 @@
 
 | Contract | Address | Version |
 |----------|---------|---------|
-| **PredictionMarket** | [`0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`](https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9) | v2.4.0 |
+| **PredictionMarket** | [`0x3988808940d027a70FE2D0938Cf06580bbad19F9`](https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9) | v2.5.0 |
 
 ---
 

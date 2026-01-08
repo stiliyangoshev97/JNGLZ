@@ -5,6 +5,45 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-01-08
+
+### Added
+
+#### Market Creation Fee
+- Added `marketCreationFee` state variable (defaults to 0 = free market creation)
+- Added `MAX_MARKET_CREATION_FEE` constant (0.1 BNB max)
+- Added `ActionType.SetMarketCreationFee` for MultiSig governance
+- Added `InvalidMarketCreationFee` and `InsufficientCreationFee` errors
+- `createMarket` is now `payable` and requires `msg.value >= marketCreationFee`
+- `createMarketAndBuy` deducts creation fee from `msg.value` before bet calculation
+- Creation fees are sent to the treasury wallet
+
+**MultiSig Usage:**
+```solidity
+// Set fee to 0.01 BNB
+proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether));
+// Then 2 more signers call confirmAction(actionId)
+```
+
+**Tests:** Added 15 new tests (12 unit + 3 fuzz):
+- `test_MarketCreationFee_DefaultsToZero`
+- `test_MultiSig_SetMarketCreationFee`
+- `test_MultiSig_SetMarketCreationFee_ToZero`
+- `test_MultiSig_RevertMarketCreationFeeTooHigh`
+- `test_CreateMarket_WithFee_Success`
+- `test_CreateMarket_WithFee_ExcessRefundedNotKept`
+- `test_CreateMarket_WithFee_RevertInsufficientFee`
+- `test_CreateMarket_WithFee_RevertNoFee`
+- `test_CreateMarketAndBuy_WithFee_Success`
+- `test_CreateMarketAndBuy_WithFee_RevertInsufficientForFee`
+- `test_CreateMarketAndBuy_WithFee_RevertInsufficientForBet`
+- `test_CreateMarket_ZeroFee_StillWorks`
+- `testFuzz_MultiSig_SetMarketCreationFee_ValidRange`
+- `testFuzz_CreateMarket_WithVariableFee`
+- `testFuzz_CreateMarketAndBuy_WithVariableFee`
+
+**Total Tests:** 163 passing
+
 ## [2.4.0] - 2026-01-08
 
 ### Added

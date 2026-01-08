@@ -55,6 +55,9 @@ contract PredictionMarket is ReentrancyGuard {
     /// @notice Emergency refund delay after expiry (24 hours)
     uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours;
 
+    /// @notice Maximum market creation fee (0.1 BNB)
+    uint256 public constant MAX_MARKET_CREATION_FEE = 0.1 ether;
+
     // ============ Street Consensus Constants ============
 
     /// @notice Creator priority window - only creator can propose (10 minutes)
@@ -86,7 +89,8 @@ contract PredictionMarket is ReentrancyGuard {
         SetResolutionFee,
         SetMinBondFloor,
         SetDynamicBondBps,
-        SetBondWinnerShare
+        SetBondWinnerShare,
+        SetMarketCreationFee
     }
 
     // ============ Structs ============
@@ -150,6 +154,9 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public dynamicBondBps = 100; // 1% of pool
     uint256 public bondWinnerShareBps = 5000; // 50% to winner
     address public treasury;
+
+    // Market creation fee (defaults to 0 = free market creation)
+    uint256 public marketCreationFee = 0;
 
     // Pause state
     bool public paused;
@@ -254,6 +261,7 @@ contract PredictionMarket is ReentrancyGuard {
     error InvalidMinBondFloor();
     error InvalidDynamicBondBps();
     error InvalidBondWinnerShare();
+    error InvalidMarketCreationFee();
     error ActionExpired();
     error ActionAlreadyExecuted();
     error AlreadyConfirmed();
@@ -288,6 +296,7 @@ contract PredictionMarket is ReentrancyGuard {
     error NoSharesForVoting();
     error InsufficientBond();
     error MarketStuck();
+    error InsufficientCreationFee();
 
     // ============ Modifiers ============
 
@@ -321,12 +330,13 @@ contract PredictionMarket is ReentrancyGuard {
     // ============ Market Creation ============
 
     /**
-     * @notice Create a new prediction market (free)
+     * @notice Create a new prediction market
      * @param question The prediction question
      * @param evidenceLink URL to source of truth for resolution (can be empty for degen markets)
      * @param resolutionRules Clear rules for how to resolve
      * @param imageUrl URL to market image/thumbnail (IPFS or HTTP, can be empty)
      * @param expiryTimestamp When trading ends
+     * @dev Requires msg.value >= marketCreationFee (defaults to 0 = free)
      */
     function createMarket(
         string calldata question,
@@ -334,7 +344,9 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata resolutionRules,
         string calldata imageUrl,
         uint256 expiryTimestamp
-    ) external whenNotPaused returns (uint256 marketId) {
+    ) external payable whenNotPaused returns (uint256 marketId) {
+        if (msg.value < marketCreationFee) revert InsufficientCreationFee();
+
         marketId = _createMarket(
             question,
             evidenceLink,
@@ -342,11 +354,18 @@ contract PredictionMarket is ReentrancyGuard {
             imageUrl,
             expiryTimestamp
         );
+
+        // Send creation fee to treasury
+        if (msg.value > 0) {
+            (bool success, ) = treasury.call{value: msg.value}("");
+            if (!success) revert TransferFailed();
+        }
     }
 
     /**
      * @notice Create a new prediction market AND place the first bet atomically
      * @dev This guarantees the creator is the first buyer - impossible to front-run
+     *      msg.value must cover both marketCreationFee + minBet
      */
     function createMarketAndBuy(
         string calldata question,
@@ -363,6 +382,11 @@ contract PredictionMarket is ReentrancyGuard {
         whenNotPaused
         returns (uint256 marketId, uint256 sharesOut)
     {
+        // Check creation fee and calculate bet amount
+        if (msg.value < marketCreationFee) revert InsufficientCreationFee();
+        uint256 betAmount = msg.value - marketCreationFee;
+        if (betAmount < minBet) revert BelowMinBet();
+
         marketId = _createMarket(
             question,
             evidenceLink,
@@ -371,12 +395,10 @@ contract PredictionMarket is ReentrancyGuard {
             expiryTimestamp
         );
 
-        if (msg.value < minBet) revert BelowMinBet();
-
         Market storage market = markets[marketId];
 
-        uint256 fee = (msg.value * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 amountAfterFee = msg.value - fee;
+        uint256 fee = (betAmount * platformFeeBps) / BPS_DENOMINATOR;
+        uint256 amountAfterFee = betAmount - fee;
 
         sharesOut = _calculateBuyShares(
             market.yesSupply,
@@ -395,8 +417,10 @@ contract PredictionMarket is ReentrancyGuard {
         }
         market.poolBalance += amountAfterFee;
 
-        if (fee > 0) {
-            (bool success, ) = treasury.call{value: fee}("");
+        // Send creation fee + platform fee to treasury
+        uint256 treasuryAmount = marketCreationFee + fee;
+        if (treasuryAmount > 0) {
+            (bool success, ) = treasury.call{value: treasuryAmount}("");
             if (!success) revert TransferFailed();
         }
 
@@ -1517,6 +1541,11 @@ contract PredictionMarket is ReentrancyGuard {
                 newBondWinnerShare > BOND_WINNER_SHARE_UPPER
             ) revert InvalidBondWinnerShare();
             bondWinnerShareBps = newBondWinnerShare;
+        } else if (action.actionType == ActionType.SetMarketCreationFee) {
+            uint256 newMarketCreationFee = abi.decode(action.data, (uint256));
+            if (newMarketCreationFee > MAX_MARKET_CREATION_FEE)
+                revert InvalidMarketCreationFee();
+            marketCreationFee = newMarketCreationFee;
         }
 
         emit ActionExecuted(actionId, action.actionType);

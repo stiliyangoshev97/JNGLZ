@@ -1,7 +1,7 @@
 # Junkie.Fun - Master TODO
 
 > **Last Updated:** January 8, 2026  
-> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.4.0) | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
+> **Status:** Smart Contracts ✅ | Testnet Deployed ✅ (v2.5.0) | Subgraph ✅ Code Complete | Frontend ⬜ Pending  
 > **Stack:** React 19 + Vite + Wagmi v2 + Foundry + The Graph
 
 ---
@@ -11,28 +11,30 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Project Setup | ✅ Complete | 100% |
-| Phase 1: Smart Contracts | ✅ Complete | 100% (148 tests) |
-| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.4.0 with imageUrl) |
+| Phase 1: Smart Contracts | ✅ Complete | 100% (163 tests) |
+| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.5.0 with marketCreationFee) |
 | Phase 2: Subgraph | ✅ Code Complete | 95% (awaiting deploy) |
 | Phase 3: Frontend | ⬜ Not Started | 0% |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
 ### 🚀 BNB Testnet Deployment (January 8, 2026)
-- **Contract (v2.4.0):** `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`
-- **BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
+- **Contract (v2.5.0):** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
+- **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
 - **Verified:** ✅ Yes
-- **Block:** 83227353
-- **Features:** imageUrl support for market thumbnails
+- **Block:** 83243447
+- **Features:** imageUrl + marketCreationFee (defaults to 0 = free)
 
-### 📊 Subgraph v1.1.0 (January 8, 2026)
-- **Status:** Code complete with imageUrl support, builds successfully
+### 📊 Subgraph v1.2.0 (January 8, 2026)
+- **Status:** Code complete, builds successfully
+- **Contract Address:** Updated to v2.5.0 (`0x3988808940d027a70FE2D0938Cf06580bbad19F9`)
+- **Start Block:** 83243447
 - **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
 - **Event Handlers:** 10 (all contract events indexed)
-- **Next Step:** Update subgraph.yaml with new contract address, deploy to Subgraph Studio
+- **Next Step:** Deploy to Subgraph Studio (requires user account setup)
 
 ---
 
-## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (148 tests)
+## 🔐 PHASE 1: Smart Contracts ✅ COMPLETE (163 tests)
 
 ### Security Audit ✅ COMPLETE
 - [x] **Integration Tests:** 16 tests covering full lifecycle scenarios

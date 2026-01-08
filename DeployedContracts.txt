@@ -7,12 +7,17 @@
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v2.4.0 - with imageUrl)
+### PredictionMarket Contract (v2.5.0 - with marketCreationFee)
+- **Address**: 0x3988808940d027a70FE2D0938Cf06580bbad19F9
+- **BscScan**: https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
+- **Verified**: ✅ Yes
+- **Deployed Block**: 83243447
+- **Deployment TX**: 0x13ece6f5de84ddfc5d1f0b016508897414405ce055a8ee8dad4485e3b96982f7
+
+### Previous Deployment (v2.4.0 - deprecated)
 - **Address**: 0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
 - **BscScan**: https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
-- **Verified**: ✅ Yes
-- **Deployed Block**: 83227353
-- **Deployment TX**: Check BscScan for latest transaction
+- **Status**: ⚠️ Deprecated (no marketCreationFee)
 
 ### Previous Deployment (v2.3.0 - deprecated)
 - **Address**: 0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
@@ -24,6 +29,7 @@
 - **Platform Fee**: 1% (goes to treasury)
 - **Creator Fee**: 0.5% (goes to market creator)
 - **Resolution Reward**: 0.3% (goes to resolver)
+- **Market Creation Fee**: 0 (free by default, MultiSig configurable)
 
 ### MultiSig Signers (3-of-3)
 - Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2

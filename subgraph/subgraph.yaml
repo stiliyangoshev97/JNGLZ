@@ -8,9 +8,9 @@ dataSources:
     name: PredictionMarket
     network: chapel # BNB Testnet (BSC Testnet)
     source:
-      address: "0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9"
+      address: "0x3988808940d027a70FE2D0938Cf06580bbad19F9"
       abi: PredictionMarket
-      startBlock: 83227353
+      startBlock: 83243447
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

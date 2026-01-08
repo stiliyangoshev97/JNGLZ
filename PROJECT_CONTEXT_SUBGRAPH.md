@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** ✅ Code Complete (v1.1.0) - Ready for Deployment
+> **Status:** ✅ Code Complete (v1.2.0) - Ready for Deployment
 
 ---
 
@@ -11,11 +11,11 @@
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
 
 ### Contract Details (Testnet)
-- **Address:** `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9`
+- **Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83227353
-- **BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
-- **Contract Version:** v2.4.0 (includes imageUrl support)
+- **Start Block:** 83243447
+- **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
+- **Contract Version:** v2.5.0 (includes imageUrl + marketCreationFee)
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)
@@ -29,7 +29,7 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 | Component | Progress | Notes |
 |-----------|----------|-------|
 | Schema Definition | ✅ 100% | 8 entities (includes imageUrl) |
-| Subgraph Config | ✅ 100% | subgraph.yaml updated for v2.4.0 |
+| Subgraph Config | ✅ 100% | subgraph.yaml updated for v2.5.0 |
 | Mappings | ✅ 100% | 10 event handlers |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |

@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** ✅ Smart Contracts Complete & Deployed (v2.4.0, 148 tests)
+> **Status:** ✅ Smart Contracts Complete & Deployed (v2.5.0, 163 tests)
 
 ---
 
@@ -10,16 +10,17 @@
 
 | Contract | Address | Status |
 |----------|---------|--------|
-| PredictionMarket (v2.4.0) | `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9` | ✅ Verified |
+| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ✅ Verified |
 
-**BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
+**BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
+**Deployed Block:** 83243447
 
 ---
 
 ## 🎯 Contract Overview
 
 **PredictionMarket.sol** is a single monolithic smart contract that handles:
-- Market creation (free, 0 BNB) with **imageUrl** support for thumbnails
+- Market creation with optional fee (defaults to 0 = free) with **imageUrl** support
 - Trading YES/NO shares via bonding curve
 - **Street Consensus** resolution (bettors vote on outcomes)
 - Winner payouts after resolution
@@ -38,13 +39,14 @@
 | Core Contract | ✅ 100% | PredictionMarket.sol complete |
 | Bonding Curve Math | ✅ 100% | P(yes) + P(no) = 0.01 BNB |
 | Fee System | ✅ 100% | 1% platform + 0.5% creator + 0.3% resolution |
+| Market Creation Fee | ✅ 100% | Optional fee (defaults to 0), MultiSig configurable |
 | Street Consensus | ✅ 100% | Propose → Dispute → Vote → Finalize |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
 | Image URL | ✅ 100% | Market thumbnail support (v2.4.0) |
-| Unit Tests | ✅ 100% | 60 tests passing |
-| Fuzz Tests | ✅ 100% | 29 tests passing |
+| Unit Tests | ✅ 100% | 72 tests passing |
+| Fuzz Tests | ✅ 100% | 32 tests passing |
 | Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | Instant Sell Analysis | ✅ 100% | 8 tests passing |
@@ -52,7 +54,7 @@
 | Testnet Deployment | ✅ 100% | v2.4.0 deployed & verified |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 148 ✅**
+**Total Tests: 163 ✅**
 
 ---
 
@@ -67,6 +69,7 @@ PredictionMarket.sol
 │   ├── MAX_FEE_BPS = 500 (5%)
 │   ├── MAX_CREATOR_FEE_BPS = 200 (2%)
 │   ├── MAX_RESOLUTION_FEE_BPS = 100 (1%)
+│   ├── MAX_MARKET_CREATION_FEE = 0.1 ether
 │   ├── ACTION_EXPIRY = 1 hour
 │   ├── CREATOR_PRIORITY_WINDOW = 10 minutes
 │   ├── DISPUTE_WINDOW = 30 minutes
@@ -77,6 +80,7 @@ PredictionMarket.sol
 │   ├── platformFeeBps = 100 (1% default)
 │   ├── creatorFeeBps = 50 (0.5% default)
 │   ├── resolutionFeeBps = 30 (0.3% default)
+│   ├── marketCreationFee = 0 (free default)
 │   ├── minBondFloor = 0.005 ether
 │   ├── dynamicBondBps = 100 (1%)
 │   ├── bondWinnerShareBps = 5000 (50%)
@@ -89,7 +93,7 @@ PredictionMarket.sol
 │   └── signers (MultiSig)
 │
 ├── Market Lifecycle
-│   ├── createMarket() - free creation
+│   ├── createMarket() - with optional fee (payable)
 │   ├── createMarketAndBuy() - atomic create + buy
 │   ├── buyYes() / buyNo()
 │   ├── sellYes() / sellNo()
@@ -128,6 +132,7 @@ PredictionMarket.sol
 | `platformFeeBps` | 100 | 1% platform fee (configurable 0-5%) |
 | `creatorFeeBps` | 50 | 0.5% creator fee (configurable 0-2%) |
 | `resolutionFeeBps` | 30 | 0.3% resolution fee (configurable 0-1%) |
+| `marketCreationFee` | 0 | Optional fee (defaults to 0) |
 | `minBet` | 0.005 ether | Minimum bet (~$3) |
 | `minBondFloor` | 0.005 ether | Minimum proposal bond |
 | `dynamicBondBps` | 100 | 1% of pool for bond |
@@ -311,13 +316,13 @@ Formula: refund = (userShares / totalShares) * poolBalance
 
 | Test File | Tests | Status |
 |-----------|-------|--------|
-| PredictionMarket.t.sol | 52 | ✅ Passing |
-| PredictionMarket.fuzz.t.sol | 29 | ✅ Passing |
+| PredictionMarket.t.sol | 72 | ✅ Passing |
+| PredictionMarket.fuzz.t.sol | 32 | ✅ Passing |
 | VulnerabilityCheck.t.sol | 4 | ✅ Passing |
 | PumpDump.t.sol | 31 | ✅ Passing |
 | InstantSellAnalysis.t.sol | 8 | ✅ Passing |
 
-**Total Tests: 124 ✅**
+**Total Tests: 163 ✅**
 
 ### Test Categories
 - **Unit tests:** Market creation, trading, fees, resolution, claims
@@ -449,8 +454,8 @@ contracts/
 ├── src/
 │   └── PredictionMarket.sol    # Main contract
 ├── test/
-│   ├── PredictionMarket.t.sol       # Unit tests (52)
-│   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (29)
+│   ├── PredictionMarket.t.sol       # Unit tests (72)
+│   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (32)
 │   ├── PumpDump.t.sol               # Economics + feature tests (31)
 │   ├── VulnerabilityCheck.t.sol     # Security tests (4)
 │   ├── InstantSellAnalysis.t.sol    # Instant sell + liquidity tests (8)
