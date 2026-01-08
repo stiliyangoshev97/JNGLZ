@@ -7,24 +7,25 @@
  * @module features/markets/pages/MarketsPage
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GET_ACTIVE_MARKETS, GET_RECENT_TRADES } from '@/shared/api';
-import type { GetActiveMarketsResponse, GetRecentTradesResponse } from '@/shared/api';
+import { GET_MARKETS, GET_RECENT_TRADES } from '@/shared/api';
+import type { GetMarketsResponse, GetRecentTradesResponse } from '@/shared/api';
 import { MarketCard, LiveTicker } from '../components';
 import { MarketCardSkeleton } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
+type FilterOption = 'active' | 'expired' | 'resolved';
 
 export function MarketsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('volume');
-  const [showActive, setShowActive] = useState(true);
+  const [filterBy, setFilterBy] = useState<FilterOption>('active');
 
-  // Fetch markets
-  const { data, loading, error } = useQuery<GetActiveMarketsResponse>(GET_ACTIVE_MARKETS, {
-    variables: { first: 50 },
+  // Fetch ALL markets (not just active)
+  const { data, loading, error } = useQuery<GetMarketsResponse>(GET_MARKETS, {
+    variables: { first: 100 },
     pollInterval: 60000, // Refresh every 60 seconds
   });
 
@@ -34,24 +35,60 @@ export function MarketsPage() {
     pollInterval: 30000, // Refresh every 30 seconds
   });
 
-  const markets = data?.markets || [];
+  const allMarkets = data?.markets || [];
   const recentTrades = tradesData?.trades || [];
 
+  // Filter markets based on selection
+  const filteredMarkets = useMemo(() => {
+    const now = Date.now();
+    return allMarkets.filter((market) => {
+      const expiryMs = Number(market.expiryTimestamp) * 1000;
+      const isExpired = now > expiryMs;
+      const isResolved = market.resolved;
+
+      switch (filterBy) {
+        case 'active':
+          return !isExpired && !isResolved;
+        case 'expired':
+          return isExpired && !isResolved;
+        case 'resolved':
+          return isResolved;
+        default:
+          return true;
+      }
+    });
+  }, [allMarkets, filterBy]);
+
   // Sort markets
-  const sortedMarkets = [...markets].sort((a, b) => {
-    switch (sortBy) {
-      case 'volume':
-        return Number(b.totalVolume) - Number(a.totalVolume);
-      case 'newest':
-        return Number(b.createdAt) - Number(a.createdAt);
-      case 'ending':
-        return Number(a.expiryTimestamp) - Number(b.expiryTimestamp);
-      case 'liquidity':
-        return Number(b.poolBalance) - Number(a.poolBalance);
-      default:
-        return 0;
-    }
-  });
+  const sortedMarkets = useMemo(() => {
+    return [...filteredMarkets].sort((a, b) => {
+      switch (sortBy) {
+        case 'volume':
+          return Number(b.totalVolume) - Number(a.totalVolume);
+        case 'newest':
+          return Number(b.createdAt) - Number(a.createdAt);
+        case 'ending':
+          return Number(a.expiryTimestamp) - Number(b.expiryTimestamp);
+        case 'liquidity':
+          return Number(b.poolBalance) - Number(a.poolBalance);
+        default:
+          return 0;
+      }
+    });
+  }, [filteredMarkets, sortBy]);
+
+  // Count markets by category
+  const marketCounts = useMemo(() => {
+    const now = Date.now();
+    let active = 0, expired = 0, resolved = 0;
+    allMarkets.forEach((market) => {
+      const expiryMs = Number(market.expiryTimestamp) * 1000;
+      if (market.resolved) resolved++;
+      else if (now > expiryMs) expired++;
+      else active++;
+    });
+    return { active, expired, resolved };
+  }, [allMarkets]);
 
   return (
     <div className="min-h-screen">
@@ -67,7 +104,7 @@ export function MarketsPage() {
                 THE <span className="text-cyber">JUNGLE</span>
               </h1>
               <p className="text-text-secondary mt-2 font-mono text-sm">
-                {markets.length} ACTIVE MARKETS • TRADE YOUR CONVICTIONS
+                {allMarkets.length} MARKETS • TRADE YOUR CONVICTIONS
               </p>
             </div>
 
@@ -75,14 +112,14 @@ export function MarketsPage() {
             <div className="flex items-center gap-6 font-mono text-sm">
               <div className="text-center">
                 <p className="text-2xl font-bold text-yes">
-                  {markets.length}
+                  {marketCounts.active}
                 </p>
-                <p className="text-text-muted text-xs">MARKETS</p>
+                <p className="text-text-muted text-xs">ACTIVE</p>
               </div>
               <div className="h-8 w-px bg-dark-600" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-cyber">
-                  {calculateTotalVolume(markets)}
+                  {calculateTotalVolume(allMarkets)}
                 </p>
                 <p className="text-text-muted text-xs">TOTAL VOL</p>
               </div>
@@ -98,16 +135,25 @@ export function MarketsPage() {
             {/* Filter tabs */}
             <div className="flex items-center gap-2">
               <FilterButton
-                active={showActive}
-                onClick={() => setShowActive(true)}
+                active={filterBy === 'active'}
+                onClick={() => setFilterBy('active')}
+                count={marketCounts.active}
               >
                 ACTIVE
               </FilterButton>
               <FilterButton
-                active={!showActive}
-                onClick={() => setShowActive(false)}
+                active={filterBy === 'expired'}
+                onClick={() => setFilterBy('expired')}
+                count={marketCounts.expired}
               >
-                ALL
+                EXPIRED
+              </FilterButton>
+              <FilterButton
+                active={filterBy === 'resolved'}
+                onClick={() => setFilterBy('resolved')}
+                count={marketCounts.resolved}
+              >
+                RESOLVED
               </FilterButton>
             </div>
 
@@ -174,10 +220,12 @@ function FilterButton({
   active,
   onClick,
   children,
+  count,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  count?: number;
 }) {
   return (
     <button
@@ -190,6 +238,14 @@ function FilterButton({
       )}
     >
       {children}
+      {count !== undefined && (
+        <span className={cn(
+          'ml-1.5 px-1.5 py-0.5 text-[10px] rounded-sm',
+          active ? 'bg-cyber/30' : 'bg-dark-700'
+        )}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }

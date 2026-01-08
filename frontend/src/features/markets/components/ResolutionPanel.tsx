@@ -49,9 +49,21 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const marketId = BigInt(market.marketId);
   
   // Get required bond for proposing
+  // Contract takes 0.3% fee from bond, so we need to send extra to cover it
+  // Formula: bondAfterFee = msg.value - (msg.value * 0.003)
+  // So: msg.value = requiredBond / (1 - 0.003) = requiredBond / 0.997
+  // We add 0.5% buffer to be safe
   const { data: requiredBond } = useRequiredBond(marketId);
-  const bondAmount = (requiredBond as bigint) || 0n;
-  const disputeBond = bondAmount * 2n; // Disputer pays 2× proposer's bond
+  const baseBond = (requiredBond as bigint) || 0n;
+  // Add ~0.5% to cover the 0.3% fee plus some buffer for rounding
+  const bondAmount = baseBond > 0n ? (baseBond * 1005n) / 1000n : 0n;
+  
+  // Dispute bond is 2× the actual proposerBond (stored in market after proposal)
+  // Plus we need to add fee buffer for the dispute transaction too
+  const proposerBondFromMarket = market.proposerBond ? BigInt(market.proposerBond) : 0n;
+  const baseDisputeBond = proposerBondFromMarket * 2n;
+  // Add 0.5% to cover the 0.3% fee plus buffer
+  const disputeBond = baseDisputeBond > 0n ? (baseDisputeBond * 1005n) / 1000n : bondAmount * 2n;
   
   // User's position
   const { position } = usePosition(marketId, address);
@@ -124,7 +136,6 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
     if (!canTrade) return;
     await dispute({
       marketId,
-      proofLink: proofLink || '',
       bond: disputeBond,
     });
   };
@@ -197,18 +208,24 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {/* Dispute Info */}
         {hasDispute && !isResolved && (
           <div className="p-3 bg-dark-800 border border-no/50 text-sm">
-            <p className="text-no font-bold mb-1">⚠️ DISPUTED</p>
-            <div className="flex justify-between text-xs">
+            <p className="text-no font-bold mb-2">⚠️ DISPUTED - VOTING ACTIVE</p>
+            <div className="flex justify-between text-xs mb-1">
               <span className="text-text-muted">Voting ends:</span>
-              <span className="font-mono">{formatTimeLeft(votingWindowEnd)}</span>
+              <span className="font-mono text-cyber">{formatTimeLeft(votingWindowEnd)}</span>
             </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-text-muted">Proposer votes:</span>
-              <span className="font-mono text-yes">{formatShares(BigInt(market.proposerVoteWeight || '0'))}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-text-muted">Disputer votes:</span>
-              <span className="font-mono text-no">{formatShares(BigInt(market.disputerVoteWeight || '0'))}</span>
+            <div className="border-t border-dark-600 pt-2 mt-2 space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-text-muted">
+                  Proposer ({market.proposedOutcome ? <span className="text-yes">YES</span> : <span className="text-no">NO</span>}):
+                </span>
+                <span className="font-mono text-white">{formatShares(BigInt(market.proposerVoteWeight || '0'))} votes</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-text-muted">
+                  Disputer ({market.proposedOutcome ? <span className="text-no">NO</span> : <span className="text-yes">YES</span>}):
+                </span>
+                <span className="font-mono text-white">{formatShares(BigInt(market.disputerVoteWeight || '0'))} votes</span>
+              </div>
             </div>
           </div>
         )}
@@ -250,12 +267,14 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
             <Input
               value={proofLink}
               onChange={(e) => setProofLink(e.target.value)}
-              placeholder="Link to proof (optional)"
+              placeholder="https://... (optional)"
               label="Proof URL"
+              helperText="Link showing evidence of the outcome. Leave empty if evidence link is sufficient."
             />
 
             <div className="text-xs text-text-muted">
               Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>
+              <span className="text-text-muted"> (includes 0.3% fee)</span>
             </div>
 
             <Button
@@ -280,22 +299,16 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {canDispute && !isResolved && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
             <p className="text-sm text-text-secondary">
-              Disagree with the proposal? Dispute it with 2× the bond.
+              Disagree with the proposal? Dispute it to trigger shareholder voting.
             </p>
             
             <div className="text-xs text-text-muted">
               Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(disputeWindowEnd)}</span>
             </div>
 
-            <Input
-              value={proofLink}
-              onChange={(e) => setProofLink(e.target.value)}
-              placeholder="Link to counter-proof (optional)"
-              label="Counter-proof URL"
-            />
-
             <div className="text-xs text-text-muted">
               Required bond: <span className="text-no font-mono">{formatBNB(disputeBond)} BNB</span>
+              <span className="text-text-muted"> (2× proposer bond + 0.3% fee)</span>
             </div>
 
             <Button
@@ -319,12 +332,16 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {/* Vote Section */}
         {canVote && !isResolved && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
-            <p className="text-sm text-text-secondary">
-              Cast your vote. Your vote weight: <span className="text-cyber font-mono">{formatShares(totalShares)}</span> shares
-            </p>
+            <div className="p-3 bg-cyber/10 border border-cyber text-sm">
+              <p className="text-cyber font-bold mb-1">🗳️ YOUR VOTE MATTERS!</p>
+              <p className="text-text-secondary text-xs">
+                Vote weight: <span className="text-cyber font-mono">{formatShares(totalShares)}</span> shares
+              </p>
+            </div>
 
-            <div className="text-xs text-text-muted">
-              Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(votingWindowEnd)}</span>
+            <div className="text-xs text-text-muted space-y-1">
+              <div>Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(votingWindowEnd)}</span></div>
+              <div className="text-yes">💰 No bond required! Only pay gas (~$0.01). Correct voters share jury fees.</div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -336,7 +353,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 {isVoting || isConfirmingVote ? (
                   <Spinner size="sm" variant="yes" />
                 ) : (
-                  'AGREE (YES)'
+                  'VOTE YES'
                 )}
               </Button>
               <Button
@@ -347,7 +364,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 {isVoting || isConfirmingVote ? (
                   <Spinner size="sm" variant="no" />
                 ) : (
-                  'DISAGREE (NO)'
+                  'VOTE NO'
                 )}
               </Button>
             </div>

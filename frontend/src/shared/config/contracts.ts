@@ -218,7 +218,6 @@ export const PREDICTION_MARKET_ABI = [
     stateMutability: 'payable',
     inputs: [
       { name: 'marketId', type: 'uint256' },
-      { name: 'proofLink', type: 'string' },
     ],
     outputs: [],
   },

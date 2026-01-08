@@ -7,6 +7,7 @@
  * @module features/portfolio/pages/PortfolioPage
  */
 
+import { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -20,6 +21,7 @@ import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { cn } from '@/shared/utils/cn';
 import { Link } from 'react-router-dom';
 
+
 // Position with full market data
 interface PositionWithMarket {
   id: string;
@@ -32,6 +34,7 @@ interface PositionWithMarket {
     resolved: boolean;
     outcome?: boolean | null;
     expiryTimestamp: string;
+    imageUrl?: string;
     yesShares?: string;
     noShares?: string;
   };
@@ -39,10 +42,14 @@ interface PositionWithMarket {
   noShares: string;
   totalInvested: string;
   claimed: boolean;
+  hasVoted?: boolean;
 }
+
+type FilterOption = 'all' | 'active' | 'needs-action' | 'claimable';
 
 export function PortfolioPage() {
   const { address, isConnected } = useAccount();
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
 
   const { data, loading, error } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
@@ -68,8 +75,61 @@ export function PortfolioPage() {
 
   const positions = (data?.positions || []) as PositionWithMarket[];
   
+  // Categorize positions
+  const categorizedPositions = useMemo(() => {
+    const now = Date.now();
+    const categories = {
+      active: [] as PositionWithMarket[],
+      needsAction: [] as PositionWithMarket[], // Can vote or needs attention
+      claimable: [] as PositionWithMarket[],
+      archived: [] as PositionWithMarket[],
+    };
+
+    positions.forEach((pos) => {
+      const expiryMs = Number(pos.market.expiryTimestamp) * 1000;
+      const isExpired = now > expiryMs;
+      const isResolved = pos.market.resolved;
+      const isDisputed = pos.market.status === 'Disputed';
+      const canVote = isDisputed && !pos.hasVoted;
+
+      if (isResolved && !pos.claimed) {
+        // Check if user has winning shares
+        const hasWinningShares = pos.market.outcome 
+          ? BigInt(pos.yesShares || '0') > 0n
+          : BigInt(pos.noShares || '0') > 0n;
+        if (hasWinningShares) {
+          categories.claimable.push(pos);
+          return;
+        }
+        categories.archived.push(pos);
+      } else if (canVote) {
+        categories.needsAction.push(pos);
+      } else if (isExpired || isResolved) {
+        categories.archived.push(pos);
+      } else {
+        categories.active.push(pos);
+      }
+    });
+
+    return categories;
+  }, [positions]);
+
+  // Filter positions based on selection
+  const filteredPositions = useMemo(() => {
+    switch (filterBy) {
+      case 'active':
+        return categorizedPositions.active;
+      case 'needs-action':
+        return categorizedPositions.needsAction;
+      case 'claimable':
+        return categorizedPositions.claimable;
+      default:
+        return positions;
+    }
+  }, [filterBy, positions, categorizedPositions]);
+
   // Calculate portfolio stats
-  const stats = calculatePortfolioStats(positions);
+  const stats = calculatePortfolioStats(positions, categorizedPositions);
 
   return (
     <div className="min-h-screen">
@@ -126,16 +186,56 @@ export function PortfolioPage() {
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4">
           {/* Filter tabs */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
             <span className="text-text-muted text-sm font-mono">FILTER:</span>
-            <button className="text-sm font-bold text-cyber border-b-2 border-cyber pb-1">
-              ALL
+            <button 
+              onClick={() => setFilterBy('all')}
+              className={cn(
+                "text-sm font-bold pb-1 transition-colors",
+                filterBy === 'all' 
+                  ? "text-cyber border-b-2 border-cyber" 
+                  : "text-text-secondary hover:text-white"
+              )}
+            >
+              ALL ({positions.length})
             </button>
-            <button className="text-sm font-bold text-text-secondary hover:text-white pb-1">
-              ACTIVE
+            <button 
+              onClick={() => setFilterBy('active')}
+              className={cn(
+                "text-sm font-bold pb-1 transition-colors",
+                filterBy === 'active' 
+                  ? "text-cyber border-b-2 border-cyber" 
+                  : "text-text-secondary hover:text-white"
+              )}
+            >
+              ACTIVE ({categorizedPositions.active.length})
             </button>
-            <button className="text-sm font-bold text-text-secondary hover:text-white pb-1">
-              CLAIMABLE
+            {categorizedPositions.needsAction.length > 0 && (
+              <button 
+                onClick={() => setFilterBy('needs-action')}
+                className={cn(
+                  "text-sm font-bold pb-1 transition-colors flex items-center gap-1",
+                  filterBy === 'needs-action' 
+                    ? "text-warning border-b-2 border-warning" 
+                    : "text-warning/70 hover:text-warning"
+                )}
+              >
+                <span className="animate-pulse">⚡</span>
+                NEEDS ACTION ({categorizedPositions.needsAction.length})
+              </button>
+            )}
+            <button 
+              onClick={() => setFilterBy('claimable')}
+              className={cn(
+                "text-sm font-bold pb-1 transition-colors",
+                filterBy === 'claimable' 
+                  ? "text-yes border-b-2 border-yes" 
+                  : categorizedPositions.claimable.length > 0 
+                    ? "text-yes/70 hover:text-yes" 
+                    : "text-text-secondary hover:text-white"
+              )}
+            >
+              💰 CLAIMABLE ({categorizedPositions.claimable.length})
             </button>
           </div>
 
@@ -147,11 +247,29 @@ export function PortfolioPage() {
             </div>
           ) : error ? (
             <ErrorState message={error.message} />
-          ) : positions.length === 0 ? (
-            <EmptyState />
+          ) : filteredPositions.length === 0 ? (
+            filterBy === 'all' ? (
+              <EmptyState />
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-4xl mb-4">🔍</p>
+                <p className="text-xl font-bold text-white mb-2">NO {filterBy.toUpperCase().replace('-', ' ')} POSITIONS</p>
+                <p className="text-text-secondary mb-6">
+                  {filterBy === 'needs-action' && "No markets need your vote right now"}
+                  {filterBy === 'claimable' && "No winnings to claim at the moment"}
+                  {filterBy === 'active' && "No active positions in open markets"}
+                </p>
+                <button 
+                  onClick={() => setFilterBy('all')}
+                  className="text-cyber hover:underline"
+                >
+                  View all positions →
+                </button>
+              </div>
+            )
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {positions.map((position) => (
+              {filteredPositions.map((position) => (
                 <PositionCard key={position.id} position={position} />
               ))}
             </div>
@@ -229,10 +347,18 @@ function EmptyState() {
   );
 }
 
-function calculatePortfolioStats(positions: PositionWithMarket[]) {
+function calculatePortfolioStats(
+  positions: PositionWithMarket[],
+  categorizedPositions: {
+    active: PositionWithMarket[];
+    needsAction: PositionWithMarket[];
+    claimable: PositionWithMarket[];
+    archived: PositionWithMarket[];
+  }
+) {
   let totalInvested = 0;
   let totalValue = 0;
-  let claimable = 0;
+  let claimableValue = 0;
 
   positions.forEach((pos) => {
     const invested = Number(pos.totalInvested || 0) / 1e18;
@@ -253,12 +379,20 @@ function calculatePortfolioStats(positions: PositionWithMarket[]) {
         totalValue += (Number(yesShares) / 1e18) * yesPrice;
         totalValue += (Number(noShares) / 1e18) * noPrice;
       }
+    }
+  });
 
-      // Check if resolved and claimable
-      if (pos.market.status === 'Resolved') {
-        // Simplified - would need actual resolution outcome
-        claimable += invested * 0.5; // Placeholder
-      }
+  // Calculate claimable value from winning positions
+  categorizedPositions.claimable.forEach((pos) => {
+    const outcome = pos.market.outcome;
+    if (outcome === true) {
+      // YES won - user gets 0.01 BNB per YES share
+      const yesShares = Number(pos.yesShares || '0') / 1e18;
+      claimableValue += yesShares * 0.01;
+    } else if (outcome === false) {
+      // NO won - user gets 0.01 BNB per NO share
+      const noShares = Number(pos.noShares || '0') / 1e18;
+      claimableValue += noShares * 0.01;
     }
   });
 
@@ -267,7 +401,7 @@ function calculatePortfolioStats(positions: PositionWithMarket[]) {
     totalInvested,
     totalValue,
     totalPnL: totalValue - totalInvested,
-    claimable,
+    claimable: claimableValue,
   };
 }
 

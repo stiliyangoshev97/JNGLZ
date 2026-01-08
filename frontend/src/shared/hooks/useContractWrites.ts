@@ -311,7 +311,7 @@ export function useProposeOutcome() {
 /**
  * Dispute a proposed outcome
  * 
- * Contract: dispute(marketId, proofLink) payable
+ * Contract: dispute(marketId) payable
  * Bond: 2× proposer's bond
  * Must be within 30 min dispute window
  */
@@ -324,14 +324,13 @@ export function useDispute() {
 
   const dispute = async (params: {
     marketId: bigint;
-    proofLink: string;
-    bond: bigint; // 2× proposer's bond
+    bond: bigint; // 2× proposer's bond + fee buffer
   }) => {
     writeContract({
       address: PREDICTION_MARKET_ADDRESS,
       abi: PREDICTION_MARKET_ABI,
       functionName: 'dispute',
-      args: [params.marketId, params.proofLink],
+      args: [params.marketId],
       value: params.bond,
     });
   };
