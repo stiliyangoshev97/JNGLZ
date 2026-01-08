@@ -13,7 +13,7 @@
 | Phase 0: Project Setup | ✅ Complete | 100% |
 | Phase 1: Smart Contracts | ✅ Complete | 100% (163 tests) |
 | Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v2.5.0 with marketCreationFee) |
-| Phase 2: Subgraph | ✅ Code Complete | 95% (awaiting deploy) |
+| Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.1) |
 | Phase 3: Frontend | ⬜ Not Started | 0% |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
@@ -24,13 +24,14 @@
 - **Block:** 83243447
 - **Features:** imageUrl + marketCreationFee (defaults to 0 = free)
 
-### 📊 Subgraph v1.2.0 (January 8, 2026)
-- **Status:** Code complete, builds successfully
-- **Contract Address:** Updated to v2.5.0 (`0x3988808940d027a70FE2D0938Cf06580bbad19F9`)
+### 📊 Subgraph v0.0.1 (January 8, 2026)
+- **Status:** ✅ Deployed to The Graph Studio
+- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1`
+- **Studio URL:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+- **Contract Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
 - **Start Block:** 83243447
 - **Entities:** 8 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats)
 - **Event Handlers:** 10 (all contract events indexed)
-- **Next Step:** Deploy to Subgraph Studio (requires user account setup)
 
 ---
 

@@ -31,6 +31,13 @@
 - **Resolution Reward**: 0.3% (goes to resolver)
 - **Market Creation Fee**: 0 (free by default, MultiSig configurable)
 
+### Subgraph (The Graph)
+- **Subgraph Name**: junkiefun-bnb-testnet
+- **Version**: v0.0.1
+- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+- **Studio URL**: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+- **Status**: ✅ Deployed (indexing from block 83243447)
+
 ### MultiSig Signers (3-of-3)
 - Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
 - Signer 2: 0xC119B9152afcC5f40C019aABd78A312d37C63926

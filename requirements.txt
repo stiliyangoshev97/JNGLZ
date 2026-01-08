@@ -1,7 +1,7 @@
 # Junkie.Fun - Dependencies
 
-> **Last Updated:** January 6, 2026  
-> **Status:** Planning Phase  
+> **Last Updated:** January 8, 2026  
+> **Status:** Testnet Deployed (v2.5.0)  
 
 This file documents all dependencies for deployment and PC migration.
 
@@ -46,6 +46,11 @@ viem                ^2.x.x             # Ethereum client
 zustand             ^5.x.x             # Global state management
 @tanstack/react-query ^5.x.x           # Server state / data fetching
 
+# --- GraphQL Client (The Graph) ---
+@apollo/client      ^3.x.x             # GraphQL client for The Graph
+graphql             ^16.x.x            # GraphQL core library
+graphql-tag         ^2.x.x             # GraphQL template literals (gql``)
+
 # --- Forms & Validation ---
 react-hook-form     ^7.x.x             # Form management
 @hookform/resolvers ^3.x.x             # Form resolvers
@@ -72,30 +77,46 @@ eslint              ^9.x.x             # Linting
 # cd frontend && npm install
 
 # ============================================================================
-# SUBGRAPH (The Graph)
+# SUBGRAPH (The Graph) - ✅ DEPLOYED
 # ============================================================================
 
-@graphprotocol/graph-cli    latest     # Graph CLI for deployment
-@graphprotocol/graph-ts     latest     # AssemblyScript for mappings
+@graphprotocol/graph-cli    ^0.93.x    # Graph CLI for deployment
+@graphprotocol/graph-ts     ^0.35.x    # AssemblyScript for mappings
+assemblyscript              ^0.19.x    # AssemblyScript compiler (peer dep)
+
+# Deployed Subgraph:
+# - Name: junkiefun-bnb-testnet
+# - Version: v0.0.1
+# - Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+# - Studio: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
 
 # Installation:
 # npm install -g @graphprotocol/graph-cli
 # cd subgraph && npm install
+# graph auth --studio <deploy-key>
+# graph codegen && graph build
+# graph deploy --studio junkiefun-bnb-testnet
 
 # ============================================================================
 # EXTERNAL SERVICES
 # ============================================================================
 
 The Graph Studio     -                 # Subgraph hosting (https://thegraph.com/studio)
+                                       # ✅ junkiefun-bnb-testnet deployed
 WalletConnect        -                 # Wallet connection (Project ID required)
 Vercel               -                 # Frontend hosting (optional)
+BscScan              -                 # Contract verification (API key required)
 
 # ============================================================================
 # BLOCKCHAIN (Target Chains)
 # ============================================================================
 
-BNB Chain Testnet   Chain ID: 97       # Development
-BNB Chain Mainnet   Chain ID: 56       # Production
+BNB Chain Testnet   Chain ID: 97       # Development ✅ Contract deployed
+BNB Chain Mainnet   Chain ID: 56       # Production (pending)
+
+# Deployed Contracts:
+# - PredictionMarket v2.5.0: 0x3988808940d027a70FE2D0938Cf06580bbad19F9
+# - BscScan: https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
 
 # RPC URLs:
 # Testnet: https://bsc-testnet-rpc.publicnode.com
@@ -105,9 +126,9 @@ BNB Chain Mainnet   Chain ID: 56       # Production
 # EXTERNAL CONTRACTS (BNB Chain)
 # ============================================================================
 
-# UMA OOv3 (Optimistic Oracle V3):
-# Mainnet: TBD (check https://docs.uma.xyz)
-# Testnet: TBD
+# JunkieFun PredictionMarket (v2.5.0):
+# Testnet: 0x3988808940d027a70FE2D0938Cf06580bbad19F9 ✅
+# Mainnet: TBD
 
 # WBNB (Wrapped BNB):
 # Mainnet: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
@@ -150,4 +171,6 @@ BNB Chain Mainnet   Chain ID: 56       # Production
 
 # - No backend (Express/MongoDB) needed - The Graph handles all indexing
 # - No SIWE/JWT - wallet connection only
-# - Native BNB for trading, WBNB only for UMA bond
+# - Native BNB for trading (no WBNB needed)
+# - Street Consensus resolution (no external oracles)
+# - 163 tests passing (72 unit + 32 fuzz + security tests)

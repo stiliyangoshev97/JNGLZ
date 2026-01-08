@@ -17,14 +17,29 @@
 
 ---
 
-## 🚀 Contract Addresses (BNB Testnet)
+## 🚀 Testnet Configuration
 
-| Contract | Address | Notes |
-|----------|---------|-------|
-| PredictionMarket (v2.4.0) | `0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9` | Latest with imageUrl |
-| Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` | Platform fees |
+### Contract (BNB Testnet - Chain ID: 97)
+| Item | Value |
+|------|-------|
+| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` |
+| Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
+| BscScan | https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9 |
 
-**BscScan:** https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
+### Subgraph (The Graph)
+| Item | Value |
+|------|-------|
+| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1` |
+| Studio Dashboard | https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet |
+
+### Environment Variables (.env)
+```env
+# BNB Testnet
+VITE_CONTRACT_ADDRESS=0x3988808940d027a70FE2D0938Cf06580bbad19F9
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+VITE_CHAIN_ID=97
+VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
+```
 
 ---
 

@@ -2,13 +2,18 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 8, 2026  
-> **Status:** ✅ Code Complete (v1.2.0) - Ready for Deployment
+> **Status:** ✅ Deployed (v0.0.1)
 
 ---
 
 ## 🎯 Subgraph Overview
 
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
+
+### GraphQL Endpoint (Testnet)
+```
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.1
+```
 
 ### Contract Details (Testnet)
 - **Address:** `0x3988808940d027a70FE2D0938Cf06580bbad19F9`
@@ -33,12 +38,11 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 | Mappings | ✅ 100% | 10 event handlers |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Subgraph Studio Account | ⬜ 0% | **USER ACTION NEEDED** |
-| Testnet Deployment | ⬜ 0% | Waiting for Studio account |
+| Testnet Deployment | ✅ 100% | v0.0.1 deployed to The Graph Studio |
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 
-**Overall Progress: 95%** (code complete, awaiting Studio setup & deployment)
+**Overall Progress: 100%** ✅
 
 ---
 
