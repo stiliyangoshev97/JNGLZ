@@ -4,6 +4,7 @@
 # Use these prompts to quickly onboard AI assistants to the project state.
 # Copy and paste the relevant prompt when starting a new chat.
 # Last Updated: January 8, 2026
+# Contract Version: v3.1.0 (Heat Levels + SweepFunds)
 
 ================================================================================
 PROMPT #1: FULL PROJECT CONTEXT (Recommended for new chats)
@@ -12,9 +13,9 @@ PROMPT #1: FULL PROJECT CONTEXT (Recommended for new chats)
 I'm working on JunkieFun - a decentralized prediction market platform on BNB Chain. Please review the project to understand the current state.
 
 **PROJECT STATUS:**
-- ✅ Smart Contracts: COMPLETE (116 tests passing)
+- ✅ Smart Contracts: COMPLETE (173 tests passing, v3.1.0)
 - ✅ Subgraph: COMPLETE (deployed to The Graph)
-- 🟡 Frontend: IN PROGRESS (~70% - UI complete, contract hooks pending)
+- ✅ Frontend: ~95% COMPLETE (UI + contract hooks done)
 - ⬜ Deployment: NOT STARTED (mainnet)
 
 **Read these files in order:**
@@ -32,7 +33,8 @@ I'm working on JunkieFun - a decentralized prediction market platform on BNB Cha
 - **Street Consensus resolution** (NO external oracles, bettors vote on outcomes)
 - Fee structure: 1% platform + 0.5% creator + 0.3% resolution = 1.8% total
 - Dual bonding curve: P(YES) + P(NO) = 0.01 BNB (always)
-- Virtual liquidity: 100 YES + 100 NO shares at start
+- **Heat Levels (v3.1.0):** CRACK=5, HIGH=20, PRO=50 virtual liquidity
+- **SweepFunds (v3.1.0):** MultiSig can recover surplus BNB
 - **Frontend uses "High-Energy Brutalism" design** (black bg, harsh borders, no rounded corners)
 
 After reviewing, summarize where we are and ask what I want to work on.
@@ -44,9 +46,9 @@ PROMPT #2: QUICK STATUS CHECK (For shorter sessions)
 Junkie.Fun project quick check:
 
 **STATUS:**
-- ✅ Smart contracts: 100% complete (116 tests)
+- ✅ Smart contracts: 100% complete (173 tests, v3.1.0)
 - ✅ Subgraph: Deployed to The Graph
-- 🟡 Frontend: ~70% complete (UI done, contract hooks pending)
+- ✅ Frontend: ~95% complete (UI + contract hooks done)
 
 Please:
 1. Read `/TODO.md` - Focus on what's complete vs pending
@@ -59,10 +61,14 @@ Please:
 - Apollo Client v4 + The Graph
 - Tailwind CSS ("High-Energy Brutalism" design)
 
+**v3.1.0 Features:**
+- Heat Levels: CRACK (5), HIGH (20), PRO (50) virtual liquidity
+- SweepFunds: MultiSig can recover surplus BNB
+- Removed proofLink from proposeOutcome()
+
 **Next tasks:**
-- Contract interaction hooks (useBuyYes, useSellYes, etc.)
-- Wire up TradePanel to actual contract
-- Add Supabase for comments (future)
+- Mainnet deployment preparation
+- Final testing & QA
 
 Ask what I want to work on.
 
@@ -70,7 +76,7 @@ Ask what I want to work on.
 PROMPT #3: SMART CONTRACTS CONTEXT (For contract work)
 ================================================================================
 
-I need help with Junkie.Fun smart contracts. The contracts are COMPLETE but I may need modifications.
+I need help with Junkie.Fun smart contracts. The contracts are COMPLETE (v3.1.0) but I may need modifications.
 
 **Read:**
 1. `/contracts/README.md` - Street Consensus flow & economics
@@ -78,15 +84,18 @@ I need help with Junkie.Fun smart contracts. The contracts are COMPLETE but I ma
 3. `/contracts/src/PredictionMarket.sol` - The full contract
 4. `/contracts/PROFIT.txt` - Pump & dump economics proof
 
-**Contract Summary:**
-- 1445 lines of Solidity 0.8.24
-- 116 tests passing (52 unit + 29 fuzz + 31 features + 4 vulnerability)
+**Contract Summary (v3.1.0):**
+- ~1500 lines of Solidity 0.8.24
+- 173 tests passing (52 unit + 29 fuzz + 77 features + 15 heat level)
 - **Street Consensus resolution** (NO external oracles like UMA)
 
-**Features:**
-- createMarket, createMarketAndBuy, buyYes/No, sellYes/No
-- proposeOutcome, dispute, vote, finalizeMarket
+**v3.1.0 Features:**
+- createMarket, createMarketAndBuy (now require HeatLevel parameter)
+- **Heat Levels:** CRACK=5, HIGH=20, PRO=50 virtual liquidity
+- buyYes/No, sellYes/No
+- proposeOutcome (proofLink removed), dispute, vote, finalizeMarket
 - claim, emergencyRefund
+- **SweepFunds:** MultiSig can recover surplus BNB above locked funds
 
 **Fee: 1.8% total:**
 - 1% platform + 0.5% creator on trades
@@ -104,6 +113,7 @@ I need help with Junkie.Fun smart contracts. The contracts are COMPLETE but I ma
 - Early buyer profits +36.6% when late buyer enters
 - Late buyer loses ~27% when early buyer dumps
 - Pool never goes negative (InsufficientPoolBalance protection)
+- Heat level is immutable per market (MultiSig changes only affect NEW markets)
 
 What contract work do you need?
 
@@ -111,7 +121,7 @@ What contract work do you need?
 PROMPT #4: CONTINUE FRONTEND (For continuing frontend development)
 ================================================================================
 
-I want to continue the Junkie.Fun frontend. UI is ~70% complete.
+I want to continue the Junkie.Fun frontend. UI is ~95% complete.
 
 **Current State:**
 - ✅ Project setup (Vite + React 19 + TypeScript)
@@ -121,8 +131,9 @@ I want to continue the Junkie.Fun frontend. UI is ~70% complete.
 - ✅ GraphQL setup (Apollo Client v4 + The Graph)
 - ✅ All pages (Markets, MarketDetail, Create, Portfolio)
 - ✅ Chain validation (WrongNetworkModal prevents Phantom stuck issue)
-- ⬜ Contract interaction hooks (useBuyYes, useSellYes, etc.)
-- ⬜ Wire TradePanel to actual contract
+- ✅ Contract interaction hooks (useBuyYes, useSellYes, etc.)
+- ✅ TradePanel wired to contract
+- ⬜ Heat Level selector in Create page (v3.1.0)
 - ⬜ Supabase for comments (future)
 
 **Read:**
@@ -141,6 +152,7 @@ I want to continue the Junkie.Fun frontend. UI is ~70% complete.
 - GraphQL queries use subgraph field names: `expiryTimestamp`, `poolBalance`, `evidenceLink`
 - `formatBNB()` handles both BigInt and string inputs
 - Chain validation prevents wrong-network issues
+- **v3.1.0:** createMarket now requires HeatLevel parameter
 
 **Contract to Frontend:**
 | Contract | Address |
@@ -185,20 +197,25 @@ PROMPT #6: CONTINUE FROM LAST SESSION
 Continuing Junkie.Fun development.
 
 **Current status:**
-- ✅ Smart Contracts: COMPLETE (116 tests, v2.5.0)
+- ✅ Smart Contracts: COMPLETE (173 tests, v3.1.0)
 - ✅ Subgraph: DEPLOYED (The Graph Studio)
-- 🟡 Frontend: ~70% COMPLETE (UI done, contract hooks pending)
+- ✅ Frontend: ~95% COMPLETE (UI + contract hooks done)
 - ⬜ Mainnet Deployment: NOT STARTED
+
+**v3.1.0 Contract Features:**
+- Heat Levels: CRACK=5, HIGH=20, PRO=50 virtual liquidity
+- SweepFunds: MultiSig can recover surplus BNB
+- Removed proofLink from proposeOutcome()
 
 **Frontend completed:**
 - All UI components (brutalist theme)
 - All pages (Markets, MarketDetail, Create, Portfolio)
 - GraphQL queries (Apollo Client)
 - Chain validation (wrong network handling)
+- Contract interaction hooks
 
 **Frontend pending:**
-- Contract interaction hooks (useBuyYes, useSellYes, etc.)
-- Wire TradePanel to contract
+- Heat Level selector in Create page
 - Supabase comments (future)
 
 **Read:**
@@ -255,9 +272,12 @@ Simple majority wins, bonds distributed:
 | Who decides | UMA token holders | **Actual bettors** |
 | Complexity | High (WBNB wrapping) | **Simple (native BNB)** |
 
-**Key Constants:**
+**Key Constants (v3.1.0):**
 - Unit Price: 0.01 BNB (P_YES + P_NO always equals this)
-- Virtual Liquidity: 100 YES + 100 NO shares
+- Virtual Liquidity: **Configurable per market via HeatLevel**
+  - CRACK: 5 (max volatility, ~16% price impact per 0.01 BNB)
+  - HIGH: 20 (~4.7% price impact per 0.01 BNB)
+  - PRO: 50 (default, ~1.9% price impact per 0.01 BNB)
 - Min Bet: 0.005 BNB
 - Platform Fee: 1% (to treasury)
 - Creator Fee: 0.5% (to market creator)
@@ -284,19 +304,23 @@ Simple majority wins, bonds distributed:
 3. `/contracts/README.md` - Street Consensus explained
 4. `/contracts/PROJECT_CONTEXT.md` - Contract architecture
 5. `/contracts/PROFIT.txt` - Pump & dump math proof
-6. `/contracts/CHANGELOG.md` - Version history (v2.0.0 = Street Consensus)
+6. `/contracts/CHANGELOG.md` - Version history (v3.1.0 = Heat Levels + SweepFunds)
 
 ================================================================================
-CONTRACT INTERFACE QUICK REFERENCE
+CONTRACT INTERFACE QUICK REFERENCE (v3.1.0)
 ================================================================================
 
 ```solidity
+// ===== Heat Levels =====
+enum HeatLevel { CRACK, HIGH, PRO }  // 5, 20, 50 virtual liquidity
+
 // ===== Market Creation =====
 function createMarket(
     string question,
     string evidenceLink,
     string resolutionRules,
-    uint256 expiryTimestamp
+    uint256 expiryTimestamp,
+    HeatLevel heatLevel       // NEW in v3.1.0
 ) returns (uint256 marketId)
 
 function createMarketAndBuy(
@@ -305,7 +329,8 @@ function createMarketAndBuy(
     string resolutionRules,
     uint256 expiryTimestamp,
     bool buyYesSide,
-    uint256 minSharesOut
+    uint256 minSharesOut,
+    HeatLevel heatLevel       // NEW in v3.1.0
 ) payable returns (uint256 marketId, uint256 sharesOut)
 
 // ===== Trading =====
@@ -315,7 +340,7 @@ function sellYes(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (u
 function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (uint256)
 
 // ===== Street Consensus Resolution =====
-function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+function proposeOutcome(uint256 marketId, bool outcome) payable  // proofLink REMOVED in v3.1.0
 function dispute(uint256 marketId, string proofLink) payable
 function vote(uint256 marketId, bool supportProposer)
 function finalizeMarket(uint256 marketId)
@@ -337,7 +362,7 @@ function getPosition(uint256 marketId, address user) view returns (
     bool hasVoted, 
     bool votedForProposer
 )
-function getMarket(uint256 marketId) view returns (...)
+function getMarket(uint256 marketId) view returns (...)  // Returns 22 fields including virtualLiquidity
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
 // MarketStatus: Active, Expired, Proposed, Disputed, Resolved
 function getRequiredBond(uint256 marketId) view returns (uint256)
@@ -345,45 +370,31 @@ function canEmergencyRefund(uint256 marketId) view returns (bool, uint256)
 ```
 
 ================================================================================
-TEST RESULTS SUMMARY (116 tests passing)
+TEST RESULTS SUMMARY (173 tests passing - v3.1.0)
 ================================================================================
 
 ```
 ╭────────────────────────────────+--------+--------+---------╮
 | Test Suite                     | Passed | Failed | Skipped |
 +================================================================+
-| PredictionMarket.t.sol         | 52     | 0      | 0       |  <- Unit tests
+| PredictionMarket.t.sol         | 67     | 0      | 0       |  <- Unit + Heat Level tests
 | PredictionMarket.fuzz.t.sol    | 29     | 0      | 0       |  <- Fuzz tests
 | PumpDump.t.sol                 | 31     | 0      | 0       |  <- Economics + Features
+| Integration.t.sol              | 30     | 0      | 0       |  <- Integration tests
 | VulnerabilityCheck.t.sol       | 4      | 0      | 0       |  <- Security tests
+| InstantSellAnalysis.t.sol      | 12     | 0      | 0       |  <- Sell mechanics tests
 ╰────────────────────────────────+--------+--------+---------╯
 ```
 
-**Street Consensus Test Results:**
-- test_ProposeOutcome_Success ✅
-- test_ProposeOutcome_CreatorPriority ✅
-- test_ProposeOutcome_AfterPriorityWindow ✅
-- test_Dispute_Success ✅
-- test_Dispute_RequiresDoubleBond ✅
-- test_Vote_Success ✅
-- test_Vote_WeightedByShares ✅
-- test_FinalizeMarket_ProposerWins ✅
-- test_FinalizeMarket_DisputerWins ✅
-- test_FinalizeMarket_TieReturnsBonds ✅
-- test_JuryFee_DistributedToVoters ✅
-
-**Pump & Dump Test Results:**
-- test_PumpDump_EarlyBuyerProfits: Alice spent 1 BNB, received 1.366 BNB ✅
-- test_PumpDump_LateBuyerLosesValue: Bob lost 27% ✅
-- test_PumpDump_PoolNeverNegative: Pool >= 0 always ✅
-- test_PumpDump_InsufficientPoolBalanceProtection: Over-withdrawal blocked ✅
-- test_PumpDump_FeesCollected: 1% platform + 0.5% creator ✅
-- test_PumpDump_CreatorFirstMoverAdvantage: Creator gets more shares ✅
-
-**Emergency Refund Test Results:**
-- test_EmergencyRefund_AfterTimeout ✅
-- test_EmergencyRefund_RevertTooEarly ✅
-- test_EmergencyRefund_RevertIfProposed ✅
-- test_EmergencyRefund_RevertIfResolved ✅
+**Heat Level Tests (NEW in v3.1.0):**
+- test_HeatLevel_CrackMarket_HighVolatility ✅
+- test_HeatLevel_HighMarket_MediumVolatility ✅
+- test_HeatLevel_ProMarket_LowVolatility ✅
+- test_HeatLevel_Immutability ✅
+- test_HeatLevel_DefaultSetting ✅
+- test_HeatLevel_CreateMarketAndBuy ✅
+- test_SweepFunds_Success ✅
+- test_SweepFunds_RevertsWhenNoSurplus ✅
+- test_SweepFunds_OnlyViaSig ✅
 
 ================================================================================

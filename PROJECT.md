@@ -178,12 +178,22 @@ P(YES) + P(NO) = 0.01 BNB (always!)
 
 This is a **Constant Sum Linear Curve**. The two prices always add up to 0.01 BNB.
 
-### Virtual Liquidity
+### Virtual Liquidity & Heat Levels (v3.1.0)
 
-Markets start with **100 virtual YES and 100 virtual NO shares** (scaled to 1e18). This:
+Markets start with **virtual YES and virtual NO shares** (scaled to 1e18). The amount depends on the **Heat Level**:
+
+| Heat Level | Virtual Liquidity | Price Impact | Description |
+|------------|------------------|--------------|-------------|
+| **CRACK** 🔥🔥🔥 | 5 | ~16% per 0.01 BNB | Maximum volatility, meme markets |
+| **HIGH** 🔥🔥 | 20 | ~4.7% per 0.01 BNB | High action, trending topics |
+| **PRO** 🔥 | 50 (default) | ~1.9% per 0.01 BNB | Stable, serious predictions |
+
+This:
 - Sets initial price at exactly **0.005 BNB** for both sides (50/50)
 - Provides instant liquidity without real capital
 - Prevents division by zero
+- **Is immutable per market** - Once created, a market keeps its heat level forever
+- **Lower liquidity = higher price impact** - CRACK markets are for degens who want big swings
 
 ### Price Dynamics
 
@@ -195,10 +205,10 @@ Markets start with **100 virtual YES and 100 virtual NO shares** (scaled to 1e18
 
 ### Formulas
 
-**Price Calculation:**
+**Formulas:**
 ```
-virtualYes = yesSupply + 100e18
-virtualNo = noSupply + 100e18
+virtualYes = yesSupply + virtualLiquidity (5, 20, or 50 based on HeatLevel)
+virtualNo = noSupply + virtualLiquidity
 totalVirtual = virtualYes + virtualNo
 
 P(YES) = 0.01 BNB × virtualYes / totalVirtual
@@ -409,12 +419,15 @@ MARKET EXPIRES
 
 ---
 
-## Part 6: Contract Constants
+## Part 6: Contract Constants (v3.1.0)
 
 | Parameter | Value | Configurable? |
 |-----------|-------|---------------|
 | UNIT_PRICE | 0.01 BNB | No |
-| VIRTUAL_LIQUIDITY | 100e18 | No |
+| Virtual Liquidity (CRACK) | 5e18 | No (per market) |
+| Virtual Liquidity (HIGH) | 20e18 | No (per market) |
+| Virtual Liquidity (PRO) | 50e18 | No (per market) |
+| Default Heat Level | PRO (50) | Yes (via MultiSig) |
 | Platform Fee | 1% (100 bps) | Yes (0-5% via MultiSig) |
 | Creator Fee | 0.5% (50 bps) | Yes (0-2% via MultiSig) |
 | Resolution Fee | 0.3% (30 bps) | Yes (0-1% via MultiSig) |
@@ -428,6 +441,13 @@ MARKET EXPIRES
 | Emergency Refund | 24 hours | No |
 | MultiSig | 3-of-3 | No |
 | Action Expiry | 1 hour | No |
+
+**MultiSig Governance Actions:**
+- `SetFee` - Adjust platform/creator/resolution fees
+- `Pause` - Emergency pause all market operations
+- `Unpause` - Resume operations
+- `SetDefaultHeatLevel` - Change default for new markets
+- `SweepFunds` - Recover surplus BNB above locked funds
 
 ---
 
@@ -445,25 +465,34 @@ MARKET EXPIRES
 
 ### ✅ Completed
 
-1. **Smart Contracts**
-   - PredictionMarket.sol (fully implemented, 1445 lines)
-   - 116 tests passing (52 unit + 29 fuzz + 31 features + 4 vulnerability)
+1. **Smart Contracts (v3.1.0)**
+   - PredictionMarket.sol (fully implemented, ~1500 lines)
+   - 173 tests passing (52 unit + 29 fuzz + 77 features + 15 heat level)
    - All features working:
-     - Market creation (free)
+     - Market creation (free) with Heat Level selection
      - createMarketAndBuy (atomic first buy)
      - Buy/Sell YES/NO with bonding curve
      - Platform fee (1%) + Creator fee (0.5%) + Resolution fee (0.3%)
      - **Street Consensus resolution** (propose/dispute/vote/finalize)
+     - **Heat Levels** (CRACK/HIGH/PRO for different volatility)
      - Emergency refund (24h timeout)
      - Winner claims
      - 3-of-3 MultiSig governance
+     - **SweepFunds** - Recover surplus BNB via MultiSig
      - Pause/unpause
+
+2. **Subgraph** - DEPLOYED (The Graph Studio)
+
+3. **Frontend** - ~95% COMPLETE
+   - All UI components (brutalist theme)
+   - All pages (Markets, MarketDetail, Create, Portfolio)
+   - GraphQL queries working
+   - Contract integration hooks
+   - Chain validation
 
 ### 🔄 In Progress
 
-2. **Frontend** - Not started
-3. **Subgraph** - Not started
-4. **Deployment** - Not started
+4. **Deployment** - Mainnet deployment pending
 
 ---
 
@@ -495,15 +524,19 @@ JunkieFun/
 
 ---
 
-## Quick Reference: Contract Interface
+## Quick Reference: Contract Interface (v3.1.0)
 
 ```solidity
-// Create market (free)
+// Heat levels for market volatility
+enum HeatLevel { CRACK, HIGH, PRO }  // 5, 20, 50 virtual liquidity
+
+// Create market (free) - defaults to contract's defaultHeatLevel
 function createMarket(
     string question,
     string evidenceLink, 
     string resolutionRules,
-    uint256 expiryTimestamp
+    uint256 expiryTimestamp,
+    HeatLevel heatLevel      // NEW in v3.1.0
 ) returns (uint256 marketId)
 
 // Create market + buy atomically (anti-frontrun)
@@ -513,7 +546,8 @@ function createMarketAndBuy(
     string resolutionRules, 
     uint256 expiryTimestamp,
     bool buyYesSide,        // true=YES, false=NO
-    uint256 minSharesOut    // slippage protection
+    uint256 minSharesOut,   // slippage protection
+    HeatLevel heatLevel     // NEW in v3.1.0
 ) payable returns (uint256 marketId, uint256 sharesOut)
 
 // Trading
@@ -523,7 +557,7 @@ function sellYes(uint256 marketId, uint256 shares, uint256 minBnbOut)
 function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut)
 
 // Street Consensus Resolution
-function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+function proposeOutcome(uint256 marketId, bool outcome) payable  // proofLink removed in v3.1.0
 function dispute(uint256 marketId, string proofLink) payable
 function vote(uint256 marketId, bool supportProposer)
 function finalizeMarket(uint256 marketId)
@@ -545,7 +579,7 @@ function getPosition(uint256 marketId, address user) view returns (
     bool hasVoted,
     bool votedForProposer
 )
-function getMarket(uint256 marketId) view
+function getMarket(uint256 marketId) view  // Returns 22 fields including virtualLiquidity
 function getMarketStatus(uint256 marketId) view returns (MarketStatus)
 // MarketStatus: Active, Expired, Proposed, Disputed, Resolved
 function getRequiredBond(uint256 marketId) view returns (uint256)
