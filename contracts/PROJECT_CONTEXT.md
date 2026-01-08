@@ -1,8 +1,8 @@
 # 📋 Junkie.Fun - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 8, 2026  
-> **Status:** ✅ Smart Contracts Complete & Deployed (v2.5.0, 163 tests)
+> **Last Updated:** January 9, 2026  
+> **Status:** ✅ Smart Contracts Complete (v3.1.0, 173 tests)
 
 ---
 
@@ -11,6 +11,7 @@
 | Contract | Address | Status |
 |----------|---------|--------|
 | PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ✅ Verified |
+| PredictionMarket (v3.1.0) | Not yet deployed | ⏳ Pending |
 
 **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
 **Deployed Block:** 83243447
@@ -21,6 +22,7 @@
 
 **PredictionMarket.sol** is a single monolithic smart contract that handles:
 - Market creation with optional fee (defaults to 0 = free) with **imageUrl** support
+- **Heat Levels** - configurable per-market virtual liquidity (CRACK/HIGH/PRO)
 - Trading YES/NO shares via bonding curve
 - **Street Consensus** resolution (bettors vote on outcomes)
 - Winner payouts after resolution
@@ -28,6 +30,7 @@
 - Voter jury fee incentives (50% of loser's bond)
 - Dynamic bond pricing
 - 3-of-3 MultiSig governance
+- **SweepFunds** - recover surplus/dust BNB from contract
 
 ---
 
@@ -37,6 +40,7 @@
 |-----------|----------|-------|
 | Project Setup | ✅ 100% | Foundry initialized |
 | Core Contract | ✅ 100% | PredictionMarket.sol complete |
+| Heat Levels | ✅ 100% | CRACK/HIGH/PRO per-market volatility |
 | Bonding Curve Math | ✅ 100% | P(yes) + P(no) = 0.01 BNB |
 | Fee System | ✅ 100% | 1% platform + 0.5% creator + 0.3% resolution |
 | Market Creation Fee | ✅ 100% | Optional fee (defaults to 0), MultiSig configurable |
@@ -44,17 +48,41 @@
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
-| Image URL | ✅ 100% | Market thumbnail support (v2.4.0) |
-| Unit Tests | ✅ 100% | 72 tests passing |
+| Image URL | ✅ 100% | Market thumbnail support |
+| SweepFunds | ✅ 100% | Governance can recover surplus BNB |
+| Unit Tests | ✅ 100% | 82 tests passing |
 | Fuzz Tests | ✅ 100% | 32 tests passing |
 | Feature Tests | ✅ 100% | 31 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | Instant Sell Analysis | ✅ 100% | 8 tests passing |
 | Integration Tests | ✅ 100% | 16 tests passing |
-| Testnet Deployment | ✅ 100% | v2.4.0 deployed & verified |
+| Testnet Deployment | ⏳ 90% | v2.5.0 deployed, v3.1.0 pending |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 163 ✅**
+**Total Tests: 173 ✅**
+
+---
+
+## 🔥 Heat Levels (v3.1.0)
+
+Configurable per-market virtual liquidity for different trading styles:
+
+| Level | Name | Virtual Liquidity | Target Bet | Price Impact |
+|-------|------|-------------------|------------|--------------|
+| ☢️ CRACK | Degen Flash | 5 × 1e18 | 0.005-0.1 BNB | ~15% per 0.05 BNB |
+| 🔥 HIGH | Street Fight (DEFAULT) | 20 × 1e18 | 0.1-1.0 BNB | ~15% per 0.5 BNB |
+| 🧊 PRO | Whale Pond | 50 × 1e18 | 1.0-5.0+ BNB | ~15% per 2.0 BNB |
+
+**State Variables:**
+```solidity
+uint256 public heatLevelCrack = 5 * 1e18;   // Configurable by MultiSig
+uint256 public heatLevelHigh = 20 * 1e18;   // Configurable by MultiSig
+uint256 public heatLevelPro = 50 * 1e18;    // Configurable by MultiSig
+```
+
+**Market Struct Fields:**
+- `uint256 virtualLiquidity` - Per-market virtual liquidity (immutable after creation)
+- `HeatLevel heatLevel` - Heat level enum for display
 
 ---
 
@@ -65,7 +93,8 @@
 PredictionMarket.sol
 ├── Constants
 │   ├── UNIT_PRICE = 0.01 ether
-│   ├── VIRTUAL_LIQUIDITY = 100e18
+│   ├── MIN_HEAT_LEVEL = 1e18
+│   ├── MAX_HEAT_LEVEL = 200e18
 │   ├── MAX_FEE_BPS = 500 (5%)
 │   ├── MAX_CREATOR_FEE_BPS = 200 (2%)
 │   ├── MAX_RESOLUTION_FEE_BPS = 100 (1%)
@@ -81,6 +110,9 @@ PredictionMarket.sol
 │   ├── creatorFeeBps = 50 (0.5% default)
 │   ├── resolutionFeeBps = 30 (0.3% default)
 │   ├── marketCreationFee = 0 (free default)
+│   ├── heatLevelCrack = 5e18
+│   ├── heatLevelHigh = 20e18
+│   ├── heatLevelPro = 50e18
 │   ├── minBondFloor = 0.005 ether
 │   ├── dynamicBondBps = 100 (1%)
 │   ├── bondWinnerShareBps = 5000 (50%)
@@ -93,11 +125,11 @@ PredictionMarket.sol
 │   └── signers (MultiSig)
 │
 ├── Market Lifecycle
-│   ├── createMarket() - with optional fee (payable)
-│   ├── createMarketAndBuy() - atomic create + buy
+│   ├── createMarket(heatLevel) - with optional fee (payable)
+│   ├── createMarketAndBuy(heatLevel) - atomic create + buy
 │   ├── buyYes() / buyNo()
 │   ├── sellYes() / sellNo()
-│   ├── proposeOutcome() - propose with bond
+│   ├── proposeOutcome() - propose with bond (no proofLink)
 │   ├── dispute() - challenge with 2× bond
 │   ├── vote() - weighted by shares
 │   ├── finalizeMarket() - settle after voting
@@ -112,13 +144,15 @@ PredictionMarket.sol
 │   ├── previewBuy() / previewSell()
 │   ├── getRequiredBond() - dynamic bond calculation
 │   ├── canEmergencyRefund() - eligibility check
-│   ├── getMaxSellableShares() - max sellable given pool liquidity (NEW)
+│   ├── getMaxSellableShares() - max sellable given pool liquidity
+│   ├── getSweepableAmount() - surplus BNB calculation
 │   └── isSigner()
 │
 └── Governance (3-of-3 MultiSig)
     ├── proposeAction()
     ├── confirmAction()
-    └── executeAction()
+    ├── executeAction()
+    └── ActionTypes: SetHeatLevelCrack, SetHeatLevelHigh, SetHeatLevelPro, SweepFunds, ...
 ```
 
 ---
@@ -128,11 +162,15 @@ PredictionMarket.sol
 | Constant | Value | Description |
 |----------|-------|-------------|
 | `UNIT_PRICE` | 0.01 ether | P(YES) + P(NO) always equals this |
-| `VIRTUAL_LIQUIDITY` | 100e18 | Virtual shares per side |
+| `MIN_HEAT_LEVEL` | 1e18 | Minimum virtual liquidity setting |
+| `MAX_HEAT_LEVEL` | 200e18 | Maximum virtual liquidity setting |
 | `platformFeeBps` | 100 | 1% platform fee (configurable 0-5%) |
 | `creatorFeeBps` | 50 | 0.5% creator fee (configurable 0-2%) |
 | `resolutionFeeBps` | 30 | 0.3% resolution fee (configurable 0-1%) |
 | `marketCreationFee` | 0 | Optional fee (defaults to 0) |
+| `heatLevelCrack` | 5e18 | CRACK level virtual liquidity |
+| `heatLevelHigh` | 20e18 | HIGH level virtual liquidity |
+| `heatLevelPro` | 50e18 | PRO level virtual liquidity |
 | `minBet` | 0.005 ether | Minimum bet (~$3) |
 | `minBondFloor` | 0.005 ether | Minimum proposal bond |
 | `dynamicBondBps` | 100 | 1% of pool for bond |
@@ -155,223 +193,53 @@ PredictionMarket.sol
 | Creator Fee | 50 | 0.5% | Market Creator | Yes (0-2%) |
 | **Total** | 150 | **1.5%** | - | - |
 
-### Resolution Fee: 0.3% on Actions
-
-| Action | Fee | Description |
-|--------|-----|-------------|
-| `proposeOutcome()` | 0.3% of bond | Charged on proposal |
-| `dispute()` | 0.3% of bond | Charged on dispute |
-| `vote()` | 0.3% of voting weight | Spam prevention |
-
-### Fee Flow (Buy Example)
-```
-User sends 1 BNB
-├── Platform Fee: 0.01 BNB → Treasury
-├── Creator Fee: 0.005 BNB → Market Creator
-└── To Pool: 0.985 BNB → market.poolBalance
-```
-
----
-
-## 📐 Bonding Curve Math
-
-### Price Formula
-```solidity
-virtualYes = yesSupply + VIRTUAL_LIQUIDITY  // 100e18
-virtualNo = noSupply + VIRTUAL_LIQUIDITY    // 100e18
-totalVirtual = virtualYes + virtualNo
-
-P(YES) = UNIT_PRICE × virtualYes / totalVirtual
-P(NO) = UNIT_PRICE × virtualNo / totalVirtual
-
-// Constraint: P(YES) + P(NO) = UNIT_PRICE (0.01 BNB)
-```
-
-### Initial State
-- Virtual YES: 100e18
-- Virtual NO: 100e18
-- Total: 200e18
-- YES price: 0.005 BNB (50%)
-- NO price: 0.005 BNB (50%)
-
-### Buy Formula
-```solidity
-shares = (bnbAmount × totalVirtual × 1e18) / (UNIT_PRICE × virtualSide)
-```
-
-### Sell Formula (Average Price - Critical!)
-```solidity
-P1 = price before sell
-P2 = price after sell (simulated)
-avgPrice = (P1 + P2) / 2
-bnbOut = shares × avgPrice / 1e18
-```
-
-### Why Average Price for Selling?
-Prevents pool insolvency. If instant price was used:
-- Buy at low price → get many shares
-- Sell at high price → drain pool
-
-Average price ensures: `bnbOut ≤ bnbIn` (approximately)
-
-### ⚠️ Instant Sell Liquidity Constraint
-
-**Important:** When a user is the ONLY buyer in a market (no opposing side liquidity), they CANNOT immediately sell 100% of their position.
-
-| Buy Amount | Max Instant Sellable | Position Stuck |
-|------------|---------------------|----------------|
-| 0.1 BNB | 95% | 5% |
-| 0.5 BNB | 83% | 17% |
-| 1 BNB | 74% | 26% |
-| 2 BNB | 65% | 35% |
-
-**Root Cause:** The average price formula doesn't have enough pool liquidity to cover full position returns when you're the only buyer.
-
-**Good News:** When opposing liquidity exists (buyers on both YES and NO), full instant selling works perfectly.
-
-**Frontend Solution:** Use `getMaxSellableShares(marketId, userShares, isYes)` to:
-1. Show users their max sellable amount
-2. Display "Sell Max Available" button
-3. Show liquidity health indicator
-
----
-
-## ⚖️ Street Consensus Resolution
-
-### Resolution Flow
-```
-Market Expires
-     │
-     ▼
-Creator can propose (10 min priority)
-     │
-     ▼
-Anyone can propose after priority
-     │
-     ▼
-30-minute dispute window
-     │
-     ├─ No dispute → Proposal accepted, market resolved
-     │
-     └─ Disputed → Goes to VOTING (1 hour)
-                        │
-                        ▼
-                   Bettors vote (weighted by shares)
-                        │
-                        ├─ Proposer wins → Gets bond + 50% of disputer bond
-                        │                  Voters split 50% of disputer bond
-                        │
-                        ├─ Disputer wins → Gets bond + 50% of proposer bond
-                        │                  Voters split 50% of proposer bond
-                        │
-                        └─ Tie (0 vs 0) → Both get bonds back, market resets
-```
-
-### If Nobody Proposes (24h after expiry)
-```
-No proposal for 24 hours
-     │
-     ▼
-emergencyRefund() becomes available
-     │
-     ▼
-Users self-claim proportional refund
-Formula: refund = (userShares / totalShares) * poolBalance
-```
-
-### Bond Economics
-
-| Pool Size | Proposer Bond | Disputer Bond (2×) |
-|-----------|---------------|-------------------|
-| 1 BNB | 0.02 BNB (floor) | 0.04 BNB |
-| 5 BNB | 0.05 BNB (1%) | 0.10 BNB |
-| 50 BNB | 0.50 BNB (1%) | 1.00 BNB |
-| 500 BNB | 5.00 BNB (1%) | 10.00 BNB |
-
-### Bond Distribution After Dispute
-
-| Scenario | Winner Gets | Voters Get | Loser |
-|----------|-------------|------------|-------|
-| Proposer wins | Bond + 50% disputer | 50% disputer | Loses all |
-| Disputer wins | Bond + 50% proposer | 50% proposer | Loses all |
-| Tie (0 vs 0) | Bond back | Nothing | Bond back |
-
----
-
-## 🌐 Deployment Status
-
-### BSC Testnet (Chain ID: 97)
-| Contract | Address | Verified |
-|----------|---------|----------|
-| PredictionMarket | Not deployed | ❌ |
-
-### BSC Mainnet (Chain ID: 56)
-| Contract | Address | Verified |
-|----------|---------|----------|
-| PredictionMarket | Not deployed | ❌ |
-
 ---
 
 ## 🧪 Test Coverage
 
 | Test File | Tests | Status |
 |-----------|-------|--------|
-| PredictionMarket.t.sol | 72 | ✅ Passing |
+| PredictionMarket.t.sol | 82 | ✅ Passing |
 | PredictionMarket.fuzz.t.sol | 32 | ✅ Passing |
 | VulnerabilityCheck.t.sol | 4 | ✅ Passing |
 | PumpDump.t.sol | 31 | ✅ Passing |
 | InstantSellAnalysis.t.sol | 8 | ✅ Passing |
+| Integration.t.sol | 16 | ✅ Passing |
 
-**Total Tests: 163 ✅**
+**Total Tests: 173 ✅**
 
 ### Test Categories
-- **Unit tests:** Market creation, trading, fees, resolution, claims
+- **Unit tests:** Market creation, trading, fees, resolution, claims, heat levels, sweep
 - **Fuzz tests:** Bonding curve math, configurable parameters, edge cases
 - **Vulnerability tests:** Reentrancy, overflow, access control
 - **Pump & Dump tests:** Economics verification
-  - Early buyer profits +36.6%
-  - Late buyer loses ~27%
-  - Pool solvency (never negative)
-  - InsufficientPoolBalance protection
-  - Creator first-mover advantage
-- **Street Consensus tests:**
-  - Propose/dispute/vote flow
-  - Creator priority window
-  - Bond distribution
-  - Jury fee distribution
-  - Tie handling
-- **Emergency Refund tests:** 
-  - 24h timeout
-  - Proportional distribution
-  - Order-independent fairness
+- **Street Consensus tests:** Propose/dispute/vote flow
+- **Integration tests:** Full lifecycle scenarios
 
 ---
 
-## 📝 Events
+## 📝 Key Events
 
 ```solidity
 // Market Lifecycle
-event MarketCreated(uint256 indexed marketId, address indexed creator, string question, uint256 expiryTimestamp);
-event Trade(uint256 indexed marketId, address indexed trader, bool isYes, bool isBuy, uint256 shares, uint256 bnbAmount);
+event MarketCreated(marketId, creator, question, expiryTimestamp, heatLevel, virtualLiquidity);
+event Trade(marketId, trader, isYes, isBuy, shares, bnbAmount);
 
-// Street Consensus
-event OutcomeProposed(uint256 indexed marketId, address indexed proposer, bool outcome, uint256 bond, string proofLink);
-event MarketDisputed(uint256 indexed marketId, address indexed disputer, uint256 bond, string proofLink);
-event VoteCast(uint256 indexed marketId, address indexed voter, bool supportProposer, uint256 weight);
-event MarketFinalized(uint256 indexed marketId, bool outcome, address winner, uint256 winnerBonus, uint256 voterPool);
-event MarketResolved(uint256 indexed marketId, bool outcome);
+// Street Consensus  
+event OutcomeProposed(marketId, proposer, outcome, bond);  // No proofLink in v3.1.0
+event ProposalDisputed(marketId, disputer, bond);
+event VoteCast(marketId, voter, outcome, weight);
+event MarketResolved(marketId, outcome, wasDisputed);
 
 // Payouts
-event Claimed(uint256 indexed marketId, address indexed user, uint256 amount);
-event JuryFeePaid(uint256 indexed marketId, address indexed voter, uint256 amount);
-event EmergencyRefunded(uint256 indexed marketId, address indexed user, uint256 amount);
+event Claimed(marketId, user, amount);
+event JuryFeeDistributed(marketId, voter, amount);
+event EmergencyRefunded(marketId, user, amount);
 
 // Governance
-event ActionProposed(uint256 indexed actionId, ActionType actionType, address indexed proposer);
-event ActionConfirmed(uint256 indexed actionId, address indexed confirmer);
-event ActionExecuted(uint256 indexed actionId, ActionType actionType);
-event Paused(address indexed by);
-event Unpaused(address indexed by);
+event FundsSwept(amount, totalLocked, contractBalance);  // New in v3.1.0
+event ActionProposed(actionId, actionType, proposer);
+event ActionExecuted(actionId, actionType);
 ```
 
 ---
@@ -388,10 +256,13 @@ event Unpaused(address indexed by);
 - [x] Pause mechanism via MultiSig
 - [x] Double-vote prevention
 - [x] Bond validation (2× for disputer)
+- [x] Heat level bounds validation
+- [x] SweepFunds only sweeps surplus (user funds safe)
+- [x] No receive() - direct BNB transfers revert
 
 ---
 
-## 🎮 Quick Reference: Contract Interface
+## 🎮 Quick Reference: Contract Interface (v3.1.0)
 
 ```solidity
 // ===== Market Creation =====
@@ -399,50 +270,27 @@ function createMarket(
     string question,
     string evidenceLink, 
     string resolutionRules,
-    uint256 expiryTimestamp
-) returns (uint256 marketId)
+    string imageUrl,
+    uint256 expiryTimestamp,
+    HeatLevel heatLevel  // NEW: CRACK, HIGH, or PRO
+) payable returns (uint256 marketId)
 
 function createMarketAndBuy(
     string question,
     string evidenceLink,
-    string resolutionRules, 
+    string resolutionRules,
+    string imageUrl,
     uint256 expiryTimestamp,
+    HeatLevel heatLevel,  // NEW
     bool buyYesSide,
     uint256 minSharesOut
 ) payable returns (uint256 marketId, uint256 sharesOut)
 
-// ===== Trading =====
-function buyYes(uint256 marketId, uint256 minSharesOut) payable returns (uint256 sharesOut)
-function buyNo(uint256 marketId, uint256 minSharesOut) payable returns (uint256 sharesOut)
-function sellYes(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (uint256 bnbOut)
-function sellNo(uint256 marketId, uint256 shares, uint256 minBnbOut) returns (uint256 bnbOut)
-
 // ===== Street Consensus Resolution =====
-function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
-function dispute(uint256 marketId, string proofLink) payable
-function vote(uint256 marketId, bool supportProposer)
-function finalizeMarket(uint256 marketId)
+function proposeOutcome(uint256 marketId, bool outcome) payable  // No proofLink
 
-// ===== Claims =====
-function claim(uint256 marketId) returns (uint256 payout)
-function emergencyRefund(uint256 marketId) returns (uint256 refund)
-
-// ===== Views =====
-function getYesPrice(uint256 marketId) view returns (uint256)
-function getNoPrice(uint256 marketId) view returns (uint256)
-function previewBuy(uint256 marketId, uint256 bnbAmount, bool isYes) view returns (uint256)
-function previewSell(uint256 marketId, uint256 shares, bool isYes) view returns (uint256)
-function getMaxSellableShares(uint256 marketId, uint256 userShares, bool isYes) view returns (uint256 maxShares, uint256 bnbOut)
-function getPosition(uint256 marketId, address user) view returns (uint256, uint256, bool, bool, bool, bool)
-function getMarket(uint256 marketId) view returns (...)
-function getMarketStatus(uint256 marketId) view returns (MarketStatus)
-function getRequiredBond(uint256 marketId) view returns (uint256)
-function canEmergencyRefund(uint256 marketId) view returns (bool, uint256)
-
-// ===== Governance =====
-function proposeAction(ActionType actionType, bytes data) returns (uint256 actionId)
-function confirmAction(uint256 actionId)
-function executeAction(uint256 actionId)
+// ===== Views (New) =====
+function getSweepableAmount() view returns (surplus, totalLocked, contractBalance)
 ```
 
 ---
@@ -452,25 +300,22 @@ function executeAction(uint256 actionId)
 ```
 contracts/
 ├── src/
-│   └── PredictionMarket.sol    # Main contract
+│   └── PredictionMarket.sol    # Main contract (v3.1.0, 1701 lines)
 ├── test/
-│   ├── PredictionMarket.t.sol       # Unit tests (72)
+│   ├── PredictionMarket.t.sol       # Unit tests (82)
 │   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (32)
 │   ├── PumpDump.t.sol               # Economics + feature tests (31)
 │   ├── VulnerabilityCheck.t.sol     # Security tests (4)
 │   ├── InstantSellAnalysis.t.sol    # Instant sell + liquidity tests (8)
+│   ├── Integration.t.sol            # Integration tests (16)
 │   └── helpers/
 │       └── TestHelper.sol           # Test utilities
 ├── script/
 │   └── Deploy.s.sol                 # Deployment script
-├── lib/                             # Dependencies
+├── AUDIT.md                         # Security audit (v3.1.0)
 ├── CHANGELOG.md                     # Version history
 ├── PROJECT_CONTEXT.md               # This file
-├── README.md                        # Main documentation
-├── RUNBOOK.md                       # Commands reference
-├── PROFIT.txt                       # Pump & dump math analysis
-├── foundry.toml                     # Foundry config
-└── remappings.txt                   # Import remappings
+└── README.md                        # Main documentation
 ```
 
 ---

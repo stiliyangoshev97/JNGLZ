@@ -5,6 +5,164 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-01-09
+
+### Added
+
+#### Heat Levels Feature
+Configurable per-market virtual liquidity for different trading styles:
+
+| Level | Name | Virtual Liquidity | Target Bet | Price Impact |
+|-------|------|-------------------|------------|--------------|
+| ☢️ CRACK | Degen Flash | 5 × 1e18 | 0.005-0.1 BNB | ~15% per 0.05 BNB |
+| 🔥 HIGH | Street Fight (DEFAULT) | 20 × 1e18 | 0.1-1.0 BNB | ~15% per 0.5 BNB |
+| 🧊 PRO | Whale Pond | 50 × 1e18 | 1.0-5.0+ BNB | ~15% per 2.0 BNB |
+
+**New Enum:**
+```solidity
+enum HeatLevel {
+    CRACK,  // High volatility - 5 vLiq
+    HIGH,   // Balanced (DEFAULT) - 20 vLiq
+    PRO     // Low slippage - 50 vLiq
+}
+```
+
+**New Market Struct Fields:**
+- `uint256 virtualLiquidity` - Per-market virtual liquidity (immutable after creation)
+- `HeatLevel heatLevel` - Heat level enum for display
+
+**New State Variables:**
+```solidity
+uint256 public heatLevelCrack = 5 * 1e18;   // Configurable by MultiSig
+uint256 public heatLevelHigh = 20 * 1e18;   // Configurable by MultiSig
+uint256 public heatLevelPro = 50 * 1e18;    // Configurable by MultiSig
+```
+
+**New Constants:**
+- `MIN_HEAT_LEVEL = 1 * 1e18` - Minimum allowed heat level value
+- `MAX_HEAT_LEVEL = 200 * 1e18` - Maximum allowed heat level value
+
+**New ActionTypes:**
+- `SetHeatLevelCrack` - Adjust CRACK level virtual liquidity
+- `SetHeatLevelHigh` - Adjust HIGH level virtual liquidity
+- `SetHeatLevelPro` - Adjust PRO level virtual liquidity
+
+**Breaking Changes:**
+- `createMarket()` now requires `HeatLevel heatLevel` parameter
+- `createMarketAndBuy()` now requires `HeatLevel heatLevel` parameter
+- `MarketCreated` event now includes `heatLevel` and `virtualLiquidity`
+
+**MultiSig Usage:**
+```solidity
+// Set CRACK level to 10 virtual liquidity
+proposeAction(ActionType.SetHeatLevelCrack, abi.encode(10 * 1e18));
+// Then 2 more signers call confirmAction(actionId)
+```
+
+**Tests:** Added 6 new tests:
+- `test_CreateMarket_HeatLevelCrack`
+- `test_CreateMarket_HeatLevelHigh`
+- `test_CreateMarket_HeatLevelPro`
+- `test_HeatLevel_PriceImpactComparison`
+- `test_MultiSig_SetHeatLevelCrack`
+- `test_MultiSig_SetHeatLevelHigh`
+
+---
+
+#### SweepFunds Feature
+MultiSig governance can recover surplus/dust BNB from the contract.
+
+**New ActionType:**
+- `SweepFunds` - Sweep surplus BNB to treasury
+
+**New Error:**
+- `NothingToSweep` - Reverts when no surplus funds exist
+
+**New Event:**
+```solidity
+event FundsSwept(uint256 amount, uint256 totalLocked, uint256 contractBalance);
+```
+
+**New View Function:**
+```solidity
+function getSweepableAmount() external view returns (
+    uint256 surplus,
+    uint256 totalLocked,
+    uint256 contractBalance
+);
+```
+
+**How It Works:**
+1. `_calculateTotalLockedFunds()` iterates all markets to sum:
+   - `poolBalance` for unresolved markets
+   - Active `proposalBond` amounts
+   - Active `disputeBond` amounts
+2. Surplus = contract balance - total locked funds
+3. Only surplus is sweepable (user funds never touched)
+
+**MultiSig Usage:**
+```solidity
+// Check sweepable amount first
+(uint256 surplus, , ) = pm.getSweepableAmount();
+
+// Sweep surplus to treasury
+proposeAction(ActionType.SweepFunds, "");
+// Then 2 more signers call confirmAction(actionId)
+```
+
+**Tests:** Added 5 new tests:
+- `test_SweepFunds_Success`
+- `test_SweepFunds_NothingToSweep`
+- `test_SweepFunds_ExcludesActivePools`
+- `test_SweepFunds_ExcludesActiveBonds`
+- `test_GetSweepableAmount_View`
+
+---
+
+### Removed
+
+#### `proofLink` Parameter
+Simplified the proposal flow by removing the optional proof link:
+
+**Old Signature:**
+```solidity
+function proposeOutcome(uint256 marketId, bool outcome, string proofLink) payable
+```
+
+**New Signature:**
+```solidity
+function proposeOutcome(uint256 marketId, bool outcome) payable
+```
+
+**Why Removed:**
+- Proof links were rarely used in practice
+- Market's `evidenceLink` field already serves this purpose
+- Simplifies frontend integration and reduces gas costs
+
+**Changes:**
+- `OutcomeProposed` event no longer includes `proofLink`
+- `getProposal()` returns 5 values instead of 6
+
+---
+
+#### `receive()` Function
+Contract now reverts on direct BNB transfers (no data).
+
+**Why Removed:**
+- Prevents accidental deposits that would inflate `getSweepableAmount()`
+- All legitimate transfers require function calls with data
+- Cleaner accounting of contract balance
+
+---
+
+### Changed
+
+- Total tests: **173** (was 163)
+- Slither findings: 36 total (0 critical/high, 2 medium, all mitigated)
+- Contract lines: 1,701 (was 1,517)
+
+---
+
 ## [2.5.0] - 2026-01-08
 
 ### Added

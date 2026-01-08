@@ -394,14 +394,19 @@ contract InstantSellAnalysisTest is TestHelper {
      * @dev When there's opposing liquidity, should return full position
      */
     function test_GetMaxSellableShares_WithOpposingLiquidity() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
+        // Use PRO market for larger liquidity pool - allows full exits
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
+        );
 
-        // Bob buys NO first
-        vm.deal(bob, 1 ether);
-        buyNoFor(bob, marketId, 1 ether, 0);
+        // Bob buys NO first (scaled for PRO)
+        vm.deal(bob, 0.5 ether);
+        buyNoFor(bob, marketId, 0.5 ether, 0);
 
         // Alice buys YES
-        uint256 buyAmount = 1 ether;
+        uint256 buyAmount = 0.5 ether;
         vm.deal(alice, buyAmount);
         uint256 sharesBought = buyYesFor(alice, marketId, buyAmount, 0);
 

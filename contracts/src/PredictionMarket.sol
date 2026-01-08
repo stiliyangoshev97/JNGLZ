@@ -8,18 +8,16 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @author Junkie.Fun
  * @notice Decentralized prediction market with bonding curve pricing and Street Consensus resolution
  * @dev Uses linear constant sum bonding curve: P(YES) + P(NO) = UNIT_PRICE (0.01 BNB)
- *      Virtual liquidity of 100 shares each side provides initial pricing
+ *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
+ * @custom:version 3.1.0 - Heat Levels + SweepFunds + removed proofLink
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
 
     /// @notice Fixed unit price for shares (P_YES + P_NO always equals this)
     uint256 public constant UNIT_PRICE = 0.01 ether;
-
-    /// @notice Virtual liquidity added to each side for pricing (scaled to 1e18)
-    uint256 public constant VIRTUAL_LIQUIDITY = 100 * 1e18;
 
     /// @notice Maximum platform fee (5%)
     uint256 public constant MAX_FEE_BPS = 500;
@@ -58,6 +56,10 @@ contract PredictionMarket is ReentrancyGuard {
     /// @notice Maximum market creation fee (0.1 BNB)
     uint256 public constant MAX_MARKET_CREATION_FEE = 0.1 ether;
 
+    /// @notice Heat level bounds for governance (1 to 200 base units * 1e18)
+    uint256 public constant MIN_HEAT_LEVEL = 1 * 1e18;
+    uint256 public constant MAX_HEAT_LEVEL = 200 * 1e18;
+
     // ============ Street Consensus Constants ============
 
     /// @notice Creator priority window - only creator can propose (10 minutes)
@@ -79,6 +81,14 @@ contract PredictionMarket is ReentrancyGuard {
         Resolved // Final outcome set
     }
 
+    /// @notice Heat levels for market volatility
+    /// @dev CRACK = high volatility (5 vLiq), HIGH = balanced (20 vLiq), PRO = low slippage (50 vLiq)
+    enum HeatLevel {
+        CRACK, // ☢️ Degen Flash - 5 virtual liquidity - max volatility
+        HIGH, // 🔥 Street Fight - 20 virtual liquidity - balanced (DEFAULT)
+        PRO // 🧊 Whale Pond - 50 virtual liquidity - low slippage
+    }
+
     enum ActionType {
         SetFee,
         SetMinBet,
@@ -90,7 +100,11 @@ contract PredictionMarket is ReentrancyGuard {
         SetMinBondFloor,
         SetDynamicBondBps,
         SetBondWinnerShare,
-        SetMarketCreationFee
+        SetMarketCreationFee,
+        SetHeatLevelCrack, // NEW: Set CRACK level virtual liquidity
+        SetHeatLevelHigh, // NEW: Set HIGH level virtual liquidity
+        SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
+        SweepFunds // NEW: Sweep dust/surplus BNB to treasury
     }
 
     // ============ Structs ============
@@ -105,12 +119,13 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 yesSupply; // Total YES shares minted
         uint256 noSupply; // Total NO shares minted
         uint256 poolBalance; // Total BNB in pool
+        uint256 virtualLiquidity; // NEW: Per-market virtual liquidity (set at creation, immutable)
+        HeatLevel heatLevel; // NEW: Heat level enum for display
         bool resolved;
         bool outcome; // true = YES wins, false = NO wins
         // Street Consensus fields
         address proposer;
         bool proposedOutcome;
-        string proofLink;
         uint256 proposalTime;
         uint256 proposalBond;
         address disputer;
@@ -158,6 +173,11 @@ contract PredictionMarket is ReentrancyGuard {
     // Market creation fee (defaults to 0 = free market creation)
     uint256 public marketCreationFee = 0;
 
+    // Heat Level virtual liquidity settings (configurable by MultiSig, affects NEW markets only)
+    uint256 public heatLevelCrack = 5 * 1e18; // ☢️ CRACK: High volatility
+    uint256 public heatLevelHigh = 20 * 1e18; // 🔥 HIGH: Balanced (DEFAULT)
+    uint256 public heatLevelPro = 50 * 1e18; // 🧊 PRO: Low slippage
+
     // Pause state
     bool public paused;
 
@@ -175,7 +195,9 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 indexed marketId,
         address indexed creator,
         string question,
-        uint256 expiryTimestamp
+        uint256 expiryTimestamp,
+        HeatLevel heatLevel,
+        uint256 virtualLiquidity
     );
 
     event Trade(
@@ -191,7 +213,6 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 indexed marketId,
         address indexed proposer,
         bool outcome,
-        string proofLink,
         uint256 bond
     );
 
@@ -252,6 +273,12 @@ contract PredictionMarket is ReentrancyGuard {
     event Paused(address indexed by);
     event Unpaused(address indexed by);
 
+    event FundsSwept(
+        uint256 amount,
+        uint256 totalLocked,
+        uint256 contractBalance
+    );
+
     // ============ Errors ============
 
     error NotSigner();
@@ -297,6 +324,7 @@ contract PredictionMarket is ReentrancyGuard {
     error InsufficientBond();
     error MarketStuck();
     error InsufficientCreationFee();
+    error NothingToSweep();
 
     // ============ Modifiers ============
 
@@ -336,6 +364,7 @@ contract PredictionMarket is ReentrancyGuard {
      * @param resolutionRules Clear rules for how to resolve
      * @param imageUrl URL to market image/thumbnail (IPFS or HTTP, can be empty)
      * @param expiryTimestamp When trading ends
+     * @param heatLevel The heat level for market volatility
      * @dev Requires msg.value >= marketCreationFee (defaults to 0 = free)
      */
     function createMarket(
@@ -343,7 +372,8 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata evidenceLink,
         string calldata resolutionRules,
         string calldata imageUrl,
-        uint256 expiryTimestamp
+        uint256 expiryTimestamp,
+        HeatLevel heatLevel
     ) external payable whenNotPaused returns (uint256 marketId) {
         if (msg.value < marketCreationFee) revert InsufficientCreationFee();
 
@@ -352,7 +382,8 @@ contract PredictionMarket is ReentrancyGuard {
             evidenceLink,
             resolutionRules,
             imageUrl,
-            expiryTimestamp
+            expiryTimestamp,
+            heatLevel
         );
 
         // Send creation fee to treasury
@@ -373,6 +404,7 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata resolutionRules,
         string calldata imageUrl,
         uint256 expiryTimestamp,
+        HeatLevel heatLevel,
         bool buyYesSide,
         uint256 minSharesOut
     )
@@ -392,7 +424,8 @@ contract PredictionMarket is ReentrancyGuard {
             evidenceLink,
             resolutionRules,
             imageUrl,
-            expiryTimestamp
+            expiryTimestamp,
+            heatLevel
         );
 
         Market storage market = markets[marketId];
@@ -404,7 +437,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             amountAfterFee,
-            buyYesSide
+            buyYesSide,
+            market.virtualLiquidity
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
@@ -439,7 +473,8 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata evidenceLink,
         string calldata resolutionRules,
         string calldata imageUrl,
-        uint256 expiryTimestamp
+        uint256 expiryTimestamp,
+        HeatLevel heatLevel
     ) internal returns (uint256 marketId) {
         if (bytes(question).length == 0) revert EmptyQuestion();
         // evidenceLink can be empty for degen markets
@@ -455,8 +490,25 @@ contract PredictionMarket is ReentrancyGuard {
         market.imageUrl = imageUrl;
         market.creator = msg.sender;
         market.expiryTimestamp = expiryTimestamp;
+        market.heatLevel = heatLevel;
 
-        emit MarketCreated(marketId, msg.sender, question, expiryTimestamp);
+        // Set virtual liquidity based on heat level
+        if (heatLevel == HeatLevel.CRACK) {
+            market.virtualLiquidity = heatLevelCrack;
+        } else if (heatLevel == HeatLevel.HIGH) {
+            market.virtualLiquidity = heatLevelHigh;
+        } else if (heatLevel == HeatLevel.PRO) {
+            market.virtualLiquidity = heatLevelPro;
+        }
+
+        emit MarketCreated(
+            marketId,
+            msg.sender,
+            question,
+            expiryTimestamp,
+            heatLevel,
+            market.virtualLiquidity
+        );
     }
 
     // ============ Trading Functions ============
@@ -483,7 +535,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             amountAfterFee,
-            true
+            true,
+            market.virtualLiquidity
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
@@ -526,7 +579,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             amountAfterFee,
-            false
+            false,
+            market.virtualLiquidity
         );
         if (sharesOut < minSharesOut) revert SlippageExceeded();
 
@@ -566,7 +620,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             shares,
-            true
+            true,
+            market.virtualLiquidity
         );
 
         if (grossBnbOut > market.poolBalance) revert InsufficientPoolBalance();
@@ -617,7 +672,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             shares,
-            false
+            false,
+            market.virtualLiquidity
         );
 
         if (grossBnbOut > market.poolBalance) revert InsufficientPoolBalance();
@@ -655,13 +711,11 @@ contract PredictionMarket is ReentrancyGuard {
      * @notice Propose an outcome for an expired market
      * @param marketId The market to propose outcome for
      * @param outcome The proposed outcome (true = YES wins, false = NO wins)
-     * @param proofLink Optional URL to proof/evidence (can be empty)
      * @dev Requires bond payment. Creator has priority in first 10 minutes.
      */
     function proposeOutcome(
         uint256 marketId,
-        bool outcome,
-        string calldata proofLink
+        bool outcome
     ) external payable nonReentrant whenNotPaused {
         Market storage market = markets[marketId];
 
@@ -688,7 +742,6 @@ contract PredictionMarket is ReentrancyGuard {
         // Store proposal
         market.proposer = msg.sender;
         market.proposedOutcome = outcome;
-        market.proofLink = proofLink;
         market.proposalTime = block.timestamp;
         market.proposalBond = bondAfterFee;
 
@@ -698,13 +751,7 @@ contract PredictionMarket is ReentrancyGuard {
             if (!success) revert TransferFailed();
         }
 
-        emit OutcomeProposed(
-            marketId,
-            msg.sender,
-            outcome,
-            proofLink,
-            bondAfterFee
-        );
+        emit OutcomeProposed(marketId, msg.sender, outcome, bondAfterFee);
     }
 
     /**
@@ -1044,7 +1091,12 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 marketId
     ) external view returns (uint256 price) {
         Market storage market = markets[marketId];
-        return _getYesPrice(market.yesSupply, market.noSupply);
+        return
+            _getYesPrice(
+                market.yesSupply,
+                market.noSupply,
+                market.virtualLiquidity
+            );
     }
 
     /**
@@ -1054,7 +1106,12 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 marketId
     ) external view returns (uint256 price) {
         Market storage market = markets[marketId];
-        return _getNoPrice(market.yesSupply, market.noSupply);
+        return
+            _getNoPrice(
+                market.yesSupply,
+                market.noSupply,
+                market.virtualLiquidity
+            );
     }
 
     /**
@@ -1073,7 +1130,8 @@ contract PredictionMarket is ReentrancyGuard {
                 market.yesSupply,
                 market.noSupply,
                 bnbAmount - totalFee,
-                isYes
+                isYes,
+                market.virtualLiquidity
             );
     }
 
@@ -1090,7 +1148,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             shares,
-            isYes
+            isYes,
+            market.virtualLiquidity
         );
         uint256 totalFee = (grossBnbOut * (platformFeeBps + creatorFeeBps)) /
             BPS_DENOMINATOR;
@@ -1122,7 +1181,8 @@ contract PredictionMarket is ReentrancyGuard {
             market.yesSupply,
             market.noSupply,
             userShares,
-            isYes
+            isYes,
+            market.virtualLiquidity
         );
 
         if (fullSellGross <= market.poolBalance) {
@@ -1142,7 +1202,8 @@ contract PredictionMarket is ReentrancyGuard {
                 market.yesSupply,
                 market.noSupply,
                 mid,
-                isYes
+                isYes,
+                market.virtualLiquidity
             );
 
             if (grossBnb <= market.poolBalance) {
@@ -1159,7 +1220,8 @@ contract PredictionMarket is ReentrancyGuard {
                 market.yesSupply,
                 market.noSupply,
                 maxShares,
-                isYes
+                isYes,
+                market.virtualLiquidity
             );
             uint256 totalFee = (grossBnbOut *
                 (platformFeeBps + creatorFeeBps)) / BPS_DENOMINATOR;
@@ -1261,7 +1323,6 @@ contract PredictionMarket is ReentrancyGuard {
         returns (
             address proposer,
             bool proposedOutcome,
-            string memory proofLink,
             uint256 proposalTime,
             uint256 proposalBond,
             uint256 disputeDeadline
@@ -1271,7 +1332,6 @@ contract PredictionMarket is ReentrancyGuard {
         return (
             m.proposer,
             m.proposedOutcome,
-            m.proofLink,
             m.proposalTime,
             m.proposalBond,
             m.proposalTime + DISPUTE_WINDOW
@@ -1430,19 +1490,21 @@ contract PredictionMarket is ReentrancyGuard {
 
     function _getYesPrice(
         uint256 yesSupply,
-        uint256 noSupply
+        uint256 noSupply,
+        uint256 virtualLiquidity
     ) internal pure returns (uint256) {
-        uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
-        uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
+        uint256 virtualYes = yesSupply + virtualLiquidity;
+        uint256 virtualNo = noSupply + virtualLiquidity;
         return (UNIT_PRICE * virtualYes) / (virtualYes + virtualNo);
     }
 
     function _getNoPrice(
         uint256 yesSupply,
-        uint256 noSupply
+        uint256 noSupply,
+        uint256 virtualLiquidity
     ) internal pure returns (uint256) {
-        uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
-        uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
+        uint256 virtualYes = yesSupply + virtualLiquidity;
+        uint256 virtualNo = noSupply + virtualLiquidity;
         return (UNIT_PRICE * virtualNo) / (virtualYes + virtualNo);
     }
 
@@ -1450,10 +1512,11 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 yesSupply,
         uint256 noSupply,
         uint256 bnbAmount,
-        bool isYes
+        bool isYes,
+        uint256 virtualLiquidity
     ) internal pure returns (uint256) {
-        uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
-        uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
+        uint256 virtualYes = yesSupply + virtualLiquidity;
+        uint256 virtualNo = noSupply + virtualLiquidity;
         uint256 totalVirtual = virtualYes + virtualNo;
 
         if (isYes) {
@@ -1468,10 +1531,11 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 yesSupply,
         uint256 noSupply,
         uint256 shares,
-        bool isYes
+        bool isYes,
+        uint256 virtualLiquidity
     ) internal pure returns (uint256) {
-        uint256 virtualYes = yesSupply + VIRTUAL_LIQUIDITY;
-        uint256 virtualNo = noSupply + VIRTUAL_LIQUIDITY;
+        uint256 virtualYes = yesSupply + virtualLiquidity;
+        uint256 virtualNo = noSupply + virtualLiquidity;
         uint256 totalVirtual = virtualYes + virtualNo;
 
         uint256 virtualSide = isYes ? virtualYes : virtualNo;
@@ -1546,11 +1610,91 @@ contract PredictionMarket is ReentrancyGuard {
             if (newMarketCreationFee > MAX_MARKET_CREATION_FEE)
                 revert InvalidMarketCreationFee();
             marketCreationFee = newMarketCreationFee;
+        } else if (action.actionType == ActionType.SetHeatLevelCrack) {
+            uint256 newHeatLevelCrack = abi.decode(action.data, (uint256));
+            if (
+                newHeatLevelCrack < MIN_HEAT_LEVEL ||
+                newHeatLevelCrack > MAX_HEAT_LEVEL
+            ) revert InvalidFee();
+            heatLevelCrack = newHeatLevelCrack;
+        } else if (action.actionType == ActionType.SetHeatLevelHigh) {
+            uint256 newHeatLevelHigh = abi.decode(action.data, (uint256));
+            if (
+                newHeatLevelHigh < MIN_HEAT_LEVEL ||
+                newHeatLevelHigh > MAX_HEAT_LEVEL
+            ) revert InvalidFee();
+            heatLevelHigh = newHeatLevelHigh;
+        } else if (action.actionType == ActionType.SetHeatLevelPro) {
+            uint256 newHeatLevelPro = abi.decode(action.data, (uint256));
+            if (
+                newHeatLevelPro < MIN_HEAT_LEVEL ||
+                newHeatLevelPro > MAX_HEAT_LEVEL
+            ) revert InvalidFee();
+            heatLevelPro = newHeatLevelPro;
+        } else if (action.actionType == ActionType.SweepFunds) {
+            // Calculate total locked funds across all markets
+            uint256 totalLocked = _calculateTotalLockedFunds();
+            uint256 contractBalance = address(this).balance;
+
+            // Only sweep if there's surplus
+            if (contractBalance <= totalLocked) revert NothingToSweep();
+
+            uint256 surplus = contractBalance - totalLocked;
+
+            // Send surplus to treasury
+            (bool success, ) = treasury.call{value: surplus}("");
+            if (!success) revert TransferFailed();
+
+            emit FundsSwept(surplus, totalLocked, contractBalance);
         }
 
         emit ActionExecuted(actionId, action.actionType);
     }
 
-    /// @notice Receive BNB for bond payments
-    receive() external payable {}
+    /**
+     * @notice Calculate total BNB locked in unresolved markets and active bonds
+     * @dev Used by SweepFunds to ensure we never touch user funds
+     */
+    function _calculateTotalLockedFunds()
+        internal
+        view
+        returns (uint256 totalLocked)
+    {
+        for (uint256 i = 0; i < marketCount; i++) {
+            Market storage market = markets[i];
+
+            // Add pool balance for unresolved markets
+            if (!market.resolved) {
+                totalLocked += market.poolBalance;
+            }
+
+            // Add active proposal bonds (not yet returned/distributed)
+            if (market.proposalBond > 0) {
+                totalLocked += market.proposalBond;
+            }
+
+            // Add active dispute bonds (not yet returned/distributed)
+            if (market.disputeBond > 0) {
+                totalLocked += market.disputeBond;
+            }
+        }
+    }
+
+    /**
+     * @notice View function to check sweepable surplus
+     * @return surplus Amount that can be swept to treasury
+     * @return totalLocked Total funds locked in markets and bonds
+     * @return contractBalance Current contract BNB balance
+     */
+    function getSweepableAmount()
+        external
+        view
+        returns (uint256 surplus, uint256 totalLocked, uint256 contractBalance)
+    {
+        totalLocked = _calculateTotalLockedFunds();
+        contractBalance = address(this).balance;
+        surplus = contractBalance > totalLocked
+            ? contractBalance - totalLocked
+            : 0;
+    }
 }

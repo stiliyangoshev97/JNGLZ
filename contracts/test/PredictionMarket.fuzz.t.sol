@@ -38,7 +38,8 @@ contract PredictionMarketFuzzTest is TestHelper {
             "https://example.com/evidence",
             "Resolution rules here",
             "", // imageUrl
-            block.timestamp + expiryOffset
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.HIGH
         );
 
         (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
@@ -56,7 +57,8 @@ contract PredictionMarketFuzzTest is TestHelper {
                 "https://example.com",
                 "Rules",
                 "", // imageUrl
-                block.timestamp + 7 days
+                block.timestamp + 7 days,
+                PredictionMarket.HeatLevel.HIGH
             );
             assertEq(marketId, i);
         }
@@ -501,7 +503,8 @@ contract PredictionMarketFuzzTest is TestHelper {
             "https://coinmarketcap.com/currencies/bitcoin/",
             "Resolve YES if BTC > $100,000 USD at expiry",
             "",
-            block.timestamp + 7 days
+            block.timestamp + 7 days,
+            PredictionMarket.HeatLevel.HIGH
         );
 
         assertEq(marketId, 0, "First market should have ID 0");
@@ -543,6 +546,7 @@ contract PredictionMarketFuzzTest is TestHelper {
             "Rules",
             "",
             block.timestamp + 7 days,
+            PredictionMarket.HeatLevel.HIGH,
             true, // Buy YES
             0 // minSharesOut
         );

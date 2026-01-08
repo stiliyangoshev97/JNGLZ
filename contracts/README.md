@@ -3,10 +3,11 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-163%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-success)]()
+[![Version](https://img.shields.io/badge/version-v3.1.0-blue)]()
 
 ---
 
@@ -15,6 +16,8 @@
 | Contract | Address | Version |
 |----------|---------|---------|
 | **PredictionMarket** | [`0x3988808940d027a70FE2D0938Cf06580bbad19F9`](https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9) | v2.5.0 |
+
+> **Note:** v3.1.0 not yet deployed. Testnet deployment pending.
 
 ---
 
@@ -52,6 +55,7 @@
 
 - [Quick Start](#-quick-start)
 - [How It Works](#-how-it-works)
+- [Heat Levels](#-heat-levels)
 - [Economics at a Glance](#-economics-at-a-glance)
 - [Street Consensus Explained](#-street-consensus-explained)
 - [Contract Functions](#-contract-functions)
@@ -119,6 +123,63 @@ Initial State:           After YES Buying:        After NO Buying:
 └─────────────────┘      └─────────────────┘      └─────────────────┘
      Balanced              More YES demand         More NO demand
 ```
+
+---
+
+## 🔥 Heat Levels
+
+Heat Levels control market volatility through per-market virtual liquidity. Choose the right level for your market type:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          HEAT LEVELS                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ☢️ CRACK (Degen Flash)              │  Virtual Liquidity: 5            │
+│  ─────────────────────               │  Target Bet: 0.005-0.1 BNB       │
+│  • Maximum volatility                │  Price Impact: ~15% per 0.05 BNB │
+│  • Small bets move prices BIG        │  Best for: Meme markets, degen   │
+│  • Wild swings, pure chaos           │                                   │
+│                                                                          │
+│  🔥 HIGH (Street Fight) - DEFAULT    │  Virtual Liquidity: 20           │
+│  ─────────────────────────────────   │  Target Bet: 0.1-1.0 BNB         │
+│  • Balanced volatility               │  Price Impact: ~15% per 0.5 BNB  │
+│  • Good price discovery              │  Best for: General markets       │
+│  • Default for most markets          │                                   │
+│                                                                          │
+│  🧊 PRO (Whale Pond)                 │  Virtual Liquidity: 50           │
+│  ───────────────────                 │  Target Bet: 1.0-5.0+ BNB        │
+│  • Low slippage                      │  Price Impact: ~15% per 2.0 BNB  │
+│  • Stable prices                     │  Best for: Serious/whale markets │
+│  • Whales can trade without moving   │                                   │
+│    price too much                    │                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### How Virtual Liquidity Works
+
+```
+Price Impact = f(bet_size / virtual_liquidity)
+
+Lower vLiq = More price movement per BNB
+Higher vLiq = Less price movement per BNB
+
+Example: 0.1 BNB bet
+├── CRACK (5 vLiq):  ~25% price swing
+├── HIGH (20 vLiq):  ~7% price swing  
+└── PRO (50 vLiq):   ~3% price swing
+```
+
+### Choosing the Right Heat Level
+
+| Market Type | Recommended Heat | Why |
+|-------------|------------------|-----|
+| Meme/joke markets | ☢️ CRACK | Max entertainment |
+| Sports predictions | 🔥 HIGH | Balanced trading |
+| Crypto price bets | 🔥 HIGH | Good price discovery |
+| Political events | 🧊 PRO | Stable, serious |
+| Whale-heavy markets | 🧊 PRO | Low slippage |
 
 ---
 

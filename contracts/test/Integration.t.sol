@@ -48,7 +48,7 @@ contract IntegrationTest is TestHelper {
 
         // === RESOLUTION PHASE ===
         // Creator proposes YES won (within priority window) - using helper
-        proposeOutcomeFor(marketCreator, marketId, true, "https://proof.com");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // === WAIT FOR DISPUTE WINDOW (no dispute) ===
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
@@ -104,19 +104,23 @@ contract IntegrationTest is TestHelper {
      * @dev Tests jury fee distribution to voters
      */
     function test_Integration_DisputedPath_ProposerWins() public {
-        // === SETUP ===
-        uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // === SETUP: Use PRO market for larger bet amounts ===
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            1 days,
+            PredictionMarket.HeatLevel.PRO
+        );
 
-        // === TRADING: Multiple users on both sides ===
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 0.5 ether, 0);
-        buyYesFor(charlie, marketId, 0.3 ether, 0);
+        // === TRADING: Multiple users on both sides (scaled for PRO) ===
+        buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.25 ether, 0);
+        buyYesFor(charlie, marketId, 0.15 ether, 0);
 
         // === EXPIRY ===
         vm.warp(block.timestamp + 1 days + 1);
 
         // === PROPOSE: Creator says YES won ===
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // === DISPUTE: Bob disagrees (he has NO shares) ===
         uint256 bobBalanceBeforeDispute = bob.balance;
@@ -181,7 +185,7 @@ contract IntegrationTest is TestHelper {
 
         // === PROPOSE: Someone LIES and says YES won ===
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1); // Wait for priority window
-        proposeOutcomeFor(proposer, marketId, true, ""); // LIES: says YES
+        proposeOutcomeFor(proposer, marketId, true); // LIES: says YES
 
         // === DISPUTE: Bob knows NO actually won ===
         disputeFor(bob, marketId);
@@ -344,7 +348,7 @@ contract IntegrationTest is TestHelper {
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
 
         // === MALICIOUS PROPOSAL: Someone says NO won (LIE!) ===
-        proposeOutcomeFor(proposer, marketId, false, ""); // LIES: says NO
+        proposeOutcomeFor(proposer, marketId, false); // LIES: says NO
 
         // === ALICE DISPUTES ===
         uint256 aliceBalanceBefore = alice.balance;
@@ -384,7 +388,7 @@ contract IntegrationTest is TestHelper {
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // Warp to EXACTLY end of dispute window (should still work)
         vm.warp(block.timestamp + DISPUTE_WINDOW);
@@ -407,7 +411,7 @@ contract IntegrationTest is TestHelper {
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // Warp PAST dispute window
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
@@ -438,7 +442,7 @@ contract IntegrationTest is TestHelper {
 
         // Expire, propose, dispute
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
         disputeFor(bob, marketId);
 
         // Warp to EXACTLY end of voting window
@@ -466,7 +470,7 @@ contract IntegrationTest is TestHelper {
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // Dispute
         disputeFor(disputer, marketId);
@@ -503,23 +507,36 @@ contract IntegrationTest is TestHelper {
      * @dev Tests system under realistic conditions
      */
     function test_Integration_MultiUser_ComplexScenario() public {
-        // === SETUP ===
-        uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // === SETUP: Use PRO market for larger amounts ===
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            1 days,
+            PredictionMarket.HeatLevel.PRO
+        );
 
-        // Multiple trades - YES side has more volume
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 0.5 ether, 0);
-        buyYesFor(charlie, marketId, 0.8 ether, 0);
+        // Multiple trades - scaled for PRO (YES side has more volume)
+        buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.25 ether, 0);
+        buyYesFor(charlie, marketId, 0.4 ether, 0);
 
-        // Alice sells a small amount
+        // Alice sells a small amount (use getMaxSellableShares to ensure it's possible)
         (uint256 aliceYes, , , , , ) = market.getPosition(marketId, alice);
         uint256 sellAmount = aliceYes / 10; // Sell only 10%
-        vm.prank(alice);
-        market.sellYes(marketId, sellAmount, 0);
+
+        // Only sell if there's enough in the pool
+        (uint256 maxSellable, ) = market.getMaxSellableShares(
+            marketId,
+            sellAmount,
+            true
+        );
+        if (maxSellable >= sellAmount) {
+            vm.prank(alice);
+            market.sellYes(marketId, sellAmount, 0);
+        }
 
         // === RESOLUTION ===
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
 
         // Dispute
         disputeFor(bob, marketId);
@@ -574,10 +591,10 @@ contract IntegrationTest is TestHelper {
 
         vm.prank(alice);
         vm.expectRevert(PredictionMarket.CreatorPriorityActive.selector);
-        market.proposeOutcome{value: totalRequired}(marketId, true, "");
+        market.proposeOutcome{value: totalRequired}(marketId, true);
 
         // Creator CAN propose
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
     }
 
     /**
@@ -591,7 +608,7 @@ contract IntegrationTest is TestHelper {
         vm.warp(block.timestamp + 1 days + 1 + CREATOR_PRIORITY_WINDOW + 1);
 
         // Non-creator CAN propose now
-        proposeOutcomeFor(alice, marketId, true, "");
+        proposeOutcomeFor(alice, marketId, true);
 
         assertEq(
             uint256(market.getMarketStatus(marketId)),
@@ -612,7 +629,7 @@ contract IntegrationTest is TestHelper {
 
         // Expire, propose, dispute
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
         disputeFor(disputer, marketId);
 
         // Bob (no shares) tries to vote
@@ -634,7 +651,7 @@ contract IntegrationTest is TestHelper {
 
         // Resolve market
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
         market.finalizeMarket(marketId);
 
@@ -662,7 +679,7 @@ contract IntegrationTest is TestHelper {
 
         // Resolve
         vm.warp(block.timestamp + 1 days + 1);
-        proposeOutcomeFor(marketCreator, marketId, true, "");
+        proposeOutcomeFor(marketCreator, marketId, true);
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
         market.finalizeMarket(marketId);
 

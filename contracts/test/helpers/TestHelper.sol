@@ -115,7 +115,7 @@ contract TestHelper is Test {
     // ============================================
 
     /**
-     * @notice Create a test market with default parameters
+     * @notice Create a test market with default parameters (HIGH heat level)
      * @param creator The address creating the market
      * @param expiryOffset How many seconds from now until expiry
      */
@@ -129,12 +129,35 @@ contract TestHelper is Test {
             "https://coinmarketcap.com/currencies/ethereum/",
             "Resolve YES if ETH price is above $5000 USD at 00:00 UTC on Jan 1, 2027 according to CoinMarketCap",
             "https://i.imgur.com/test.png", // imageUrl
-            block.timestamp + expiryOffset
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.HIGH // Default to HIGH heat level
         );
     }
 
     /**
-     * @notice Create a degen market (no evidence link)
+     * @notice Create a test market with specific heat level
+     * @param creator The address creating the market
+     * @param expiryOffset How many seconds from now until expiry
+     * @param heatLevel The heat level for market volatility
+     */
+    function createTestMarketWithHeatLevel(
+        address creator,
+        uint256 expiryOffset,
+        PredictionMarket.HeatLevel heatLevel
+    ) internal returns (uint256 marketId) {
+        vm.prank(creator);
+        marketId = market.createMarket(
+            "Will ETH be above $5000 by end of 2026?",
+            "https://coinmarketcap.com/currencies/ethereum/",
+            "Resolve YES if ETH price is above $5000 USD at 00:00 UTC on Jan 1, 2027 according to CoinMarketCap",
+            "https://i.imgur.com/test.png", // imageUrl
+            block.timestamp + expiryOffset,
+            heatLevel
+        );
+    }
+
+    /**
+     * @notice Create a degen market (no evidence link, CRACK heat level for max volatility)
      */
     function createDegenMarket(
         address creator,
@@ -146,7 +169,27 @@ contract TestHelper is Test {
             "", // No evidence link - full degen
             "Resolve YES if creator posts proof of girlfriend",
             "", // No image - full degen
-            block.timestamp + expiryOffset
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.CRACK // Degen markets use CRACK for max volatility
+        );
+    }
+
+    /**
+     * @notice Create a PRO market (high liquidity for whale bets)
+     * @dev Use this for tests with large BNB amounts (1+ BNB)
+     */
+    function createProMarket(
+        address creator,
+        uint256 expiryOffset
+    ) internal returns (uint256 marketId) {
+        vm.prank(creator);
+        marketId = market.createMarket(
+            "Will BTC hit $100k by end of year?",
+            "https://coinmarketcap.com/currencies/bitcoin/",
+            "Resolve YES if BTC price > $100k USD at expiry",
+            "https://i.imgur.com/btc.png",
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.PRO // PRO for large bets
         );
     }
 
@@ -253,13 +296,11 @@ contract TestHelper is Test {
      * @param _proposer Who proposes
      * @param marketId The market
      * @param outcome Proposed outcome (true=YES, false=NO)
-     * @param proofLink Optional proof link
      */
     function proposeOutcomeFor(
         address _proposer,
         uint256 marketId,
-        bool outcome,
-        string memory proofLink
+        bool outcome
     ) internal {
         uint256 requiredBond = market.getRequiredBond(marketId);
         // Add 0.3% fee on top
@@ -269,11 +310,7 @@ contract TestHelper is Test {
             1;
 
         vm.prank(_proposer);
-        market.proposeOutcome{value: totalRequired}(
-            marketId,
-            outcome,
-            proofLink
-        );
+        market.proposeOutcome{value: totalRequired}(marketId, outcome);
     }
 
     /**
@@ -310,10 +347,9 @@ contract TestHelper is Test {
     function proposeAndFinalize(
         address _proposer,
         uint256 marketId,
-        bool outcome,
-        string memory proofLink
+        bool outcome
     ) internal {
-        proposeOutcomeFor(_proposer, marketId, outcome, proofLink);
+        proposeOutcomeFor(_proposer, marketId, outcome);
 
         // Skip dispute window
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
@@ -334,7 +370,7 @@ contract TestHelper is Test {
         address[] memory noVoters
     ) internal {
         // Propose
-        proposeOutcomeFor(_proposer, marketId, proposedOutcome, "");
+        proposeOutcomeFor(_proposer, marketId, proposedOutcome);
 
         // Dispute
         disputeFor(_disputer, marketId);
@@ -371,7 +407,7 @@ contract TestHelper is Test {
         if (skipCreator) {
             skipCreatorPriority(marketId);
         }
-        proposeAndFinalize(_proposer, marketId, outcome, "");
+        proposeAndFinalize(_proposer, marketId, outcome);
     }
 
     /**

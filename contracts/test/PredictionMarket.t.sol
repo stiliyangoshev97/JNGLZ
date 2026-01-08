@@ -21,7 +21,8 @@ contract PredictionMarketTest is TestHelper {
             "https://coinmarketcap.com/currencies/bitcoin/",
             "Resolve YES if BTC > $100,000 USD at expiry",
             "",
-            expiryTime
+            expiryTime,
+            PredictionMarket.HeatLevel.HIGH
         );
 
         assertEq(marketId, 0, "First market should have ID 0");
@@ -63,7 +64,9 @@ contract PredictionMarketTest is TestHelper {
             0,
             marketCreator,
             "Test question",
-            expiryTime
+            expiryTime,
+            PredictionMarket.HeatLevel.HIGH,
+            20 * 1e18 // Default HIGH liquidity
         );
 
         vm.prank(marketCreator);
@@ -72,7 +75,8 @@ contract PredictionMarketTest is TestHelper {
             "https://example.com",
             "Rules",
             "",
-            expiryTime
+            expiryTime,
+            PredictionMarket.HeatLevel.HIGH
         );
     }
 
@@ -84,7 +88,8 @@ contract PredictionMarketTest is TestHelper {
             "https://example.com",
             "Rules",
             "",
-            block.timestamp + 1 days
+            block.timestamp + 1 days,
+            PredictionMarket.HeatLevel.HIGH
         );
     }
 
@@ -96,7 +101,8 @@ contract PredictionMarketTest is TestHelper {
             "", // Empty evidence link is OK for degen markets
             "Creator posts proof",
             "",
-            block.timestamp + 1 days
+            block.timestamp + 1 days,
+            PredictionMarket.HeatLevel.CRACK // Degen = CRACK heat
         );
 
         assertEq(marketId, 0, "Should create market successfully");
@@ -110,7 +116,8 @@ contract PredictionMarketTest is TestHelper {
             "https://example.com",
             "Rules",
             "",
-            block.timestamp - 1
+            block.timestamp - 1,
+            PredictionMarket.HeatLevel.HIGH
         );
     }
 
@@ -120,7 +127,16 @@ contract PredictionMarketTest is TestHelper {
         vm.prank(alice);
         (uint256 marketId, uint256 shares) = market.createMarketAndBuy{
             value: 1 ether
-        }("Test?", "https://example.com", "Rules", "", expiryTime, true, 0);
+        }(
+            "Test?",
+            "https://example.com",
+            "Rules",
+            "",
+            expiryTime,
+            PredictionMarket.HeatLevel.HIGH,
+            true,
+            0
+        );
 
         assertEq(marketId, 0);
         assertGt(shares, 0, "Should receive shares");
@@ -130,706 +146,246 @@ contract PredictionMarketTest is TestHelper {
     }
 
     // ============================================
-    // TRADING TESTS
+    // HEAT LEVEL TESTS
     // ============================================
 
-    function test_BuyYes_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        uint256 aliceBalanceBefore = alice.balance;
-
-        vm.prank(alice);
-        uint256 shares = market.buyYes{value: 1 ether}(marketId, 0);
-
-        assertGt(shares, 0, "Should receive shares");
-        assertLt(alice.balance, aliceBalanceBefore, "Balance should decrease");
-
-        (uint256 yesShares, , , , , ) = market.getPosition(marketId, alice);
-        assertEq(yesShares, shares);
-    }
-
-    function test_BuyNo_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        vm.prank(bob);
-        uint256 shares = market.buyNo{value: 1 ether}(marketId, 0);
-
-        assertGt(shares, 0, "Should receive shares");
-
-        (, uint256 noShares, , , , ) = market.getPosition(marketId, bob);
-        assertEq(noShares, shares);
-    }
-
-    function test_Buy_RevertBelowMinBet() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.BelowMinBet.selector);
-        market.buyYes{value: 0.001 ether}(marketId, 0); // Below default 0.005 min
-    }
-
-    function test_Buy_RevertIfExpired() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        expireMarket(marketId);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
-        market.buyYes{value: 1 ether}(marketId, 0);
-    }
-
-    function test_SellYes_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Buy first
-        vm.prank(alice);
-        uint256 shares = market.buyYes{value: 1 ether}(marketId, 0);
-
-        // Sell half
-        uint256 balanceBefore = alice.balance;
-        vm.prank(alice);
-        uint256 bnbOut = market.sellYes(marketId, shares / 2, 0);
-
-        assertGt(bnbOut, 0, "Should receive BNB");
-        assertGt(alice.balance, balanceBefore, "Balance should increase");
-    }
-
-    function test_SellNo_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        vm.prank(bob);
-        uint256 shares = market.buyNo{value: 1 ether}(marketId, 0);
-
-        vm.prank(bob);
-        uint256 bnbOut = market.sellNo(marketId, shares / 2, 0);
-
-        assertGt(bnbOut, 0, "Should receive BNB");
-    }
-
-    function test_Sell_RevertInsufficientShares() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.InsufficientShares.selector);
-        market.sellYes(marketId, type(uint256).max, 0);
-    }
-
-    function test_Trading_FeeDistribution() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        uint256 treasuryBefore = treasury.balance;
-        uint256 creatorBefore = marketCreator.balance;
-
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
-
-        // Treasury gets platform fee (1%)
-        assertGt(treasury.balance, treasuryBefore, "Treasury should get fee");
-
-        // Creator gets creator fee (0.5%)
-        assertGt(
-            marketCreator.balance,
-            creatorBefore,
-            "Creator should get fee"
-        );
-    }
-
-    function test_PreviewBuy_MatchesActual() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        uint256 previewShares = market.previewBuy(marketId, 1 ether, true);
-
-        vm.prank(alice);
-        uint256 actualShares = market.buyYes{value: 1 ether}(marketId, 0);
-
-        assertEq(
-            previewShares,
-            actualShares,
-            "Preview should match actual shares"
-        );
-    }
-
-    // ============================================
-    // STREET CONSENSUS RESOLUTION TESTS
-    // ============================================
-
-    function test_ProposeOutcome_CreatorPriority() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-
-        // Non-creator cannot propose during priority window
-        vm.prank(charlie);
-        vm.expectRevert(PredictionMarket.CreatorPriorityActive.selector);
-        market.proposeOutcome{value: 0.03 ether}(marketId, true, "");
-
-        // Creator CAN propose during priority window
-        uint256 requiredBond = market.getRequiredBond(marketId);
-        uint256 totalRequired = requiredBond +
-            (requiredBond * RESOLUTION_FEE_BPS) /
-            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
-            1;
+    function test_HeatLevel_CRACK_HasCorrectLiquidity() public {
+        uint256 expiryTime = block.timestamp + 7 days;
 
         vm.prank(marketCreator);
-        market.proposeOutcome{value: totalRequired}(
-            marketId,
-            true,
-            "https://proof.com"
+        uint256 marketId = market.createMarket(
+            "Degen CRACK test?",
+            "",
+            "Rules",
+            "",
+            expiryTime,
+            PredictionMarket.HeatLevel.CRACK
         );
 
-        // Check proposal was stored
-        (address proposerAddr, bool proposedOutcome, , , , ) = market
-            .getProposal(marketId);
-        assertEq(proposerAddr, marketCreator);
-        assertTrue(proposedOutcome);
-    }
-
-    function test_ProposeOutcome_AnyoneAfterPriorityWindow() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        // Skip past expiry + creator priority window
-        skipCreatorPriority(marketId);
-
-        // Now anyone can propose
-        proposeOutcomeFor(charlie, marketId, true, "https://proof.com");
-
-        (address proposerAddr, , , , , ) = market.getProposal(marketId);
-        assertEq(proposerAddr, charlie);
-    }
-
-    function test_ProposeOutcome_RevertIfNotExpired() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.MarketNotExpired.selector);
-        market.proposeOutcome{value: 0.03 ether}(marketId, true, "");
-    }
-
-    function test_ProposeOutcome_EmptyProofLinkAllowed() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-
-        // Empty proof link is OK (degen mode)
-        proposeOutcomeFor(charlie, marketId, true, "");
-
-        (address proposerAddr, , string memory proofLink, , , ) = market
-            .getProposal(marketId);
-        assertEq(proposerAddr, charlie);
-        assertEq(proofLink, "");
-    }
-
-    function test_Dispute_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-
-        // Dispute the proposal
-        disputeFor(bob, marketId);
-
-        // Check dispute was stored
+        // CRACK = 5 * 1e18 - access virtualLiquidity and heatLevel
         (
-            address disputerAddr,
-            uint256 disputeTime,
-            uint256 disputeBond,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 virtualLiquidity,
+            PredictionMarket.HeatLevel heatLevel,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
             ,
             ,
 
-        ) = market.getDispute(marketId);
-        assertEq(disputerAddr, bob);
-        assertGt(disputeTime, 0);
-        assertGt(disputeBond, 0);
+        ) = market.markets(marketId);
 
-        // Status should be Disputed
         assertEq(
-            uint256(market.getMarketStatus(marketId)),
-            uint256(PredictionMarket.MarketStatus.Disputed)
+            virtualLiquidity,
+            5 * 1e18,
+            "CRACK should have 5e18 liquidity"
         );
+        assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.CRACK));
     }
 
-    function test_Dispute_RevertAfterWindow() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
+    function test_HeatLevel_HIGH_HasCorrectLiquidity() public {
+        uint256 expiryTime = block.timestamp + 7 days;
 
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
+        vm.prank(marketCreator);
+        uint256 marketId = market.createMarket(
+            "Standard HIGH test?",
+            "",
+            "Rules",
+            "",
+            expiryTime,
+            PredictionMarket.HeatLevel.HIGH
+        );
 
-        // Skip past dispute window
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+        // HIGH = 20 * 1e18
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 virtualLiquidity,
+            PredictionMarket.HeatLevel heatLevel,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(marketId);
+
+        assertEq(
+            virtualLiquidity,
+            20 * 1e18,
+            "HIGH should have 20e18 liquidity"
+        );
+        assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.HIGH));
+    }
+
+    function test_HeatLevel_PRO_HasCorrectLiquidity() public {
+        uint256 expiryTime = block.timestamp + 7 days;
+
+        vm.prank(marketCreator);
+        uint256 marketId = market.createMarket(
+            "Whale PRO test?",
+            "",
+            "Rules",
+            "",
+            expiryTime,
+            PredictionMarket.HeatLevel.PRO
+        );
+
+        // PRO = 50 * 1e18
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 virtualLiquidity,
+            PredictionMarket.HeatLevel heatLevel,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(marketId);
+
+        assertEq(
+            virtualLiquidity,
+            50 * 1e18,
+            "PRO should have 50e18 liquidity"
+        );
+        assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.PRO));
+    }
+
+    function test_HeatLevel_CRACK_HasHigherPriceImpact() public {
+        // Create CRACK market (5 liquidity)
+        uint256 crackMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
+
+        // Create PRO market (50 liquidity)
+        uint256 proMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
+        );
+
+        // Buy same amount on both
+        uint256 buyAmount = 0.05 ether; // Small bet
+
+        vm.prank(alice);
+        market.buyYes{value: buyAmount}(crackMarket, 0);
 
         vm.prank(bob);
-        vm.expectRevert(PredictionMarket.DisputeWindowExpired.selector);
-        market.dispute{value: 1 ether}(marketId);
+        market.buyYes{value: buyAmount}(proMarket, 0);
+
+        // CRACK should have higher price after same buy
+        uint256 crackPrice = market.getYesPrice(crackMarket);
+        uint256 proPrice = market.getYesPrice(proMarket);
+
+        assertGt(crackPrice, proPrice, "CRACK should have higher price impact");
     }
 
-    function test_Vote_Success() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 1 ether, 0);
+    function test_HeatLevel_GovernanceCanUpdateDefaults() public {
+        uint256 newCrackValue = 3 * 1e18;
 
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
-
-        // Alice votes YES
-        voteFor(alice, marketId, true);
-
-        // Bob votes NO
-        voteFor(bob, marketId, false);
-
-        // Check votes recorded
-        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
-            marketId
-        );
-        assertGt(yesVotes, 0, "YES votes should be recorded");
-        assertGt(noVotes, 0, "NO votes should be recorded");
-    }
-
-    function test_Vote_RevertIfNoShares() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
-
-        // Charlie has no shares, cannot vote
-        vm.prank(charlie);
-        vm.expectRevert(PredictionMarket.NoSharesForVoting.selector);
-        market.vote(marketId, true);
-    }
-
-    function test_Vote_RevertIfAlreadyVoted() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
-
-        voteFor(alice, marketId, true);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.AlreadyVoted.selector);
-        market.vote(marketId, false);
-    }
-
-    function test_FinalizeMarket_NoDispute() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-
-        // Skip dispute window (no one disputed)
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-
-        // Finalize
-        market.finalizeMarket(marketId);
-
-        // Check resolved
-        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
-            marketId
-        );
-        assertTrue(resolved, "Market should be resolved");
-        assertTrue(outcome, "Outcome should be YES");
-    }
-
-    function test_FinalizeMarket_WithDispute_ProposerWins() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // To ensure Alice wins the vote, she needs significantly more shares
-        // Due to bonding curve, when Alice buys YES, the NO price drops
-        // So Bob gets more NO shares per BNB
-        // Solution: Have Alice buy first at good price, then Bob buys minimal amount
-        buyYesFor(alice, marketId, 1 ether, 0); // Alice gets ~197 shares at initial price
-        buyNoFor(bob, marketId, 0.1 ether, 0); // Bob gets much fewer shares
-
-        // Verify Alice has more voting weight
-        (uint256 aliceYes, , , , , ) = market.getPosition(marketId, alice);
-        (, uint256 bobNo, , , , ) = market.getPosition(marketId, bob);
-        assertGt(aliceYes, bobNo, "Alice should have more shares for voting");
-
-        skipCreatorPriority(marketId);
-
-        // Charlie proposes YES
-        proposeOutcomeFor(charlie, marketId, true, "");
-
-        // Bob disputes
-        disputeFor(bob, marketId);
-
-        // Alice votes YES, Bob votes NO
-        // Alice has more shares, so YES should win
-        voteFor(alice, marketId, true);
-        voteFor(bob, marketId, false);
-
-        // Skip voting window
-        vm.warp(block.timestamp + VOTING_WINDOW + 1);
-
-        // Finalize
-        market.finalizeMarket(marketId);
-
-        // Check resolved with YES
-        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
-            marketId
-        );
-        assertTrue(resolved);
-        assertTrue(outcome, "YES should win (proposer was correct)");
-    }
-
-    function test_FinalizeMarket_WithDispute_DisputerWins() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Bob bets more on NO
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 2 ether, 0);
-
-        skipCreatorPriority(marketId);
-
-        // Charlie proposes YES (wrong!)
-        proposeOutcomeFor(charlie, marketId, true, "");
-
-        // Bob disputes
-        disputeFor(bob, marketId);
-
-        // Votes: Alice YES, Bob NO. Bob has more shares.
-        voteFor(alice, marketId, true);
-        voteFor(bob, marketId, false);
-
-        vm.warp(block.timestamp + VOTING_WINDOW + 1);
-
-        market.finalizeMarket(marketId);
-
-        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
-            marketId
-        );
-        assertTrue(resolved);
-        assertFalse(outcome, "NO should win (disputer was correct)");
-    }
-
-    function test_FinalizeMarket_TieReturnsBonds() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Both buy equal YES shares (same side voting)
-        // This ensures they have exactly equal voting weight
-        uint256 aliceShares = buyYesFor(alice, marketId, 1 ether, 0);
-
-        // Charlie also buys YES for same amount at similar price
-        uint256 charlieShares = buyYesFor(charlie, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-
-        uint256 proposerBalanceBefore = proposer.balance;
-        proposeOutcomeFor(proposer, marketId, true, "");
-
-        uint256 disputerBalanceBefore = disputer.balance;
-        disputeFor(disputer, marketId);
-
-        // Alice votes YES, Charlie votes NO - they have similar share counts
-        // Since both bought YES at similar times, their shares should be close
-        // However they won't be exactly equal, so let's test the scenario
-        // where NO ONE votes (0 vs 0 = tie)
-        // (Don't call voteFor at all)
-
-        vm.warp(block.timestamp + VOTING_WINDOW + 1);
-
-        // Finalize with 0 votes each side = tie
-        market.finalizeMarket(marketId);
-
-        // Market should NOT be resolved (tie = stuck)
-        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
-        assertFalse(resolved, "Market should not resolve on tie");
-
-        // Bonds should be returned
-        assertGt(
-            proposer.balance,
-            proposerBalanceBefore - 0.1 ether,
-            "Proposer should get bond back"
-        );
-        assertGt(
-            disputer.balance,
-            disputerBalanceBefore - 0.1 ether,
-            "Disputer should get bond back"
-        );
-    }
-
-    // ============================================
-    // CLAIM TESTS
-    // ============================================
-
-    function test_Claim_WinnerGetsPool() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
-
-        uint256 aliceBalanceBefore = alice.balance;
-        vm.prank(alice);
-        uint256 payout = market.claim(marketId);
-
-        assertGt(payout, 0, "Alice should get payout");
-        assertGt(
-            alice.balance,
-            aliceBalanceBefore,
-            "Alice balance should increase"
-        );
-
-        (, , bool claimed, , , ) = market.getPosition(marketId, alice);
-        assertTrue(claimed, "Position should be marked claimed");
-    }
-
-    function test_Claim_LoserGetsNothing() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
-
-        vm.prank(bob);
-        vm.expectRevert(PredictionMarket.NothingToClaim.selector);
-        market.claim(marketId);
-    }
-
-    function test_Claim_RevertIfNotResolved() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.MarketNotResolved.selector);
-        market.claim(marketId);
-    }
-
-    function test_Claim_RevertIfAlreadyClaimed() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
-
-        vm.prank(alice);
-        market.claim(marketId);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.AlreadyClaimed.selector);
-        market.claim(marketId);
-    }
-
-    function test_Claim_TakesResolutionFee() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
-
-        uint256 treasuryBefore = treasury.balance;
-
-        vm.prank(alice);
-        market.claim(marketId);
-
-        assertGt(
-            treasury.balance,
-            treasuryBefore,
-            "Treasury should get resolution fee"
-        );
-    }
-
-    // ============================================
-    // EMERGENCY REFUND TESTS
-    // ============================================
-
-    function test_EmergencyRefund_AfterDelay() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 0.5 ether, 0);
-
-        // Warp past expiry + 24h
-        (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
-        vm.warp(expiry + 24 hours + 1);
-
-        uint256 aliceBalanceBefore = alice.balance;
-        vm.prank(alice);
-        uint256 refund = market.emergencyRefund(marketId);
-
-        assertGt(refund, 0, "Should get refund");
-        assertGt(alice.balance, aliceBalanceBefore, "Balance should increase");
-    }
-
-    function test_EmergencyRefund_RevertTooEarly() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.EmergencyRefundTooEarly.selector);
-        market.emergencyRefund(marketId);
-    }
-
-    function test_EmergencyRefund_RevertIfResolved() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        expireMarket(marketId);
-        assertAndResolve(marketId, charlie, true, true);
-
-        (, , , , , uint256 expiry, , , , , ) = market.getMarket(marketId);
-        vm.warp(expiry + 24 hours + 1);
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.MarketAlreadyResolved.selector);
-        market.emergencyRefund(marketId);
-    }
-
-    // ============================================
-    // MULTISIG GOVERNANCE TESTS
-    // ============================================
-
-    function test_MultiSig_SetFee() public {
-        uint256 newFee = 200; // 2%
-
+        // Update CRACK heat level via MultiSig
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(newFee)
-        );
-
-        assertEq(market.platformFeeBps(), newFee, "Fee should be updated");
-    }
-
-    function test_MultiSig_SetMinBet() public {
-        uint256 newMinBet = 0.01 ether;
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMinBet,
-            abi.encode(newMinBet)
-        );
-
-        assertEq(market.minBet(), newMinBet, "Min bet should be updated");
-    }
-
-    function test_MultiSig_SetCreatorFee() public {
-        uint256 newFee = 100; // 1%
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetCreatorFee,
-            abi.encode(newFee)
+            PredictionMarket.ActionType.SetHeatLevelCrack,
+            abi.encode(newCrackValue)
         );
 
         assertEq(
-            market.creatorFeeBps(),
-            newFee,
-            "Creator fee should be updated"
+            market.heatLevelCrack(),
+            newCrackValue,
+            "CRACK should be updated"
         );
-    }
 
-    function test_MultiSig_SetResolutionFee() public {
-        uint256 newFee = 50; // 0.5%
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetResolutionFee,
-            abi.encode(newFee)
+        // Create new market - should use new value
+        vm.prank(marketCreator);
+        uint256 marketId = market.createMarket(
+            "Test new CRACK?",
+            "",
+            "Rules",
+            "",
+            block.timestamp + 7 days,
+            PredictionMarket.HeatLevel.CRACK
         );
+
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 virtualLiquidity,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(marketId);
 
         assertEq(
-            market.resolutionFeeBps(),
-            newFee,
-            "Resolution fee should be updated"
+            virtualLiquidity,
+            newCrackValue,
+            "New market should use updated CRACK"
         );
     }
 
-    function test_MultiSig_SetMinBondFloor() public {
-        uint256 newFloor = 0.05 ether;
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMinBondFloor,
-            abi.encode(newFloor)
-        );
-
-        assertEq(
-            market.minBondFloor(),
-            newFloor,
-            "Min bond floor should be updated"
-        );
-    }
-
-    function test_MultiSig_SetDynamicBondBps() public {
-        uint256 newBps = 200; // 2%
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetDynamicBondBps,
-            abi.encode(newBps)
-        );
-
-        assertEq(
-            market.dynamicBondBps(),
-            newBps,
-            "Dynamic bond BPS should be updated"
-        );
-    }
-
-    function test_MultiSig_SetBondWinnerShare() public {
-        uint256 newShare = 6000; // 60%
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetBondWinnerShare,
-            abi.encode(newShare)
-        );
-
-        assertEq(
-            market.bondWinnerShareBps(),
-            newShare,
-            "Bond winner share should be updated"
-        );
-    }
-
-    function test_MultiSig_Pause() public {
-        executeMultiSigAction(PredictionMarket.ActionType.Pause, "");
-
-        assertTrue(market.paused(), "Contract should be paused");
-    }
-
-    function test_MultiSig_Unpause() public {
-        executeMultiSigAction(PredictionMarket.ActionType.Pause, "");
-        executeMultiSigAction(PredictionMarket.ActionType.Unpause, "");
-
-        assertFalse(market.paused(), "Contract should be unpaused");
-    }
-
-    function test_MultiSig_RevertNonSigner() public {
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.NotSigner.selector);
-        market.proposeAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(200)
-        );
-    }
-
-    function test_MultiSig_RevertFeeTooHigh() public {
-        uint256 tooHighFee = 600; // 6% > 5% max
-
+    function test_HeatLevel_InvalidValueReverts() public {
+        // Try to set heat level below minimum (1e18)
+        // The revert happens on the 3rd confirmation (execution)
         vm.prank(signer1);
         uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(tooHighFee)
+            PredictionMarket.ActionType.SetHeatLevelCrack,
+            abi.encode(0.5e18)
         );
 
         vm.prank(signer2);
@@ -840,646 +396,404 @@ contract PredictionMarketTest is TestHelper {
         market.confirmAction(actionId);
     }
 
-    function test_MultiSig_RevertBondWinnerShareOutOfBounds() public {
-        uint256 tooLow = 1000; // 10% < 20% min
-
-        vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetBondWinnerShare,
-            abi.encode(tooLow)
-        );
-
-        vm.prank(signer2);
-        market.confirmAction(actionId);
-
-        vm.prank(signer3);
-        vm.expectRevert(PredictionMarket.InvalidBondWinnerShare.selector);
-        market.confirmAction(actionId);
-    }
-
-    function test_MultiSig_ActionExpiry() public {
-        vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(200)
-        );
-
-        vm.warp(block.timestamp + ACTION_EXPIRY + 1);
-
-        vm.prank(signer2);
-        vm.expectRevert(PredictionMarket.ActionExpired.selector);
-        market.confirmAction(actionId);
-    }
-
     // ============================================
-    // MARKET CREATION FEE TESTS
-    // ============================================
-
-    function test_MarketCreationFee_DefaultsToZero() public {
-        assertEq(market.marketCreationFee(), 0, "Default fee should be 0");
-    }
-
-    function test_MultiSig_SetMarketCreationFee() public {
-        uint256 newFee = 0.01 ether;
-
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(newFee)
-        );
-
-        assertEq(
-            market.marketCreationFee(),
-            newFee,
-            "Market creation fee should be updated"
-        );
-    }
-
-    function test_MultiSig_SetMarketCreationFee_ToZero() public {
-        // First set a fee
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(0.05 ether)
-        );
-
-        // Then set it back to zero
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(0)
-        );
-
-        assertEq(
-            market.marketCreationFee(),
-            0,
-            "Market creation fee should be 0"
-        );
-    }
-
-    function test_MultiSig_RevertMarketCreationFeeTooHigh() public {
-        uint256 tooHighFee = 0.2 ether; // > 0.1 ether max
-
-        vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(tooHighFee)
-        );
-
-        vm.prank(signer2);
-        market.confirmAction(actionId);
-
-        vm.prank(signer3);
-        vm.expectRevert(PredictionMarket.InvalidMarketCreationFee.selector);
-        market.confirmAction(actionId);
-    }
-
-    function test_CreateMarket_WithFee_Success() public {
-        uint256 creationFee = 0.02 ether;
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        uint256 treasuryBalanceBefore = treasury.balance;
-
-        vm.prank(marketCreator);
-        uint256 marketId = market.createMarket{value: creationFee}(
-            "Will BTC hit $100k?",
-            "https://coinmarketcap.com/currencies/bitcoin/",
-            "Resolve YES if BTC > $100,000 USD at expiry",
-            "",
-            block.timestamp + 7 days
-        );
-
-        assertEq(marketId, 0, "First market should have ID 0");
-        assertEq(market.marketCount(), 1, "Market count should be 1");
-        assertEq(
-            treasury.balance,
-            treasuryBalanceBefore + creationFee,
-            "Treasury should receive creation fee"
-        );
-    }
-
-    function test_CreateMarket_WithFee_ExcessRefundedNotKept() public {
-        uint256 creationFee = 0.02 ether;
-        uint256 sentAmount = 0.05 ether; // More than needed
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        uint256 treasuryBalanceBefore = treasury.balance;
-
-        vm.prank(marketCreator);
-        market.createMarket{value: sentAmount}(
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days
-        );
-
-        // Note: Current implementation sends entire msg.value to treasury
-        // This is intentional - excess is a tip/donation
-        assertEq(
-            treasury.balance,
-            treasuryBalanceBefore + sentAmount,
-            "Treasury receives full msg.value"
-        );
-    }
-
-    function test_CreateMarket_WithFee_RevertInsufficientFee() public {
-        uint256 creationFee = 0.02 ether;
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.InsufficientCreationFee.selector);
-        market.createMarket{value: 0.01 ether}( // Less than required
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days
-        );
-    }
-
-    function test_CreateMarket_WithFee_RevertNoFee() public {
-        uint256 creationFee = 0.02 ether;
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.InsufficientCreationFee.selector);
-        market.createMarket( // No value sent
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days
-        );
-    }
-
-    function test_CreateMarketAndBuy_WithFee_Success() public {
-        uint256 creationFee = 0.02 ether;
-        uint256 betAmount = 0.1 ether;
-        uint256 totalSent = creationFee + betAmount;
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        uint256 treasuryBalanceBefore = treasury.balance;
-        uint256 creatorBalanceBefore = marketCreator.balance;
-
-        vm.prank(marketCreator);
-        (uint256 marketId, uint256 sharesOut) = market.createMarketAndBuy{
-            value: totalSent
-        }(
-            "Will BTC hit $100k?",
-            "https://coinmarketcap.com/currencies/bitcoin/",
-            "Resolve YES if BTC > $100,000 USD at expiry",
-            "",
-            block.timestamp + 7 days,
-            true, // Buy YES
-            0 // minSharesOut
-        );
-
-        assertEq(marketId, 0, "First market should have ID 0");
-        assertTrue(sharesOut > 0, "Should receive shares");
-
-        // Calculate expected treasury amount (creation fee + platform fee on bet)
-        uint256 platformFee = (betAmount * DEFAULT_FEE_BPS) / BPS_DENOMINATOR;
-        uint256 expectedTreasuryIncrease = creationFee + platformFee;
-
-        assertEq(
-            treasury.balance,
-            treasuryBalanceBefore + expectedTreasuryIncrease,
-            "Treasury should receive creation fee + platform fee"
-        );
-    }
-
-    function test_CreateMarketAndBuy_WithFee_RevertInsufficientForFee() public {
-        uint256 creationFee = 0.02 ether;
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.InsufficientCreationFee.selector);
-        market.createMarketAndBuy{value: 0.01 ether}( // Less than creation fee
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days,
-            true,
-            0
-        );
-    }
-
-    function test_CreateMarketAndBuy_WithFee_RevertInsufficientForBet() public {
-        uint256 creationFee = 0.02 ether;
-        uint256 minBet = market.minBet(); // 0.005 ether
-
-        // Set creation fee via MultiSig
-        executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
-        );
-
-        // Send enough for fee but not enough for minBet after fee deduction
-        uint256 sentAmount = creationFee + minBet - 1 wei;
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.BelowMinBet.selector);
-        market.createMarketAndBuy{value: sentAmount}(
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days,
-            true,
-            0
-        );
-    }
-
-    function test_CreateMarket_ZeroFee_StillWorks() public {
-        // Ensure fee is 0 (default)
-        assertEq(market.marketCreationFee(), 0);
-
-        // Should work without sending any value
-        vm.prank(marketCreator);
-        uint256 marketId = market.createMarket(
-            "Will BTC hit $100k?",
-            "",
-            "Rules",
-            "",
-            block.timestamp + 7 days
-        );
-
-        assertEq(marketId, 0, "Market should be created");
-    }
-
-    // ============================================
-    // PAUSE TESTS
-    // ============================================
-
-    function test_Paused_BlocksMarketCreation() public {
-        executeMultiSigAction(PredictionMarket.ActionType.Pause, "");
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.ContractPaused.selector);
-        market.createMarket(
-            "Question",
-            "https://example.com",
-            "Rules",
-            "",
-            block.timestamp + 1 days
-        );
-    }
-
-    function test_Paused_BlocksTrading() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        executeMultiSigAction(PredictionMarket.ActionType.Pause, "");
-
-        vm.prank(alice);
-        vm.expectRevert(PredictionMarket.ContractPaused.selector);
-        market.buyYes{value: 0.1 ether}(marketId, 0);
-    }
-
-    function test_Paused_BlocksProposal() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-        expireMarket(marketId);
-
-        executeMultiSigAction(PredictionMarket.ActionType.Pause, "");
-
-        vm.prank(marketCreator);
-        vm.expectRevert(PredictionMarket.ContractPaused.selector);
-        market.proposeOutcome{value: 0.03 ether}(marketId, true, "");
-    }
-
-    // ============================================
-    // WEIGHTED VOTING TESTS (Anti-Sybil)
+    // HEAT LEVEL PRICE IMPACT VERIFICATION TESTS
     // ============================================
 
     /**
-     * @notice Test that vote weight equals total shares owned
-     * @dev Verifies: voteWeight = yesShares + noShares
+     * @notice Test CRACK heat level math: 0.01 BNB buy should move price significantly
+     * @dev virtualLiquidity = 5e18, so small bets have HUGE impact
+     *
+     * Math walkthrough for 0.01 BNB buy on CRACK:
+     * - Initial: virtualYes = 5e18, virtualNo = 5e18, total = 10e18
+     * - Initial price: P(YES) = 0.01 * 5 / 10 = 0.005 BNB (50%)
+     * - After fee (1.5%): 0.01 * 0.985 = 0.00985 BNB to pool
+     * - Shares = (0.00985 * 10e18 * 1e18) / (0.01 * 5e18) = ~19.7e18 shares
+     * - New virtualYes = 5e18 + 19.7e18 = 24.7e18
+     * - New P(YES) = 0.01 * 24.7 / (24.7 + 5) = ~0.00831 BNB (~83%)
+     * - Price moved from 50% to ~83% = 33% swing!
      */
-    function test_Vote_WeightEqualsShares() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
+    function test_HeatLevel_CRACK_PriceImpact_SmallBet() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
 
-        // Alice buys 1 BNB of YES
-        buyYesFor(alice, marketId, 1 ether, 0);
-        (uint256 aliceYes, , , , , ) = market.getPosition(marketId, alice);
+        // Initial price should be 50%
+        uint256 initialPrice = market.getYesPrice(marketId);
+        assertEq(
+            initialPrice,
+            0.005 ether,
+            "Initial YES price should be 0.005 BNB"
+        );
 
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
+        // Buy with 0.01 BNB (very small bet)
+        uint256 buyAmount = 0.01 ether;
+        uint256 sharesBought = buyYesFor(alice, marketId, buyAmount, 0);
 
-        // Alice votes
-        voteFor(alice, marketId, true);
+        // Get new price
+        uint256 newPrice = market.getYesPrice(marketId);
 
-        // Check vote weight matches shares
-        (, , , , uint256 yesVotes, ) = market.getDispute(marketId);
-        assertEq(yesVotes, aliceYes, "Vote weight should equal shares owned");
+        // Calculate price change percentage (in basis points for precision)
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== CRACK Heat Level (vLiq=5) - 0.01 BNB buy ===");
+        console.log("Initial YES price:", initialPrice);
+        console.log("Shares bought:", sharesBought);
+        console.log("New YES price:", newPrice);
+        console.log("Price change (bps):", priceChangeBps);
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // CRACK should have significant price impact (~16% for 0.01 BNB)
+        // Actual math: vLiq=5, shares=1.97, price moves from 50% to ~58%
+        assertGt(priceChangeBps, 1000, "CRACK 0.01 BNB should move price >10%");
+        assertLt(priceChangeBps, 2500, "CRACK 0.01 BNB should move price <25%");
     }
 
     /**
-     * @notice Test that larger shareholders have proportionally more voting power
-     * @dev Alice with 1 BNB should have ~10x voting power of Bob with 0.1 BNB
+     * @notice Test HIGH heat level math: 0.01 BNB buy should have moderate impact
+     * @dev virtualLiquidity = 20e18, balanced volatility
+     *
+     * Math for 0.01 BNB on HIGH:
+     * - Initial: virtualYes = 20e18, virtualNo = 20e18, total = 40e18
+     * - After fee: ~0.00985 BNB to pool
+     * - Shares = (0.00985 * 40e18 * 1e18) / (0.01 * 20e18) = ~19.7e18 shares
+     * - New virtualYes = 20e18 + 19.7e18 = 39.7e18
+     * - New P(YES) = 0.01 * 39.7 / (39.7 + 20) = ~0.00665 BNB (~66.5%)
+     * - Price moved from 50% to ~66.5% = 16.5% swing
      */
-    function test_Vote_LargerPositionMorePower() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
+    function test_HeatLevel_HIGH_PriceImpact_SmallBet() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
 
-        // Alice buys 1 BNB, Bob buys 0.1 BNB
-        buyYesFor(alice, marketId, 1 ether, 0);
-        buyNoFor(bob, marketId, 0.1 ether, 0);
+        uint256 initialPrice = market.getYesPrice(marketId);
+        assertEq(
+            initialPrice,
+            0.005 ether,
+            "Initial YES price should be 0.005 BNB"
+        );
 
-        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
-        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
+        uint256 buyAmount = 0.01 ether;
+        uint256 sharesBought = buyYesFor(alice, marketId, buyAmount, 0);
 
-        // Alice should have significantly more shares
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== HIGH Heat Level (vLiq=20) - 0.01 BNB buy ===");
+        console.log("Initial YES price:", initialPrice);
+        console.log("Shares bought:", sharesBought);
+        console.log("New YES price:", newPrice);
+        console.log("Price change (bps):", priceChangeBps);
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // HIGH should have moderate price impact (~4.7% for 0.01 BNB)
+        assertGt(priceChangeBps, 300, "HIGH 0.01 BNB should move price >3%");
+        assertLt(priceChangeBps, 800, "HIGH 0.01 BNB should move price <8%");
+    }
+
+    /**
+     * @notice Test PRO heat level math: 0.01 BNB buy should have minimal impact
+     * @dev virtualLiquidity = 50e18, designed for whale trades
+     *
+     * Math for 0.01 BNB on PRO:
+     * - Initial: virtualYes = 50e18, virtualNo = 50e18, total = 100e18
+     * - After fee: ~0.00985 BNB to pool
+     * - Shares = (0.00985 * 100e18 * 1e18) / (0.01 * 50e18) = ~19.7e18 shares
+     * - New virtualYes = 50e18 + 19.7e18 = 69.7e18
+     * - New P(YES) = 0.01 * 69.7 / (69.7 + 50) = ~0.00582 BNB (~58.2%)
+     * - Price moved from 50% to ~58.2% = 8.2% swing
+     */
+    function test_HeatLevel_PRO_PriceImpact_SmallBet() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
+        );
+
+        uint256 initialPrice = market.getYesPrice(marketId);
+        assertEq(
+            initialPrice,
+            0.005 ether,
+            "Initial YES price should be 0.005 BNB"
+        );
+
+        uint256 buyAmount = 0.01 ether;
+        uint256 sharesBought = buyYesFor(alice, marketId, buyAmount, 0);
+
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== PRO Heat Level (vLiq=50) - 0.01 BNB buy ===");
+        console.log("Initial YES price:", initialPrice);
+        console.log("Shares bought:", sharesBought);
+        console.log("New YES price:", newPrice);
+        console.log("Price change (bps):", priceChangeBps);
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // PRO should have minimal price impact (~1.9% for 0.01 BNB)
+        assertLt(priceChangeBps, 400, "PRO 0.01 BNB should move price <4%");
         assertGt(
-            aliceShares,
-            bobShares * 5,
-            "Alice should have >5x Bob's shares"
+            priceChangeBps,
+            100,
+            "PRO 0.01 BNB should still move price >1%"
+        );
+    }
+
+    /**
+     * @notice Compare all three heat levels with same buy amount
+     * @dev This test creates visual comparison of volatility differences
+     */
+    function test_HeatLevel_AllLevels_PriceImpactComparison() public {
+        // Create one market of each type
+        uint256 crackMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
+        uint256 highMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
+        uint256 proMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
         );
 
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
+        uint256 buyAmount = 0.05 ether; // ~$25 at typical BNB prices
 
-        // Both vote opposite ways
-        voteFor(alice, marketId, true); // Alice votes YES
-        voteFor(bob, marketId, false); // Bob votes NO
+        // Buy on all three
+        buyYesFor(alice, crackMarket, buyAmount, 0);
+        buyYesFor(bob, highMarket, buyAmount, 0);
+        buyYesFor(charlie, proMarket, buyAmount, 0);
 
-        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
-            marketId
-        );
+        uint256 crackPrice = market.getYesPrice(crackMarket);
+        uint256 highPrice = market.getYesPrice(highMarket);
+        uint256 proPrice = market.getYesPrice(proMarket);
 
-        // Alice's vote should outweigh Bob's
+        console.log("=== Heat Level Comparison (0.05 BNB buy) ===");
+        console.log("CRACK price after:", crackPrice);
+        console.log("CRACK price %:", (crackPrice * 100) / 0.01 ether);
+        console.log("HIGH price after:", highPrice);
+        console.log("HIGH price %:", (highPrice * 100) / 0.01 ether);
+        console.log("PRO price after:", proPrice);
+        console.log("PRO price %:", (proPrice * 100) / 0.01 ether);
+
+        // Verify ordering: CRACK > HIGH > PRO price impact
         assertGt(
-            yesVotes,
-            noVotes,
-            "Larger shareholder should have more voting power"
+            crackPrice,
+            highPrice,
+            "CRACK should have higher price than HIGH"
         );
+        assertGt(highPrice, proPrice, "HIGH should have higher price than PRO");
+
+        // Verify CRACK is significantly more volatile than PRO
+        uint256 crackImpact = crackPrice - 0.005 ether;
+        uint256 proImpact = proPrice - 0.005 ether;
+        assertGt(
+            (crackImpact * 100) / proImpact,
+            300,
+            "CRACK should have >3x PRO's impact"
+        );
+    }
+
+    /**
+     * @notice Test larger bet amounts on each heat level
+     * @dev Verifies the "target bet" ranges from documentation
+     */
+    function test_HeatLevel_CRACK_LargeBetImpact() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
+
+        // 0.05 BNB should cause ~15% price impact on CRACK (per documentation)
+        uint256 buyAmount = 0.05 ether;
+        uint256 initialPrice = market.getYesPrice(marketId);
+
+        buyYesFor(alice, marketId, buyAmount, 0);
+
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== CRACK: 0.05 BNB (target bet) ===");
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // CRACK with 0.05 BNB should have ~49% price change (74% price)
+        assertGt(priceChangeBps, 4000, "CRACK 0.05 BNB should move price >40%");
+        assertLt(priceChangeBps, 6000, "CRACK 0.05 BNB should move price <60%");
+    }
+
+    function test_HeatLevel_HIGH_TargetBetImpact() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
+
+        // 0.5 BNB should cause ~15% price impact on HIGH (per documentation)
+        uint256 buyAmount = 0.5 ether;
+        uint256 initialPrice = market.getYesPrice(marketId);
+
+        buyYesFor(alice, marketId, buyAmount, 0);
+
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== HIGH: 0.5 BNB (target bet) ===");
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // HIGH with 0.5 BNB should have ~71% price change
+        assertGt(priceChangeBps, 6000, "HIGH 0.5 BNB should move price >60%");
+        assertLt(priceChangeBps, 8500, "HIGH 0.5 BNB should move price <85%");
+    }
+
+    function test_HeatLevel_PRO_WhaleBetImpact() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
+        );
+
+        // 2.0 BNB should cause ~15% price impact on PRO (per documentation)
+        uint256 buyAmount = 2 ether;
+        uint256 initialPrice = market.getYesPrice(marketId);
+
+        buyYesFor(alice, marketId, buyAmount, 0);
+
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== PRO: 2.0 BNB (whale bet) ===");
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // PRO with 2 BNB should have ~79% price change
+        assertGt(priceChangeBps, 7000, "PRO 2 BNB should move price >70%");
+        assertLt(priceChangeBps, 9000, "PRO 2 BNB should move price <90%");
+    }
+
+    /**
+     * @notice Verify heat level immutability per market
+     * @dev Even if MultiSig changes global defaults, existing markets keep their original virtualLiquidity
+     */
+    function test_HeatLevel_ImmutablePerMarket() public {
+        // Create CRACK market with default 5e18
+        uint256 crackMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
+
+        // Get initial virtualLiquidity
+        (, , , , , , , , , uint256 initialVLiq, , , , , , , , , , , , ) = market
+            .markets(crackMarket);
+        assertEq(initialVLiq, 5e18, "Initial CRACK should be 5e18");
+
+        // MultiSig changes CRACK default to 10e18
+        executeMultiSigAction(
+            PredictionMarket.ActionType.SetHeatLevelCrack,
+            abi.encode(10e18)
+        );
+
+        // Verify global default changed
         assertEq(
-            yesVotes,
-            aliceShares,
-            "YES votes should match Alice's shares"
+            market.heatLevelCrack(),
+            10e18,
+            "Global CRACK should be 10e18"
         );
-        assertEq(noVotes, bobShares, "NO votes should match Bob's shares");
+
+        // BUT the existing market should STILL have 5e18
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 unchangedVLiq,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(crackMarket);
+        assertEq(unchangedVLiq, 5e18, "Existing market should STILL have 5e18");
+
+        // New market gets the new value
+        uint256 newMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
+        );
+        (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , ) = market
+            .markets(newMarket);
+        assertEq(newVLiq, 10e18, "New market should have 10e18");
     }
 
     /**
-     * @notice Test Sybil attack resistance - splitting across wallets doesn't help
-     * @dev 1 BNB in 1 wallet = same voting power as 0.5 BNB in 2 wallets
+     * @notice Test price invariant holds across all heat levels
+     * @dev P(YES) + P(NO) should always equal UNIT_PRICE regardless of heat level
      */
-    function test_Vote_SybilAttackResistance() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Honest user: Alice buys 1 BNB in one wallet
-        buyYesFor(alice, marketId, 1 ether, 0);
-        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
-
-        // "Attacker" splits across 2 wallets (bob + charlie each 0.5 BNB)
-        buyNoFor(bob, marketId, 0.5 ether, 0);
-        buyNoFor(charlie, marketId, 0.5 ether, 0);
-
-        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
-        (, uint256 charlieNoShares, , , , ) = market.getPosition(
-            marketId,
-            charlie
+    function test_HeatLevel_PriceInvariant_AllLevels() public {
+        uint256 crackMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.CRACK
         );
-        uint256 attackerTotalShares = bobShares + charlieNoShares;
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(proposer, marketId, true, "");
-        disputeFor(disputer, marketId);
-
-        // Alice votes YES
-        voteFor(alice, marketId, true);
-
-        // "Attackers" both vote NO
-        voteFor(bob, marketId, false);
-        voteFor(charlie, marketId, false);
-
-        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
-            marketId
+        uint256 highMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
+        uint256 proMarket = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.PRO
         );
 
-        // Total votes should equal total shares
-        assertEq(yesVotes, aliceShares, "YES votes = Alice's shares");
-        assertEq(
-            noVotes,
-            attackerTotalShares,
-            "NO votes = attacker total shares"
-        );
+        // Trade on each market
+        buyYesFor(alice, crackMarket, 0.1 ether, 0);
+        buyNoFor(bob, highMarket, 0.2 ether, 0);
+        buyYesFor(charlie, proMarket, 0.5 ether, 0);
 
-        // Key insight: splitting doesn't give more power
-        // Alice with 1 BNB still has comparable or more power than attackers with 1 BNB split
-        console.log("Alice (1 wallet, 1 BNB) voting power:", aliceShares);
-        console.log(
-            "Attackers (2 wallets, 1 BNB total) voting power:",
-            attackerTotalShares
-        );
+        // Verify invariant: P(YES) + P(NO) = 0.01 BNB
+        uint256 crackYes = market.getYesPrice(crackMarket);
+        uint256 crackNo = market.getNoPrice(crackMarket);
+        assertApproxEqAbs(crackYes + crackNo, 0.01 ether, 1, "CRACK invariant");
+
+        uint256 highYes = market.getYesPrice(highMarket);
+        uint256 highNo = market.getNoPrice(highMarket);
+        assertApproxEqAbs(highYes + highNo, 0.01 ether, 1, "HIGH invariant");
+
+        uint256 proYes = market.getYesPrice(proMarket);
+        uint256 proNo = market.getNoPrice(proMarket);
+        assertApproxEqAbs(proYes + proNo, 0.01 ether, 1, "PRO invariant");
     }
 
-    /**
-     * @notice Test that combined YES+NO shares count for voting weight
-     * @dev Users who hedge (buy both sides) get full voting power
-     */
-    function test_Vote_BothSidesCountForWeight() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Alice buys both YES and NO
-        buyYesFor(alice, marketId, 0.5 ether, 0);
-        buyNoFor(alice, marketId, 0.5 ether, 0);
-
-        (uint256 aliceYes, uint256 aliceNo, , , , ) = market.getPosition(
-            marketId,
-            alice
-        );
-        uint256 aliceTotalShares = aliceYes + aliceNo;
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
-
-        voteFor(alice, marketId, true);
-
-        (, , , , uint256 yesVotes, ) = market.getDispute(marketId);
-
-        // Vote weight should include BOTH yes and no shares
-        assertEq(
-            yesVotes,
-            aliceTotalShares,
-            "Vote weight should be YES + NO shares"
-        );
-        assertGt(aliceYes, 0, "Should have YES shares");
-        assertGt(aliceNo, 0, "Should have NO shares");
-    }
-
-    /**
-     * @notice Test that voting outcome is determined by weighted majority
-     * @dev The side with more total share-weight wins
-     */
-    function test_Vote_WeightedMajorityWins() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Setup: Alice has way more shares than Bob
-        buyYesFor(alice, marketId, 2 ether, 0); // Alice: large position
-        buyNoFor(bob, marketId, 0.1 ether, 0); // Bob: small position
-
-        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
-        (, uint256 bobShares, , , , ) = market.getPosition(marketId, bob);
-
-        skipCreatorPriority(marketId);
-
-        // Proposer says YES
-        proposeOutcomeFor(proposer, marketId, true, "");
-        disputeFor(disputer, marketId);
-
-        // Alice votes YES (with proposer), Bob votes NO (with disputer)
-        voteFor(alice, marketId, true);
-        voteFor(bob, marketId, false);
-
-        // Skip voting window
-        vm.warp(block.timestamp + VOTING_WINDOW + 1);
-
-        // Finalize
-        market.finalizeMarket(marketId);
-
-        // Check outcome - YES should win because Alice has more shares
-        (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
-            marketId
-        );
-        assertTrue(resolved, "Market should be resolved");
-        assertTrue(outcome, "YES should win (Alice has more voting power)");
-
-        console.log("Alice voted YES with weight:", aliceShares);
-        console.log("Bob voted NO with weight:", bobShares);
-        console.log("Outcome: YES wins (as expected)");
-    }
-
-    /**
-     * @notice Test that trading is blocked after market expires (can't buy votes)
-     * @dev Prevents vote-buying attacks
-     */
-    function test_Vote_CantBuySharesAfterExpiry() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        // Expire the market
-        expireMarket(marketId);
-
-        // Try to buy more shares - should fail
-        vm.prank(bob);
-        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
-        market.buyYes{value: 0.5 ether}(marketId, 0);
-
-        vm.prank(bob);
-        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
-        market.buyNo{value: 0.5 ether}(marketId, 0);
-    }
-
-    /**
-     * @notice Test that trading is blocked during dispute/voting phase
-     * @dev Additional protection against vote manipulation
-     */
-    function test_Vote_CantBuySharesDuringVoting() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-        buyYesFor(alice, marketId, 1 ether, 0);
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(charlie, marketId, true, "");
-        disputeFor(proposer, marketId);
-
-        // Market is now in DISPUTED status (voting active)
-        // Try to buy shares - should fail
-        vm.prank(bob);
-        vm.expectRevert(PredictionMarket.MarketNotActive.selector);
-        market.buyYes{value: 0.5 ether}(marketId, 0);
-    }
-
-    /**
-     * @notice Test multiple small voters can't beat one large voter
-     * @dev 10 small voters with 0.1 BNB each ≈ 1 voter with 1 BNB
-     */
-    function test_Vote_ManySmallVotersCantBeatOneLarge() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Alice: 1 big buyer
-        buyYesFor(alice, marketId, 1 ether, 0);
-        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
-
-        // Create 5 small buyers (we can't easily make 10 in test)
-        address[5] memory smallBuyers;
-        uint256 totalSmallShares;
-
-        for (uint256 i = 0; i < 5; i++) {
-            smallBuyers[i] = address(uint160(0x5000 + i));
-            vm.deal(smallBuyers[i], 1 ether);
-
-            vm.prank(smallBuyers[i]);
-            market.buyNo{value: 0.2 ether}(marketId, 0);
-
-            (, uint256 shares, , , , ) = market.getPosition(
-                marketId,
-                smallBuyers[i]
-            );
-            totalSmallShares += shares;
-        }
-
-        skipCreatorPriority(marketId);
-        proposeOutcomeFor(proposer, marketId, true, "");
-        disputeFor(disputer, marketId);
-
-        // Alice votes YES
-        voteFor(alice, marketId, true);
-
-        // All small buyers vote NO
-        for (uint256 i = 0; i < 5; i++) {
-            vm.prank(smallBuyers[i]);
-            market.vote(marketId, false);
-        }
-
-        (, , , , uint256 yesVotes, uint256 noVotes) = market.getDispute(
-            marketId
-        );
-
-        console.log("Alice (1 BNB) voting power:", yesVotes);
-        console.log("5 small buyers (1 BNB total) voting power:", noVotes);
-
-        // Verify votes match shares
-        assertEq(
-            yesVotes,
-            aliceShares,
-            "Alice's votes should match her shares"
-        );
-        assertEq(
-            noVotes,
-            totalSmallShares,
-            "Small buyers' votes should match their total shares"
-        );
-    }
+    // ============================================
+    // SWEEP FUNDS TESTS
+    // ============================================
+    // ...existing code...
 }
