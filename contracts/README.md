@@ -63,6 +63,251 @@
 
 ---
 
+## 📜 RULES OF THE GAME
+
+> **Everything you need to understand JunkieFun in one place.**
+
+### 1️⃣ TRADING FEES (When You Buy/Sell Shares)
+
+| Fee | Amount | Goes To | When |
+|-----|--------|---------|------|
+| **Platform Fee** | 1.0% | Treasury | Every trade |
+| **Creator Fee** | 0.5% | Market Creator | Every trade |
+| **Net to Pool** | 98.5% | Betting Pool | Every trade |
+
+**Example:** You buy with 1 BNB
+- 0.01 BNB → Treasury (1%)
+- 0.005 BNB → Market Creator (0.5%)
+- 0.985 BNB → Pool (buys your shares)
+
+---
+
+### 2️⃣ CLAIMING FEES (When You Claim Winnings)
+
+| Fee | Amount | Goes To | When |
+|-----|--------|---------|------|
+| **Resolution Fee** | 0.3% | Treasury | Claiming winnings |
+
+**Example:** You claim 10 BNB winnings
+- 0.03 BNB → Treasury (0.3%)
+- 9.97 BNB → You
+
+---
+
+### 3️⃣ MARKET CREATION
+
+| Fee | Amount | Notes |
+|-----|--------|-------|
+| **Creation Fee** | FREE (0 BNB) | Configurable by MultiSig, default is free |
+
+---
+
+### 4️⃣ BONDING CURVE PRICING
+
+```
+Price Formula: P(YES) + P(NO) = 0.01 BNB always
+
+Buy more YES → YES price goes UP, NO price goes DOWN
+Buy more NO  → NO price goes UP, YES price goes DOWN
+
+Initial: YES = 0.005 BNB (50%), NO = 0.005 BNB (50%)
+```
+
+**Sell Rule:** When you sell, you receive LESS than you would expect due to price impact. Buy→Sell always results in ~3% loss (to fees). No arbitrage possible.
+
+---
+
+### 5️⃣ HEAT LEVELS (Market Volatility)
+
+| Level | Virtual Liquidity | Best For | Price Impact |
+|-------|-------------------|----------|--------------|
+| ☢️ **CRACK** | 5 | Meme/degen markets | ~25% per 0.1 BNB |
+| 🔥 **HIGH** (default) | 20 | General markets | ~7% per 0.1 BNB |
+| 🧊 **PRO** | 50 | Whale/serious markets | ~3% per 0.1 BNB |
+
+---
+
+### 6️⃣ RESOLUTION TIMELINE
+
+```
+Market Expires
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  CREATOR PRIORITY WINDOW (10 minutes)                       │
+│  Only the market creator can propose outcome                │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ▼ (after 10 min, anyone can propose)
+┌─────────────────────────────────────────────────────────────┐
+│  PROPOSAL: Someone proposes YES or NO + posts bond          │
+│  Bond = max(0.005 BNB, 1% of pool)                          │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  DISPUTE WINDOW (30 minutes)                                │
+│  Anyone can dispute by posting 2× the proposer's bond       │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ├──► NO DISPUTE: Market finalizes after 30 min
+     │
+     └──► DISPUTED:
+              │
+              ▼
+         ┌─────────────────────────────────────────────────────┐
+         │  VOTING WINDOW (1 hour)                             │
+         │  Shareholders vote YES or NO                        │
+         │  Vote weight = total shares held (YES + NO)         │
+         └─────────────────────────────────────────────────────┘
+              │
+              ▼
+         Market finalizes with majority vote outcome
+```
+
+---
+
+### 7️⃣ BOND AMOUNTS
+
+| Pool Size | Proposer Bond | Disputer Bond (2×) |
+|-----------|---------------|-------------------|
+| < 0.5 BNB | 0.005 BNB (floor) | 0.01 BNB |
+| 1 BNB | 0.01 BNB | 0.02 BNB |
+| 10 BNB | 0.1 BNB | 0.2 BNB |
+| 100 BNB | 1.0 BNB | 2.0 BNB |
+
+**Formula:** `Bond = max(0.005 BNB, Pool × 1%)`
+
+---
+
+### 8️⃣ PROPOSER REWARDS ⭐ (NEW in v3.3.0)
+
+| Scenario | Proposer Gets |
+|----------|---------------|
+| **No Dispute** | Bond back + **0.5% of pool** |
+| **Disputed + Wins** | Bond back + 50% of disputer's bond + **0.5% of pool** |
+| **Disputed + Loses** | **Loses entire bond** |
+
+**Why 0.5% reward?** Incentivizes people to resolve markets quickly. Without it, proposing has zero financial upside.
+
+**Economics Example (10 BNB pool):**
+```
+Bond required:     0.1 BNB (1% of pool)
+Reward if no dispute: 0.05 BNB (0.5% of pool)
+Net profit:        0.05 BNB (+50% ROI on bond!)
+
+If disputed and you WIN:
+Bond back:         0.1 BNB
+Disputer's bond:   0.2 BNB → You get 50% = 0.1 BNB
+Pool reward:       0.05 BNB
+Total:             0.25 BNB (+150% ROI!)
+
+If disputed and you LOSE:
+You lose:          0.1 BNB (your entire bond)
+```
+
+---
+
+### 9️⃣ DISPUTER REWARDS
+
+| Scenario | Disputer Gets |
+|----------|---------------|
+| **Wins Vote** | Bond back + 50% of proposer's bond |
+| **Loses Vote** | **Loses entire bond** |
+
+**Example (Disputer wins):**
+```
+Proposer bond:     0.1 BNB
+Disputer bond:     0.2 BNB (2×)
+Disputer wins vote...
+Disputer gets:     0.2 BNB (back) + 0.05 BNB (50% of proposer's)
+Net profit:        0.05 BNB (+25% ROI)
+```
+
+---
+
+### 🔟 VOTER REWARDS (Jury Fees)
+
+When a market is **disputed**, the 50% of the loser's bond NOT given to the winner goes to voters on the winning side, proportional to their voting weight.
+
+**Example:**
+```
+Loser's bond:      0.2 BNB
+To winner:         0.1 BNB (50%)
+To voters:         0.1 BNB (50%)
+
+Alice voted correctly, has 6000 shares
+Bob voted correctly, has 4000 shares
+Total winning votes: 10000 shares
+
+Alice gets: 0.1 × (6000/10000) = 0.06 BNB
+Bob gets:   0.1 × (4000/10000) = 0.04 BNB
+```
+
+---
+
+### 1️⃣1️⃣ WINNER PAYOUTS (After Resolution)
+
+Winners share the pool **proportionally** based on their shares:
+
+```
+Payout = (Your Winning Shares / Total Winning Shares) × Pool Balance
+
+Example: YES wins, Pool = 10 BNB
+- Alice has 600 YES shares (60% of all YES)
+- Bob has 400 YES shares (40% of all YES)
+- Charlie has 500 NO shares (LOSES)
+
+Alice gets: 10 × 0.60 = 6.0 BNB
+Bob gets:   10 × 0.40 = 4.0 BNB
+Charlie:    0 BNB (lost the bet)
+```
+
+---
+
+### 1️⃣2️⃣ EMERGENCY REFUND
+
+If **24 hours** pass after expiry with NO proposal, anyone can trigger emergency refund:
+
+```
+Everyone gets back proportional to their total shares:
+Refund = (Your Total Shares / All Shares) × Pool Balance
+
+(Minus 0.3% resolution fee)
+```
+
+---
+
+### 1️⃣3️⃣ COMPLETE FEE SUMMARY
+
+| Action | Fee | Recipient |
+|--------|-----|-----------|
+| Buy shares | 1.0% | Treasury |
+| Buy shares | 0.5% | Creator |
+| Sell shares | 1.0% | Treasury |
+| Sell shares | 0.5% | Creator |
+| Claim winnings | 0.3% | Treasury |
+| Emergency refund | 0.3% | Treasury |
+| Create market | FREE | - |
+
+**Maximum total fees:** 1.5% per trade + 0.3% on claim = **1.8%**
+
+---
+
+### 1️⃣4️⃣ GOVERNANCE (3-of-3 MultiSig)
+
+All protocol parameters can be adjusted by MultiSig:
+- Platform fee (0-5%)
+- Creator fee (0-2%)
+- Resolution fee (0-1%)
+- Min bet (0.001-0.1 BNB)
+- Bond floor (0.005-0.1 BNB)
+- Heat level defaults
+- Treasury address
+- Pause/unpause
+
+---
+
 ## 📋 Table of Contents
 
 - [Quick Start](#-quick-start)
