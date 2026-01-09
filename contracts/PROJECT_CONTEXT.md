@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 9, 2026  
-> **Status:** ✅ Smart Contracts Complete (v3.1.0, 173 tests)
+> **Status:** ✅ Smart Contracts Complete (v3.2.0, 113 tests)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Contract | Address | Status |
 |----------|---------|--------|
-| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ✅ Verified |
-| PredictionMarket (v3.1.0) | Not yet deployed | ⏳ Pending |
+| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ⚠️ DEPRECATED (arbitrage bug) |
+| PredictionMarket (v3.2.0) | Not yet deployed | ⏳ Pending |
 
 **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
 **Deployed Block:** 83243447

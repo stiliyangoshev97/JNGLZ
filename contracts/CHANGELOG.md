@@ -5,6 +5,47 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-01-09
+
+### Fixed
+
+#### CRITICAL: Bonding Curve Arbitrage Vulnerability
+Fixed a critical bug in `_calculateSellBnb()` that allowed instant arbitrage profit.
+
+**The Bug:**
+The old formula used average price `(priceBefore + priceAfter) / 2` which created a mismatch between buy and sell calculations. Users could buy shares and immediately sell them for MORE BNB than they put in.
+
+**Proof of Exploit:**
+- Wallet A buys 0.01 BNB → gets 1.98 shares
+- Wallet B buys 0.1 BNB → gets 16.9 shares
+- Wallet B sells ALL 16.9 shares → gets 0.1067 BNB + keeps 2.2 shares
+- **Result: 6.7% instant profit + free shares**
+
+**The Fix:**
+Changed to use post-sell state for price calculation:
+
+```solidity
+// OLD (BROKEN) - average price allowed arbitrage
+uint256 avgPrice = (priceBeforeSell + priceAfterSell) / 2;
+return (shares * avgPrice) / 1e18;
+
+// NEW (FIXED) - post-sell state ensures loss
+uint256 virtualSideAfter = virtualSide - shares;
+uint256 totalVirtualAfter = totalVirtual - shares;
+return (shares * UNIT_PRICE * virtualSideAfter) / (totalVirtualAfter * 1e18);
+```
+
+**After Fix:**
+- Buy → immediate sell always results in ~3% loss (platform + creator fees)
+- No arbitrage possible
+- Pool remains solvent
+
+### Breaking Changes
+- **Contract must be redeployed** - existing markets cannot be migrated
+- All existing positions on old contract should be closed/resolved first
+
+---
+
 ## [3.1.0] - 2026-01-09
 
 ### Added
