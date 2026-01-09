@@ -306,21 +306,58 @@ Example: YES wins, Pool = 10 BNB
 
 Alice gets: 10 × 0.60 = 6.0 BNB
 Bob gets:   10 × 0.40 = 4.0 BNB
-Charlie:    0 BNB (lost the bet)
+Charlie:    0 BNB (lost the trade)
 ```
 
 ---
 
-### 1️⃣2️⃣ EMERGENCY REFUND
+### 1️⃣2️⃣ EMERGENCY REFUND (When Normal Resolution Fails)
 
-If **24 hours** pass after expiry with NO proposal, anyone can trigger emergency refund:
+Emergency refund kicks in when the market **cannot be resolved normally**. There are two scenarios:
 
+**Scenario A: No Proposal for 24 Hours**
 ```
-Everyone gets back proportional to their total shares:
-Refund = (Your Total Shares / All Shares) × Pool Balance
-
-(Minus 0.3% resolution fee)
+Timeline:
+  T+0:   Market expires
+  T+24h: Still no proposal submitted
+  
+Result: Emergency refund opens immediately
 ```
+
+**Scenario B: Vote Ends in Exact 50/50 Tie**
+```
+Timeline:
+  T+0:     Market expires
+  T+10m:   Proposal submitted
+  T+40m:   Disputed
+  T+1h40m: Voting ends → EXACT TIE (yesVotes == noVotes)
+  
+What happens:
+  1. Proposer gets bond back (no penalty)
+  2. Disputer gets bond back (no penalty)
+  3. Market stays UNRESOLVED
+  4. Emergency refund opens at: T+24h (original expiry + 24h)
+  
+Wait time after tie: ~22 hours (clock started at expiry)
+```
+
+**How Emergency Refund Works:**
+```
+Everyone gets back proportional to their TOTAL shares:
+
+Refund = (Your YES + NO Shares / All Shares) × Pool Balance
+
+Example: Pool = 10 BNB
+- Alice has 600 shares total (60%)  → Gets 6.0 BNB
+- Bob has 400 shares total (40%)    → Gets 4.0 BNB
+
+Note: 0.3% resolution fee is deducted from each refund.
+```
+
+**Why 24h from expiry (not from tie)?**
+- Prevents gaming: Can't force a tie to delay resolution
+- Simple rule: One deadline to remember
+- Fair: By tie time (~2h), most of 24h has passed anyway
 
 ---
 
@@ -335,6 +372,7 @@ Refund = (Your Total Shares / All Shares) × Pool Balance
 | Claim winnings | 0.3% | Treasury |
 | Emergency refund | 0.3% | Treasury |
 | Create market | FREE | - |
+| **Proposer reward** | **0.5% of pool** | **Proposer** ⭐ |
 
 **Maximum total fees:** 1.5% per trade + 0.3% on claim = **1.8%**
 
