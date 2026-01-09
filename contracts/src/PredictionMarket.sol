@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
- * @custom:version 3.1.0 - Heat Levels + SweepFunds + removed proofLink
+ * @custom:version 3.3.0 - Proposer Rewards (0.5% of pool)
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
@@ -27,6 +27,9 @@ contract PredictionMarket is ReentrancyGuard {
 
     /// @notice Maximum resolution fee (1%)
     uint256 public constant MAX_RESOLUTION_FEE_BPS = 100;
+
+    /// @notice Maximum proposer reward (2% of pool)
+    uint256 public constant MAX_PROPOSER_REWARD_BPS = 200;
 
     /// @notice Basis points denominator
     uint256 public constant BPS_DENOMINATOR = 10000;
@@ -104,7 +107,8 @@ contract PredictionMarket is ReentrancyGuard {
         SetHeatLevelCrack, // NEW: Set CRACK level virtual liquidity
         SetHeatLevelHigh, // NEW: Set HIGH level virtual liquidity
         SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
-        SweepFunds // NEW: Sweep dust/surplus BNB to treasury
+        SweepFunds, // NEW: Sweep dust/surplus BNB to treasury
+        SetProposerReward // v3.3.0: Set proposer reward percentage
     }
 
     // ============ Structs ============
@@ -168,6 +172,7 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public minBondFloor = 0.005 ether;
     uint256 public dynamicBondBps = 100; // 1% of pool
     uint256 public bondWinnerShareBps = 5000; // 50% to winner
+    uint256 public proposerRewardBps = 50; // 0.5% of pool to proposer (v3.3.0)
     address public treasury;
 
     // Market creation fee (defaults to 0 = free market creation)
@@ -254,6 +259,12 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 amount
     );
 
+    event ProposerRewardPaid(
+        uint256 indexed marketId,
+        address indexed proposer,
+        uint256 amount
+    );
+
     event EmergencyRefunded(
         uint256 indexed marketId,
         address indexed user,
@@ -289,6 +300,7 @@ contract PredictionMarket is ReentrancyGuard {
     error InvalidDynamicBondBps();
     error InvalidBondWinnerShare();
     error InvalidMarketCreationFee();
+    error InvalidProposerReward();
     error ActionExpired();
     error ActionAlreadyExecuted();
     error AlreadyConfirmed();
@@ -856,11 +868,27 @@ contract PredictionMarket is ReentrancyGuard {
             market.resolved = true;
             market.outcome = market.proposedOutcome;
 
-            // Return bond to proposer
-            (bool success, ) = market.proposer.call{value: market.proposalBond}(
-                ""
-            );
+            // Calculate proposer reward (0.5% of pool)
+            uint256 proposerReward = (market.poolBalance * proposerRewardBps) /
+                BPS_DENOMINATOR;
+
+            // Deduct reward from pool
+            if (proposerReward > 0) {
+                market.poolBalance -= proposerReward;
+            }
+
+            // Return bond + reward to proposer
+            uint256 proposerPayout = market.proposalBond + proposerReward;
+            (bool success, ) = market.proposer.call{value: proposerPayout}("");
             if (!success) revert TransferFailed();
+
+            if (proposerReward > 0) {
+                emit ProposerRewardPaid(
+                    marketId,
+                    market.proposer,
+                    proposerReward
+                );
+            }
 
             emit MarketResolved(marketId, market.outcome, false);
         } else if (status == MarketStatus.Disputed) {
@@ -885,8 +913,20 @@ contract PredictionMarket is ReentrancyGuard {
             // Determine who won the dispute
             bool proposerWins = (market.proposedOutcome == votedOutcome);
 
-            // Distribute bonds
-            _distributeBonds(marketId, market, proposerWins);
+            // Pay proposer reward if proposer wins (0.5% of pool)
+            uint256 proposerReward = 0;
+            if (proposerWins && proposerRewardBps > 0) {
+                proposerReward =
+                    (market.poolBalance * proposerRewardBps) /
+                    BPS_DENOMINATOR;
+                if (proposerReward > 0) {
+                    market.poolBalance -= proposerReward;
+                    // Reward paid in _distributeBonds along with bond return
+                }
+            }
+
+            // Distribute bonds (+ proposer reward if applicable)
+            _distributeBonds(marketId, market, proposerWins, proposerReward);
 
             emit MarketResolved(marketId, market.outcome, true);
         } else {
@@ -920,11 +960,13 @@ contract PredictionMarket is ReentrancyGuard {
     /**
      * @notice Internal function to distribute bonds after voting
      * @dev 50% to winner (proposer or disputer), 50% to winning voters
+     * @param proposerReward Additional reward from pool if proposer wins (v3.3.0)
      */
     function _distributeBonds(
         uint256 marketId,
         Market storage market,
-        bool proposerWins
+        bool proposerWins,
+        uint256 proposerReward
     ) internal {
         uint256 loserBond = proposerWins
             ? market.disputeBond
@@ -939,12 +981,17 @@ contract PredictionMarket is ReentrancyGuard {
             BPS_DENOMINATOR;
         uint256 voterPool = loserBond - winnerShare;
 
-        // Pay winner
-        uint256 winnerPayout = winnerBond + winnerShare;
+        // Pay winner (+ proposer reward if proposer wins)
+        uint256 winnerPayout = winnerBond + winnerShare + proposerReward;
         (bool success, ) = winner.call{value: winnerPayout}("");
         if (!success) revert TransferFailed();
 
         emit BondDistributed(marketId, winner, winnerPayout, voterPool);
+
+        // Emit proposer reward event if applicable
+        if (proposerReward > 0) {
+            emit ProposerRewardPaid(marketId, market.proposer, proposerReward);
+        }
 
         // Distribute voter pool to winning voters
         if (voterPool > 0) {
@@ -1653,6 +1700,11 @@ contract PredictionMarket is ReentrancyGuard {
             if (!success) revert TransferFailed();
 
             emit FundsSwept(surplus, totalLocked, contractBalance);
+        } else if (action.actionType == ActionType.SetProposerReward) {
+            uint256 newProposerReward = abi.decode(action.data, (uint256));
+            if (newProposerReward > MAX_PROPOSER_REWARD_BPS)
+                revert InvalidProposerReward();
+            proposerRewardBps = newProposerReward;
         }
 
         emit ActionExecuted(actionId, action.actionType);

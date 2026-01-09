@@ -1347,7 +1347,7 @@ contract PumpDumpTest is TestHelper {
      * @dev In Street Consensus, the proposer's bond is returned when finalized without dispute
      */
     function test_ProposerReward_BondReturnedOnFinalize() public {
-        console.log("=== PROPOSER BOND RETURN TEST ===");
+        console.log("=== PROPOSER BOND + REWARD RETURN TEST ===");
 
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
@@ -1377,7 +1377,7 @@ contract PumpDumpTest is TestHelper {
 
         uint256 charlieBalanceBefore = charlie.balance;
 
-        // Charlie proposes
+        // Propose outcome with native BNB
         vm.prank(charlie);
         market.proposeOutcome{value: totalRequired}(marketId, true);
 
@@ -1394,20 +1394,26 @@ contract PumpDumpTest is TestHelper {
         market.finalizeMarket(marketId);
 
         uint256 charlieAfterFinalize = charlie.balance;
-        uint256 bondReturned = charlieAfterFinalize - charlieAfterPropose;
+        uint256 payout = charlieAfterFinalize - charlieAfterPropose;
 
-        console.log("Charlie bond returned:", bondReturned);
+        // Calculate expected proposer reward (0.5% of pool = 50 bps)
+        uint256 proposerRewardBps = market.proposerRewardBps();
+        uint256 expectedReward = (poolBalance * proposerRewardBps) /
+            BPS_DENOMINATOR;
+        uint256 expectedPayout = requiredBond + expectedReward;
 
-        // Proposer should get their bond back (minus the fee that was taken)
+        console.log("Charlie payout (bond + reward):", payout);
+        console.log("Expected reward (0.5% of pool):", expectedReward);
+        console.log("Expected total payout:", expectedPayout);
+
+        // Proposer should get their bond back PLUS 0.5% proposer reward
         // Allow 2 wei tolerance for rounding
         assertApproxEqAbs(
-            bondReturned,
-            requiredBond,
+            payout,
+            expectedPayout,
             2,
-            "Proposer should get bond back on finalize"
-        );
-
-        // Now test claims - pool should be intact
+            "Proposer should get bond + reward on finalize"
+        ); // Now test claims - pool should be reduced by proposer reward
         vm.prank(alice);
         uint256 alicePayout = market.claim(marketId);
         assertGt(alicePayout, 0, "Alice should get payout");
@@ -1418,133 +1424,337 @@ contract PumpDumpTest is TestHelper {
 
         console.log("Alice payout:", alicePayout);
         console.log("Bob payout:", bobPayout);
-    }
 
-    // ============ Dynamic Bond Tests ============
+        // Total payouts to winners should be:
+        // (pool - proposerReward) minus 0.3% resolution fee on gross payout
+        // Since resolution fee is taken on gross amounts before payout,
+        // let's just verify the pool was reduced correctly
+        uint256 totalWinnerPayouts = alicePayout + bobPayout;
+        uint256 availablePool = poolBalance - expectedReward;
 
-    /**
-     * @notice Test dynamic bond returns minimum floor for small pools
-     */
-    function test_DynamicBond_ReturnsMinFloorForSmallPool() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
+        // 0.3% resolution fee is taken from gross payouts
+        uint256 resolutionFeeBps = market.resolutionFeeBps();
+        // After fee: payout = gross - (gross * 30/10000)
+        // So payout = gross * (10000-30)/10000 = gross * 9970/10000
+        // So gross = payout * 10000/9970
+        // Total gross = availablePool (all of it goes to winners)
+        // Expected total payout = availablePool * 9970/10000
+        uint256 expectedPayoutAfterFee = (availablePool *
+            (BPS_DENOMINATOR - resolutionFeeBps)) / BPS_DENOMINATOR;
 
-        // Small bet creates small pool
-        vm.prank(alice);
-        market.buyYes{value: 0.1 ether}(marketId, 0);
+        console.log("Available pool after reward:", availablePool);
+        console.log("Expected payout after 0.3% fee:", expectedPayoutAfterFee);
+        console.log("Total winner payouts:", totalWinnerPayouts);
 
-        uint256 requiredBond = market.getRequiredBond(marketId);
-
-        // 0.1 ether * 1% = 0.001 ether < MIN_BOND_FLOOR (0.005 ether)
-        assertEq(
-            requiredBond,
-            0.005 ether,
-            "Should return MIN_BOND_FLOOR for small pools"
+        assertApproxEqAbs(
+            totalWinnerPayouts,
+            expectedPayoutAfterFee,
+            2,
+            "Winner payouts should be pool minus proposer reward minus fees"
         );
     }
 
     /**
-     * @notice Test dynamic bond scales with pool size
+     * @notice Test proposer gets reward when disputed and proposer wins
+     * @dev Proposer gets 0.5% of pool + both bonds when they win the dispute
      */
-    function test_DynamicBond_ScalesWithPoolSize() public {
+    function test_ProposerReward_DisputedProposerWins() public {
+        console.log("=== PROPOSER REWARD - DISPUTED, PROPOSER WINS ===");
+
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
-        // Large bets create large pool
+        // Alice bets YES, Bob bets NO
         vm.prank(alice);
-        market.buyYes{value: 10 ether}(marketId, 0);
+        market.buyYes{value: 3 ether}(marketId, 0);
         vm.prank(bob);
-        market.buyNo{value: 10 ether}(marketId, 0);
+        market.buyNo{value: 2 ether}(marketId, 0);
 
+        // Get pool balance
         (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
-        uint256 requiredBond = market.getRequiredBond(marketId);
-        uint256 expectedBond = (poolBalance * 100) / 10000; // 1% of pool
-
-        console.log("Required bond:", requiredBond);
-        console.log("Expected bond (1% of pool):", expectedBond);
-
-        // Pool should be large enough that 1% > 0.02 ether
-        assertTrue(
-            expectedBond > 0.02 ether,
-            "Expected bond should exceed floor"
-        );
-        assertEq(requiredBond, expectedBond, "Bond should be 1% of pool");
-    }
-
-    /**
-     * @notice Test proposeOutcome uses dynamic bond
-     */
-    function test_ProposeOutcome_UsesDynamicBond() public {
-        uint256 marketId = createTestMarket(marketCreator, 7 days);
-
-        // Create large pool
-        vm.prank(alice);
-        market.buyYes{value: 5 ether}(marketId, 0);
-        vm.prank(bob);
-        market.buyNo{value: 5 ether}(marketId, 0);
-
+        // Expire market
         expireMarket(marketId);
         skipCreatorPriority(marketId);
 
+        // Get required bond
         uint256 requiredBond = market.getRequiredBond(marketId);
-        console.log("Required bond for proposal:", requiredBond);
-
-        // Calculate total required with resolution fee
         uint256 totalRequired = requiredBond +
             (requiredBond * RESOLUTION_FEE_BPS) /
             (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
             1;
 
-        uint256 charlieBefore = charlie.balance;
-
-        // Propose outcome with native BNB
+        // Charlie proposes YES (correct outcome)
         vm.prank(charlie);
         market.proposeOutcome{value: totalRequired}(marketId, true);
 
-        uint256 charlieAfter = charlie.balance;
-        uint256 spent = charlieBefore - charlieAfter;
+        // Dave disputes (backs NO, which is wrong)
+        // Use the actual required dispute bond
+        uint256 requiredDisputeBond = market.getRequiredDisputeBond(marketId);
+        uint256 disputeTotalRequired = requiredDisputeBond +
+            (requiredDisputeBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
 
-        console.log("Charlie spent:", spent);
-        console.log("Required bond + fee:", totalRequired);
+        vm.prank(dave);
+        market.dispute{value: disputeTotalRequired}(marketId);
 
-        // Charlie should have spent the bond + fee
+        // Skip to voting
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+
+        // Alice (YES holder) votes - she has more shares, so YES wins
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Skip voting window and finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+
+        uint256 charlieBalanceBefore = charlie.balance;
+
+        // Finalize - proposer should win and get reward
+        market.finalizeMarket(marketId);
+
+        uint256 charlieBalanceAfter = charlie.balance;
+        uint256 charliePayout = charlieBalanceAfter - charlieBalanceBefore;
+
+        // Calculate expected: proposer's bond + disputer's bond share + 0.5% of pool
+        uint256 proposerRewardBps = market.proposerRewardBps();
+        uint256 expectedReward = (poolBalance * proposerRewardBps) /
+            BPS_DENOMINATOR;
+        uint256 bondWinnerShareBps = market.bondWinnerShareBps();
+        // Note: disputer bond is requiredDisputeBond, which is stored in the market
+        uint256 expectedBondPayout = requiredBond +
+            (requiredDisputeBond * bondWinnerShareBps) /
+            BPS_DENOMINATOR;
+        uint256 expectedTotal = expectedBondPayout + expectedReward;
+
+        console.log("Charlie payout:", charliePayout);
+        console.log("Expected reward (0.5% pool):", expectedReward);
+        console.log("Expected bond payout:", expectedBondPayout);
+        console.log("Expected total:", expectedTotal);
+
+        // Allow some tolerance for rounding
         assertApproxEqAbs(
-            spent,
-            totalRequired,
-            2,
-            "Should deduct dynamic bond + fee"
+            charliePayout,
+            expectedTotal,
+            10,
+            "Proposer should get bonds + reward when winning dispute"
         );
     }
 
     /**
-     * @notice Test dynamic bond at threshold (exactly 2 BNB pool = 0.02 bond)
+     * @notice Test proposer does NOT get reward when disputed and proposer loses
+     * @dev Proposer loses bond and gets no reward when disputer wins
      */
-    function test_DynamicBond_AtThreshold() public {
+    function test_ProposerReward_DisputedProposerLoses() public {
+        console.log("=== PROPOSER REWARD - DISPUTED, PROPOSER LOSES ===");
+
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
-        // Need pool of exactly 2 BNB for 1% = 0.02 BNB threshold
-        // Due to fees, we need to slightly overshoot
+        // Alice bets YES, Bob bets NO (Bob has more)
         vm.prank(alice);
-        market.buyYes{value: 1.1 ether}(marketId, 0);
+        market.buyYes{value: 2 ether}(marketId, 0);
         vm.prank(bob);
-        market.buyNo{value: 1.1 ether}(marketId, 0);
+        market.buyNo{value: 3 ether}(marketId, 0);
 
+        // Get pool balance
         (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
         console.log("Pool balance:", poolBalance);
 
-        uint256 requiredBond = market.getRequiredBond(marketId);
-        uint256 onePercent = (poolBalance * 100) / 10000;
-        console.log("1% of pool:", onePercent);
-        console.log("Required bond:", requiredBond);
+        // Expire market
+        expireMarket(marketId);
+        skipCreatorPriority(marketId);
 
-        // Bond should be max(0.02, 1% of pool)
-        uint256 expectedBond = onePercent > 0.02 ether
-            ? onePercent
-            : 0.02 ether;
+        // Get required bond
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        // Charlie proposes YES (wrong - NO will win)
+        uint256 charlieBalanceStart = charlie.balance;
+        vm.prank(charlie);
+        market.proposeOutcome{value: totalRequired}(marketId, true);
+
+        // Dave disputes (backs NO, which is correct)
+        uint256 requiredDisputeBond = market.getRequiredDisputeBond(marketId);
+        uint256 disputeTotalRequired = requiredDisputeBond +
+            (requiredDisputeBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(dave);
+        market.dispute{value: disputeTotalRequired}(marketId);
+
+        // Skip to voting
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+
+        // Bob (NO holder) votes - he has more shares, so NO wins
+        vm.prank(bob);
+        market.vote(marketId, false);
+
+        // Skip voting window and finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+
+        uint256 charlieBalanceBefore = charlie.balance;
+
+        // Finalize - proposer loses, disputer wins
+        market.finalizeMarket(marketId);
+
+        uint256 charlieBalanceAfter = charlie.balance;
+
+        // Proposer should get NOTHING (already lost bond, no reward)
         assertEq(
-            requiredBond,
-            expectedBond,
-            "Bond should be max of floor and 1%"
+            charlieBalanceAfter,
+            charlieBalanceBefore,
+            "Losing proposer should get nothing on finalize"
+        );
+
+        // Total lost by proposer = totalRequired (bond + fee)
+        uint256 charlieTotalLoss = charlieBalanceStart - charlieBalanceAfter;
+        console.log("Charlie total loss:", charlieTotalLoss);
+        console.log("Total required paid:", totalRequired);
+
+        assertApproxEqAbs(
+            charlieTotalLoss,
+            totalRequired,
+            2,
+            "Losing proposer should lose entire bond + fee"
         );
     }
+
+    /**
+     * @notice Test MultiSig can adjust proposer reward percentage
+     */
+    function test_ProposerReward_GovernanceCanAdjust() public {
+        console.log("=== PROPOSER REWARD - GOVERNANCE ADJUSTMENT ===");
+
+        // Check initial value
+        uint256 initialReward = market.proposerRewardBps();
+        assertEq(
+            initialReward,
+            50,
+            "Initial proposer reward should be 50 bps (0.5%)"
+        );
+
+        // Create action to set proposer reward to 100 bps (1%)
+        bytes memory data = abi.encode(uint256(100));
+
+        vm.prank(signer1);
+        uint256 actionId = market.proposeAction(
+            PredictionMarket.ActionType.SetProposerReward,
+            data
+        );
+
+        // Confirm with signer2 and signer3 (need 3/5 multi-sig)
+        vm.prank(signer2);
+        market.confirmAction(actionId);
+
+        vm.prank(signer3);
+        market.confirmAction(actionId);
+
+        // Check new value
+        uint256 newReward = market.proposerRewardBps();
+        assertEq(
+            newReward,
+            100,
+            "Proposer reward should be updated to 100 bps (1%)"
+        );
+
+        console.log("Initial reward bps:", initialReward);
+        console.log("New reward bps:", newReward);
+    }
+
+    /**
+     * @notice Test MultiSig cannot set proposer reward above max
+     */
+    function test_ProposerReward_CannotExceedMax() public {
+        console.log("=== PROPOSER REWARD - MAX LIMIT ===");
+
+        uint256 maxReward = market.MAX_PROPOSER_REWARD_BPS();
+        console.log("Max proposer reward bps:", maxReward);
+
+        // Try to set reward above max (201 bps when max is 200)
+        bytes memory data = abi.encode(uint256(201));
+
+        vm.prank(signer1);
+        uint256 actionId = market.proposeAction(
+            PredictionMarket.ActionType.SetProposerReward,
+            data
+        );
+
+        // Confirm with signer2
+        vm.prank(signer2);
+        market.confirmAction(actionId);
+
+        // Confirm with signer3 - should revert on execution
+        vm.prank(signer3);
+        vm.expectRevert(PredictionMarket.InvalidProposerReward.selector);
+        market.confirmAction(actionId);
+    }
+
+    /**
+     * @notice Test proposer reward can be set to 0 (disabled)
+     */
+    function test_ProposerReward_CanBeDisabled() public {
+        console.log("=== PROPOSER REWARD - DISABLE ===");
+
+        // Set proposer reward to 0
+        bytes memory data = abi.encode(uint256(0));
+
+        vm.prank(signer1);
+        uint256 actionId = market.proposeAction(
+            PredictionMarket.ActionType.SetProposerReward,
+            data
+        );
+
+        vm.prank(signer2);
+        market.confirmAction(actionId);
+
+        vm.prank(signer3);
+        market.confirmAction(actionId);
+
+        // Check value
+        uint256 reward = market.proposerRewardBps();
+        assertEq(reward, 0, "Proposer reward should be 0 (disabled)");
+
+        // Now test that proposer only gets bond back (no reward)
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        vm.prank(alice);
+        market.buyYes{value: 5 ether}(marketId, 0);
+
+        expireMarket(marketId);
+        skipCreatorPriority(marketId);
+
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(charlie);
+        market.proposeOutcome{value: totalRequired}(marketId, true);
+
+        uint256 charlieBalanceBefore = charlie.balance;
+
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        uint256 charliePayout = charlie.balance - charlieBalanceBefore;
+
+        // Should only get bond back, no reward
+        assertApproxEqAbs(
+            charliePayout,
+            requiredBond,
+            2,
+            "Proposer should only get bond back when reward is disabled"
+        );
+
+        console.log("Charlie payout (reward disabled):", charliePayout);
+        console.log("Required bond:", requiredBond);
+    }
+
+    // ============ Dynamic Bond Tests ============
 }

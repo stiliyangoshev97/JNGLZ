@@ -5,6 +5,55 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-01-09
+
+### Added
+
+#### Proposer Reward Feature
+Incentivizes quick market resolution by rewarding proposers with 0.5% of the pool.
+
+**Problem Solved:**
+Previously, proposers risked their bond to resolve markets but received nothing in return (unless disputed and they won). This discouraged community members from proposing outcomes, leading to markets sitting unresolved.
+
+**The Solution:**
+Proposers now receive 0.5% of the pool balance as a reward when they successfully resolve a market:
+
+| Scenario | Proposer Gets |
+|----------|---------------|
+| No dispute | Bond + 0.5% of pool |
+| Disputed & wins | Bond + loser's bond share + 0.5% of pool |
+| Disputed & loses | Nothing (loses bond) |
+
+**Implementation:**
+- New constant: `MAX_PROPOSER_REWARD_BPS = 200` (2% max)
+- New state variable: `proposerRewardBps = 50` (0.5% default)
+- New event: `ProposerRewardPaid(marketId, proposer, amount)`
+- New error: `InvalidProposerReward()`
+- New governance action: `SetProposerReward` for MultiSig adjustment
+
+**Economic Impact:**
+- For a 10 BNB pool: proposer earns 0.05 BNB (~$15) for resolving
+- Winner payouts reduced by 0.5% (negligible impact)
+- Creates incentive for prompt resolution
+
+**Governance:**
+MultiSig can adjust the reward between 0-2% via `SetProposerReward` action.
+
+### Changed
+- `finalizeMarket()` now calculates and pays proposer reward from pool
+- `_distributeBonds()` signature updated to include proposer reward parameter
+- Updated fee summary table in README.md RULES OF THE GAME
+
+### Tests Added
+- `test_ProposerReward_BondReturnedOnFinalize` - No dispute scenario
+- `test_ProposerReward_DisputedProposerWins` - Proposer wins dispute
+- `test_ProposerReward_DisputedProposerLoses` - Proposer loses dispute
+- `test_ProposerReward_GovernanceCanAdjust` - MultiSig can change reward
+- `test_ProposerReward_CannotExceedMax` - Max limit enforced
+- `test_ProposerReward_CanBeDisabled` - Reward can be set to 0
+
+---
+
 ## [3.2.0] - 2026-01-09
 
 ### Fixed

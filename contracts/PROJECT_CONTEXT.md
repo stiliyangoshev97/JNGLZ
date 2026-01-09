@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 9, 2026  
-> **Status:** ✅ Smart Contracts Complete (v3.2.0, 113 tests)
+> **Status:** ✅ Smart Contracts Complete (v3.3.0, 114 tests)
 
 ---
 
@@ -11,7 +11,7 @@
 | Contract | Address | Status |
 |----------|---------|--------|
 | PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ⚠️ DEPRECATED (arbitrage bug) |
-| PredictionMarket (v3.2.0) | Not yet deployed | ⏳ Pending |
+| PredictionMarket (v3.3.0) | Not yet deployed | ⏳ Pending |
 
 **BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
 **Deployed Block:** 83243447
@@ -25,6 +25,7 @@
 - **Heat Levels** - configurable per-market virtual liquidity (CRACK/HIGH/PRO)
 - Trading YES/NO shares via bonding curve
 - **Street Consensus** resolution (bettors vote on outcomes)
+- **Proposer Reward** - 0.5% of pool to incentivize quick resolution
 - Winner payouts after resolution
 - Emergency refunds (24h timeout)
 - Voter jury fee incentives (50% of loser's bond)
@@ -45,6 +46,7 @@
 | Fee System | ✅ 100% | 1% platform + 0.5% creator + 0.3% resolution |
 | Market Creation Fee | ✅ 100% | Optional fee (defaults to 0), MultiSig configurable |
 | Street Consensus | ✅ 100% | Propose → Dispute → Vote → Finalize |
+| Proposer Reward | ✅ 100% | 0.5% of pool to incentivize resolution |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
