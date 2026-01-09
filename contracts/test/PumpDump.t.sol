@@ -506,16 +506,16 @@ contract PumpDumpTest is TestHelper {
         console.log("Bob P&L (wei):", bobPnL);
         console.log("Bob loss %:", bobLossPercent);
 
-        // Assertions - corrected for actual bonding curve behavior
-        // When small buyer enters first + large buyer second, BOTH can profit!
+        // Assertions - FIXED bonding curve behavior
+        // Early buyer (Alice) profits from later buyer pushing price up
         assertGt(aliceReceived, 0.1 ether, "Alice (early) should profit");
 
-        // Bob actually profits too because the large position brings lots of liquidity
-        // and Alice's small sell doesn't drain the pool significantly
-        assertGt(
+        // Late buyer (Bob) LOSES money with the fixed bonding curve
+        // The old broken curve allowed instant arbitrage profit, but that's been fixed
+        assertLt(
             bobCanSellFor,
             2 ether,
-            "Bob (large late) actually profits due to pool liquidity"
+            "Bob (large late) should LOSE due to fixed bonding curve"
         );
     }
 
@@ -699,9 +699,9 @@ contract PumpDumpTest is TestHelper {
      * @notice Scenario 6: Small early, large late with NO shares
      * @dev Same asymmetric dynamics as Scenario 2 but on NO side
      *
-     * ACTUAL BEHAVIOR:
-     * Same as YES - when large buyer enters after small buyer,
-     * both can profit because pool has enough liquidity.
+     * ACTUAL BEHAVIOR (fixed bonding curve):
+     * Early buyer profits from price impact of later buyer.
+     * Late buyer LOSES due to fees and bonding curve mechanics.
      */
     function test_PumpDump_Scenario6_SmallEarlyLargeLate_NO() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
@@ -730,12 +730,12 @@ contract PumpDumpTest is TestHelper {
         console.log("Alice received:", aliceReceived);
         console.log("Bob can sell for:", bobCanSellFor);
 
-        // Alice profits, Bob ALSO profits (same dynamics as Scenario 2)
+        // Alice profits, Bob LOSES (fixed bonding curve behavior)
         assertGt(aliceReceived, 0.1 ether, "Alice (early NO) should profit");
-        assertGt(
+        assertLt(
             bobCanSellFor,
             2 ether,
-            "Bob (large late NO) also profits due to liquidity"
+            "Bob (large late NO) should LOSE due to fixed bonding curve"
         );
     }
 

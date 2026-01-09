@@ -370,15 +370,25 @@ contract InstantSellAnalysisTest is TestHelper {
 
         // Verify we can actually sell this amount
         assertGt(maxShares, 0, "Should be able to sell some shares");
-        assertLt(
+
+        // With the fixed bonding curve, you CAN sell all shares immediately
+        // (you just receive less than you put in due to fees)
+        assertEq(
             maxShares,
             sharesBought,
-            "Should not be able to sell all (in empty market)"
+            "Should be able to sell all shares (with loss from fees)"
         );
 
         // Actually sell the max amount - should succeed
         uint256 actualBnb = sellYesFor(alice, marketId, maxShares, 0);
         console.log("Actual BNB received:", actualBnb);
+
+        // Verify we took a loss (fees + bonding curve)
+        assertLt(
+            actualBnb,
+            1 ether,
+            "Should receive less than invested due to fees"
+        );
 
         // Should be very close to predicted
         assertApproxEqRel(

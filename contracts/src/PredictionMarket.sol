@@ -1534,23 +1534,30 @@ contract PredictionMarket is ReentrancyGuard {
         bool isYes,
         uint256 virtualLiquidity
     ) internal pure returns (uint256) {
+        // The sell formula must be the exact inverse of the buy formula
+        // Buy: shares = (bnb * totalVirtual * 1e18) / (UNIT_PRICE * virtualSide)
+        // Sell: bnb = (shares * UNIT_PRICE * virtualSideAfter) / (totalVirtualAfter * 1e18)
+        //
+        // But we need to account for the price impact during the sell.
+        // We use the state AFTER selling to calculate the BNB out.
+        // This ensures buy->sell always results in a loss (to fees).
+
         uint256 virtualYes = yesSupply + virtualLiquidity;
         uint256 virtualNo = noSupply + virtualLiquidity;
         uint256 totalVirtual = virtualYes + virtualNo;
 
         uint256 virtualSide = isYes ? virtualYes : virtualNo;
 
-        uint256 priceBeforeSell = (UNIT_PRICE * virtualSide) / totalVirtual;
-
+        // State after selling
         uint256 virtualSideAfter = virtualSide - shares;
         uint256 totalVirtualAfter = totalVirtual - shares;
 
-        uint256 priceAfterSell = (UNIT_PRICE * virtualSideAfter) /
-            totalVirtualAfter;
-
-        uint256 avgPrice = (priceBeforeSell + priceAfterSell) / 2;
-
-        return (shares * avgPrice) / 1e18;
+        // Calculate BNB out using the inverse of buy formula with post-sell state
+        // This is equivalent to: what BNB would buy these shares at the NEW (lower) price
+        // bnbOut = (shares * UNIT_PRICE * virtualSideAfter) / (totalVirtualAfter * 1e18)
+        return
+            (shares * UNIT_PRICE * virtualSideAfter) /
+            (totalVirtualAfter * 1e18);
     }
 
     function _executeAction(uint256 actionId) internal {
