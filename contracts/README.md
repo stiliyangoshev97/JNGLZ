@@ -3,11 +3,11 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-113%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-131%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Testnet](https://img.shields.io/badge/BNB%20Testnet-pending-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.2.0-blue)]()
+[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-v3.3.0-blue)]()
 
 ---
 
@@ -27,9 +27,9 @@
 | Contract | Address | Version | Status |
 |----------|---------|---------|--------|
 | **PredictionMarket** | [`0x4C1508BA973856125a4F42c343560DB918c9EB2b`](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) | v3.1.0 | ⚠️ DEPRECATED |
-| **PredictionMarket** | TBD | v3.2.0 | ⏳ Pending deployment |
+| **PredictionMarket** | [`0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`](https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7) | v3.3.0 | ✅ LIVE |
 
-> **v3.2.0 Features:** Fixed bonding curve, Heat Levels (CRACK/HIGH/PRO), SweepFunds
+> **v3.3.0 Features:** Proposer Rewards (0.5%), Fixed bonding curve, Heat Levels, SweepFunds
 
 ---
 
@@ -378,7 +378,159 @@ Note: 0.3% resolution fee is deducted from each refund.
 
 ---
 
-### 1️⃣4️⃣ GOVERNANCE (3-of-3 MultiSig)
+### 1️⃣4️⃣ ACTION BUTTONS EXPLAINED (What Each Button Does)
+
+> **Complete guide to every action button in the UI and what happens when you click them.**
+
+#### 🟢 BUY YES / BUY NO
+**When:** Market is ACTIVE (before expiry)
+**Cost:** Your BNB amount + 1.5% fees
+**What happens:**
+```
+1. You send BNB to the contract
+2. 1.0% goes to Treasury (platform fee)
+3. 0.5% goes to Market Creator
+4. 98.5% buys shares via bonding curve
+5. You receive shares (amount depends on current price)
+6. Price moves UP for the side you bought
+```
+**Risk:** If your side loses, shares become worthless.
+
+---
+
+#### 🔴 SELL YES / SELL NO
+**When:** Market is ACTIVE (before expiry)
+**Requirement:** Must own shares of that type
+**What happens:**
+```
+1. You specify how many shares to sell
+2. Contract calculates BNB value (bonding curve)
+3. 1.0% fee to Treasury
+4. 0.5% fee to Creator
+5. You receive remaining BNB
+6. Price moves DOWN for the side you sold
+```
+**⚠️ WARNING:** Selling ALWAYS returns less than you paid due to:
+- Price impact (you push price down as you sell)
+- 1.5% trading fees
+- This is BY DESIGN to prevent arbitrage!
+
+---
+
+#### 📝 PROPOSE OUTCOME
+**When:** Market is EXPIRED
+**Who can click:**
+- First 10 minutes: ONLY market creator
+- After 10 minutes: Anyone
+**Cost:** Bond amount + 0.3% fee
+**What happens:**
+```
+1. You select YES or NO as the outcome
+2. You pay bond (max of 0.02 BNB or 1% of pool)
+3. 0.3% resolution fee goes to Treasury
+4. 30-minute dispute window starts
+5. If no dispute → you get bond back + 0.5% reward
+```
+**Risk:** If someone disputes and wins, you lose your bond.
+
+---
+
+#### ⚔️ DISPUTE
+**When:** Market has a PROPOSAL within 30 minutes
+**Who can click:** Anyone (even non-shareholders)
+**Cost:** 2× proposer's bond + 0.3% fee
+**What happens:**
+```
+1. You click to challenge the proposal
+2. You pay 2× the proposer's bond
+3. 0.3% resolution fee to Treasury
+4. Voting phase starts (1 hour)
+5. Shareholders vote on the correct outcome
+```
+**Risk:** If you lose the vote, you lose your ENTIRE 2× bond.
+**Reward:** If you win, you get bond back + 50% of proposer's bond.
+
+---
+
+#### 🗳️ VOTE (Yes/No)
+**When:** Market is DISPUTED (voting phase active)
+**Who can click:** ONLY shareholders (must own YES or NO shares)
+**Cost:** FREE (no BNB required)
+**What happens:**
+```
+1. You vote for either the proposer or disputer's outcome
+2. Your vote weight = total shares you own (YES + NO)
+3. You can only vote ONCE
+4. After voting ends, majority wins
+```
+**Reward:** If you voted for winning side, you share 50% of loser's bond.
+
+---
+
+#### ✅ FINALIZE
+**When:** 
+- Dispute window ended (no dispute), OR
+- Voting window ended (after dispute)
+**Who can click:** Anyone
+**Cost:** FREE (just gas)
+**What happens:**
+```
+1. Contract determines final outcome
+2. Bonds are distributed (winner gets back + bonus)
+3. Proposer gets 0.5% reward (if they won)
+4. Voter jury fees distributed (if disputed)
+5. Market status → RESOLVED
+6. Claims become available
+```
+
+---
+
+#### 💰 CLAIM
+**When:** Market is RESOLVED and you have winning shares
+**Who can click:** Winners only
+**Cost:** 0.3% resolution fee
+**What happens:**
+```
+1. Contract calculates your share of the pool
+2. Payout = (Your Shares / Total Winning Shares) × Pool
+3. 0.3% fee deducted → Treasury
+4. You receive BNB payout
+5. Position marked as "claimed" (can't claim twice)
+```
+
+---
+
+#### 🆘 EMERGENCY REFUND
+**When:** 24+ hours after expiry with NO resolution
+**Who can click:** Anyone with shares
+**Cost:** 0.3% resolution fee
+**What happens:**
+```
+1. Contract checks: expired + 24h passed + not resolved
+2. Refund = (Your Total Shares / All Shares) × Pool
+3. 0.3% fee deducted
+4. You receive proportional BNB refund
+5. Position marked as "refunded"
+```
+**Note:** This is a safety net, not normal operation.
+
+---
+
+#### 📊 BUTTON STATE SUMMARY
+
+| Market Status | Available Buttons |
+|---------------|-------------------|
+| **Active** | Buy YES, Buy NO, Sell YES, Sell NO |
+| **Expired** | Propose Outcome |
+| **Proposed** | Dispute (within 30 min) |
+| **Disputed** | Vote (shareholders only) |
+| **Voting Ended** | Finalize |
+| **Resolved** | Claim (winners), View Results |
+| **Stuck 24h+** | Emergency Refund |
+
+---
+
+### 1️⃣5️⃣ GOVERNANCE (3-of-3 MultiSig)
 
 All protocol parameters can be adjusted by MultiSig:
 - Platform fee (0-5%)
@@ -1098,11 +1250,15 @@ forge test --match-contract PredictionMarketFuzzTest --fuzz-runs 1000
 
 | Test File | Tests | Description |
 |-----------|-------|-------------|
-| `PredictionMarket.t.sol` | 52 | Core unit tests |
-| `PredictionMarket.fuzz.t.sol` | 29 | Fuzz testing |
-| `PumpDump.t.sol` | 31 | Economics + features |
+| `PredictionMarket.t.sol` | 21 | Core unit tests |
+| `PredictionMarket.fuzz.t.sol` | 32 | Fuzz testing |
+| `PumpDump.t.sol` | 32 | Economics + proposer rewards |
+| `Integration.t.sol` | 16 | Full flow tests |
+| `ArbitrageProof.t.sol` | 17 | Arbitrage prevention certification |
+| `InstantSellAnalysis.t.sol` | 8 | Sell mechanics |
 | `VulnerabilityCheck.t.sol` | 4 | Security tests |
-| **Total** | **116** | ✅ All passing |
+| `WalletBScenario.t.sol` | 1 | Edge case scenarios |
+| **Total** | **131** | ✅ All passing (1 skipped) |
 
 ---
 

@@ -7,12 +7,20 @@
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v3.1.0 - Heat Levels + SweepFunds)
+### PredictionMarket Contract (v3.3.0 - Proposer Rewards) ✅ LIVE
+- **Address**: 0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+- **BscScan**: https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+- **Verified**: ✅ Yes
+- **Deployed**: January 9, 2026
+- **Features**: Proposer Rewards (0.5%), Heat Levels, Fixed Bonding Curve, SweepFunds
+- **Tests**: 131 passing (130 + 1 skipped)
+
+### PredictionMarket Contract (v3.1.0 - Heat Levels + SweepFunds) ⚠️ DEPRECATED
 - **Address**: 0x4C1508BA973856125a4F42c343560DB918c9EB2b
 - **BscScan**: https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
 - **Verified**: ✅ Yes
 - **Deployed Block**: 83314823
-- **Features**: Heat Levels (CRACK/HIGH/PRO), SweepFunds, removed proofLink
+- **Status**: ⚠️ DEPRECATED - Arbitrage vulnerability in bonding curve
 
 ### Previous Deployment (v2.5.0 - deprecated)
 - **Address**: 0x3988808940d027a70FE2D0938Cf06580bbad19F9

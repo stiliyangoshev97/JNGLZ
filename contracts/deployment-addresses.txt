@@ -1,12 +1,15 @@
 ========================================
-JunkieFun Deployment
+JunkieFun Deployment - v3.3.0
 ========================================
 
 Network: BNB Testnet (Chain ID: 97)
-Deployed at block: 83314823
-Timestamp: 1767910652
+Deployed at block: 83435321
+Timestamp: January 9, 2026
+Version: v3.3.0
 
-PredictionMarket: 0x4C1508BA973856125a4F42c343560DB918c9EB2b
+PredictionMarket: 0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+BscScan: https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+Verified: ✅ Yes
 
 MultiSig Signers:
   Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
@@ -15,4 +18,9 @@ MultiSig Signers:
 Treasury: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
 
 Resolution: Street Consensus
+Features: Proposer Rewards (0.5%), Heat Levels, SweepFunds
+========================================
+
+Previous Deployments (DEPRECATED):
+- v3.1.0: 0x4C1508BA973856125a4F42c343560DB918c9EB2b (⚠️ Arbitrage bug)
 ========================================

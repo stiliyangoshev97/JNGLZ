@@ -2,6 +2,46 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.5.3] - 2026-01-09
+
+### Added
+
+#### Slippage Protection
+- **Slippage Settings Component** (`SlippageSettings.tsx`)
+  - Gear icon button in Trade Panel header
+  - Preset buttons: 0.5%, 1%, 2%, 5%
+  - Custom input field for any value (0-50%)
+  - Warning message for slippage > 5%
+  - Settings saved to localStorage and persist across sessions
+
+- **Slippage Applied to All Trades**
+  - Buy trades: `minSharesOut` calculated from preview with slippage applied
+  - Sell trades: `minBnbOut` calculated from preview with slippage applied
+  - **Default: 1%** - protects against price movements during tx confirmation
+
+- **Trade Preview Shows Minimum Output**
+  - Displays "Min. after slippage (X%)" with the protected minimum value
+  - Users can see exactly what they're guaranteed to receive
+
+#### New Exports
+- `SlippageSettings` component
+- `useSlippage` hook for accessing slippage settings
+- `applySlippage(amount, bps)` utility function
+- `getSavedSlippage()` for reading saved preference
+- `DEFAULT_SLIPPAGE_BPS = 100` (1%)
+
+### Why This Matters
+Previously, the frontend was passing `minSharesOut = 0n` (no protection). This meant:
+- If 10 users bought at the same time, later users could get significantly fewer shares
+- Front-running bots could exploit this
+
+Now with 1% default slippage:
+- Transactions revert if price moves more than 1% unfavorably
+- Users are protected from unexpected price impact
+- Can adjust to higher values for volatile markets or lower for stable ones
+
+---
+
 ## [0.5.2] - 2026-01-09
 
 ### Fixed

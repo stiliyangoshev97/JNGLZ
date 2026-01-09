@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.3.0] - 2026-01-09
 
+### Deployed
+- **BNB Testnet:** [`0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`](https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7)
+- **Verified:** ✅ Source code verified on BscScan
+- **Status:** ✅ LIVE
+
 ### Added
 
 #### Proposer Reward Feature
@@ -51,6 +56,19 @@ MultiSig can adjust the reward between 0-2% via `SetProposerReward` action.
 - `test_ProposerReward_GovernanceCanAdjust` - MultiSig can change reward
 - `test_ProposerReward_CannotExceedMax` - Max limit enforced
 - `test_ProposerReward_CanBeDisabled` - Reward can be set to 0
+
+### ArbitrageProof Test Suite Added
+Comprehensive 17-test certification suite (`ArbitrageProof.t.sol`) verifying:
+- Single user buy→sell = guaranteed loss (arbitrage blocked)
+- Pump/dump scenarios document expected market behavior
+- Sandwich attacks don't guarantee profit
+- Both-sides arbitrage attempts fail
+- All heat levels (CRACK/HIGH/PRO) tested
+- Minimum/maximum bet sizes tested
+- Fuzz tests with random amounts
+- Pool solvency checks
+
+**Total Tests:** 131 passing (1 skipped for pool edge case)
 
 ---
 

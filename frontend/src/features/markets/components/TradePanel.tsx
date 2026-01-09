@@ -3,6 +3,7 @@
  *
  * Trading interface for buying/selling YES/NO shares.
  * Uses actual contract calls via wagmi hooks.
+ * Includes slippage protection (default 1%).
  *
  * @module features/markets/components/TradePanel
  */
@@ -14,6 +15,7 @@ import { parseEther, formatEther } from 'viem';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Spinner } from '@/shared/components/ui/Spinner';
+import { SlippageSettings, useSlippage, applySlippage } from '@/shared/components/SlippageSettings';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
 import {
   useBuyYes,
@@ -45,6 +47,9 @@ const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
 export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePanelProps) {
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
+  
+  // Slippage settings (default 1%)
+  const { slippageBps, slippagePercent } = useSlippage();
   
   // User's BNB balance
   const { data: balanceData } = useBalance({ address });
@@ -167,18 +172,26 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
     if (!canTrade || !amount) return;
     
     if (action === 'buy') {
+      // Calculate minSharesOut with slippage protection
+      const expectedShares = previewBuyData as bigint | undefined;
+      const minSharesOut = expectedShares ? applySlippage(expectedShares, slippageBps) : 0n;
+      
       if (direction === 'yes') {
-        await buyYes({ marketId, amount });
+        await buyYes({ marketId, amount, minSharesOut });
       } else {
-        await buyNo({ marketId, amount });
+        await buyNo({ marketId, amount, minSharesOut });
       }
     } else {
       // Sell - amount is in shares (need to convert to 1e18)
       const sharesToSell = parseEther(amount);
+      // Calculate minBnbOut with slippage protection
+      const expectedBnb = previewSellData as bigint | undefined;
+      const minBnbOut = expectedBnb ? applySlippage(expectedBnb, slippageBps) : 0n;
+      
       if (direction === 'yes') {
-        await sellYes({ marketId, shares: sharesToSell });
+        await sellYes({ marketId, shares: sharesToSell, minBnbOut });
       } else {
-        await sellNo({ marketId, shares: sharesToSell });
+        await sellNo({ marketId, shares: sharesToSell, minBnbOut });
       }
     }
   };
@@ -245,11 +258,14 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
       {/* Header */}
       <div className="border-b border-dark-600 px-4 py-3 flex justify-between items-center">
         <h3 className="font-bold uppercase">TRADE</h3>
-        {balanceData && (
-          <span className="text-xs font-mono text-text-muted">
-            BAL: {formatBNB(balanceData.value)} BNB
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {balanceData && (
+            <span className="text-xs font-mono text-text-muted">
+              BAL: {formatBNB(balanceData.value)} BNB
+            </span>
+          )}
+          <SlippageSettings />
+        </div>
       </div>
 
       <div className="p-4 space-y-4">
@@ -388,6 +404,17 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
               </span>
               <span className={cn('font-mono', direction === 'yes' ? 'text-yes' : 'text-no')}>
                 {estimatedOutput}
+              </span>
+            </div>
+            {/* Minimum output with slippage */}
+            <div className="flex justify-between text-xs mt-1">
+              <span className="text-text-muted">Min. after slippage ({slippagePercent}%)</span>
+              <span className="font-mono text-text-secondary">
+                {action === 'buy' && previewBuyData
+                  ? formatShares(applySlippage(previewBuyData as bigint, slippageBps))
+                  : action === 'sell' && previewSellData
+                  ? `${formatBNB(applySlippage(previewSellData as bigint, slippageBps))} BNB`
+                  : '0'}
               </span>
             </div>
             {action === 'buy' && (

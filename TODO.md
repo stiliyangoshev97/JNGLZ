@@ -1,12 +1,65 @@
 # JunkieFun - Master TODO
 
 > **Last Updated:** January 9, 2026  
-> **Status:** Smart Contracts ✅ v3.2.0 Complete | Testnet Deployed ⚠️ (v3.1.0 DEPRECATED) | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs Update  
+> **Status:** Smart Contracts ✅ v3.3.0 Deployed | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs ABI/Address Update  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚨 CRITICAL: v3.2.0 Deployment Required (Jan 10, 2026)
+## 🚨 CRITICAL: v3.3.0 Integration Required (Jan 9-10, 2026)
+
+### v3.3.0 Changes (DEPLOYED ✅)
+- **Contract Address:** `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- **BscScan:** https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+- **Verified:** ✅ Yes
+- **Tests:** 131 passing (130 + 1 skipped)
+
+### New Features in v3.3.0
+1. **Proposer Rewards (0.5% of pool)** - Incentivizes quick market resolution
+2. **New Event:** `ProposerRewardPaid(marketId, proposer, amount)`
+3. **New Error:** `InvalidProposerReward()`
+4. **New Constants:** `MAX_PROPOSER_REWARD_BPS = 200`, `proposerRewardBps = 50`
+
+### Integration Checklist
+
+#### 1. Update Subgraph ⏳ PENDING
+- [ ] Update `subgraph/subgraph.yaml` with new contract address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- [ ] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)
+- [ ] Add `ProposerRewardPaid` event handler to `subgraph.yaml`
+- [ ] Add `ProposerReward` entity to `schema.graphql`
+- [ ] Update `src/mapping.ts` with `handleProposerRewardPaid` function
+- [ ] Run `npm run codegen && npm run build`
+- [ ] Deploy: `graph deploy --studio junkiefun-bnb-testnet`
+- [ ] Wait for sync (~5-10 min)
+- [ ] Verify data indexing correctly
+
+#### 2. Update Frontend ⏳ PENDING
+- [ ] Update `frontend/src/shared/config/contracts.ts` with new address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- [ ] Update ABI file with v3.3.0 ABI
+- [ ] Add proposer reward display to resolution UI (optional but nice)
+- [ ] Test create market flow
+- [ ] Test buy/sell flow with slippage protection
+- [ ] Test propose/dispute/finalize flow
+- [ ] Verify proposer receives 0.5% reward on finalization
+- [ ] Deploy frontend update
+
+#### 3. Slippage Protection (Frontend) ✅ COMPLETE
+- [x] Created `SlippageSettings.tsx` component
+- [x] Default 1% slippage (100 bps)
+- [x] Presets: 0.5%, 1%, 2%, 5%, custom
+- [x] Persists to localStorage
+- [x] `useSlippage()` hook for easy access
+- [x] `applySlippage()` function calculates minimum output
+- [x] Updated `TradePanel.tsx` to pass `minSharesOut`/`minBnbOut` to contract
+
+#### 4. Testing ✅ COMPLETE
+- [x] 131 tests passing (ArbitrageProof, PumpDump, Integration, Fuzz, etc.)
+- [x] Slither: 0 high/medium issues
+- [x] Contract verified on BscScan
+
+---
+
+## ✅ COMPLETED: v3.2.0 Bonding Curve Fix
 
 ### The Bug (v3.1.0)
 The `_calculateSellBnb()` function used average price `(P1 + P2) / 2` which created an **arbitrage vulnerability**:
@@ -185,35 +238,35 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Project Setup | ✅ Complete | 100% |
-| Phase 1: Smart Contracts | ✅ Complete | 100% (173 tests, v3.1.0) |
-| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v3.1.0 with Heat Levels + SweepFunds) |
-| Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.3) |
-| Phase 3: Frontend | ✅ Complete | ~98% (UI/UX improvements, legal pages) |
+| Phase 1: Smart Contracts | ✅ Complete | 100% (131 tests, v3.3.0) |
+| Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v3.3.0 with Proposer Rewards) |
+| Phase 2: Subgraph | ⚠️ Needs Update | 90% (needs v3.3.0 address + ABI) |
+| Phase 3: Frontend | ⚠️ Needs Update | 95% (needs v3.3.0 address + ABI) |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
 ### 🚀 BNB Testnet Deployment (January 9, 2026)
-- **Contract (v3.1.0):** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
-- **BscScan:** https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
+- **Contract (v3.3.0):** `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7` ✅ LIVE
+- **BscScan:** https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
 - **Verified:** ✅ Yes
-- **Block:** 83314823
-- **Features:** Heat Levels (CRACK/HIGH/PRO) + SweepFunds + removed proofLink
+- **Tests:** 131 passing (130 + 1 skipped)
+- **Features:** Proposer Rewards (0.5% of pool), Heat Levels, Fixed Bonding Curve
 
-### 📊 Subgraph v0.0.3 (January 9, 2026)
-- **Status:** ✅ Deployed to The Graph Studio
+### ⚠️ DEPRECATED Contracts
+- **v3.1.0:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b` - Arbitrage vulnerability in bonding curve
+- **v2.5.0 and earlier:** See DeployedContracts.txt
+
+### 📊 Subgraph v0.0.3 (January 9, 2026) - ⚠️ NEEDS UPDATE
+- **Status:** ⚠️ Still pointing to v3.1.0 contract - needs redeployment
+- **TODO:** Update to v3.3.0 address `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- **TODO:** Add `ProposerRewardPaid` event handler
 - **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3`
 - **Studio URL:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
-- **Contract Address:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
-- **Start Block:** 83314823
-- **Entities:** 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep)
-- **Event Handlers:** 11 (all contract events indexed, includes FundsSwept)
 
-### 🎨 Frontend v0.5.0 (January 10, 2026)
-- **Status:** ✅ UI/UX Improvements & Legal Compliance Complete
-- **Design:** "High-Energy Brutalism" (black bg, harsh borders, no rounded corners)
-- **Completed:** All pages, contract hooks, trading, resolution UI, error boundary
-- **New:** Entry Modal, Cookie Banner, Terms/Privacy pages, Smart Claim, Sell Warning
-- **Fixed:** Price calculation (bonding curve), BigDecimal parsing, time display, fee display
-- **Pending:** Supabase comments (future phase), Heat Level UI
+### 🎨 Frontend v0.5.0 (January 10, 2026) - ⚠️ NEEDS UPDATE
+- **Status:** ⚠️ Still pointing to old contract address
+- **TODO:** Update contract address to `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- **TODO:** Update ABI with v3.3.0 changes
+- **Completed:** Slippage protection UI (SlippageSettings.tsx)
 
 ---
 

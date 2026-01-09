@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 9, 2026  
-> **Status:** ✅ Smart Contracts Complete (v3.3.0, 114 tests)
+> **Status:** ✅ Smart Contracts Complete (v3.3.0, 131 tests)
 
 ---
 
@@ -52,16 +52,18 @@
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
 | Image URL | ✅ 100% | Market thumbnail support |
 | SweepFunds | ✅ 100% | Governance can recover surplus BNB |
-| Unit Tests | ✅ 100% | 82 tests passing |
+| Unit Tests | ✅ 100% | 21 tests passing |
 | Fuzz Tests | ✅ 100% | 32 tests passing |
-| Feature Tests | ✅ 100% | 31 tests passing |
-| Vulnerability Tests | ✅ 100% | 4 tests passing |
-| Instant Sell Analysis | ✅ 100% | 8 tests passing |
+| PumpDump Tests | ✅ 100% | 32 tests passing |
 | Integration Tests | ✅ 100% | 16 tests passing |
-| Testnet Deployment | ⏳ 90% | v2.5.0 deployed, v3.1.0 pending |
+| ArbitrageProof Tests | ✅ 100% | 17 tests (1 skipped) |
+| InstantSell Tests | ✅ 100% | 8 tests passing |
+| Vulnerability Tests | ✅ 100% | 4 tests passing |
+| WalletB Scenario | ✅ 100% | 1 test passing |
+| Testnet Deployment | ⏳ 90% | v2.5.0 deployed, v3.3.0 pending |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 173 ✅**
+**Total Tests: 131 ✅** (1 skipped)
 
 ---
 
