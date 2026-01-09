@@ -4,6 +4,8 @@
  * Real-time price chart showing YES/NO price movements based on trades.
  * Creates FOMO by visualizing pumps and dumps!
  *
+ * Smart Polling (v3.4.1): Uses background interval, stops when tab inactive
+ *
  * @module features/markets/components/PriceChart
  */
 
@@ -11,6 +13,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET_TRADES } from '@/shared/api';
 import { cn } from '@/shared/utils/cn';
+import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 interface Trade {
   id: string;
@@ -27,10 +30,13 @@ interface PriceChartProps {
 }
 
 export function PriceChart({ marketId, className }: PriceChartProps) {
+  // Smart polling: stops when tab is inactive
+  const pollInterval = useSmartPollInterval(POLL_INTERVALS.BACKGROUND);
+
   // Fetch trades for this market
   const { data } = useQuery<{ trades: Trade[] }>(GET_MARKET_TRADES, {
     variables: { marketId, first: 200 },
-    pollInterval: 5000, // Refresh every 5 seconds
+    pollInterval, // Dynamic: 60s when visible, 0 when hidden
   });
 
   const trades = data?.trades || [];

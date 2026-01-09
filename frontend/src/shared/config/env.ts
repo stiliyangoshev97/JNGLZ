@@ -23,11 +23,11 @@ export const env = {
   WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
   CHAIN_ID: Number(import.meta.env.VITE_CHAIN_ID) || 97, // Default to BNB Testnet
   
-  // Contract
-  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7',
+  // Contract (v3.4.1 - Pull Pattern, ReplaceSigner)
+  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x4e20Df1772D972f10E9604e7e9C775B1ae897464',
   
-  // The Graph
-  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.3.1',
+  // The Graph (update after subgraph deployment)
+  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1',
   
   // Feature flags
   ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true' || true,

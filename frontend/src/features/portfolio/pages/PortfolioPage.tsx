@@ -4,6 +4,8 @@
  * Shows user's positions across all markets.
  * Displays P/L, claimable winnings, and trade history.
  *
+ * Smart Polling (v3.4.1): Uses background interval, stops when tab inactive
+ *
  * @module features/portfolio/pages/PortfolioPage
  */
 
@@ -20,6 +22,7 @@ import { Skeleton } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { cn } from '@/shared/utils/cn';
 import { Link } from 'react-router-dom';
+import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 
 // Position with full market data
@@ -53,17 +56,20 @@ export function PortfolioPage() {
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('positions');
 
+  // Smart polling: stops when tab is inactive
+  const pollInterval = useSmartPollInterval(POLL_INTERVALS.BACKGROUND);
+
   const { data, loading, error } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
-    pollInterval: 10000, // Refresh every 10 seconds
+    pollInterval, // Dynamic: 60s when visible, 0 when hidden
   });
 
   // Fetch markets created by this user
   const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
     variables: { creator: address?.toLowerCase(), first: 50 },
     skip: !address || viewMode !== 'my-markets',
-    pollInterval: 10000, // Refresh every 10 seconds
+    pollInterval, // Dynamic: 60s when visible, 0 when hidden
   });
 
   // Only show loading on initial load, not polls

@@ -4,6 +4,10 @@
  * The main "Jungle" - homepage showing all active markets.
  * Features a live ticker, market grid, and trending markets.
  *
+ * Smart Polling (v3.4.1):
+ * - Stops polling when tab is inactive (saves 70%+ API quota)
+ * - Uses 30s intervals for list, 2min for ticker
+ *
  * @module features/markets/pages/MarketsPage
  */
 
@@ -15,6 +19,7 @@ import { MarketCard, LiveTicker } from '../components';
 import { MarketCardSkeleton } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
+import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
 type FilterOption = 'active' | 'expired' | 'resolved';
@@ -24,10 +29,14 @@ export function MarketsPage() {
   const [filterBy, setFilterBy] = useState<FilterOption>('active');
   const [marketIdSearch, setMarketIdSearch] = useState('');
 
+  // Smart polling: stops when tab is inactive
+  const listPollInterval = useSmartPollInterval(POLL_INTERVALS.MARKET_LIST);
+  const tickerPollInterval = useSmartPollInterval(POLL_INTERVALS.TICKER);
+
   // Fetch ALL markets (not just active)
   const { data, loading, error } = useQuery<GetMarketsResponse>(GET_MARKETS, {
     variables: { first: 100 },
-    pollInterval: 10000, // Refresh every 10 seconds for FOMO
+    pollInterval: listPollInterval, // Dynamic: 30s when visible, 0 when hidden
   });
 
   // Only show loading skeleton on initial load, not polls
@@ -36,7 +45,7 @@ export function MarketsPage() {
   // Fetch recent trades for ticker
   const { data: tradesData } = useQuery<GetRecentTradesResponse>(GET_RECENT_TRADES, {
     variables: { first: 20 },
-    pollInterval: 5000, // Refresh every 5 seconds for real-time ticker
+    pollInterval: tickerPollInterval, // Dynamic: 2min when visible, 0 when hidden
   });
 
   const allMarkets = data?.markets || [];

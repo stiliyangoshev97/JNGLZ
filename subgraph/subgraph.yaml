@@ -26,6 +26,10 @@ dataSources:
         - GlobalStats
         - FundsSweep
         - ProposerReward
+        - WithdrawalCredit
+        - WithdrawalClaim
+        - CreatorFeeCredit
+        - CreatorFeeClaim
       abis:
         - name: PredictionMarket
           file: ./abis/PredictionMarket.json
@@ -67,4 +71,14 @@ dataSources:
         # Governance (v3.1.0 - new SweepFunds)
         - event: FundsSwept(uint256,uint256,uint256)
           handler: handleFundsSwept
+
+        # Pull Pattern Events (v3.4.0)
+        - event: WithdrawalCredited(indexed address,uint256,string)
+          handler: handleWithdrawalCredited
+        - event: WithdrawalClaimed(indexed address,uint256)
+          handler: handleWithdrawalClaimed
+        - event: CreatorFeesCredited(indexed address,indexed uint256,uint256)
+          handler: handleCreatorFeesCredited
+        - event: CreatorFeesClaimed(indexed address,uint256)
+          handler: handleCreatorFeesClaimed
       file: ./src/mapping.ts

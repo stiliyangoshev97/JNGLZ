@@ -45,3 +45,12 @@ export {
 
 // Smart Hooks
 export { useSmartClaim } from './useSmartClaim';
+
+// Smart Polling (v3.4.1 - rate limit protection)
+export {
+  usePageVisibility,
+  useSmartPollInterval,
+  useImmediateRefetch,
+  POLL_INTERVALS,
+  calculateDailyQueries,
+} from './useSmartPolling';

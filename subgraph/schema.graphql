@@ -222,3 +222,65 @@ type ProposerReward @entity(immutable: true) {
   txHash: Bytes! # Transaction hash
   blockNumber: BigInt! # Block number
 }
+
+# ============================================
+# WithdrawalCredit Entity - Pull Pattern credits (v3.4.0)
+# ============================================
+type WithdrawalCredit @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  user: User! # User credited
+  userAddress: Bytes! # User address (for filtering)
+  # Credit Details
+  amount: BigDecimal! # Amount credited in BNB
+  reason: String! # Reason: "proposer_bond_reward", "bond_winner", "jury_fee", etc.
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# WithdrawalClaim Entity - Pull Pattern claims (v3.4.0)
+# ============================================
+type WithdrawalClaim @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  user: User! # User who claimed
+  userAddress: Bytes! # User address (for filtering)
+  # Claim Details
+  amount: BigDecimal! # Amount claimed in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# CreatorFeeCredit Entity - Creator fees credited (v3.4.0)
+# ============================================
+type CreatorFeeCredit @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  creator: User! # Creator credited
+  creatorAddress: Bytes! # Creator address (for filtering)
+  market: Market! # Related market
+  # Credit Details
+  amount: BigDecimal! # Amount credited in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# CreatorFeeClaim Entity - Creator fees claimed (v3.4.0)
+# ============================================
+type CreatorFeeClaim @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  creator: User! # Creator who claimed
+  creatorAddress: Bytes! # Creator address (for filtering)
+  # Claim Details
+  amount: BigDecimal! # Amount claimed in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}

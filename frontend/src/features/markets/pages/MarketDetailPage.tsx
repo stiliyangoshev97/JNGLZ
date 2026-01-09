@@ -9,6 +9,11 @@
  * - Trade history
  * - Market info & rules
  *
+ * Smart Polling (v3.4.1):
+ * - Stops polling when tab is inactive (saves 70%+ API quota)
+ * - Uses 15s intervals instead of 5s
+ * - Instant refresh after trades via manual refetch
+ *
  * @module features/markets/pages/MarketDetailPage
  */
 
@@ -31,15 +36,19 @@ import { ResolutionPanel } from '../components';
 import { formatTimeRemaining, calculateYesPercent, calculateNoPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
+import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
+  // Smart polling: stops when tab is inactive, uses 15s interval (was 5s)
+  const pollInterval = useSmartPollInterval(POLL_INTERVALS.MARKET_DETAIL);
+
   const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
     variables: { id: marketId },
-    pollInterval: 5000, // Refresh every 5 seconds for real-time feel
+    pollInterval, // Dynamic: 15s when visible, 0 when hidden
     skip: !marketId,
     notifyOnNetworkStatusChange: true, // So we can distinguish initial load from poll
   });

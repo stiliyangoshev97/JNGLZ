@@ -18,6 +18,10 @@ import {
   JuryFeeDistributed,
   FundsSwept,
   ProposerRewardPaid,
+  WithdrawalCredited,
+  WithdrawalClaimed,
+  CreatorFeesCredited,
+  CreatorFeesClaimed,
   PredictionMarket,
 } from "../generated/PredictionMarket/PredictionMarket";
 import {
@@ -31,6 +35,10 @@ import {
   GlobalStats,
   FundsSweep,
   ProposerReward,
+  WithdrawalCredit,
+  WithdrawalClaim,
+  CreatorFeeCredit,
+  CreatorFeeClaim,
 } from "../generated/schema";
 
 // ============================================
@@ -601,4 +609,103 @@ export function handleProposerRewardPaid(event: ProposerRewardPaid): void {
   reward.txHash = event.transaction.hash;
   reward.blockNumber = event.block.number;
   reward.save();
+}
+
+// ============================================
+// Pull Pattern Event Handlers (v3.4.1)
+// ============================================
+
+/**
+ * Handle WithdrawalCredited event (v3.4.1)
+ * Creates WithdrawalCredit entity when funds are credited for withdrawal
+ */
+export function handleWithdrawalCredited(event: WithdrawalCredited): void {
+  let creditId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let creditAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user
+  let user = getOrCreateUser(event.params.user);
+
+  // Create WithdrawalCredit entity
+  let credit = new WithdrawalCredit(creditId);
+  credit.user = user.id;
+  credit.userAddress = event.params.user;
+  credit.amount = creditAmount;
+  credit.reason = event.params.reason;
+  credit.timestamp = event.block.timestamp;
+  credit.txHash = event.transaction.hash;
+  credit.blockNumber = event.block.number;
+  credit.save();
+}
+
+/**
+ * Handle WithdrawalClaimed event (v3.4.1)
+ * Creates WithdrawalClaim entity when user claims their pending withdrawal
+ */
+export function handleWithdrawalClaimed(event: WithdrawalClaimed): void {
+  let claimId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let claimAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user
+  let user = getOrCreateUser(event.params.user);
+
+  // Create WithdrawalClaim entity
+  let claim = new WithdrawalClaim(claimId);
+  claim.user = user.id;
+  claim.userAddress = event.params.user;
+  claim.amount = claimAmount;
+  claim.timestamp = event.block.timestamp;
+  claim.txHash = event.transaction.hash;
+  claim.blockNumber = event.block.number;
+  claim.save();
+}
+
+/**
+ * Handle CreatorFeesCredited event (v3.4.1)
+ * Creates CreatorFeeCredit entity when creator fees are credited
+ */
+export function handleCreatorFeesCredited(event: CreatorFeesCredited): void {
+  let creditId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let marketId = event.params.marketId.toString();
+  let creditAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user
+  let user = getOrCreateUser(event.params.creator);
+
+  // Create CreatorFeeCredit entity
+  let credit = new CreatorFeeCredit(creditId);
+  credit.creator = user.id;
+  credit.creatorAddress = event.params.creator;
+  credit.market = marketId;
+  credit.amount = creditAmount;
+  credit.timestamp = event.block.timestamp;
+  credit.txHash = event.transaction.hash;
+  credit.blockNumber = event.block.number;
+  credit.save();
+}
+
+/**
+ * Handle CreatorFeesClaimed event (v3.4.1)
+ * Creates CreatorFeeClaim entity when creator claims their accumulated fees
+ */
+export function handleCreatorFeesClaimed(event: CreatorFeesClaimed): void {
+  let claimId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let claimAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user
+  let user = getOrCreateUser(event.params.creator);
+
+  // Create CreatorFeeClaim entity
+  let claim = new CreatorFeeClaim(claimId);
+  claim.creator = user.id;
+  claim.creatorAddress = event.params.creator;
+  claim.amount = claimAmount;
+  claim.timestamp = event.block.timestamp;
+  claim.txHash = event.transaction.hash;
+  claim.blockNumber = event.block.number;
+  claim.save();
 }
