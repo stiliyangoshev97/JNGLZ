@@ -1,7 +1,7 @@
-# Junkie.Fun - Master TODO
+# JunkieFun - Master TODO
 
-> **Last Updated:** January 9, 2026  
-> **Status:** Smart Contracts ✅ v3.1.0 Complete | Testnet Deployed ✅ (v3.1.0) | Subgraph ✅ v0.0.3 Deployed | Frontend ✅ ~95% Complete  
+> **Last Updated:** January 10, 2026  
+> **Status:** Smart Contracts ✅ v3.1.0 Complete | Testnet Deployed ✅ (v3.1.0) | Subgraph ✅ v0.0.3 Deployed | Frontend ✅ ~98% Complete  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -78,6 +78,50 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 
 ---
 
+## 🎨 UI/UX Improvements (v0.5.0) ✅ COMPLETE
+
+### Legal Compliance ✅
+- [x] **Entry Modal** - 3-step onboarding (How it Works, Age Verification, Terms/Privacy acceptance)
+- [x] **Cookie Banner** - Essential cookies disclosure with slide-up animation
+- [x] **Terms of Service Page** (`/terms`) - Full legal terms with risk disclosure
+- [x] **Privacy Policy Page** (`/privacy`) - Blockchain data transparency, wallet tracking notice
+- [x] **Footer Links** - Added Terms and Privacy links
+
+### Trading UX ✅
+- [x] **Smart Claim Hook** (`useSmartClaim`) - Auto-finalizes market before claiming if needed
+- [x] **Sell Warning Tooltip** - Warning when selling 100% of shares about potential claim impact
+- [x] **Fee Display Fix** - Changed "Trading Fee: 1.5%" → "Platform Fee: 1% • Creator Fee: 0.5%"
+
+### Branding ✅
+- [x] Updated all "Junkie.fun" → "JunkieFun" 
+- [x] Updated all "JUNKIE.FUN" → "JUNKIEFUN"
+
+### Files Created
+- `/frontend/src/shared/components/legal/EntryModal.tsx`
+- `/frontend/src/shared/components/legal/CookieBanner.tsx`
+- `/frontend/src/shared/components/legal/index.ts`
+- `/frontend/src/features/legal/pages/TermsPage.tsx`
+- `/frontend/src/features/legal/pages/PrivacyPage.tsx`
+- `/frontend/src/features/legal/index.ts`
+- `/frontend/src/shared/hooks/useSmartClaim.ts`
+
+---
+
+## 🔧 DevOps & Monitoring
+
+### Error Tracking - Sentry Setup ⬜ PENDING
+- [ ] Create Sentry account and project for JunkieFun
+- [ ] Install `@sentry/react` package
+- [ ] Initialize Sentry in `main.tsx` with DSN
+- [ ] Configure source maps upload for production builds
+- [ ] Add Sentry to ErrorBoundary for automatic error capture
+- [ ] Set up performance monitoring (optional)
+- [ ] Configure environment-based DSN (dev/staging/prod)
+- [ ] Add Sentry user context on wallet connection
+- [ ] Test error capture in staging environment
+
+---
+
 ## 🎯 Current Progress Summary
 
 | Phase | Status | Progress |
@@ -86,7 +130,7 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 | Phase 1: Smart Contracts | ✅ Complete | 100% (173 tests, v3.1.0) |
 | Phase 1.5: Testnet Deploy | ✅ Complete | 100% (v3.1.0 with Heat Levels + SweepFunds) |
 | Phase 2: Subgraph | ✅ Complete | 100% (deployed v0.0.3) |
-| Phase 3: Frontend | ✅ Complete | ~95% (bug fixes done, comments pending) |
+| Phase 3: Frontend | ✅ Complete | ~98% (UI/UX improvements, legal pages) |
 | Phase 4: Mainnet | ⬜ Not Started | 0% |
 
 ### 🚀 BNB Testnet Deployment (January 9, 2026)
@@ -105,12 +149,13 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 - **Entities:** 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep)
 - **Event Handlers:** 11 (all contract events indexed, includes FundsSwept)
 
-### 🎨 Frontend v0.3.0 (January 8, 2026)
-- **Status:** ✅ Bug Fixes & Error Handling Complete
+### 🎨 Frontend v0.5.0 (January 10, 2026)
+- **Status:** ✅ UI/UX Improvements & Legal Compliance Complete
 - **Design:** "High-Energy Brutalism" (black bg, harsh borders, no rounded corners)
 - **Completed:** All pages, contract hooks, trading, resolution UI, error boundary
-- **Fixed:** Price calculation (bonding curve), BigDecimal parsing, time display
-- **Pending:** Supabase comments (future phase)
+- **New:** Entry Modal, Cookie Banner, Terms/Privacy pages, Smart Claim, Sell Warning
+- **Fixed:** Price calculation (bonding curve), BigDecimal parsing, time display, fee display
+- **Pending:** Supabase comments (future phase), Heat Level UI
 
 ---
 
@@ -599,6 +644,8 @@ const canVote = marketStatus === 'Disputed' && hasPosition && !hasVoted;
 - [ ] `MarketDetailPage` - Single market + resolution UI
 - [ ] `CreateMarketPage` - Create new market
 - [ ] `PortfolioPage` - User's positions & pending jury fees
+- [x] `TermsPage` - Terms of Service (`/terms`)
+- [x] `PrivacyPage` - Privacy Policy (`/privacy`)
 
 ### 🔄 Expired Market Resolution Strategy (PortfolioPage/MarketDetailPage)
 **Scenario:** User has position in an expired market with no proposal yet.

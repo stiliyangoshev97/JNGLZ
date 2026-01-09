@@ -155,7 +155,7 @@ export function EntryModal() {
               type="checkbox"
               checked={ageConfirmed}
               onChange={(e) => setAgeConfirmed(e.target.checked)}
-              className="mt-1 w-5 h-5 bg-dark-800 border-2 border-dark-600 checked:bg-cyber checked:border-cyber appearance-none cursor-pointer relative after:content-['✓'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-black after:font-bold after:opacity-0 checked:after:opacity-100"
+              className="mt-1 min-w-5 min-h-5 w-5 h-5 flex-shrink-0 bg-dark-800 border-2 border-dark-600 checked:bg-cyber checked:border-cyber appearance-none cursor-pointer relative after:content-['✓'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-black after:font-bold after:opacity-0 checked:after:opacity-100"
             />
             <span className="text-sm text-text-secondary group-hover:text-white transition-colors">
               I confirm that I am <strong className="text-white">18 years or older</strong> (or 21+ where required by local law) 
@@ -169,7 +169,7 @@ export function EntryModal() {
               type="checkbox"
               checked={termsConfirmed}
               onChange={(e) => setTermsConfirmed(e.target.checked)}
-              className="mt-1 w-5 h-5 bg-dark-800 border-2 border-dark-600 checked:bg-cyber checked:border-cyber appearance-none cursor-pointer relative after:content-['✓'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-black after:font-bold after:opacity-0 checked:after:opacity-100"
+              className="mt-1 min-w-5 min-h-5 w-5 h-5 flex-shrink-0 bg-dark-800 border-2 border-dark-600 checked:bg-cyber checked:border-cyber appearance-none cursor-pointer relative after:content-['✓'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-black after:font-bold after:opacity-0 checked:after:opacity-100"
             />
             <span className="text-sm text-text-secondary group-hover:text-white transition-colors">
               I have read and agree to the{' '}
