@@ -5,6 +5,356 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-01-10
+
+### Deployed ✅
+- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 83514593
+- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Verified:** ✅ Yes
+
+### Added
+
+#### ReplaceSigner - Emergency Signer Recovery (2-of-3) 🔐
+Emergency escape hatch for when a signer key is compromised or lost.
+
+**Problem Solved:**
+In a 3-of-3 MultiSig, if one signer loses their key or is compromised, the governance becomes permanently stuck. No parameters can be changed, and funds cannot be swept.
+
+**The Solution:**
+A new `ReplaceSigner` action that only requires 2-of-3 confirmations:
+
+```solidity
+// Propose replacing oldSigner with newSigner
+proposeAction(ActionType.ReplaceSigner, abi.encode(oldSigner, newSigner));
+// Only 2 signers need to confirm (not 3)
+```
+
+**Security Measures:**
+1. **Cannot replace with address(0)** - Validates new signer is valid
+2. **Cannot replace with same address** - old != new check
+3. **Prevents duplicate signers** - New signer cannot already be a signer
+4. **Event emitted** - `SignerReplaced(oldSigner, newSigner, actionId)` for monitoring
+5. **1-hour expiry** - Action expires if not confirmed quickly
+
+**Why 2-of-3?**
+- Emergency recovery when one key is lost/compromised
+- Two honest signers can recover governance
+- All OTHER actions still require 3-of-3
+
+**New ActionType:** `ReplaceSigner`
+**New Event:** `SignerReplaced(address indexed oldSigner, address indexed newSigner, uint256 indexed actionId)`
+**New Errors:** `InvalidSignerReplacement()`, `SignerNotFound()`
+
+---
+
+#### Constructor Duplicate Signer Validation 🛡️
+Prevents deployment with duplicate signers.
+
+**Problem:**
+Without validation, someone could deploy with `[signerA, signerA, signerB]`, breaking 3-of-3 governance since signerA could confirm twice.
+
+**Solution:**
+Added nested loop in constructor:
+```solidity
+for (uint256 i = 0; i < 3; i++) {
+    if (_signers[i] == address(0)) revert InvalidAddress();
+    // Check for duplicate signers
+    for (uint256 j = 0; j < i; j++) {
+        if (_signers[i] == _signers[j]) revert InvalidAddress();
+    }
+    signers[i] = _signers[i];
+}
+```
+
+---
+
+#### Enhanced Sweep Protection 💰
+`_calculateTotalLockedFunds()` now includes Pull Pattern pending funds.
+
+**Problem:**
+v3.4.0 added `pendingWithdrawals` and `pendingCreatorFees` mappings, but sweep calculation didn't include them. A sweep could accidentally take funds users haven't withdrawn yet.
+
+**Solution:**
+Added tracking variables and included them in sweep calculation:
+```solidity
+// New state variables
+uint256 public totalPendingWithdrawals;
+uint256 public totalPendingCreatorFees;
+
+// In _calculateTotalLockedFunds()
+totalLocked += totalPendingWithdrawals;
+totalLocked += totalPendingCreatorFees;
+```
+
+**Result:** Sweep can NEVER touch user funds waiting in Pull Pattern queues.
+
+---
+
+### Changed
+- `confirmAction()` now auto-executes at 2 confirmations for `ReplaceSigner` (was always 3)
+- `executeAction()` now requires 2 confirmations for `ReplaceSigner` (was always 3)
+- `_executeAction()` includes duplicate signer check before replacement
+
+### Tests Added (PullPattern.t.sol - 28 tests)
+- `test_ReplaceSigner_Success` - Full 2-of-3 flow works
+- `test_ReplaceSigner_RequiresOnly2of3` - Doesn't need 3rd confirmation
+- `test_ReplaceSigner_OnlySignerCanPropose` - Access control verified
+- `test_ReplaceSigner_CannotReplaceWithZeroAddress` - Validation check
+- `test_ReplaceSigner_CannotReplaceSameAddress` - old != new check
+- `test_ReplaceSigner_PreventDuplicateSigner` - No duplicate signers
+- Plus 22 other Pull Pattern tests for bonds, jury fees, creator fees, sweep protection
+
+**Total Tests:** 164 passing (1 expected skip)
+
+---
+
+## [3.4.0] - 2026-01-09log
+
+All notable changes to the PredictionMarket smart contracts will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.4.1] - 2026-01-10
+
+### Added
+
+#### ReplaceSigner (2-of-3 Emergency Signer Replacement) 🔐
+Emergency mechanism to replace a compromised or unavailable signer with only 2-of-3 confirmations.
+
+**Problem Solved:**
+If one of the three MultiSig signers loses access to their key or becomes compromised, the protocol would be stuck - unable to execute ANY governance action (all other actions require 3-of-3).
+
+**The Solution:**
+A new `ReplaceSigner` action type that only requires 2-of-3 confirmations:
+
+```solidity
+// Propose replacement (signer1)
+uint256 actionId = pm.proposeAction(
+    ActionType.ReplaceSigner, 
+    abi.encode(oldSigner, newSigner)
+);
+
+// Second signer confirms → auto-executes at 2 confirmations
+pm.confirmAction(actionId); // From signer2
+// Done! newSigner replaces oldSigner
+```
+
+**Safety Checks:**
+1. `newSigner != address(0)` - Cannot set null signer
+2. `oldSigner != newSigner` - Cannot replace with same address
+3. `!_isSigner(newSigner)` - **Prevents duplicate signers** (critical!)
+4. `oldSigner` must exist in signers array
+
+**Why Prevent Duplicates?**
+Without duplicate prevention, replacing SignerA with SignerB (already a signer) would result in:
+- `signers = [SignerB, SignerB, SignerC]`
+- SignerB now has 2 votes instead of 1
+- 3-of-3 actions become impossible (only 2 unique signers)
+- Protocol governance effectively broken
+
+**New Components:**
+- `ActionType.ReplaceSigner` - New governance action
+- `SignerReplaced(oldSigner, newSigner, actionId)` event
+- `InvalidSignerReplacement()` error - old==new or duplicate
+- `SignerNotFound()` error - oldSigner not in array
+
+#### Constructor Duplicate Signer Validation 🛡️
+Added validation at deployment time to prevent duplicate signers in the constructor.
+
+```solidity
+constructor(address[3] memory _signers, address _treasury) {
+    for (uint256 i = 0; i < 3; i++) {
+        if (_signers[i] == address(0)) revert InvalidAddress();
+        // Check for duplicate signers
+        for (uint256 j = 0; j < i; j++) {
+            if (_signers[i] == _signers[j]) revert InvalidAddress();
+        }
+        signers[i] = _signers[i];
+    }
+    // ...
+}
+```
+
+**Why Added?**
+Previously, deploying with `[Alice, Alice, Bob]` would succeed, immediately breaking 3-of-3 governance. Now it reverts.
+
+#### Enhanced Sweep Protection 🧹
+Updated `_calculateTotalLockedFunds()` to include Pull Pattern pending funds.
+
+**Before v3.4.1:**
+```solidity
+totalLocked = sum(poolBalance) + sum(proposalBond) + sum(disputeBond)
+```
+
+**After v3.4.1:**
+```solidity
+totalLocked = sum(poolBalance) + sum(proposalBond) + sum(disputeBond) 
+            + totalPendingWithdrawals  // NEW!
+            + totalPendingCreatorFees  // NEW!
+```
+
+**Why Important?**
+Without this, `SweepFunds` could accidentally sweep funds that belong to users waiting to withdraw their bonds or creator fees.
+
+### Changed
+- `confirmAction()` now checks if action is `ReplaceSigner` and only requires 2 confirmations
+- `executeAction()` now checks if action is `ReplaceSigner` and only requires 2 confirmations
+- `_calculateTotalLockedFunds()` includes pending withdrawal/creator fee totals
+
+### Tests Added (PullPattern.t.sol - 28 tests)
+- `test_CreatorFeeCreditedOnBuy` - Pull Pattern for creator fees
+- `test_CreatorFeeCreditedOnSell` - Pull Pattern for creator fees
+- `test_WithdrawBond_Success` - Bond withdrawal
+- `test_WithdrawCreatorFees_Success` - Creator fee withdrawal
+- `test_ProposeOutcome_BlocksEmptyMarket` - NoTradesToResolve check
+- `test_ReplaceSigner_Success` - 2-of-3 replacement
+- `test_ReplaceSigner_RequiresTwo` - Cannot execute with 1
+- `test_ReplaceSigner_PreventDuplicateSigner` - Duplicate blocked
+- `test_ReplaceSigner_CannotReplaceWithZero` - Zero address blocked
+- `test_ReplaceSigner_CannotReplaceSameAddress` - Same address blocked
+- `test_SweepProtection_IncludesPendingWithdrawals` - Sweep safety
+- `test_SweepProtection_IncludesPendingCreatorFees` - Sweep safety
+- `test_JuryFees_CreditedViaPullPattern` - Jury rewards
+- `test_TieScenario_BondsReturnedViaPullPattern` - Tie handling
+- And 14 more edge case tests...
+
+**Total Tests:** 164 passing (1 skipped)
+
+---
+
+## [3.4.0] - 2026-01-09
+
+### Added
+
+#### Pull Pattern for Griefing Protection 🛡️
+Refactored bond and fee distribution to use the Pull Pattern instead of Push Pattern to prevent griefing attacks.
+
+**Problem Discovered:**
+If a proposer, disputer, or market creator had a malicious/broken wallet (contract that reverts on receive), the entire `finalizeMarket()` transaction would fail, blocking market resolution for everyone.
+
+**Attack Scenario:**
+```
+1. Attacker deploys griefing contract that reverts on ETH receive
+2. Attacker proposes outcome with bond from griefing contract
+3. Market dispute/voting completes
+4. finalizeMarket() tries to send bond back → REVERT
+5. Result: Market stuck forever, nobody can claim!
+```
+
+**The Solution:**
+Changed from Push (immediate transfer) to Pull (credit + withdraw) pattern for:
+
+| Transfer Type | Before (Push) | After (Pull) |
+|---------------|--------------|--------------|
+| Proposer bond | Direct transfer | `pendingWithdrawals[proposer]` |
+| Disputer bond | Direct transfer | `pendingWithdrawals[disputer]` |
+| Bond winner payout | Direct transfer | `pendingWithdrawals[winner]` |
+| Jury fees | Direct transfer | `pendingWithdrawals[voter]` |
+| Creator fees (0.5%) | Direct transfer | `pendingCreatorFees[creator]` |
+| Treasury fees | Direct transfer | **Still Push** (we control it) |
+| Claim payouts | Direct transfer | **Still Push** (user-initiated) |
+
+**New State Variables:**
+```solidity
+mapping(address => uint256) public pendingWithdrawals;
+mapping(address => uint256) public pendingCreatorFees;
+```
+
+**New Functions:**
+- `withdrawBond()` - Withdraw pending bonds and jury fees
+- `withdrawCreatorFees()` - Withdraw pending creator fees
+- `getPendingWithdrawal(address)` - View pending withdrawal balance
+- `getPendingCreatorFees(address)` - View pending creator fees
+
+**New Events:**
+- `WithdrawalCredited(address indexed user, uint256 amount, string reason)`
+- `WithdrawalClaimed(address indexed user, uint256 amount)`
+- `CreatorFeesCredited(address indexed creator, uint256 indexed marketId, uint256 amount)`
+- `CreatorFeesClaimed(address indexed creator, uint256 amount)`
+
+**New Errors:**
+- `NothingToWithdraw()` - When trying to withdraw with 0 balance
+
+**Result:**
+- Griefing attack impossible - broken wallet only affects attacker
+- Trades always succeed even if creator wallet is broken
+- Market resolution never blocked by malicious recipients
+- Full CEI (Checks-Effects-Interactions) compliance
+
+#### Empty Market Proposal Block 🚫
+Prevents proposals on markets with no trades.
+
+**Problem:**
+Markets with 0 YES and 0 NO supply have nothing to resolve, but proposals were still allowed.
+
+**Solution:**
+Added check in `proposeOutcome()`:
+```solidity
+if (market.yesSupply == 0 && market.noSupply == 0) {
+    revert NoTradesToResolve();
+}
+```
+
+**New Error:** `NoTradesToResolve()`
+
+#### Empty Winning Side Safety Check 🛡️
+Prevents a critical funds-locking vulnerability where markets could resolve to a side with zero holders.
+
+**Problem Discovered:**
+If someone proposes resolution to a side with 0 holders (e.g., propose NO when only YES holders exist), and nobody disputes within 30 minutes, the market would resolve to the empty side → **funds locked forever** (no one can claim because winning side has 0 supply = division by zero scenario).
+
+**Attack Scenario:**
+```
+1. Market has only YES holders (e.g., 95% confidence question)
+2. Attacker proposes NO outcome with minimum bond (0.005 BNB)
+3. YES holders have no incentive to dispute (they'd be arguing FOR NO)
+4. 30 minutes pass, nobody disputes
+5. Market finalizes to NO
+6. Result: All funds locked - nobody can claim!
+```
+
+**The Solution:**
+Added safety check in `finalizeMarket()` for BOTH resolution paths:
+
+1. **Proposed case (no dispute):** Check winning side supply before resolving
+2. **Disputed case (after voting):** Check winning side supply after vote outcome determined
+
+If winning side has 0 supply:
+- Return all bonds (proposer and disputer if applicable)
+- Emit `MarketResolutionFailed` event
+- Don't resolve market (allow emergency refund after 24h)
+
+**Implementation:**
+- New event: `MarketResolutionFailed(uint256 indexed marketId, string reason)`
+- Safety check added in Proposed finalization path
+- Safety check added in Disputed finalization path
+- Reuses existing `_returnBondsOnTie()` for bond returns
+
+**Result:**
+- Attacker loses nothing (bond returned)
+- Traders protected (emergency refund available)
+- No funds locked forever
+
+### Changed
+- `finalizeMarket()` now validates winning side has holders before resolving
+- `_returnBondsOnTie()` uses Pull Pattern instead of direct transfers
+- `_distributeBonds()` uses Pull Pattern for winner payout
+- `_distributeJuryFees()` uses Pull Pattern for voter rewards
+- `buyYes()`, `buyNo()`, `sellYes()`, `sellNo()` use Pull Pattern for creator fees
+- All bond-related functions are now CEI compliant (state changes before external calls)
+- Documentation updated in README.md with new safety rule explanation
+
+### Tests Updated
+- `EmptyWinningSide.t.sol` - Updated for Pull Pattern
+- `Integration.t.sol` - Updated `DisputedPath_ProposerWins`, `DisputedPath_DisputerWins`, `TieScenario_NoVotes` for Pull Pattern
+- `PumpDump.t.sol` - Updated proposer reward tests for Pull Pattern
+- `PredictionMarket.fuzz.t.sol` - Updated creator fee collection test for Pull Pattern
+
+---
+
 ## [3.3.0] - 2026-01-09
 
 ### Deployed

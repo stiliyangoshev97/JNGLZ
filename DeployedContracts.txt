@@ -1,19 +1,27 @@
 # ============================================
 # JunkieFun - Deployed Contracts
 # ============================================
-# Last Updated: January 9, 2026
+# Last Updated: January 10, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v3.3.0 - Proposer Rewards) ✅ LIVE
+### PredictionMarket Contract (v3.4.1 - Pull Pattern + ReplaceSigner) ✅ LIVE
+- **Address**: 0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **BscScan**: https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Verified**: ✅ Yes
+- **Deployed**: January 10, 2026
+- **Block**: 83514593
+- **Features**: Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection, Proposer Rewards (0.5%), Heat Levels
+- **Tests**: 164 passing (163 + 1 skipped)
+
+### PredictionMarket Contract (v3.3.0 - Proposer Rewards) ⚠️ DEPRECATED
 - **Address**: 0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
 - **BscScan**: https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
 - **Verified**: ✅ Yes
 - **Deployed**: January 9, 2026
-- **Features**: Proposer Rewards (0.5%), Heat Levels, Fixed Bonding Curve, SweepFunds
-- **Tests**: 131 passing (130 + 1 skipped)
+- **Status**: ⚠️ DEPRECATED - Replaced by v3.4.1
 
 ### PredictionMarket Contract (v3.1.0 - Heat Levels + SweepFunds) ⚠️ DEPRECATED
 - **Address**: 0x4C1508BA973856125a4F42c343560DB918c9EB2b
@@ -25,32 +33,23 @@
 ### Previous Deployment (v2.5.0 - deprecated)
 - **Address**: 0x3988808940d027a70FE2D0938Cf06580bbad19F9
 - **BscScan**: https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
-- **Status**: ⚠️ Deprecated (no Heat Levels)
-
-### Previous Deployment (v2.4.0 - deprecated)
-- **Address**: 0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
-- **BscScan**: https://testnet.bscscan.com/address/0xD69400C9B9ac5Bdd86FB41bA9F8A800f5327aCe9
-- **Status**: ⚠️ Deprecated (no marketCreationFee)
-
-### Previous Deployment (v2.3.0 - deprecated)
-- **Address**: 0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
-- **BscScan**: https://testnet.bscscan.com/address/0x568FEafFa8c7eED1D81d120a58f4e8DF7bc4E336
-- **Status**: ⚠️ Deprecated (missing imageUrl field)
+- **Status**: ⚠️ Deprecated
 
 ### Contract Configuration
 - **Resolution Method**: Street Consensus (no external oracles)
 - **Platform Fee**: 1% (goes to treasury)
-- **Creator Fee**: 0.5% (goes to market creator)
+- **Creator Fee**: 0.5% (goes to market creator via Pull Pattern)
 - **Resolution Reward**: 0.3% (goes to resolver)
 - **Heat Levels**: CRACK (5), HIGH (20), PRO (50) virtual liquidity
 - **Market Creation Fee**: 0 (free by default, MultiSig configurable)
+- **Proposer Reward**: 0.5% of pool
 
 ### Subgraph (The Graph)
 - **Subgraph Name**: junkiefun-bnb-testnet
-- **Version**: v0.0.1
-- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
+- **Version**: v3.4.1 (NEEDS UPDATE)
+- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.3.1
 - **Studio URL**: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
-- **Status**: ✅ Deployed (indexing from block 83243447)
+- **Status**: ⚠️ Needs update to v3.4.1 contract address
 
 ### MultiSig Signers (3-of-3)
 - Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2

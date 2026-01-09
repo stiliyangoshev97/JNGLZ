@@ -352,6 +352,10 @@ contract PredictionMarketFuzzTest is TestHelper {
         assertEq(actualFee, expectedFee, "Platform fee should match expected");
     }
 
+    /**
+     * @notice Fuzz test creator fee collection
+     * @dev v3.4.0: Creator fees use Pull Pattern (pendingCreatorFees)
+     */
     function testFuzz_CreatorFeeCollection_CorrectAmount(
         uint256 amount
     ) public {
@@ -359,13 +363,16 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
-        uint256 creatorBefore = marketCreator.balance;
+        uint256 creatorPendingBefore = market.getPendingCreatorFees(
+            marketCreator
+        );
 
         buyYesFor(alice, marketId, amount, 0);
 
         uint256 expectedCreatorFee = (amount * CREATOR_FEE_BPS) /
             BPS_DENOMINATOR;
-        uint256 actualCreatorFee = marketCreator.balance - creatorBefore;
+        uint256 actualCreatorFee = market.getPendingCreatorFees(marketCreator) -
+            creatorPendingBefore;
 
         assertEq(
             actualCreatorFee,

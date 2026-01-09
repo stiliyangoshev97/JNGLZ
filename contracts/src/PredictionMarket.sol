@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
- * @custom:version 3.3.0 - Proposer Rewards (0.5% of pool)
+ * @custom:version 3.4.1 - Pull Pattern consistency fix, pending funds sweep protection, signer replacement
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
@@ -108,7 +108,8 @@ contract PredictionMarket is ReentrancyGuard {
         SetHeatLevelHigh, // NEW: Set HIGH level virtual liquidity
         SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
         SweepFunds, // NEW: Sweep dust/surplus BNB to treasury
-        SetProposerReward // v3.3.0: Set proposer reward percentage
+        SetProposerReward, // v3.3.0: Set proposer reward percentage
+        ReplaceSigner // v3.4.1: Emergency signer replacement (2-of-3)
     }
 
     // ============ Structs ============
@@ -194,6 +195,20 @@ contract PredictionMarket is ReentrancyGuard {
     // Track voters for jury fee distribution
     mapping(uint256 => address[]) public marketVoters;
 
+    // ============ Pull Pattern State (v3.4.0) ============
+
+    /// @notice Pending withdrawals for bonds and jury fees (Pull Pattern)
+    mapping(address => uint256) public pendingWithdrawals;
+
+    /// @notice Pending creator fees from trades (Pull Pattern)
+    mapping(address => uint256) public pendingCreatorFees;
+
+    /// @notice Total pending withdrawals across all users (v3.4.1 - for sweep protection)
+    uint256 public totalPendingWithdrawals;
+
+    /// @notice Total pending creator fees across all users (v3.4.1 - for sweep protection)
+    uint256 public totalPendingCreatorFees;
+
     // ============ Events ============
 
     event MarketCreated(
@@ -239,6 +254,8 @@ contract PredictionMarket is ReentrancyGuard {
         bool outcome,
         bool wasDisputed
     );
+
+    event MarketResolutionFailed(uint256 indexed marketId, string reason);
 
     event Claimed(
         uint256 indexed marketId,
@@ -290,6 +307,30 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 contractBalance
     );
 
+    event SignerReplaced(
+        address indexed oldSigner,
+        address indexed newSigner,
+        uint256 indexed actionId
+    );
+
+    // ============ Pull Pattern Events (v3.4.0) ============
+
+    event WithdrawalCredited(
+        address indexed user,
+        uint256 amount,
+        string reason
+    );
+
+    event WithdrawalClaimed(address indexed user, uint256 amount);
+
+    event CreatorFeesCredited(
+        address indexed creator,
+        uint256 indexed marketId,
+        uint256 amount
+    );
+
+    event CreatorFeesClaimed(address indexed creator, uint256 amount);
+
     // ============ Errors ============
 
     error NotSigner();
@@ -337,6 +378,12 @@ contract PredictionMarket is ReentrancyGuard {
     error MarketStuck();
     error InsufficientCreationFee();
     error NothingToSweep();
+    // v3.4.0 errors
+    error NoTradesToResolve();
+    error NothingToWithdraw();
+    // v3.4.1 errors
+    error InvalidSignerReplacement();
+    error SignerNotFound();
 
     // ============ Modifiers ============
 
@@ -360,6 +407,10 @@ contract PredictionMarket is ReentrancyGuard {
     constructor(address[3] memory _signers, address _treasury) {
         for (uint256 i = 0; i < 3; i++) {
             if (_signers[i] == address(0)) revert InvalidAddress();
+            // Check for duplicate signers
+            for (uint256 j = 0; j < i; j++) {
+                if (_signers[i] == _signers[j]) revert InvalidAddress();
+            }
             signers[i] = _signers[i];
         }
 
@@ -556,14 +607,17 @@ contract PredictionMarket is ReentrancyGuard {
         market.poolBalance += amountAfterFee;
         positions[marketId][msg.sender].yesShares += sharesOut;
 
+        // Platform fee: Push to treasury (we control it)
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
+        // Creator fee: Pull pattern (v3.4.0) - credit to pending, creator withdraws later
         if (creatorFee > 0) {
-            (bool success, ) = market.creator.call{value: creatorFee}("");
-            if (!success) revert TransferFailed();
+            pendingCreatorFees[market.creator] += creatorFee;
+            totalPendingCreatorFees += creatorFee;
+            emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
         emit Trade(marketId, msg.sender, true, true, sharesOut, msg.value);
@@ -600,14 +654,17 @@ contract PredictionMarket is ReentrancyGuard {
         market.poolBalance += amountAfterFee;
         positions[marketId][msg.sender].noShares += sharesOut;
 
+        // Platform fee: Push to treasury (we control it)
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
+        // Creator fee: Pull pattern (v3.4.0) - credit to pending, creator withdraws later
         if (creatorFee > 0) {
-            (bool success, ) = market.creator.call{value: creatorFee}("");
-            if (!success) revert TransferFailed();
+            pendingCreatorFees[market.creator] += creatorFee;
+            totalPendingCreatorFees += creatorFee;
+            emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
         emit Trade(marketId, msg.sender, false, true, sharesOut, msg.value);
@@ -649,14 +706,17 @@ contract PredictionMarket is ReentrancyGuard {
         market.poolBalance -= grossBnbOut;
         position.yesShares -= shares;
 
+        // Platform fee: Push to treasury (we control it)
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
+        // Creator fee: Pull pattern (v3.4.0) - credit to pending, creator withdraws later
         if (creatorFee > 0) {
-            (bool success, ) = market.creator.call{value: creatorFee}("");
-            if (!success) revert TransferFailed();
+            pendingCreatorFees[market.creator] += creatorFee;
+            totalPendingCreatorFees += creatorFee;
+            emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
         (bool successTransfer, ) = msg.sender.call{value: bnbOut}("");
@@ -701,14 +761,17 @@ contract PredictionMarket is ReentrancyGuard {
         market.poolBalance -= grossBnbOut;
         position.noShares -= shares;
 
+        // Platform fee: Push to treasury (we control it)
         if (platformFee > 0) {
             (bool success, ) = treasury.call{value: platformFee}("");
             if (!success) revert TransferFailed();
         }
 
+        // Creator fee: Pull pattern (v3.4.0) - credit to pending, creator withdraws later
         if (creatorFee > 0) {
-            (bool success, ) = market.creator.call{value: creatorFee}("");
-            if (!success) revert TransferFailed();
+            pendingCreatorFees[market.creator] += creatorFee;
+            totalPendingCreatorFees += creatorFee;
+            emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
         (bool successTransfer, ) = msg.sender.call{value: bnbOut}("");
@@ -734,6 +797,11 @@ contract PredictionMarket is ReentrancyGuard {
         MarketStatus status = _getMarketStatus(market);
         if (status == MarketStatus.Active) revert MarketNotExpired();
         if (status != MarketStatus.Expired) revert AlreadyProposed();
+
+        // v3.4.0: Block proposals on empty markets (no trades = nothing to resolve)
+        if (market.yesSupply == 0 && market.noSupply == 0) {
+            revert NoTradesToResolve();
+        }
 
         // Creator priority: first 10 minutes only creator can propose
         if (
@@ -864,6 +932,32 @@ contract PredictionMarket is ReentrancyGuard {
                 revert DisputeWindowExpired(); // Window not expired yet
             }
 
+            // SAFETY CHECK: Ensure winning side has holders
+            // If not, don't resolve - allow emergency refund instead
+            uint256 winningSupply = market.proposedOutcome
+                ? market.yesSupply
+                : market.noSupply;
+            if (winningSupply == 0) {
+                // No winners possible - return bond via Pull Pattern (v3.4.1 fix)
+                if (market.proposalBond > 0) {
+                    uint256 bondAmount = market.proposalBond;
+                    market.proposalBond = 0; // CEI: clear state before crediting
+                    pendingWithdrawals[market.proposer] += bondAmount;
+                    totalPendingWithdrawals += bondAmount;
+                    emit WithdrawalCredited(
+                        market.proposer,
+                        bondAmount,
+                        "proposer_bond_empty_side"
+                    );
+                }
+                // Don't resolve - market stays unresolved, emergency refund available after 24h
+                emit MarketResolutionFailed(
+                    marketId,
+                    "No holders on winning side"
+                );
+                return;
+            }
+
             // Resolve with proposed outcome
             market.resolved = true;
             market.outcome = market.proposedOutcome;
@@ -877,10 +971,16 @@ contract PredictionMarket is ReentrancyGuard {
                 market.poolBalance -= proposerReward;
             }
 
-            // Return bond + reward to proposer
+            // Return bond + reward to proposer (Pull Pattern - credit to pendingWithdrawals)
             uint256 proposerPayout = market.proposalBond + proposerReward;
-            (bool success, ) = market.proposer.call{value: proposerPayout}("");
-            if (!success) revert TransferFailed();
+            market.proposalBond = 0; // CEI: clear bond before crediting
+            pendingWithdrawals[market.proposer] += proposerPayout;
+            totalPendingWithdrawals += proposerPayout;
+            emit WithdrawalCredited(
+                market.proposer,
+                proposerPayout,
+                "proposer_bond_reward"
+            );
 
             if (proposerReward > 0) {
                 emit ProposerRewardPaid(
@@ -907,6 +1007,22 @@ contract PredictionMarket is ReentrancyGuard {
 
             // Simple majority wins
             bool votedOutcome = market.yesVotes > market.noVotes;
+
+            // SAFETY CHECK: Ensure winning side has holders
+            // If not, don't resolve - allow emergency refund instead
+            uint256 winningSupply = votedOutcome
+                ? market.yesSupply
+                : market.noSupply;
+            if (winningSupply == 0) {
+                // No winners possible - return bonds and allow emergency refund
+                _returnBondsOnTie(market);
+                emit MarketResolutionFailed(
+                    marketId,
+                    "No holders on winning side"
+                );
+                return;
+            }
+
             market.resolved = true;
             market.outcome = votedOutcome;
 
@@ -936,30 +1052,40 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Internal function to return bonds when voting is a tie
+     * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
      */
     function _returnBondsOnTie(Market storage market) internal {
-        // Return proposer bond
+        // Return proposer bond (Pull Pattern)
         if (market.proposalBond > 0) {
-            (bool success1, ) = market.proposer.call{
-                value: market.proposalBond
-            }("");
-            if (!success1) revert TransferFailed();
-            market.proposalBond = 0;
+            uint256 proposerBondAmount = market.proposalBond;
+            market.proposalBond = 0; // CEI: clear state before crediting
+            pendingWithdrawals[market.proposer] += proposerBondAmount;
+            totalPendingWithdrawals += proposerBondAmount;
+            emit WithdrawalCredited(
+                market.proposer,
+                proposerBondAmount,
+                "proposer_bond_tie"
+            );
         }
 
-        // Return disputer bond
+        // Return disputer bond (Pull Pattern)
         if (market.disputeBond > 0) {
-            (bool success2, ) = market.disputer.call{value: market.disputeBond}(
-                ""
+            uint256 disputerBondAmount = market.disputeBond;
+            market.disputeBond = 0; // CEI: clear state before crediting
+            pendingWithdrawals[market.disputer] += disputerBondAmount;
+            totalPendingWithdrawals += disputerBondAmount;
+            emit WithdrawalCredited(
+                market.disputer,
+                disputerBondAmount,
+                "disputer_bond_tie"
             );
-            if (!success2) revert TransferFailed();
-            market.disputeBond = 0;
         }
     }
 
     /**
      * @notice Internal function to distribute bonds after voting
      * @dev 50% to winner (proposer or disputer), 50% to winning voters
+     * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
      * @param proposerReward Additional reward from pool if proposer wins (v3.3.0)
      */
     function _distributeBonds(
@@ -981,10 +1107,15 @@ contract PredictionMarket is ReentrancyGuard {
             BPS_DENOMINATOR;
         uint256 voterPool = loserBond - winnerShare;
 
-        // Pay winner (+ proposer reward if proposer wins)
+        // Clear bonds first (CEI compliance)
+        market.proposalBond = 0;
+        market.disputeBond = 0;
+
+        // Credit winner (+ proposer reward if proposer wins) - Pull Pattern
         uint256 winnerPayout = winnerBond + winnerShare + proposerReward;
-        (bool success, ) = winner.call{value: winnerPayout}("");
-        if (!success) revert TransferFailed();
+        pendingWithdrawals[winner] += winnerPayout;
+        totalPendingWithdrawals += winnerPayout;
+        emit WithdrawalCredited(winner, winnerPayout, "bond_winner");
 
         emit BondDistributed(marketId, winner, winnerPayout, voterPool);
 
@@ -997,14 +1128,11 @@ contract PredictionMarket is ReentrancyGuard {
         if (voterPool > 0) {
             _distributeJuryFees(marketId, market, voterPool);
         }
-
-        // Clear bonds
-        market.proposalBond = 0;
-        market.disputeBond = 0;
     }
 
     /**
      * @notice Internal function to distribute jury fees to winning voters
+     * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
      */
     function _distributeJuryFees(
         uint256 marketId,
@@ -1017,30 +1145,29 @@ contract PredictionMarket is ReentrancyGuard {
             : market.noVotes;
 
         if (totalWinningVotes == 0) {
-            // No winning voters - send to treasury
+            // No winning voters - send to treasury (Push is OK for treasury)
             (bool success, ) = treasury.call{value: voterPool}("");
             if (!success) revert TransferFailed();
             return;
         }
 
-        // Distribute proportionally to winning voters
+        // Distribute proportionally to winning voters (Pull Pattern)
         address[] storage voters = marketVoters[marketId];
         for (uint256 i = 0; i < voters.length; i++) {
             address voter = voters[i];
             Position storage pos = positions[marketId][voter];
 
-            // Only pay winning voters
+            // Only credit winning voters
             if (pos.hasVoted && pos.votedOutcome == winningOutcome) {
                 uint256 voterWeight = pos.yesShares + pos.noShares;
                 uint256 voterShare = (voterPool * voterWeight) /
                     totalWinningVotes;
 
                 if (voterShare > 0) {
-                    (bool success, ) = voter.call{value: voterShare}("");
-                    // Don't revert on failed transfer - continue to others
-                    if (success) {
-                        emit JuryFeeDistributed(marketId, voter, voterShare);
-                    }
+                    pendingWithdrawals[voter] += voterShare;
+                    totalPendingWithdrawals += voterShare;
+                    emit WithdrawalCredited(voter, voterShare, "jury_fee");
+                    emit JuryFeeDistributed(marketId, voter, voterShare);
                 }
             }
         }
@@ -1127,6 +1254,74 @@ contract PredictionMarket is ReentrancyGuard {
         if (!success) revert TransferFailed();
 
         emit EmergencyRefunded(marketId, msg.sender, refund);
+    }
+
+    // ============ Pull Pattern Withdrawals (v3.4.0) ============
+
+    /**
+     * @notice Withdraw pending bonds, jury fees, and other credits
+     * @dev Pull Pattern - users must call this to receive their funds
+     * @return amount The amount withdrawn
+     */
+    function withdrawBond() external nonReentrant returns (uint256 amount) {
+        amount = pendingWithdrawals[msg.sender];
+        if (amount == 0) revert NothingToWithdraw();
+
+        // CEI: Clear state before transfer
+        pendingWithdrawals[msg.sender] = 0;
+        totalPendingWithdrawals -= amount;
+
+        // Transfer to user
+        (bool success, ) = msg.sender.call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        emit WithdrawalClaimed(msg.sender, amount);
+    }
+
+    /**
+     * @notice Withdraw pending creator fees
+     * @dev Pull Pattern - creators must call this to receive their fees
+     * @return amount The amount withdrawn
+     */
+    function withdrawCreatorFees()
+        external
+        nonReentrant
+        returns (uint256 amount)
+    {
+        amount = pendingCreatorFees[msg.sender];
+        if (amount == 0) revert NothingToWithdraw();
+
+        // CEI: Clear state before transfer
+        pendingCreatorFees[msg.sender] = 0;
+        totalPendingCreatorFees -= amount;
+
+        // Transfer to creator
+        (bool success, ) = msg.sender.call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        emit CreatorFeesClaimed(msg.sender, amount);
+    }
+
+    /**
+     * @notice Get pending withdrawal balance for an address
+     * @param account The address to check
+     * @return The pending withdrawal amount
+     */
+    function getPendingWithdrawal(
+        address account
+    ) external view returns (uint256) {
+        return pendingWithdrawals[account];
+    }
+
+    /**
+     * @notice Get pending creator fees for an address
+     * @param account The address to check
+     * @return The pending creator fees amount
+     */
+    function getPendingCreatorFees(
+        address account
+    ) external view returns (uint256) {
+        return pendingCreatorFees[account];
     }
 
     // ============ View Functions ============
@@ -1482,6 +1677,7 @@ contract PredictionMarket is ReentrancyGuard {
 
     /**
      * @notice Confirm a pending action
+     * @dev ReplaceSigner requires 2-of-3, all other actions require 3-of-3
      */
     function confirmAction(uint256 actionId) external onlySigner {
         PendingAction storage action = pendingActions[actionId];
@@ -1496,13 +1692,21 @@ contract PredictionMarket is ReentrancyGuard {
 
         emit ActionConfirmed(actionId, msg.sender);
 
-        if (action.confirmations >= 3) {
+        // ReplaceSigner only needs 2-of-3 (emergency escape hatch)
+        // All other actions require 3-of-3
+        uint256 requiredConfirmations = action.actionType ==
+            ActionType.ReplaceSigner
+            ? 2
+            : 3;
+
+        if (action.confirmations >= requiredConfirmations) {
             _executeAction(actionId);
         }
     }
 
     /**
      * @notice Execute a fully confirmed action
+     * @dev ReplaceSigner requires 2-of-3, all other actions require 3-of-3
      */
     function executeAction(uint256 actionId) external onlySigner {
         PendingAction storage action = pendingActions[actionId];
@@ -1510,7 +1714,14 @@ contract PredictionMarket is ReentrancyGuard {
         if (action.executed) revert ActionAlreadyExecuted();
         if (block.timestamp > action.createdAt + ACTION_EXPIRY)
             revert ActionExpired();
-        if (action.confirmations < 3) revert NotEnoughConfirmations();
+
+        // ReplaceSigner only needs 2-of-3 (emergency escape hatch)
+        uint256 requiredConfirmations = action.actionType ==
+            ActionType.ReplaceSigner
+            ? 2
+            : 3;
+        if (action.confirmations < requiredConfirmations)
+            revert NotEnoughConfirmations();
 
         _executeAction(actionId);
     }
@@ -1705,6 +1916,31 @@ contract PredictionMarket is ReentrancyGuard {
             if (newProposerReward > MAX_PROPOSER_REWARD_BPS)
                 revert InvalidProposerReward();
             proposerRewardBps = newProposerReward;
+        } else if (action.actionType == ActionType.ReplaceSigner) {
+            // v3.4.1: Emergency signer replacement (2-of-3 confirmations)
+            (address oldSigner, address newSigner) = abi.decode(
+                action.data,
+                (address, address)
+            );
+            if (newSigner == address(0)) revert InvalidAddress();
+            if (oldSigner == newSigner) revert InvalidSignerReplacement();
+            // Prevent duplicate signers - critical for 3-of-3 governance
+            // Without this, replacing SignerA with SignerB (already a signer) would
+            // result in duplicate signers, making 3-of-3 actions impossible
+            if (_isSigner(newSigner)) revert InvalidSignerReplacement();
+
+            // Find and replace the old signer
+            bool found = false;
+            for (uint256 i = 0; i < 3; i++) {
+                if (signers[i] == oldSigner) {
+                    signers[i] = newSigner;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) revert SignerNotFound();
+
+            emit SignerReplaced(oldSigner, newSigner, actionId);
         }
 
         emit ActionExecuted(actionId, action.actionType);
@@ -1737,6 +1973,10 @@ contract PredictionMarket is ReentrancyGuard {
                 totalLocked += market.disputeBond;
             }
         }
+
+        // v3.4.1: Include pending withdrawals and creator fees (Pull Pattern funds)
+        totalLocked += totalPendingWithdrawals;
+        totalLocked += totalPendingCreatorFees;
     }
 
     /**

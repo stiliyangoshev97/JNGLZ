@@ -1,0 +1,159 @@
+'forge clean' running (wd: /Users/stiliyangoshev/Desktop/Coding/Full Projects/JunkieDotFun/contracts)
+'forge config --json' running
+'forge build --build-info --skip ./test/** ./script/** --force' running (wd: /Users/stiliyangoshev/Desktop/Coding/Full Projects/JunkieDotFun/contracts)
+
+PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1137-1174) sends eth to arbitrary user
+	Dangerous calls:
+	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1149)
+PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1821-1947) sends eth to arbitrary user
+	Dangerous calls:
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1910)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations
+
+PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1181-1220) performs a multiplication on the result of a division:
+	- grossPayout = (winningShares * market.poolBalance) / totalWinningShares (src/PredictionMarket.sol#1199-1200)
+	- fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR (src/PredictionMarket.sol#1203)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+
+Reentrancy in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#629-671):
+	External calls:
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#659)
+	State variables written after the call(s):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#665)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#666)
+Reentrancy in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#582-624):
+	External calls:
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#612)
+	State variables written after the call(s):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#618)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#619)
+Reentrancy in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#731-781):
+	External calls:
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#766)
+	State variables written after the call(s):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#772)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#773)
+Reentrancy in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#676-726):
+	External calls:
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#711)
+	State variables written after the call(s):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#717)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#718)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
+
+Reentrancy in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1821-1947):
+	External calls:
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1910)
+	Event emitted after the call(s):
+	- ActionExecuted(actionId,action.actionType) (src/PredictionMarket.sol#1946)
+	- FundsSwept(surplus,totalLocked,contractBalance) (src/PredictionMarket.sol#1913)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
+
+PredictionMarket._createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#534-575) uses timestamp for comparisons
+	Dangerous comparisons:
+	- expiryTimestamp <= block.timestamp (src/PredictionMarket.sol#545)
+PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#791-835) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < market.expiryTimestamp + CREATOR_PRIORITY_WINDOW (src/PredictionMarket.sol#808)
+PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#842-876) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#851)
+PredictionMarket.vote(uint256,bool) (src/PredictionMarket.sol#884-916) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#891)
+PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#923-1051) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp <= market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#931)
+	- block.timestamp <= market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#996)
+PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1226-1257) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < market.expiryTimestamp + EMERGENCY_REFUND_DELAY (src/PredictionMarket.sol#1232)
+PredictionMarket.canEmergencyRefund(uint256) (src/PredictionMarket.sol#1517-1532) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp >= emergencyTime (src/PredictionMarket.sol#1527)
+PredictionMarket.confirmAction(uint256) (src/PredictionMarket.sol#1682-1705) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1686)
+PredictionMarket.executeAction(uint256) (src/PredictionMarket.sol#1711-1727) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1715)
+PredictionMarket._getMarketStatus(PredictionMarket.Market) (src/PredictionMarket.sol#1738-1747) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp >= market.expiryTimestamp (src/PredictionMarket.sol#1744)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+
+StorageSlot.getAddressSlot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#66-70) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#67-69)
+StorageSlot.getBooleanSlot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#75-79) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#76-78)
+StorageSlot.getBytes32Slot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#84-88) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#85-87)
+StorageSlot.getUint256Slot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#93-97) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#94-96)
+StorageSlot.getInt256Slot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#102-106) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#103-105)
+StorageSlot.getStringSlot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#111-115) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#112-114)
+StorageSlot.getStringSlot(string) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#120-124) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#121-123)
+StorageSlot.getBytesSlot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#129-133) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#130-132)
+StorageSlot.getBytesSlot(bytes) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#138-142) uses assembly
+	- INLINE ASM (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#139-141)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
+
+2 different versions of Solidity are used:
+	- Version constraint ^0.8.20 is used by:
+		-^0.8.20 (lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol#4)
+		-^0.8.20 (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#5)
+	- Version constraint 0.8.24 is used by:
+		-0.8.24 (src/PredictionMarket.sol#2)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
+
+PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#923-1051) has a high cyclomatic complexity (12).
+PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1821-1947) has a high cyclomatic complexity (39).
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
+
+Version constraint ^0.8.20 contains known severe issues (https://solidity.readthedocs.io/en/latest/bugs.html)
+	- VerbatimInvalidDeduplication
+	- FullInlinerNonExpressionSplitArgumentEvaluationOrder
+	- MissingSideEffectsOnSelectorAccess.
+It is used by:
+	- ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol#4)
+	- ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#5)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+
+Low level call in PredictionMarket.createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#433-457):
+	- (success,None) = treasury.call{value: msg.value}() (src/PredictionMarket.sol#454)
+Low level call in PredictionMarket.createMarketAndBuy(string,string,string,string,uint256,PredictionMarket.HeatLevel,bool,uint256) (src/PredictionMarket.sol#464-532):
+	- (success,None) = treasury.call{value: treasuryAmount}() (src/PredictionMarket.sol#520)
+Low level call in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#582-624):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#612)
+Low level call in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#629-671):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#659)
+Low level call in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#676-726):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#711)
+	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#722)
+Low level call in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#731-781):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#766)
+	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#777)
+Low level call in PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#791-835):
+	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#830)
+Low level call in PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#842-876):
+	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#871)
+Low level call in PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1137-1174):
+	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1149)
+Low level call in PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1181-1220):
+	- (feeSuccess,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#1211)
+	- (success,None) = msg.sender.call{value: payout}() (src/PredictionMarket.sol#1216)
+Low level call in PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1226-1257):
+	- (success,None) = msg.sender.call{value: refund}() (src/PredictionMarket.sol#1253)
+Low level call in PredictionMarket.withdrawBond() (src/PredictionMarket.sol#1266-1279):
+	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1275)
+Low level call in PredictionMarket.withdrawCreatorFees() (src/PredictionMarket.sol#1286-1303):
+	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1299)
+Low level call in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1821-1947):
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1910)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+. analyzed (3 contracts with 100 detectors), 45 result(s) found
+INFO:Slither:slither-output.json exists already, the overwrite is prevented

@@ -3,33 +3,41 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-131%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-164%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v3.3.0-blue)]()
+[![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
+[![Version](https://img.shields.io/badge/version-v3.4.1-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.2.0 Required
+## ⚠️ CRITICAL: v3.2.0+ Required
 
 **v3.1.0 has a critical bonding curve bug** that allows instant arbitrage profit. See [CHANGELOG.md](CHANGELOG.md) for details.
 
 | Version | Status | Issue |
 |---------|--------|-------|
 | v3.1.0 | ⚠️ DEPRECATED | Arbitrage vulnerability in `_calculateSellBnb()` |
-| v3.2.0 | ✅ FIXED | Bonding curve corrected, 113 tests passing |
+| v3.2.0 | ✅ FIXED | Bonding curve corrected |
+| v3.3.0 | ✅ STABLE | Added proposer rewards |
+| v3.4.0 | ✅ STABLE | Pull Pattern, griefing protection |
+| v3.4.1 | ✅ LATEST | ReplaceSigner (2-of-3), sweep protection |
 
 ---
 
-## 🚀 Deployed Contracts (BNB Testnet)
+## 🚀 Contract Status
 
-| Contract | Address | Version | Status |
-|----------|---------|---------|--------|
-| **PredictionMarket** | [`0x4C1508BA973856125a4F42c343560DB918c9EB2b`](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) | v3.1.0 | ⚠️ DEPRECATED |
-| **PredictionMarket** | [`0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`](https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7) | v3.3.0 | ✅ LIVE |
+| Version | Features | Status |
+|---------|----------|--------|
+| **v3.4.1** | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ✅ DEPLOYED |
 
-> **v3.3.0 Features:** Proposer Rewards (0.5%), Fixed bonding curve, Heat Levels, SweepFunds
+### Deployed Contract (BNB Testnet)
+- **Address:** [`0x4e20Df1772D972f10E9604e7e9C775B1ae897464`](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464)
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 83514593
+- **Verified:** ✅ Yes
+
+> **v3.4.1 Features:** Pull Pattern (griefing protection), ReplaceSigner (2-of-3 emergency), Sweep protection, Proposer Rewards (0.5%), Heat Levels, 164 tests passing
 
 ---
 
@@ -49,14 +57,16 @@
 │  ⚖️ RESOLUTION (30-90 min)           🏆 REWARDS                          │
 │  ────────────────────────            ─────────                           │
 │  1. Market expires                   • Correct proposer: gets bond back  │
-│  2. Creator proposes (10 min head    • Voters on winning side: split 50% │
-│     start) with bond                   of loser's bond                   │
-│  3. Anyone can dispute (2x bond)     • Liars: lose their bond            │
-│  4. If disputed → bettors VOTE                                           │
-│  5. Simple majority wins             ⏱️ SPEED                            │
-│                                      ──────                              │
-│  NO ORACLE. NO WAITING 48 HOURS.     • Undisputed: 30 min                │
-│  BETTORS DECIDE THEIR OWN FATE.      • Disputed: +1 hour voting          │
+│  2. Creator proposes (10 min head      + 0.5% of pool reward             │
+│     start) with bond                 • Voters on winning side: split 50% │
+│  3. Anyone can dispute (2x bond)       of loser's bond                   │
+│  4. If disputed → bettors VOTE       • Liars: lose their bond            │
+│  5. Simple majority wins                                                 │
+│                                      💼 CLAIMING (Pull Pattern)          │
+│  NO ORACLE. NO WAITING 48 HOURS.     ────────────────────────            │
+│  BETTORS DECIDE THEIR OWN FATE.      • Creators: withdrawCreatorFees()   │
+│                                      • Bonds/Jury: withdrawBond()        │
+│                                      • Winners: claim()                  │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -199,6 +209,28 @@ Timing example:
   Wait time after tie: ~22 hours (not a fresh 24h)
 
 Fair outcome: If the community can't decide, nobody gets punished.
+```
+
+**🛡️ What happens if winning side has NO holders?** ⭐ (SAFETY in v3.4.0)
+```
+If the outcome would resolve to a side with 0 shares:
+  1. Proposer gets their bond back (no penalty)
+  2. Disputer gets their bond back (if disputed)
+  3. Market is NOT resolved (stays in limbo)
+  4. Emergency refund available at: expiry + 24 hours
+  5. All traders can claim proportional refund
+
+Example scenario:
+  - Only YES holders exist (all traders bought YES)
+  - Attacker proposes NO outcome with minimum bond
+  - Nobody disputes (why would YES holders dispute for NO?)
+  - 30 min passes → finalize() called
+  
+  WITHOUT safety check: Market resolves to NO, funds locked forever!
+  WITH safety check: Resolution blocked, bonds returned, emergency refund available.
+
+This prevents a griefing attack where someone can lock funds
+by proposing resolution to an empty side that nobody defends.
 ```
 
 ---
@@ -476,12 +508,13 @@ Note: 0.3% resolution fee is deducted from each refund.
 **What happens:**
 ```
 1. Contract determines final outcome
-2. Bonds are distributed (winner gets back + bonus)
-3. Proposer gets 0.5% reward (if they won)
-4. Voter jury fees distributed (if disputed)
+2. Bonds are CREDITED to pendingWithdrawals (Pull Pattern)
+3. Proposer reward (0.5%) CREDITED if they won
+4. Voter jury fees CREDITED to winning voters
 5. Market status → RESOLVED
 6. Claims become available
 ```
+**Note:** Bond/jury recipients must call `withdrawBond()` to receive BNB.
 
 ---
 
@@ -494,8 +527,59 @@ Note: 0.3% resolution fee is deducted from each refund.
 1. Contract calculates your share of the pool
 2. Payout = (Your Shares / Total Winning Shares) × Pool
 3. 0.3% fee deducted → Treasury
-4. You receive BNB payout
+4. You receive BNB payout IMMEDIATELY
 5. Position marked as "claimed" (can't claim twice)
+```
+
+---
+
+#### 💸 WITHDRAW BOND (NEW in v3.4.0)
+**When:** You have pending withdrawals (bonds, jury fees, proposer rewards)
+**Who can click:** Anyone with `pendingWithdrawals[address] > 0`
+**Cost:** FREE (just gas)
+**What happens:**
+```
+1. Check your pending balance: getPendingWithdrawal(yourAddress)
+2. Call withdrawBond()
+3. Contract sends ALL your pending balance
+4. Balance reset to 0
+
+Who uses this:
+- Proposers: Get bond back + 0.5% reward after finalization
+- Disputers: Get bond back + winnings (if they won)
+- Voters: Get jury fee share (if voted for winning side)
+- Tie scenario: Both proposer and disputer get bonds back
+```
+**Example:**
+```
+Alice proposed, market finalized (no dispute)
+Her pending balance: 0.15 BNB (0.1 bond + 0.05 reward)
+She calls withdrawBond() → receives 0.15 BNB
+```
+
+---
+
+#### 🎨 WITHDRAW CREATOR FEES (NEW in v3.4.0)
+**When:** You created a market and trades happened
+**Who can click:** Market creators with `pendingCreatorFees[address] > 0`
+**Cost:** FREE (just gas)
+**What happens:**
+```
+1. Check your pending balance: getPendingCreatorFees(yourAddress)
+2. Call withdrawCreatorFees()
+3. Contract sends ALL your pending creator fees
+4. Balance reset to 0
+
+How creator fees accumulate:
+- Every BUY trade: 0.5% credited to you
+- Every SELL trade: 0.5% credited to you
+- Accumulates across ALL your markets
+```
+**Example:**
+```
+Bob created a market, 100 BNB traded through it
+Total creator fees: 100 × 0.5% = 0.5 BNB
+Bob calls withdrawCreatorFees() → receives 0.5 BNB
 ```
 
 ---
@@ -528,11 +612,16 @@ Note: 0.3% resolution fee is deducted from each refund.
 | **Resolved** | Claim (winners), View Results |
 | **Stuck 24h+** | Emergency Refund |
 
+| Global Actions | When Available |
+|----------------|----------------|
+| **Withdraw Bond** | `pendingWithdrawals > 0` (after finalization) |
+| **Withdraw Creator Fees** | `pendingCreatorFees > 0` (anytime) |
+
 ---
 
 ### 1️⃣5️⃣ GOVERNANCE (3-of-3 MultiSig)
 
-All protocol parameters can be adjusted by MultiSig:
+All protocol parameters can be adjusted by MultiSig (requires **3-of-3** confirmations):
 - Platform fee (0-5%)
 - Creator fee (0-2%)
 - Resolution fee (0-1%)
@@ -541,6 +630,63 @@ All protocol parameters can be adjusted by MultiSig:
 - Heat level defaults
 - Treasury address
 - Pause/unpause
+- Sweep surplus funds
+
+**Exception - ReplaceSigner (2-of-3):** ⭐ NEW in v3.4.1
+```
+Emergency signer replacement only needs 2-of-3 confirmations.
+This is an "escape hatch" if one signer is compromised/unavailable.
+
+Usage:
+1. Signer1 proposes: proposeAction(ReplaceSigner, encode(oldSigner, newSigner))
+2. Signer2 confirms: confirmAction(actionId)
+3. Done! newSigner replaces oldSigner immediately
+
+Safety checks:
+- newSigner cannot be address(0)
+- newSigner cannot already be a signer (prevents duplicates)
+- oldSigner must exist in the signers array
+```
+
+---
+
+### 1️⃣6️⃣ PULL PATTERN EXPLAINED ⭐ (NEW in v3.4.0)
+
+> **Why credits instead of direct transfers?**
+
+**The Problem (Push Pattern):**
+```
+Old way: finalizeMarket() → sends BNB directly to winner
+
+Attack: Attacker deploys contract that reverts on receive()
+        Attacker proposes/disputes from that contract
+        When finalizeMarket() tries to pay them → REVERT
+        Market stuck forever, nobody can claim!
+```
+
+**The Solution (Pull Pattern):**
+```
+New way: finalizeMarket() → credits pendingWithdrawals[winner]
+         Winner calls withdrawBond() to receive BNB
+
+Even if winner's wallet reverts, market still resolves.
+Only the attacker is affected, not other users.
+```
+
+**What uses Pull Pattern:**
+| Fund Type | Credited To | Withdraw Function |
+|-----------|-------------|-------------------|
+| Proposer bond + reward | `pendingWithdrawals[proposer]` | `withdrawBond()` |
+| Disputer bond | `pendingWithdrawals[disputer]` | `withdrawBond()` |
+| Jury fees | `pendingWithdrawals[voter]` | `withdrawBond()` |
+| Creator fees (0.5%) | `pendingCreatorFees[creator]` | `withdrawCreatorFees()` |
+
+**What still uses Push Pattern:**
+| Fund Type | Recipient | Why Push is OK |
+|-----------|-----------|----------------|
+| Platform fees | Treasury | We control treasury address |
+| Claim payouts | Winner | User-initiated, their problem if wallet breaks |
+| Emergency refunds | User | User-initiated |
 
 ---
 

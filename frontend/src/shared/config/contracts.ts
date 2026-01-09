@@ -11,7 +11,7 @@ import { env } from './env';
 
 /**
  * PredictionMarket Contract Address
- * v3.3.0 - with ProposerRewards (0.5% of pool)
+ * v3.4.1 - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
  */
 export const PREDICTION_MARKET_ADDRESS = env.CONTRACT_ADDRESS as `0x${string}`;
 

@@ -1,61 +1,63 @@
 # JunkieFun - Master TODO
 
 > **Last Updated:** January 10, 2026  
-> **Status:** Smart Contracts ✅ v3.3.0 Deployed | Subgraph ✅ v3.3.1 Deployed | Frontend ✅ v0.5.5 Updated  
+> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs Update  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚨 CRITICAL: v3.3.0 Integration Required (Jan 9-10, 2026)
+## 🚨 CRITICAL: v3.4.1 Integration Required (Jan 10, 2026)
 
-### v3.3.0 Changes (DEPLOYED ✅)
-- **Contract Address:** `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- **BscScan:** https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+### v3.4.1 Changes (DEPLOYED ✅)
+- **Contract Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
 - **Verified:** ✅ Yes
-- **Tests:** 131 passing (130 + 1 skipped)
+- **Block:** 83514593
+- **Tests:** 164 passing (163 + 1 skipped)
 
-### New Features in v3.3.0
-1. **Proposer Rewards (0.5% of pool)** - Incentivizes quick market resolution
-2. **New Event:** `ProposerRewardPaid(marketId, proposer, amount)`
-3. **New Error:** `InvalidProposerReward()`
-4. **New Constants:** `MAX_PROPOSER_REWARD_BPS = 200`, `proposerRewardBps = 50`
+### New Features in v3.4.1
+1. **Pull Pattern** - Griefing-proof bond/fee distribution
+   - `withdrawBond()` - Withdraw pending bonds, jury fees
+   - `withdrawCreatorFees()` - Withdraw pending creator fees
+   - `getPendingWithdrawal(address)` - Check pending bonds/jury fees
+   - `getPendingCreatorFees(address)` - Check pending creator fees
+2. **ReplaceSigner (2-of-3)** - Emergency signer replacement
+3. **Sweep Protection** - Includes `totalPendingWithdrawals` and `totalPendingCreatorFees`
+4. **New Events:** `WithdrawalCredited`, `WithdrawalClaimed`, `CreatorFeesCredited`, `CreatorFeesClaimed`, `SignerReplaced`
+5. **New Errors:** `NothingToWithdraw`, `InvalidSignerReplacement`, `SignerNotFound`
 
 ### Integration Checklist
 
-#### 1. Update Subgraph ✅ COMPLETE
-- [x] Update `subgraph/subgraph.yaml` with new contract address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- [x] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)
-- [x] Add `ProposerRewardPaid` event handler to `subgraph.yaml`
-- [x] Add `ProposerReward` entity to `schema.graphql`
-- [x] Update `src/mapping.ts` with `handleProposerRewardPaid` function
-- [x] Run `npm run codegen && npm run build`
-- [x] Deploy: `graph deploy --studio junkiefun-bnb-testnet`
+#### 1. Update Subgraph ⏳ PENDING
+- [ ] Update `subgraph/subgraph.yaml` with new contract address: `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- [ ] Update `subgraph/subgraph.yaml` startBlock to `83514593`
+- [ ] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)
+- [ ] Add Pull Pattern event handlers to `subgraph.yaml`:
+  - `WithdrawalCredited(indexed address,uint256,string)`
+  - `WithdrawalClaimed(indexed address,uint256)`
+  - `CreatorFeesCredited(indexed address,indexed uint256,uint256)`
+  - `CreatorFeesClaimed(indexed address,uint256)`
+  - `SignerReplaced(indexed address,indexed address,indexed uint256)`
+- [ ] Add Pull Pattern entities to `schema.graphql`
+- [ ] Update `src/mapping.ts` with new handlers
+- [ ] Run `npm run codegen && npm run build`
+- [ ] Deploy: `graph deploy --studio junkiefun-bnb-testnet --version-label v3.4.1`
 - [ ] Wait for sync (~5-10 min)
 - [ ] Verify data indexing correctly
 
-#### 2. Update Frontend ✅ COMPLETE
-- [x] Update `frontend/src/shared/config/contracts.ts` with new address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- [x] Update `frontend/.env` with v3.3.0 contract address and subgraph URL
-- [x] Add proposer reward display to resolution UI
-- [ ] Test create market flow
-- [ ] Test buy/sell flow with slippage protection
-- [ ] Test propose/dispute/finalize flow
-- [ ] Verify proposer receives 0.5% reward on finalization
+#### 2. Update Frontend ⏳ PENDING
+- [ ] Update `frontend/.env` with new contract address: `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- [ ] Update `frontend/src/shared/config/contracts.ts` comment to v3.4.1
+- [ ] Add Pull Pattern functions to ABI:
+  - `withdrawBond()`
+  - `withdrawCreatorFees()`
+  - `getPendingWithdrawal(address)`
+  - `getPendingCreatorFees(address)`
+- [ ] Add "WITHDRAW BOND" button to user profile/dashboard
+- [ ] Add "WITHDRAW CREATOR FEES" button for creators
+- [ ] Update subgraph URL after deployment
+- [ ] Test all flows on testnet
 - [ ] Deploy frontend update
-
-#### 3. Slippage Protection (Frontend) ✅ COMPLETE
-- [x] Created `SlippageSettings.tsx` component
-- [x] Default 1% slippage (100 bps)
-- [x] Presets: 0.5%, 1%, 2%, 5%, custom
-- [x] Persists to localStorage
-- [x] `useSlippage()` hook for easy access
-- [x] `applySlippage()` function calculates minimum output
-- [x] Updated `TradePanel.tsx` to pass `minSharesOut`/`minBnbOut` to contract
-
-#### 4. Testing ✅ COMPLETE
-- [x] 131 tests passing (ArbitrageProof, PumpDump, Integration, Fuzz, etc.)
-- [x] Slither: 0 high/medium issues
-- [x] Contract verified on BscScan
 
 ---
 

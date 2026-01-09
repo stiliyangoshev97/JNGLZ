@@ -201,12 +201,15 @@ contract PumpDumpTest is TestHelper {
 
     /**
      * @notice Test that fees are correctly distributed to platform and creator
+     * @dev v3.4.0: Creator fees use Pull Pattern (pendingCreatorFees)
      */
     function test_PumpDump_FeesCollected() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
 
         uint256 treasuryStartBalance = treasury.balance;
-        uint256 creatorStartBalance = marketCreator.balance;
+        uint256 creatorPendingStart = market.getPendingCreatorFees(
+            marketCreator
+        );
 
         // Alice buys
         vm.prank(alice);
@@ -217,13 +220,18 @@ contract PumpDumpTest is TestHelper {
         uint256 creatorFeeExpected = (1 ether * CREATOR_FEE_BPS) / BPS;
 
         uint256 treasuryReceived = treasury.balance - treasuryStartBalance;
-        uint256 creatorReceived = marketCreator.balance - creatorStartBalance;
+        uint256 creatorPendingReceived = market.getPendingCreatorFees(
+            marketCreator
+        ) - creatorPendingStart;
 
         console.log("=== FEES COLLECTED ===");
         console.log("Platform fee expected:", platformFeeExpected);
         console.log("Platform fee received:", treasuryReceived);
         console.log("Creator fee expected:", creatorFeeExpected);
-        console.log("Creator fee received:", creatorReceived);
+        console.log(
+            "Creator fee pending (Pull Pattern):",
+            creatorPendingReceived
+        );
 
         assertEq(
             treasuryReceived,
@@ -231,9 +239,19 @@ contract PumpDumpTest is TestHelper {
             "Platform should receive 1% fee"
         );
         assertEq(
-            creatorReceived,
+            creatorPendingReceived,
             creatorFeeExpected,
             "Creator should receive 0.5% fee"
+        );
+
+        // Verify creator can withdraw
+        uint256 creatorBalanceBefore = marketCreator.balance;
+        vm.prank(marketCreator);
+        market.withdrawCreatorFees();
+        assertEq(
+            marketCreator.balance,
+            creatorBalanceBefore + creatorFeeExpected,
+            "Creator should receive fee on withdrawal"
         );
     }
 
@@ -1390,11 +1408,12 @@ contract PumpDumpTest is TestHelper {
         // Skip dispute window
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
 
-        // Finalize market
+        // Finalize market - credits to pendingWithdrawals (Pull Pattern v3.4.0)
+        uint256 charliePendingBefore = market.getPendingWithdrawal(charlie);
         market.finalizeMarket(marketId);
+        uint256 charliePendingAfter = market.getPendingWithdrawal(charlie);
 
-        uint256 charlieAfterFinalize = charlie.balance;
-        uint256 payout = charlieAfterFinalize - charlieAfterPropose;
+        uint256 payout = charliePendingAfter - charliePendingBefore;
 
         // Calculate expected proposer reward (0.5% of pool = 50 bps)
         uint256 proposerRewardBps = market.proposerRewardBps();
@@ -1402,18 +1421,30 @@ contract PumpDumpTest is TestHelper {
             BPS_DENOMINATOR;
         uint256 expectedPayout = requiredBond + expectedReward;
 
-        console.log("Charlie payout (bond + reward):", payout);
+        console.log("Charlie pending payout (bond + reward):", payout);
         console.log("Expected reward (0.5% of pool):", expectedReward);
         console.log("Expected total payout:", expectedPayout);
 
-        // Proposer should get their bond back PLUS 0.5% proposer reward
+        // Proposer should get their bond back PLUS 0.5% proposer reward credited
         // Allow 2 wei tolerance for rounding
         assertApproxEqAbs(
             payout,
             expectedPayout,
             2,
             "Proposer should get bond + reward on finalize"
-        ); // Now test claims - pool should be reduced by proposer reward
+        );
+
+        // Verify withdrawal works
+        uint256 charlieBalanceBeforeWithdraw = charlie.balance;
+        vm.prank(charlie);
+        market.withdrawBond();
+        assertEq(
+            charlie.balance,
+            charlieBalanceBeforeWithdraw + payout,
+            "Charlie should receive withdrawal"
+        );
+
+        // Now test claims - pool should be reduced by proposer reward
         vm.prank(alice);
         uint256 alicePayout = market.claim(marketId);
         assertGt(alicePayout, 0, "Alice should get payout");
@@ -1509,13 +1540,14 @@ contract PumpDumpTest is TestHelper {
         // Skip voting window and finalize
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
-        uint256 charlieBalanceBefore = charlie.balance;
+        // Check pending before finalize (Pull Pattern v3.4.0)
+        uint256 charliePendingBefore = market.getPendingWithdrawal(charlie);
 
-        // Finalize - proposer should win and get reward
+        // Finalize - proposer should win and get reward credited
         market.finalizeMarket(marketId);
 
-        uint256 charlieBalanceAfter = charlie.balance;
-        uint256 charliePayout = charlieBalanceAfter - charlieBalanceBefore;
+        uint256 charliePendingAfter = market.getPendingWithdrawal(charlie);
+        uint256 charliePayout = charliePendingAfter - charliePendingBefore;
 
         // Calculate expected: proposer's bond + disputer's bond share + 0.5% of pool
         uint256 proposerRewardBps = market.proposerRewardBps();
@@ -1528,7 +1560,7 @@ contract PumpDumpTest is TestHelper {
             BPS_DENOMINATOR;
         uint256 expectedTotal = expectedBondPayout + expectedReward;
 
-        console.log("Charlie payout:", charliePayout);
+        console.log("Charlie pending payout:", charliePayout);
         console.log("Expected reward (0.5% pool):", expectedReward);
         console.log("Expected bond payout:", expectedBondPayout);
         console.log("Expected total:", expectedTotal);
@@ -1737,12 +1769,14 @@ contract PumpDumpTest is TestHelper {
         vm.prank(charlie);
         market.proposeOutcome{value: totalRequired}(marketId, true);
 
-        uint256 charlieBalanceBefore = charlie.balance;
-
         vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-        market.finalizeMarket(marketId);
 
-        uint256 charliePayout = charlie.balance - charlieBalanceBefore;
+        // Check pending before finalize (Pull Pattern v3.4.0)
+        uint256 charliePendingBefore = market.getPendingWithdrawal(charlie);
+        market.finalizeMarket(marketId);
+        uint256 charliePendingAfter = market.getPendingWithdrawal(charlie);
+
+        uint256 charliePayout = charliePendingAfter - charliePendingBefore;
 
         // Should only get bond back, no reward
         assertApproxEqAbs(
@@ -1752,7 +1786,7 @@ contract PumpDumpTest is TestHelper {
             "Proposer should only get bond back when reward is disabled"
         );
 
-        console.log("Charlie payout (reward disabled):", charliePayout);
+        console.log("Charlie pending payout (reward disabled):", charliePayout);
         console.log("Required bond:", requiredBond);
     }
 

@@ -147,14 +147,29 @@ contract IntegrationTest is TestHelper {
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
         // === FINALIZE ===
-        uint256 creatorBalanceBefore = marketCreator.balance;
+        uint256 creatorPendingBefore = market.getPendingWithdrawal(
+            marketCreator
+        );
         market.finalizeMarket(marketId);
 
-        // Verify proposer (creator) got bond back + bonus
+        // Verify proposer (creator) got bond back + bonus credited (Pull Pattern v3.4.0)
+        uint256 creatorPendingAfter = market.getPendingWithdrawal(
+            marketCreator
+        );
         assertGt(
-            marketCreator.balance,
-            creatorBalanceBefore,
+            creatorPendingAfter,
+            creatorPendingBefore,
             "Proposer should get bond + bonus"
+        );
+
+        // Creator withdraws their bond + bonus
+        uint256 creatorBalanceBefore = marketCreator.balance;
+        vm.prank(marketCreator);
+        market.withdrawBond();
+        assertEq(
+            marketCreator.balance,
+            creatorBalanceBefore + creatorPendingAfter,
+            "Proposer should receive withdrawal"
         );
 
         // === CLAIM WINNINGS ===
@@ -197,14 +212,25 @@ contract IntegrationTest is TestHelper {
         // === FINALIZE ===
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
-        uint256 bobBalanceBefore = bob.balance;
+        uint256 bobPendingBefore = market.getPendingWithdrawal(bob);
         market.finalizeMarket(marketId);
 
-        // Bob (disputer) should get bond back + bonus
+        // Bob (disputer) should get bond back + bonus credited (Pull Pattern v3.4.0)
+        uint256 bobPendingAfter = market.getPendingWithdrawal(bob);
         assertGt(
-            bob.balance,
-            bobBalanceBefore,
+            bobPendingAfter,
+            bobPendingBefore,
             "Disputer should get bond + bonus"
+        );
+
+        // Bob withdraws their bond + bonus
+        uint256 bobBalanceBefore = bob.balance;
+        vm.prank(bob);
+        market.withdrawBond();
+        assertEq(
+            bob.balance,
+            bobBalanceBefore + bobPendingAfter,
+            "Disputer should receive withdrawal"
         );
 
         // === VERIFY OUTCOME: NO won (disputer's position) ===
@@ -478,23 +504,49 @@ contract IntegrationTest is TestHelper {
         // NO ONE VOTES - warp past voting
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
-        // Record balances before finalize
-        uint256 creatorBalanceBefore = marketCreator.balance;
-        uint256 disputerBalanceBefore = disputer.balance;
+        // Record pending before finalize (Pull Pattern v3.4.0)
+        uint256 creatorPendingBefore = market.getPendingWithdrawal(
+            marketCreator
+        );
+        uint256 disputerPendingBefore = market.getPendingWithdrawal(disputer);
 
         // Finalize - should be a tie
         market.finalizeMarket(marketId);
 
-        // Both should get bonds back (tie = both returned)
+        // Both should get bonds credited to pendingWithdrawals (tie = both returned)
+        uint256 creatorPendingAfter = market.getPendingWithdrawal(
+            marketCreator
+        );
+        uint256 disputerPendingAfter = market.getPendingWithdrawal(disputer);
+
         assertGt(
-            marketCreator.balance,
-            creatorBalanceBefore,
+            creatorPendingAfter,
+            creatorPendingBefore,
             "Proposer should get bond back on tie"
         );
         assertGt(
-            disputer.balance,
-            disputerBalanceBefore,
+            disputerPendingAfter,
+            disputerPendingBefore,
             "Disputer should get bond back on tie"
+        );
+
+        // Withdraw to verify actual funds received
+        uint256 creatorBalanceBefore = marketCreator.balance;
+        vm.prank(marketCreator);
+        market.withdrawBond();
+        assertEq(
+            marketCreator.balance,
+            creatorBalanceBefore + creatorPendingAfter,
+            "Proposer should receive withdrawal"
+        );
+
+        uint256 disputerBalanceBefore = disputer.balance;
+        vm.prank(disputer);
+        market.withdrawBond();
+        assertEq(
+            disputer.balance,
+            disputerBalanceBefore + disputerPendingAfter,
+            "Disputer should receive withdrawal"
         );
     }
 

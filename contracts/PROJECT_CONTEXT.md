@@ -1,20 +1,23 @@
 # 📋 Junkie.Fun - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 9, 2026  
-> **Status:** ✅ Smart Contracts Complete (v3.3.0, 131 tests)
+> **Last Updated:** January 10, 2026  
+> **Status:** ✅ Smart Contracts Deployed (v3.4.1, 164 tests)
 
 ---
 
-## 🚀 Deployment (BNB Testnet)
+## 🚀 Contract Status
 
-| Contract | Address | Status |
-|----------|---------|--------|
-| PredictionMarket (v2.5.0) | `0x3988808940d027a70FE2D0938Cf06580bbad19F9` | ⚠️ DEPRECATED (arbitrage bug) |
-| PredictionMarket (v3.3.0) | Not yet deployed | ⏳ Pending |
+| Version | Status | Features |
+|---------|--------|----------|
+| v3.4.1 | ✅ DEPLOYED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-**BscScan:** https://testnet.bscscan.com/address/0x3988808940d027a70FE2D0938Cf06580bbad19F9
-**Deployed Block:** 83243447
+### Deployed Contract
+- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 83514593
+- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Verified:** ✅ Yes
 
 ---
 
@@ -30,7 +33,10 @@
 - Emergency refunds (24h timeout)
 - Voter jury fee incentives (50% of loser's bond)
 - Dynamic bond pricing
-- 3-of-3 MultiSig governance
+- **Pull Pattern** - griefing-proof bond/fee distribution (v3.4.0)
+- **ReplaceSigner** - 2-of-3 emergency signer replacement (v3.4.1)
+- **Sweep Protection** - includes pending withdrawals (v3.4.1)
+- 3-of-3 MultiSig governance (2-of-3 for ReplaceSigner)
 - **SweepFunds** - recover surplus/dust BNB from contract
 
 ---
@@ -47,6 +53,9 @@
 | Market Creation Fee | ✅ 100% | Optional fee (defaults to 0), MultiSig configurable |
 | Street Consensus | ✅ 100% | Propose → Dispute → Vote → Finalize |
 | Proposer Reward | ✅ 100% | 0.5% of pool to incentivize resolution |
+| **Pull Pattern** | ✅ 100% | Griefing-proof distribution (v3.4.0) |
+| **ReplaceSigner** | ✅ 100% | 2-of-3 emergency replacement (v3.4.1) |
+| **Sweep Protection** | ✅ 100% | Includes pending funds (v3.4.1) |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
@@ -60,10 +69,12 @@
 | InstantSell Tests | ✅ 100% | 8 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | WalletB Scenario | ✅ 100% | 1 test passing |
-| Testnet Deployment | ⏳ 90% | v2.5.0 deployed, v3.3.0 pending |
+| EmptyWinningSide Tests | ✅ 100% | 5 tests passing |
+| **PullPattern Tests** | ✅ 100% | 28 tests passing |
+| Testnet Deployment | ⏳ 90% | Ready for deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 131 ✅** (1 skipped)
+**Total Tests: 164 ✅** (1 skipped)
 
 ---
 
@@ -123,6 +134,12 @@ PredictionMarket.sol
 │   ├── minBet = 0.005 ether
 │   └── treasury address
 │
+├── Pull Pattern State (v3.4.0)
+│   ├── pendingWithdrawals (user → amount)
+│   ├── pendingCreatorFees (creator → amount)
+│   ├── totalPendingWithdrawals (for sweep protection)
+│   └── totalPendingCreatorFees (for sweep protection)
+│
 ├── Mappings
 │   ├── markets (marketId → Market)
 │   ├── positions (marketId → user → Position)
@@ -140,6 +157,12 @@ PredictionMarket.sol
 │   ├── claim() - winner payouts
 │   └── emergencyRefund() - 24h timeout refund
 │
+├── Pull Pattern Functions (v3.4.0)
+│   ├── withdrawBond() - withdraw pending bonds/jury fees
+│   ├── withdrawCreatorFees() - withdraw pending creator fees
+│   ├── getPendingWithdrawal(address) - check pending balance
+│   └── getPendingCreatorFees(address) - check pending balance
+│
 ├── View Functions
 │   ├── getMarket()
 │   ├── getYesPrice() / getNoPrice()
@@ -152,11 +175,50 @@ PredictionMarket.sol
 │   ├── getSweepableAmount() - surplus BNB calculation
 │   └── isSigner()
 │
-└── Governance (3-of-3 MultiSig)
+└── Governance (MultiSig)
     ├── proposeAction()
     ├── confirmAction()
     ├── executeAction()
-    └── ActionTypes: SetHeatLevelCrack, SetHeatLevelHigh, SetHeatLevelPro, SweepFunds, ...
+    ├── 3-of-3 Actions: SetFee, SetTreasury, Pause, SweepFunds, etc.
+    └── 2-of-3 Action: ReplaceSigner (emergency escape hatch)
+```
+
+---
+
+## 🔐 Pull Pattern (v3.4.0)
+
+**Why Pull Pattern?**
+Prevents griefing attacks where malicious wallets can block market resolution.
+
+| What | Old (Push) | New (Pull) |
+|------|------------|------------|
+| Proposer bond | Direct transfer | `pendingWithdrawals[proposer]` |
+| Disputer bond | Direct transfer | `pendingWithdrawals[disputer]` |
+| Jury fees | Direct transfer | `pendingWithdrawals[voter]` |
+| Creator fees | Direct transfer | `pendingCreatorFees[creator]` |
+
+**Users withdraw via:**
+- `withdrawBond()` - for bonds and jury fees
+- `withdrawCreatorFees()` - for creator fees
+
+---
+
+## 🔑 ReplaceSigner (v3.4.1)
+
+Emergency signer replacement with only 2-of-3 confirmations.
+
+```solidity
+// Usage
+uint256 actionId = proposeAction(ActionType.ReplaceSigner, abi.encode(oldSigner, newSigner));
+// Second signer confirms → auto-executes
+confirmAction(actionId);
+```
+
+**Safety Checks:**
+- `newSigner != address(0)`
+- `newSigner != oldSigner`
+- `!_isSigner(newSigner)` - prevents duplicates
+- Constructor also validates unique signers
 ```
 
 ---
@@ -203,22 +265,29 @@ PredictionMarket.sol
 
 | Test File | Tests | Status |
 |-----------|-------|--------|
-| PredictionMarket.t.sol | 82 | ✅ Passing |
+| PredictionMarket.t.sol | 21 | ✅ Passing |
 | PredictionMarket.fuzz.t.sol | 32 | ✅ Passing |
-| VulnerabilityCheck.t.sol | 4 | ✅ Passing |
-| PumpDump.t.sol | 31 | ✅ Passing |
-| InstantSellAnalysis.t.sol | 8 | ✅ Passing |
+| PumpDump.t.sol | 32 | ✅ Passing |
 | Integration.t.sol | 16 | ✅ Passing |
+| ArbitrageProof.t.sol | 16 | ✅ Passing (1 skip) |
+| InstantSellAnalysis.t.sol | 8 | ✅ Passing |
+| VulnerabilityCheck.t.sol | 4 | ✅ Passing |
+| WalletBScenario.t.sol | 1 | ✅ Passing |
+| EmptyWinningSide.t.sol | 6 | ✅ Passing |
+| **PullPattern.t.sol** | **28** | ✅ Passing |
 
-**Total Tests: 173 ✅**
+**Total Tests: 164 ✅** (1 expected skip)
 
 ### Test Categories
 - **Unit tests:** Market creation, trading, fees, resolution, claims, heat levels, sweep
 - **Fuzz tests:** Bonding curve math, configurable parameters, edge cases
 - **Vulnerability tests:** Reentrancy, overflow, access control
-- **Pump & Dump tests:** Economics verification
+- **Pump & Dump tests:** Economics verification, proposer rewards
 - **Street Consensus tests:** Propose/dispute/vote flow
 - **Integration tests:** Full lifecycle scenarios
+- **ArbitrageProof tests:** Buy→sell arbitrage prevention certification
+- **PullPattern tests:** Bond withdrawals, creator fees, jury fees, ReplaceSigner, sweep protection
+- **EmptyWinningSide tests:** Safety checks for empty winning side
 
 ---
 
@@ -263,10 +332,15 @@ event ActionExecuted(actionId, actionType);
 - [x] Heat level bounds validation
 - [x] SweepFunds only sweeps surplus (user funds safe)
 - [x] No receive() - direct BNB transfers revert
+- [x] **Pull Pattern** - griefing-proof distribution (v3.4.0)
+- [x] **Empty winning side check** - prevents funds locking (v3.4.0)
+- [x] **Constructor duplicate check** - no duplicate signers at deploy (v3.4.1)
+- [x] **Runtime duplicate check** - ReplaceSigner prevents duplicates (v3.4.1)
+- [x] **Sweep protection** - includes totalPendingWithdrawals/Fees (v3.4.1)
 
 ---
 
-## 🎮 Quick Reference: Contract Interface (v3.1.0)
+## 🎮 Quick Reference: Contract Interface (v3.4.1)
 
 ```solidity
 // ===== Market Creation =====
@@ -276,7 +350,7 @@ function createMarket(
     string resolutionRules,
     string imageUrl,
     uint256 expiryTimestamp,
-    HeatLevel heatLevel  // NEW: CRACK, HIGH, or PRO
+    HeatLevel heatLevel  // CRACK, HIGH, or PRO
 ) payable returns (uint256 marketId)
 
 function createMarketAndBuy(
@@ -285,15 +359,32 @@ function createMarketAndBuy(
     string resolutionRules,
     string imageUrl,
     uint256 expiryTimestamp,
-    HeatLevel heatLevel,  // NEW
+    HeatLevel heatLevel,
     bool buyYesSide,
     uint256 minSharesOut
 ) payable returns (uint256 marketId, uint256 sharesOut)
 
 // ===== Street Consensus Resolution =====
-function proposeOutcome(uint256 marketId, bool outcome) payable  // No proofLink
+function proposeOutcome(uint256 marketId, bool outcome) payable
+function dispute(uint256 marketId) payable
+function vote(uint256 marketId, bool outcome)
+function finalizeMarket(uint256 marketId)
+function claim(uint256 marketId) returns (uint256 payout)
+function emergencyRefund(uint256 marketId) returns (uint256 refund)
 
-// ===== Views (New) =====
+// ===== Pull Pattern Withdrawals (v3.4.0) =====
+function withdrawBond() returns (uint256 amount)        // Bonds, jury fees
+function withdrawCreatorFees() returns (uint256 amount) // Creator 0.5% fees
+function getPendingWithdrawal(address) view returns (uint256)
+function getPendingCreatorFees(address) view returns (uint256)
+
+// ===== Governance (3-of-3, except ReplaceSigner 2-of-3) =====
+function proposeAction(ActionType, bytes data) returns (uint256 actionId)
+function confirmAction(uint256 actionId)
+function executeAction(uint256 actionId)
+// ActionType.ReplaceSigner: encode(oldSigner, newSigner) - only needs 2-of-3
+
+// ===== Views =====
 function getSweepableAmount() view returns (surplus, totalLocked, contractBalance)
 ```
 
@@ -304,19 +395,23 @@ function getSweepableAmount() view returns (surplus, totalLocked, contractBalanc
 ```
 contracts/
 ├── src/
-│   └── PredictionMarket.sol    # Main contract (v3.1.0, 1701 lines)
+│   └── PredictionMarket.sol    # Main contract (v3.4.1, ~2000 lines)
 ├── test/
-│   ├── PredictionMarket.t.sol       # Unit tests (82)
+│   ├── PredictionMarket.t.sol       # Unit tests (21)
 │   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (32)
-│   ├── PumpDump.t.sol               # Economics + feature tests (31)
-│   ├── VulnerabilityCheck.t.sol     # Security tests (4)
-│   ├── InstantSellAnalysis.t.sol    # Instant sell + liquidity tests (8)
+│   ├── PumpDump.t.sol               # Economics + proposer rewards (32)
 │   ├── Integration.t.sol            # Integration tests (16)
+│   ├── ArbitrageProof.t.sol         # Arbitrage prevention (16 + 1 skip)
+│   ├── InstantSellAnalysis.t.sol    # Sell mechanics (8)
+│   ├── VulnerabilityCheck.t.sol     # Security tests (4)
+│   ├── WalletBScenario.t.sol        # Edge case scenario (1)
+│   ├── EmptyWinningSide.t.sol       # Empty side safety (6)
+│   ├── PullPattern.t.sol            # Pull Pattern + ReplaceSigner (28)
 │   └── helpers/
 │       └── TestHelper.sol           # Test utilities
 ├── script/
 │   └── Deploy.s.sol                 # Deployment script
-├── AUDIT.md                         # Security audit (v3.1.0)
+├── AUDIT.md                         # Security audit (v3.4.1)
 ├── CHANGELOG.md                     # Version history
 ├── PROJECT_CONTEXT.md               # This file
 └── README.md                        # Main documentation

@@ -1,12 +1,18 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.3.0  
-**Audit Date:** January 9, 2026  
+**Version:** v3.4.1  
+**Audit Date:** January 10, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
-**Deployed:** ✅ BNB Testnet - [`0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`](https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7)  
-**Verified:** ✅ Source code verified on BscScan
+**Status:** ✅ DEPLOYED to BNB Testnet
+
+### Deployment Information
+- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 83514593
+- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Verified:** ✅ Yes
 
 ---
 
@@ -16,45 +22,56 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 - **Bonding Curve Pricing:** Linear constant sum model where P(YES) + P(NO) = 0.01 BNB
 - **Heat Levels:** Configurable per-market virtual liquidity for different trading styles
 - **Street Consensus Resolution:** Shareholder voting system for outcome determination
-- **Proposer Rewards:** 0.5% of pool paid to successful proposers (NEW in v3.3.0)
-- **3-of-3 MultiSig Governance:** All parameter changes require unanimous approval
-- **SweepFunds:** Governance can recover surplus/dust BNB from the contract
+- **Proposer Rewards:** 0.5% of pool paid to successful proposers
+- **Pull Pattern:** Griefing-resistant withdrawals for bonds, jury fees, and creator fees (v3.4.0)
+- **Sweep Protection:** Includes pending withdrawals in locked funds calculation (v3.4.1)
+- **ReplaceSigner:** 2-of-3 emergency signer replacement (v3.4.1)
+- **3-of-3 MultiSig Governance:** All parameter changes require unanimous approval (except ReplaceSigner)
 - **Emergency Refund System:** 24-hour failsafe for unresolved markets
 
 ### Key Statistics
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~1,750 |
-| Total Tests | **131** |
-| Test Suites | **8** |
+| Total Lines of Code | ~2,000 |
+| Total Tests | **164** |
+| Test Suites | **10** |
 | Slither Findings | 45 (see breakdown below) |
 | Critical Issues | 0 |
-| High Issues | 0 (4 false positives - reentrancy) |
-| Medium Issues | 2 |
+| High Issues | 0 (false positives - reentrancy mitigated) |
+| Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
 
 ---
 
-## Version 3.3.0 Changes Since Last Audit
+## Version 3.4.1 Changes Since Last Audit
 
 ### New Features
-1. **Proposer Rewards** - 0.5% of pool paid to successful proposers
-   - `MAX_PROPOSER_REWARD_BPS = 200` (2% max, configurable)
-   - `proposerRewardBps = 50` (0.5% default)
-   - Incentivizes quick market resolution
-   - Paid on BOTH Proposed (undisputed) and Disputed+Won paths
-   - New event: `ProposerRewardPaid(marketId, proposer, amount)`
-   - New error: `InvalidProposerReward()`
+1. **ReplaceSigner (2-of-3)** - Emergency escape hatch for compromised/lost signer keys
+   - Only requires 2 confirmations (not 3) for emergency recovery
+   - Validates new signer is not address(0)
+   - Prevents old == new replacement
+   - **Prevents duplicate signers** (critical for governance integrity)
+   - Emits `SignerReplaced(oldSigner, newSigner, actionId)` event
 
-### Changes from v3.2.0
-- v3.2.0 fixed critical bonding curve arbitrage bug
-- v3.3.0 adds economic incentive for resolution
+2. **Constructor Duplicate Signer Check** - Prevents deployment with duplicate signers
+   - Nested loop validation at deployment time
+   - Combined with runtime check provides complete duplicate prevention
+
+3. **Sweep Protection Enhanced** - `_calculateTotalLockedFunds()` now includes:
+   - `totalPendingWithdrawals` - All unclaimed bonds/jury fees
+   - `totalPendingCreatorFees` - All unclaimed creator fees
+   - Prevents sweep from touching Pull Pattern funds
+
+### v3.4.0 Features (Previous Release)
+- **Pull Pattern** for bonds, jury fees, and creator fees
+- **Empty Market Proposal Block** (`NoTradesToResolve` error)
+- **Empty Winning Side Safety Check** (prevents funds locking)
 
 ---
 
-## Slither Static Analysis Results (v3.3.0)
+## Slither Static Analysis Results (v3.4.1)
 
 **Tool:** Slither v0.11.x  
 **Detectors Run:** 100  
@@ -64,7 +81,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Severity | Count | Status |
 |----------|-------|--------|
-| High | 4 | ⚠️ False Positives (Reentrancy - mitigated by ReentrancyGuard) |
+| High | 2 | ⚠️ False Positives (arbitrary-send-eth to treasury - we control it) |
 | Medium | 2 | ✅ Mitigated by Design |
 | Low | 12 | ℹ️ Informational / By Design |
 | Optimization | 10+ | 📝 Assembly in OpenZeppelin (expected) |
@@ -73,59 +90,56 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 ## Detailed Findings
 
-### HIGH-01 through HIGH-04: Reentrancy False Positives
-
-**Slither Detection:** `reentrancy-vulnerabilities`
-
-**Affected Functions:**
-- `_distributeBonds()` (Lines 965-1004)
-- `_returnBondsOnTie()` (Lines 940-958)
-- `_distributeJuryFees()` (Lines 1009-1047)
-
-**Description:**
-Slither flags that external calls via `.call{value:}()` are made before state variables (`proposalBond`, `disputeBond`) are zeroed.
-
-**Analysis:**
-```solidity
-// _distributeBonds writes state AFTER external calls
-(success,) = winner.call{value: winnerPayout}();
-_distributeJuryFees(marketId, market, voterPool);
-market.proposalBond = 0;  // State written after
-market.disputeBond = 0;   // State written after
-```
-
-**Risk Assessment:** FALSE POSITIVE
-- The contract inherits `ReentrancyGuard` from OpenZeppelin
-- `finalizeMarket()` (the only entry point) uses `nonReentrant` modifier
-- Re-entering `claim()`, `emergencyRefund()`, or any trading function would revert
-- The `resolved` flag is set BEFORE distribution, preventing double finalization
-
-**Mitigation Status:** ✅ Mitigated by `nonReentrant` modifier and `resolved` flag check
-
----
-
-### MEDIUM-01: Arbitrary ETH Sends
+### HIGH-01/02: Arbitrary ETH Sends (FALSE POSITIVE)
 
 **Slither Detection:** `arbitrary-send-eth`
 
 **Affected Functions:**
-- `_distributeJuryFees()` (Lines 1009-1047)
-- `_executeAction()` (Lines 1610-1711) - SweepFunds
+- `_distributeJuryFees()` - sends to treasury when no winning voters
+- `_executeAction()` - SweepFunds sends to treasury
+
+**Analysis:**
+```solidity
+(success,) = treasury.call{value: voterPool}();  // _distributeJuryFees
+(success,) = treasury.call{value: surplus}();    // SweepFunds
+```
+
+**Risk Assessment:** FALSE POSITIVE
+- `treasury` is set in constructor and only changeable via 3-of-3 MultiSig
+- Treasury is a controlled address (team wallet)
+- Cannot be exploited to send funds to arbitrary addresses
+
+**Mitigation Status:** ✅ By Design - Treasury is MultiSig controlled
+
+---
+
+### MEDIUM-01: Reentrancy in Trading Functions
+
+**Slither Detection:** `reentrancy-vulnerabilities-2`
+
+**Affected Functions:**
+- `buyYes()`, `buyNo()`, `sellYes()`, `sellNo()`
 
 **Description:**
+State variables (`pendingCreatorFees`, `totalPendingCreatorFees`) written after external call to treasury.
+
+**Analysis:**
 ```solidity
-(success,) = treasury.call{value: voterPool}();
-(success,) = voter.call{value: voterShare}();
-(success,) = treasury.call{value: surplus}();  // SweepFunds
+// Platform fee sent first (external call)
+(success,) = treasury.call{value: platformFee}("");
+
+// Then creator fee credited (state write)
+pendingCreatorFees[market.creator] += creatorFee;
+totalPendingCreatorFees += creatorFee;
 ```
 
 **Risk Assessment:** LOW
-- `treasury` is controlled by 3-of-3 MultiSig
-- `voter` addresses are stored during `vote()` calls which require share ownership
-- SweepFunds only sends to treasury (MultiSig controlled)
-- Cannot be exploited to drain funds to attacker-controlled addresses
+- All trading functions have `nonReentrant` modifier
+- Treasury is a trusted address (cannot re-enter maliciously)
+- State writes after call are for Pull Pattern credits (not withdrawals)
+- No funds at risk even if re-entered
 
-**Mitigation Status:** ✅ By Design - Treasury is MultiSig controlled, voters must be shareholders
+**Mitigation Status:** ✅ Mitigated by `nonReentrant` modifier
 
 ---
 
@@ -133,13 +147,10 @@ market.disputeBond = 0;   // State written after
 
 **Slither Detection:** `divide-before-multiply`
 
-**Affected Functions:**
-- `claim()` (Lines 1054-1093)
-- `_calculateSellBnb()` (internal)
+**Affected Function:** `claim()`
 
 **Description:**
 ```solidity
-// claim()
 grossPayout = (winningShares * market.poolBalance) / totalWinningShares;
 fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 ```
@@ -153,137 +164,79 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ---
 
-### ~~CRITICAL-01: Bonding Curve Arbitrage (FIXED in v3.2.0)~~
-
-**Status:** ✅ FIXED
-
-**Description:** The original `_calculateSellBnb()` used average price which allowed users to buy and immediately sell for MORE BNB than they put in. This was a critical arbitrage vulnerability.
-
-**Fix:** Changed to use post-sell state for price calculation. 
-
-**Verification:** 17 ArbitrageProof tests confirm:
-- Single user buy→sell = guaranteed loss
-- Pump/dump attacks unprofitable
-- Sandwich attacks unprofitable
-- Both-sides arbitrage unprofitable
-
-See [ArbitrageProof.t.sol](test/ArbitrageProof.t.sol) for comprehensive test coverage.
-
----
-
-### LOW-01: Calls Inside a Loop
-
-**Slither Detection:** `calls-loop`
-
-**Affected Function:** `_distributeJuryFees()` (Lines 1009-1047)
-
-**Description:**
-```solidity
-for (uint256 i = 0; i < voterCount; i++) {
-    address voter = marketVoters[marketId][i];
-    // ... check if voted for winning outcome ...
-    (success,) = voter.call{value: voterShare}();
-}
-```
-
-**Risk Assessment:** MEDIUM
-- Unbounded loop could cause gas exhaustion if too many voters
-- A failing transfer would not revert (continues loop)
-- Failed transfers result in lost funds for that voter
-
-**Mitigation Considerations:**
-1. In practice, market voting is time-limited (1 hour window)
-2. Each vote costs gas, naturally limiting voter count
-3. Typical markets will have <50 voters based on market dynamics
-
-**Recommendation:** Consider implementing a pull-based claim pattern for jury rewards in future versions.
-
----
-
-### LOW-02: Timestamp Dependencies
+### LOW-01: Timestamp Dependencies
 
 **Slither Detection:** `timestamp`
 
 **Affected Functions:** 10+ functions use `block.timestamp`
 
 **Risk Assessment:** LOW
-- BNB Chain block time is ~3 seconds (relatively predictable)
+- BNB Chain block time is ~3 seconds
 - Time windows are intentionally long (10min, 30min, 1hr, 24hr)
 - Miner manipulation of ~15 seconds cannot meaningfully exploit these windows
 
-**Mitigation Status:** ✅ By Design - Long time windows make manipulation impractical
+**Mitigation Status:** ✅ By Design
 
 ---
 
-### LOW-03: Different Solidity Versions
-
-**Slither Detection:** `different-pragma-directives`
+### LOW-02: Different Solidity Versions
 
 **Description:**
 - Main contract: `pragma solidity 0.8.24;`
 - OpenZeppelin imports: `pragma solidity ^0.8.20;`
 
-**Risk Assessment:** NONE
-- Using exact version (0.8.24) is best practice for deployments
-- OpenZeppelin's ^0.8.20 allows 0.8.24 compilation
-
-**Mitigation Status:** ✅ Non-Issue
+**Risk Assessment:** NONE - 0.8.24 is within ^0.8.20 range
 
 ---
 
-### LOW-04: Low-Level Calls
+### LOW-03: Low-Level Calls
 
-**Slither Detection:** `low-level-calls`
-
-**Description:**
-Contract uses `.call{value:}()` for all 16 ETH transfer locations.
+**Description:** Contract uses `.call{value:}()` for all ETH transfers.
 
 **Risk Assessment:** NONE - This is the RECOMMENDED pattern
 - `.transfer()` has fixed 2300 gas limit, breaks with contract recipients
-- `.call{}()` forwards all gas, more flexible and future-proof
 - All calls check return value
-
-**Mitigation Status:** ✅ Best Practice
 
 ---
 
-### LOW-05: High Cyclomatic Complexity
+### LOW-04: High Cyclomatic Complexity
 
-**Slither Detection:** `cyclomatic-complexity`
-
-**Affected Function:** `_executeAction()` (Lines 1610-1711) - Complexity: 32
-
-**Description:**
-Large switch statement for handling 14+ different MultiSig action types.
+**Affected Functions:**
+- `finalizeMarket()` - Complexity: 12
+- `_executeAction()` - Complexity: 39
 
 **Risk Assessment:** NONE
+- Switch pattern appropriate for action dispatching
 - Each case is independent and straightforward
-- Well-documented with clear parameter validation
-- Switch pattern is appropriate for action dispatching
 
-**Mitigation Status:** ✅ Acceptable
+---
+
+### LOW-05: Calls Inside a Loop
+
+**Affected Function:** `_distributeJuryFees()`
+
+**Description:** Loop iterates over voters to credit jury fees.
+
+**Risk Assessment:** LOW (IMPROVED in v3.4.0)
+- Now uses Pull Pattern - only credits `pendingWithdrawals`, no external calls in loop
+- Original concern about failed transfers blocking resolution is eliminated
+- Loop only writes to storage mappings
+
+**Mitigation Status:** ✅ Fixed in v3.4.0 with Pull Pattern
 
 ---
 
 ### LOW-06: Solidity Version Issues (OpenZeppelin)
 
-**Slither Detection:** `incorrect-versions-of-solidity`
+**Description:** OpenZeppelin ^0.8.20 has known compiler issues.
 
-**Description:**
-OpenZeppelin ^0.8.20 has known issues (VerbatimInvalidDeduplication, FullInlinerNonExpressionSplitArgumentEvaluationOrder).
-
-**Risk Assessment:** NONE
-- These issues are compiler-specific edge cases
-- Our contract uses 0.8.24 which has fixes
-- OpenZeppelin code paths are well-tested
-
-**Mitigation Status:** ✅ Non-Issue for our use case
+**Risk Assessment:** NONE - We use 0.8.24 which has fixes
 
 ---
 
 ## Test Coverage Analysis
 
-### Test Suite Breakdown (131 Total)
+### Test Suite Breakdown (164 Total)
 
 | Test File | Tests | Focus |
 |-----------|-------|-------|
@@ -291,54 +244,45 @@ OpenZeppelin ^0.8.20 has known issues (VerbatimInvalidDeduplication, FullInliner
 | PredictionMarket.fuzz.t.sol | 32 | Property-based fuzz testing |
 | PumpDump.t.sol | 32 | Economics + proposer rewards |
 | Integration.t.sol | 16 | Full lifecycle scenarios |
-| ArbitrageProof.t.sol | 17 (1 skipped) | Arbitrage prevention certification |
+| ArbitrageProof.t.sol | 16 (1 skipped) | Arbitrage prevention certification |
 | InstantSellAnalysis.t.sol | 8 | Sell mechanics verification |
 | VulnerabilityCheck.t.sol | 4 | Known vulnerability patterns |
 | WalletBScenario.t.sol | 1 | Edge case scenarios |
+| EmptyWinningSide.t.sol | 6 | Empty side safety checks |
+| **PullPattern.t.sol** | **28** | **Pull Pattern + ReplaceSigner tests (NEW)** |
 
 ### Key Test Scenarios Covered
 
-✅ **Arbitrage Prevention (NEW - 17 tests)**
-- `test_SingleUserBuySell_AlwaysLoses` - Buy→sell = guaranteed loss
-- `test_PumpAndDump_Unprofitable` - Large buy→sell unprofitable
-- `test_SandwichAttack_Unprofitable` - MEV sandwich simulation
-- `test_BothSidesArbitrage_Unprofitable` - YES+NO arbitrage fails
-- `test_ArbitrageAtAllHeatLevels` - CRACK/HIGH/PRO all safe
-- Fuzz tests with random amounts
+✅ **Pull Pattern (28 tests in PullPattern.t.sol)**
+- Creator fees credited on buy/sell trades
+- `withdrawCreatorFees()` functionality
+- `withdrawBond()` functionality  
+- Bond returns on tie scenarios
+- Jury fees distribution via Pull Pattern
+- Sweep protection includes pending funds
 
-✅ **Proposer Rewards (NEW - 6 tests in PumpDump.t.sol)**
-- Proposer gets 0.5% reward on undisputed finalization
-- Proposer gets 0.5% reward when winning dispute
-- Proposer loses reward when losing dispute
-- ProposerRewardPaid event emitted correctly
+✅ **ReplaceSigner (NEW - 6 tests)**
+- `test_ReplaceSigner_Success` - 2-of-3 confirmation works
+- `test_ReplaceSigner_RequiresOnly2of3` - Doesn't need 3rd confirmation
+- `test_ReplaceSigner_OnlySignerCanPropose` - Access control
+- `test_ReplaceSigner_CannotReplaceWithZeroAddress` - Validates new signer
+- `test_ReplaceSigner_CannotReplaceSameAddress` - old != new
+- `test_ReplaceSigner_PreventDuplicateSigner` - No duplicate signers allowed
 
-✅ **Heat Levels Testing**
-- Market creation with all three heat levels (CRACK, HIGH, PRO)
-- Virtual liquidity correctly assigned per heat level
-- Price calculations use market-specific virtualLiquidity
+✅ **Empty Winning Side Safety (6 tests)**
+- Resolution blocked when winning side has 0 holders
+- Bonds returned via Pull Pattern
+- Emergency refund available after failed resolution
 
-✅ **Happy Path Flows**
-- Market creation → Trading → Proposal → Finalization → Claim
-- Undisputed resolution
-- Disputed resolution with voting
+✅ **Arbitrage Prevention (16 tests)**
+- Buy→sell = guaranteed loss
+- Pump/dump attacks unprofitable
+- All heat levels tested
 
-✅ **Edge Cases**
-- Minimum bet amounts
-- Dust pool bond floor
-- Single shareholder protection
-- Timing boundaries
-- Slippage protection
-
-✅ **Attack Vectors**
-- Double claim prevention
-- Non-shareholder voting prevention
-- Creator priority window enforcement
-- Emergency refund vs claim mutual exclusion
-
-✅ **Invariants (Fuzz Tested)**
-- Price sum always equals UNIT_PRICE
-- Preview functions match actual execution
-- Pool solvency maintained
+✅ **Proposer Rewards (6 tests)**
+- 0.5% reward on undisputed finalization
+- Reward included in dispute win payout
+- Governance can adjust 0-2%
 
 ---
 
@@ -346,74 +290,72 @@ OpenZeppelin ^0.8.20 has known issues (VerbatimInvalidDeduplication, FullInliner
 
 ### 1. Heat Levels Are Immutable Per Market
 **Decision:** virtualLiquidity set at creation, cannot change  
-**Trade-off:** Cannot adjust for changed market conditions  
 **Mitigation:** Three options available at creation time
 
 ### 2. No Oracle Dependency
 **Decision:** "Street Consensus" resolution by shareholders  
-**Trade-off:** No external oracle risk, but relies on economic incentives  
 **Mitigation:** Bond system, voting weighted by stake
 
 ### 3. No Upgradability
 **Decision:** Immutable contract  
-**Trade-off:** Cannot fix bugs post-deployment  
-**Mitigation:** Extensive testing (131 tests), MultiSig pause, emergency refund
+**Mitigation:** Extensive testing (164 tests), MultiSig pause, emergency refund
 
-### 4. Fixed Time Windows
-**Decision:** Hardcoded dispute (30min), voting (1hr), emergency (24hr)  
-**Trade-off:** Cannot adjust based on market needs  
-**Mitigation:** Conservative windows, tested extensively
+### 4. ReplaceSigner Uses 2-of-3 (NEW)
+**Decision:** Emergency escape hatch if one signer is compromised/lost  
+**Risk:** Two colluding signers could replace the third  
+**Mitigation:** 
+- All other actions still require 3-of-3
+- Event emitted for monitoring
+- Intended for emergencies only
 
 ### 5. SweepFunds Iterates All Markets
 **Decision:** Full calculation each sweep  
-**Trade-off:** Gas cost scales with market count  
+**Risk:** Gas cost scales with market count  
 **Mitigation:** MultiSig controlled, execute only when needed
 
-### 6. Proposer Reward From Pool (NEW)
-**Decision:** 0.5% of pool paid to successful proposers  
-**Trade-off:** Slightly reduces winner payouts  
-**Mitigation:** Small percentage, configurable via MultiSig (0-2% range)
+### 6. Pull Pattern Requires User Action
+**Decision:** Users must call `withdrawBond()`/`withdrawCreatorFees()`  
+**Risk:** Users may forget to withdraw  
+**Mitigation:** 
+- Frontend shows pending balances prominently
+- No time limit on withdrawals
+- Funds are safe indefinitely
 
 ---
 
 ## Pre-Deployment Checklist
 
 ### Smart Contract
-- [x] All 131 tests passing (130 pass + 1 skipped)
+- [x] All 164 tests passing (163 pass + 1 expected skip)
 - [x] Slither analysis completed (no critical/high issues)
 - [x] ReentrancyGuard applied to all state-changing external functions
-- [x] MultiSig addresses configured correctly
-- [x] Treasury address set (receives platform fees)
-- [x] Heat level values configured:
-  - `heatLevelCrack`: 5 * 1e18
-  - `heatLevelHigh`: 20 * 1e18 (default for most markets)
-  - `heatLevelPro`: 50 * 1e18
-- [x] Proposer reward configured:
-  - `proposerRewardBps`: 50 (0.5%)
-  - `MAX_PROPOSER_REWARD_BPS`: 200 (2% cap)
-- [x] Initial parameters reviewed:
-  - `platformFeeBps`: 100 (1%)
-  - `creatorFeeBps`: 50 (0.5%)
-  - `resolutionFeeBps`: 30 (0.3%)
-  - `minBet`: 0.005 ether
-  - `minBondFloor`: 0.005 ether
-  - `dynamicBondBps`: 100 (1%)
-  - `bondWinnerShareBps`: 5000 (50%)
-  - `marketCreationFee`: 0 (free)
+- [x] Constructor validates no duplicate signers
+- [x] ReplaceSigner validates no duplicate signers at runtime
+- [x] Pull Pattern implemented for bonds, jury fees, creator fees
+- [x] Sweep protection includes `totalPendingWithdrawals` and `totalPendingCreatorFees`
+- [x] MultiSig addresses configured correctly (3 unique addresses)
+- [x] Treasury address set
+
+### Parameters Configured
+- `platformFeeBps`: 100 (1%)
+- `creatorFeeBps`: 50 (0.5%)
+- `resolutionFeeBps`: 30 (0.3%)
+- `proposerRewardBps`: 50 (0.5%)
+- `minBet`: 0.005 ether
+- `minBondFloor`: 0.005 ether
+- `dynamicBondBps`: 100 (1%)
+- `bondWinnerShareBps`: 5000 (50%)
+- `marketCreationFee`: 0 (free)
+- `heatLevelCrack`: 5 * 1e18
+- `heatLevelHigh`: 20 * 1e18
+- `heatLevelPro`: 50 * 1e18
 
 ### Operational
-- [x] MultiSig signers verified (3 separate entities/devices)
-- [x] Treasury wallet tested and secured
-- [ ] Monitoring setup for events
+- [ ] MultiSig signers verified (3 separate entities/devices)
+- [ ] Treasury wallet tested and secured
+- [ ] Monitoring setup for events (especially `SignerReplaced`, `FundsSwept`)
 - [ ] Emergency response plan documented
-- [x] Frontend integration tested on testnet
-- [x] **Contract deployed to BNB Testnet**
-- [x] **Contract verified on BscScan**
-
-### External Dependencies
-- [x] OpenZeppelin Contracts v5.x (ReentrancyGuard)
-- [x] No oracle dependencies
-- [x] No external contract calls except transfers
+- [ ] Frontend integration tested on testnet
 
 ---
 
@@ -421,39 +363,42 @@ OpenZeppelin ^0.8.20 has known issues (VerbatimInvalidDeduplication, FullInliner
 
 | Risk Category | Level | Notes |
 |--------------|-------|-------|
-| Reentrancy | LOW | Mitigated by ReentrancyGuard |
-| Access Control | LOW | 3-of-3 MultiSig, no single admin |
+| Reentrancy | LOW | Mitigated by ReentrancyGuard + Pull Pattern |
+| Access Control | LOW | 3-of-3 MultiSig (2-of-3 for ReplaceSigner only) |
 | Arithmetic | LOW | Solidity 0.8.24 built-in overflow checks |
-| DoS | LOW-MEDIUM | Unbounded voter loop, sweep iteration |
-| Arbitrage | **NONE** | Fixed in v3.2.0, verified by 17 tests |
+| DoS | LOW | Pull Pattern eliminates griefing, sweep is MultiSig controlled |
+| Arbitrage | **NONE** | Fixed in v3.2.0, verified by 16 tests |
+| Griefing | **NONE** | Pull Pattern prevents blocking via malicious wallets |
 | Oracle Manipulation | N/A | No oracles used |
 | Front-Running | LOW | Bonding curve + slippage protection |
 | Timestamp Manipulation | LOW | Long time windows |
 | Centralization | LOW | MultiSig governance, no upgradability |
+| Duplicate Signers | **NONE** | Validated at constructor AND runtime |
 
 ---
 
 ## Conclusion
 
-The PredictionMarket contract v3.3.0 demonstrates solid security practices:
+The PredictionMarket contract v3.4.1 demonstrates solid security practices:
 
-1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays)
+1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
-3. **Comprehensive Testing:** 131 tests including arbitrage-proof, fuzz, and integration
+3. **Comprehensive Testing:** 164 tests including Pull Pattern, ReplaceSigner, arbitrage-proof, fuzz
 4. **Conservative Design:** Immutable, no external dependencies, fail-safe emergency refund
-5. **Arbitrage-Proof:** Bonding curve mathematically prevents buy→sell profit
+5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
+6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery
 
-**v3.3.0 Additions:**
-- Proposer reward (0.5%) incentivizes timely resolution
-- ArbitrageProof test suite certifies curve security
-- Frontend slippage protection (1% default)
+**v3.4.1 Security Additions:**
+- ReplaceSigner 2-of-3 with duplicate prevention
+- Constructor duplicate signer validation
+- Sweep protection for Pull Pattern funds
+- 28 new tests for Pull Pattern and ReplaceSigner
 
 **Recommended Actions Before Mainnet:**
-1. Consider implementing voter limit or pull-based jury rewards
-2. Add monitoring for failed ETH transfers
-3. Monitor market count for SweepFunds gas costs
-4. Complete operational checklist items
-5. Consider professional third-party audit for additional assurance
+1. Run testnet for 1-2 weeks with real traffic
+2. Set up event monitoring (SignerReplaced, FundsSwept, WithdrawalCredited)
+3. Document emergency response procedures
+4. Consider professional third-party audit for additional assurance
 
 ---
 
