@@ -14,7 +14,6 @@
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Button } from '@/shared/components/ui/Button';
-import { Input } from '@/shared/components/ui/Input';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { Badge } from '@/shared/components/ui/Badge';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
@@ -74,7 +73,6 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const hasVoted = position?.hasVoted || false;
   
   // Form states
-  const [proofLink, setProofLink] = useState('');
   const [proposedOutcome, setProposedOutcome] = useState<boolean>(true);
 
   // Contract write hooks
@@ -127,7 +125,6 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
     await proposeOutcome({
       marketId,
       outcome: proposedOutcome,
-      proofLink: proofLink || '',
       bond: bondAmount,
     });
   };
@@ -255,14 +252,6 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 NO
               </button>
             </div>
-
-            <Input
-              value={proofLink}
-              onChange={(e) => setProofLink(e.target.value)}
-              placeholder="https://... (optional)"
-              label="Proof URL"
-              helperText="Link showing evidence of the outcome. Leave empty if evidence link is sufficient."
-            />
 
             <div className="text-xs text-text-muted">
               Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>

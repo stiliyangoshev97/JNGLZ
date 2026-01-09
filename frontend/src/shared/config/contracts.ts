@@ -211,7 +211,6 @@ export const PREDICTION_MARKET_ABI = [
     inputs: [
       { name: 'marketId', type: 'uint256' },
       { name: 'outcome', type: 'bool' },
-      { name: 'proofLink', type: 'string' },
     ],
     outputs: [],
   },

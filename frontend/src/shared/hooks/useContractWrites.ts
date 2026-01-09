@@ -277,9 +277,11 @@ export function useSellNo() {
 /**
  * Propose market outcome
  * 
- * Contract: proposeOutcome(marketId, outcome, proofLink) payable
+ * Contract: proposeOutcome(marketId, outcome) payable
  * Bond: max(0.005 BNB, pool * 1%)
  * Creator has 10 min priority window
+ * 
+ * Note: proofLink was removed in v3.1.0
  */
 export function useProposeOutcome() {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
@@ -291,14 +293,13 @@ export function useProposeOutcome() {
   const proposeOutcome = async (params: {
     marketId: bigint;
     outcome: boolean; // true = YES wins, false = NO wins
-    proofLink: string;
     bond: bigint; // Required bond amount
   }) => {
     writeContract({
       address: PREDICTION_MARKET_ADDRESS,
       abi: PREDICTION_MARKET_ABI,
       functionName: 'proposeOutcome',
-      args: [params.marketId, params.outcome, params.proofLink],
+      args: [params.marketId, params.outcome],
       value: params.bond,
     });
   };
