@@ -3,21 +3,33 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-113%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-success)]()
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue)]()
+[![Testnet](https://img.shields.io/badge/BNB%20Testnet-pending-yellow)]()
+[![Version](https://img.shields.io/badge/version-v3.2.0-blue)]()
+
+---
+
+## ⚠️ CRITICAL: v3.2.0 Required
+
+**v3.1.0 has a critical bonding curve bug** that allows instant arbitrage profit. See [CHANGELOG.md](CHANGELOG.md) for details.
+
+| Version | Status | Issue |
+|---------|--------|-------|
+| v3.1.0 | ⚠️ DEPRECATED | Arbitrage vulnerability in `_calculateSellBnb()` |
+| v3.2.0 | ✅ FIXED | Bonding curve corrected, 113 tests passing |
 
 ---
 
 ## 🚀 Deployed Contracts (BNB Testnet)
 
-| Contract | Address | Version |
-|----------|---------|---------|
-| **PredictionMarket** | [`0x4C1508BA973856125a4F42c343560DB918c9EB2b`](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) | v3.1.0 |
+| Contract | Address | Version | Status |
+|----------|---------|---------|--------|
+| **PredictionMarket** | [`0x4C1508BA973856125a4F42c343560DB918c9EB2b`](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) | v3.1.0 | ⚠️ DEPRECATED |
+| **PredictionMarket** | TBD | v3.2.0 | ⏳ Pending deployment |
 
-> **v3.1.0 Features:** Heat Levels (CRACK/HIGH/PRO), SweepFunds, removed proofLink
+> **v3.2.0 Features:** Fixed bonding curve, Heat Levels (CRACK/HIGH/PRO), SweepFunds
 
 ---
 

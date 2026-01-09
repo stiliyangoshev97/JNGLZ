@@ -71,11 +71,13 @@ JunkieDotFun/
 
 ### BNB Testnet (Current)
 
-| Component | Address/URL |
-|-----------|-------------|
-| **Contract (v3.1.0)** | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` |
-| **BscScan** | [View on BscScan](https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b) |
-| **Subgraph (v0.0.3)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) |
+| Component | Address/URL | Status |
+|-----------|-------------|--------|
+| **Contract (v3.2.0)** | TBD | ⏳ Pending |
+| **Contract (v3.1.0)** | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` | ⚠️ DEPRECATED |
+| **Subgraph (v0.0.3)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ⚠️ Needs Update |
+
+> ⚠️ **v3.1.0 has a critical bug** - see [contracts/CHANGELOG.md](contracts/CHANGELOG.md) for details.
 
 ---
 

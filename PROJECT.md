@@ -249,20 +249,23 @@ P(NO) = 0.01 BNB × virtualNo / totalVirtual
 shares = (bnbAmount × totalVirtual × 1e18) / (0.01 BNB × virtualSide)
 ```
 
-**Selling Shares (AVERAGE PRICE - Critical!):**
+**Selling Shares (POST-SELL STATE - v3.2.0 Fix):**
 ```
-P1 = price before sell
-P2 = price after sell (simulated)
-avgPrice = (P1 + P2) / 2
-bnbOut = shares × avgPrice / 1e18
+virtualSideAfter = virtualSide - shares
+totalVirtualAfter = totalVirtual - shares
+bnbOut = (shares × 0.01 BNB × virtualSideAfter) / (totalVirtualAfter × 1e18)
 ```
 
-### Why Average Price for Selling?
+> ⚠️ **v3.1.0 Bug:** The old formula used average price `(P1 + P2) / 2` which 
+> allowed arbitrage. Users could buy and immediately sell for MORE BNB.
+> v3.2.0 fixes this by using post-sell state, ensuring buy→sell always loses ~3% to fees.
 
-This is **CRITICAL** for pool solvency:
-- Buying uses instantaneous price → more shares when price is low
-- If selling also used instantaneous (now HIGH) price → pool goes bankrupt
-- Average price ensures: `bnbOut ≤ bnbIn` (approximately)
+### Why Post-Sell State for Selling?
+
+This is **CRITICAL** for preventing arbitrage:
+- Buying increases price, selling decreases price
+- Using average price created a mismatch allowing instant profit
+- Post-sell state ensures: `bnbOut < bnbIn` (always loses to fees)
 - Contract has `InsufficientPoolBalance` safety check as final backstop
 
 ---

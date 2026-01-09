@@ -1,8 +1,66 @@
 # JunkieFun - Master TODO
 
-> **Last Updated:** January 10, 2026  
-> **Status:** Smart Contracts ✅ v3.1.0 Complete | Testnet Deployed ✅ (v3.1.0) | Subgraph ✅ v0.0.3 Deployed | Frontend ✅ ~98% Complete  
+> **Last Updated:** January 9, 2026  
+> **Status:** Smart Contracts ✅ v3.2.0 Complete | Testnet Deployed ⚠️ (v3.1.0 DEPRECATED) | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs Update  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🚨 CRITICAL: v3.2.0 Deployment Required (Jan 10, 2026)
+
+### The Bug (v3.1.0)
+The `_calculateSellBnb()` function used average price `(P1 + P2) / 2` which created an **arbitrage vulnerability**:
+
+```
+OLD FORMULA (BROKEN):
+avgPrice = (priceBeforeSell + priceAfterSell) / 2
+bnbOut = shares × avgPrice / 1e18
+
+EXPLOIT:
+1. Wallet A buys 0.01 BNB → gets 1.98 shares
+2. Wallet B buys 0.1 BNB → gets 16.9 shares  
+3. Wallet B sells ALL 16.9 shares → gets 0.1067 BNB
+4. RESULT: Wallet B profits 6.7% instantly + keeps 2.2 free shares!
+```
+
+### The Fix (v3.2.0)
+Changed to use post-sell state for price calculation:
+
+```
+NEW FORMULA (FIXED):
+virtualSideAfter = virtualSide - shares
+totalVirtualAfter = totalVirtual - shares
+bnbOut = (shares × UNIT_PRICE × virtualSideAfter) / (totalVirtualAfter × 1e18)
+
+RESULT: Buy→sell always loses ~3% to fees (no arbitrage possible)
+```
+
+### Deployment Checklist
+
+#### 1. Deploy New Contract v3.2.0 ⏳
+- [ ] Run `forge script script/Deploy.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast`
+- [ ] Verify on BscScan
+- [ ] Update `deployment-addresses.txt` with new address
+- [ ] Test basic functions on testnet (create market, buy, sell)
+
+#### 2. Update Subgraph ⏳
+- [ ] Update `subgraph/subgraph.yaml` with new contract address
+- [ ] Update `subgraph/abis/PredictionMarket.json` if ABI changed (check `getMaxSellableShares`)
+- [ ] Run `npm run codegen && npm run build`
+- [ ] Deploy new subgraph version: `graph deploy --studio junkiefun-bnb-testnet`
+- [ ] Wait for subgraph to sync (~5-10 min)
+
+#### 3. Update Frontend ⏳
+- [ ] Update `frontend/src/shared/config/contracts.ts` with new address
+- [ ] Verify ABI is correct (especially `getMaxSellableShares` signature)
+- [ ] Test create market flow
+- [ ] Test buy/sell flow
+- [ ] Test that sell always results in loss (not profit!)
+- [ ] Deploy frontend update
+
+#### 4. Cleanup Old Data ⏳
+- [ ] Close/resolve any test markets on old contract
+- [ ] Document migration in CHANGELOG
 
 ---
 

@@ -130,7 +130,7 @@ market.disputeBond = 0;   // State written after
 
 **Affected Functions:**
 - `claim()` (Line 1007-1046)
-- `_calculateSellBnb()` (Line 1530-1554)
+- `_calculateSellBnb()` (Line 1530-1560)
 
 **Description:**
 ```solidity
@@ -138,9 +138,15 @@ market.disputeBond = 0;   // State written after
 grossPayout = (winningShares * market.poolBalance) / totalWinningShares;
 fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
-// _calculateSellBnb()
-avgPrice = (priceBeforeSell + priceAfterSell) / 2;
-return (shares * avgPrice) / 1e18;
+// _calculateSellBnb() - FIXED in v3.2.0
+// OLD (BROKEN - allowed arbitrage):
+// avgPrice = (priceBeforeSell + priceAfterSell) / 2;
+// return (shares * avgPrice) / 1e18;
+
+// NEW (v3.2.0 - prevents arbitrage):
+virtualSideAfter = virtualSide - shares;
+totalVirtualAfter = totalVirtual - shares;
+return (shares * UNIT_PRICE * virtualSideAfter) / (totalVirtualAfter * 1e18);
 ```
 
 **Risk Assessment:** LOW
@@ -149,6 +155,16 @@ return (shares * avgPrice) / 1e18;
 - Maximum loss per transaction: ~1-2 wei
 
 **Mitigation Status:** ✅ Acceptable - Precision is sufficient for practical use
+
+---
+
+### ~~CRITICAL-01: Bonding Curve Arbitrage (FIXED in v3.2.0)~~
+
+**Status:** ✅ FIXED
+
+**Description:** The original `_calculateSellBnb()` used average price which allowed users to buy and immediately sell for MORE BNB than they put in. This was a critical arbitrage vulnerability.
+
+**Fix:** Changed to use post-sell state for price calculation. See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ---
 
