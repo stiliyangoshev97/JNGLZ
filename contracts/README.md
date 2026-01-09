@@ -113,7 +113,22 @@ Buy more NO  → NO price goes UP, YES price goes DOWN
 Initial: YES = 0.005 BNB (50%), NO = 0.005 BNB (50%)
 ```
 
-**Sell Rule:** When you sell, you receive LESS than you would expect due to price impact. Buy→Sell always results in ~3% loss (to fees). No arbitrage possible.
+**The Sell Rule (Why You Can't Arbitrage):**
+```
+When you BUY: You push the price UP, paying progressively more
+When you SELL: You push the price DOWN, receiving progressively less
+
+Example: Buy 100 YES shares for 1 BNB
+- Trading fees: 1.5% = 0.015 BNB
+- You pushed YES price up by buying
+
+Immediately sell those 100 shares:
+- You push YES price DOWN as you sell
+- Sell value ≈ 0.985 BNB (price impact + fees)
+- Net result: ~3% LOSS
+
+Bottom line: Buy→Sell = guaranteed loss. No free money!
+```
 
 ---
 
@@ -165,6 +180,18 @@ Market Expires
          Market finalizes with majority vote outcome
 ```
 
+**⚖️ What happens on an EXACT 50/50 tie?**
+```
+If yesVotes == noVotes exactly:
+  1. Proposer gets their bond back (no penalty)
+  2. Disputer gets their bond back (no penalty)
+  3. Market is NOT resolved (stays in limbo)
+  4. Emergency refund becomes available
+  5. All traders can claim proportional refund
+
+Fair outcome: If the community can't decide, nobody gets punished.
+```
+
 ---
 
 ### 7️⃣ BOND AMOUNTS
@@ -208,21 +235,31 @@ You lose:          0.1 BNB (your entire bond)
 
 ---
 
-### 9️⃣ DISPUTER REWARDS
+### 9️⃣ DISPUTER REWARDS (The Market Hero)
+
+> **🦸 The disputer is the HERO of the system!** They risk 2× the bond to protect the market from wrong resolutions. Without disputers, proposers could lie and steal everyone's money.
 
 | Scenario | Disputer Gets |
 |----------|---------------|
 | **Wins Vote** | Bond back + 50% of proposer's bond |
-| **Loses Vote** | **Loses entire bond** |
+| **Loses Vote** | **Loses entire bond** (2× risk!) |
+
+**Why "Hero"?**
+- Proposer risks 1× bond, can gain +50-150% ROI
+- Disputer risks **2× bond**, can only gain +25% ROI
+- Disputer takes MORE risk for LESS reward
+- But they SAVE the market from fraud!
 
 **Example (Disputer wins):**
 ```
 Proposer bond:     0.1 BNB
-Disputer bond:     0.2 BNB (2×)
+Disputer bond:     0.2 BNB (2× - double the risk!)
 Disputer wins vote...
 Disputer gets:     0.2 BNB (back) + 0.05 BNB (50% of proposer's)
-Net profit:        0.05 BNB (+25% ROI)
+Net profit:        0.05 BNB (+25% ROI - lower than proposer!)
 ```
+
+**The disputer's real reward?** Protecting their own winning shares from a fraudulent resolution. They're incentivized to dispute when they KNOW the truth.
 
 ---
 
