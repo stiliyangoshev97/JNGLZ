@@ -93,9 +93,11 @@ export function LoadingDots({ className }: { className?: string }) {
  */
 export function LoadingOverlay({
   message = 'LOADING',
+  subMessage,
   variant = 'cyber',
 }: {
   message?: string;
+  subMessage?: string;
   variant?: SpinnerVariant;
 }) {
   return (
@@ -110,6 +112,11 @@ export function LoadingOverlay({
         {message}
         <LoadingDots />
       </p>
+      {subMessage && (
+        <p className="mt-2 font-mono text-sm text-text-secondary">
+          {subMessage}
+        </p>
+      )}
     </div>
   );
 }

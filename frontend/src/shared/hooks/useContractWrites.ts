@@ -26,7 +26,7 @@ import {
 export function useCreateMarket() {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
   
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
     hash,
   });
 
@@ -61,6 +61,7 @@ export function useCreateMarket() {
     isPending,
     isConfirming,
     isSuccess,
+    receipt,
     error,
     reset,
   };
@@ -76,7 +77,7 @@ export function useCreateMarket() {
 export function useCreateMarketAndBuy() {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
   
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
     hash,
   });
 
@@ -119,6 +120,7 @@ export function useCreateMarketAndBuy() {
     isPending,
     isConfirming,
     isSuccess,
+    receipt,
     error,
     reset,
   };

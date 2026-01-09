@@ -12,6 +12,7 @@
  * @module features/markets/pages/MarketDetailPage
  */
 
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET } from '@/shared/api';
@@ -32,15 +33,34 @@ import type { Market } from '@/shared/schemas';
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
-  const { data, loading, error } = useQuery<GetMarketResponse>(GET_MARKET, {
+  const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
     variables: { id: marketId },
     pollInterval: 30000, // Refresh every 30 seconds
     skip: !marketId,
   });
 
-  if (loading) {
-    return <LoadingOverlay message="LOADING MARKET" />;
+  // Retry fetching if market not found and we came from create page
+  useEffect(() => {
+    if (!loading && !data?.market && retryCount < maxRetries) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        refetch();
+      }, 3000); // Retry every 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [loading, data?.market, retryCount, refetch]);
+
+  // Still loading or retrying
+  if (loading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {
+    return (
+      <LoadingOverlay 
+        message={retryCount > 0 ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
+        subMessage={retryCount > 0 ? `Waiting for subgraph... (${retryCount}/${maxRetries})` : undefined}
+      />
+    );
   }
 
   if (error || !data?.market) {
@@ -50,7 +70,7 @@ export function MarketDetailPage() {
           <p className="text-6xl mb-4">💀</p>
           <p className="text-xl font-bold text-white mb-2">MARKET NOT FOUND</p>
           <p className="text-text-secondary font-mono mb-6">
-            {error?.message || 'This market does not exist'}
+            {error?.message || 'This market does not exist or is still being indexed'}
           </p>
           <Link to="/">
             <Button variant="cyber">BACK TO JUNGLE</Button>

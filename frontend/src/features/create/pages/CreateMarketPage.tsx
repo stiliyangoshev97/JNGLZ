@@ -17,14 +17,14 @@
  * @module features/create/pages/CreateMarketPage
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, decodeEventLog } from 'viem';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
@@ -36,6 +36,7 @@ import {
   useMarketCreationFee,
 } from '@/shared/hooks';
 import { formatBNB } from '@/shared/utils/format';
+import { PREDICTION_MARKET_ABI } from '@/shared/config/contracts';
 
 // Quick duration presets
 const DURATION_PRESETS = [
@@ -149,6 +150,7 @@ export function CreateMarketPage() {
     isSuccess: isCreateSuccess,
     error: createError,
     hash: createHash,
+    receipt: createReceipt,
   } = useCreateMarket();
   
   const {
@@ -158,6 +160,7 @@ export function CreateMarketPage() {
     isSuccess: isBuySuccess,
     error: buyError,
     hash: buyHash,
+    receipt: buyReceipt,
   } = useCreateMarketAndBuy();
   
   const isPending = isCreatingMarket || isCreatingAndBuying;
@@ -165,6 +168,30 @@ export function CreateMarketPage() {
   const isSuccess = isCreateSuccess || isBuySuccess;
   const error = createError || buyError;
   const hash = createHash || buyHash;
+  const receipt = createReceipt || buyReceipt;
+
+  // Parse marketId from transaction receipt
+  const createdMarketId = useMemo(() => {
+    if (!receipt?.logs) return null;
+    
+    // Find the MarketCreated event log
+    for (const log of receipt.logs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: PREDICTION_MARKET_ABI,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === 'MarketCreated') {
+          // MarketCreated event has marketId as first argument
+          return (decoded.args as { marketId: bigint }).marketId?.toString();
+        }
+      } catch {
+        // Not the event we're looking for, continue
+      }
+    }
+    return null;
+  }, [receipt]);
 
   const {
     register,
@@ -202,13 +229,17 @@ export function CreateMarketPage() {
   // Calculate expiry timestamp
   const expiryTimestamp = BigInt(Math.floor(Date.now() / 1000) + (watchedDuration || 24) * 3600);
 
-  // Navigate on success
+  // Navigate on success - redirect to the created market
   useEffect(() => {
-    if (isSuccess && hash) {
-      // Could parse the MarketCreated event to get marketId, for now go to home
-      setTimeout(() => navigate('/'), 2000);
+    if (isSuccess && createdMarketId) {
+      // Wait a bit longer for subgraph to index (5 seconds)
+      // The market page will show loading state if not indexed yet
+      setTimeout(() => navigate(`/market/${createdMarketId}`), 5000);
+    } else if (isSuccess && hash && !createdMarketId) {
+      // Fallback: if we couldn't parse marketId, go to markets page
+      setTimeout(() => navigate('/'), 3000);
     }
-  }, [isSuccess, hash, navigate]);
+  }, [isSuccess, hash, createdMarketId, navigate]);
 
   const onSubmit = async (data: CreateMarketForm) => {
     if (!canTrade) return;
@@ -314,7 +345,7 @@ export function CreateMarketPage() {
             CREATE <span className="text-cyber">MARKET</span>
           </h1>
           <p className="text-text-secondary mt-2">
-            Create a prediction market. {creationFee === 0n ? 'It\'s FREE!' : `Fee: ${formatBNB(creationFee)} BNB`}
+            Create a prediction market. {creationFee === 0n ? <span className="text-yes drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]">It's FREE!</span> : `Fee: ${formatBNB(creationFee)} BNB`}
           </p>
         </div>
 
@@ -585,7 +616,7 @@ export function CreateMarketPage() {
               <div className="flex justify-between">
                 <span className="text-text-muted">Creation Fee</span>
                 <span className="font-mono">
-                  {creationFee === 0n ? 'FREE' : `${formatBNB(creationFee)} BNB`}
+                  {creationFee === 0n ? <span className="text-yes drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]">FREE</span> : `${formatBNB(creationFee)} BNB`}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -602,8 +633,8 @@ export function CreateMarketPage() {
               )}
               <div className="flex justify-between border-t border-dark-600 pt-2">
                 <span className="font-bold">Total</span>
-                <span className="font-mono font-bold text-cyber">
-                  {totalCost === 0n ? 'FREE (gas only)' : `${formatEther(totalCost)} BNB`}
+                <span className="font-mono font-bold">
+                  {totalCost === 0n ? <span className="text-yes drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]">FREE (gas only)</span> : <span className="text-cyber">{formatEther(totalCost)} BNB</span>}
                 </span>
               </div>
               {balanceData && (
