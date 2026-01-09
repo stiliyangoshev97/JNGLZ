@@ -125,7 +125,7 @@ export function EntryModal() {
               <span className="font-mono text-yes">FREE</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">Min Bet:</span>
+              <span className="text-text-muted">Min Trade:</span>
               <span className="font-mono text-white">0.005 BNB</span>
             </div>
           </div>

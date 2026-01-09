@@ -174,7 +174,13 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
           Connect your wallet to trade
         </p>
         <div className="flex justify-center">
-          <ConnectButton />
+          <ConnectButton.Custom>
+            {({ openConnectModal }) => (
+              <Button variant="cyber" onClick={openConnectModal}>
+                CONNECT WALLET
+              </Button>
+            )}
+          </ConnectButton.Custom>
         </div>
       </div>
     );
@@ -409,7 +415,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
 
         {/* Info */}
         <p className="text-xs text-text-muted text-center">
-          Min bet: 0.005 BNB • Platform fee: 1% • Creator fee: 0.5%
+          Min trade: 0.005 BNB • Platform fee: 1% • Creator fee: 0.5%
         </p>
       </div>
     </div>

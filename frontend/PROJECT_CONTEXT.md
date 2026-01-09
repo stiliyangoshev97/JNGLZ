@@ -2,7 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 9, 2026  
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish)
+> **Version:** 0.5.1
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels)
 
 ---
 
@@ -59,7 +60,7 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |
 | Markets Page | ✅ 100% | Grid, filters (Active/Expired/Resolved with counts) |
 | Market Detail Page | ✅ 100% | Chart, trade panel, resolution panel |
-| Create Market Page | ✅ 100% | Fully wired to contract |
+| Create Market Page | ✅ 100% | Fully wired to contract + Heat Levels |
 | Portfolio Page | ✅ 100% | Positions with filters (All/Active/Needs Action/Claimable) |
 | Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds |
 | Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim |
@@ -200,10 +201,24 @@ For real-time data:
 |------|------|--------|
 | `/` | MarketsPage | ✅ Complete |
 | `/market/:marketId` | MarketDetailPage | ✅ Complete |
-| `/create` | CreateMarketPage | ✅ UI Complete |
+| `/create` | CreateMarketPage | ✅ Complete (with Heat Levels) |
 | `/portfolio` | PortfolioPage | ✅ Complete |
 | `/terms` | TermsPage | ✅ Complete |
 | `/privacy` | PrivacyPage | ✅ Complete |
+
+---
+
+## 🔥 Heat Levels (Market Volatility)
+
+Markets can be created with different volatility levels:
+
+| Level | Name | Target User | Trade Range | Vibe |
+|-------|------|-------------|-------------|------|
+| ☢️ 0 | DEGEN FLASH | "The Moon-Bagger" (small wallets) | 0.005 – 0.1 BNB | "Total Chaos" - A few bucks moves price 10% |
+| 🔥 1 | STREET FIGHT | "The Trader" (active battlers) | 0.1 – 1.0 BNB | "The Standard" - Tug-of-war battles |
+| 🧊 2 | WHALE POND | "The Shark" (serious money) | 1.0 – 5.0+ BNB | "Serious Stakes" - Low slippage for accuracy |
+
+Contract parameter: `heatLevel: uint8` (0, 1, or 2)
 
 ---
 

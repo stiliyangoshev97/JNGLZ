@@ -19,7 +19,7 @@ import {
 /**
  * Create a new market (without initial buy)
  * 
- * Contract: createMarket(question, evidenceLink, resolutionRules, imageUrl, expiryTimestamp)
+ * Contract: createMarket(question, evidenceLink, resolutionRules, imageUrl, expiryTimestamp, heatLevel)
  * Note: Market creation is FREE by default (marketCreationFee = 0)
  * Virtual liquidity (100 YES + 100 NO shares) provides initial pricing
  */
@@ -36,6 +36,7 @@ export function useCreateMarket() {
     resolutionRules?: string;
     imageUrl?: string;
     expiryTimestamp: bigint;
+    heatLevel: number; // 0=CRACK, 1=HIGH, 2=PRO
     creationFee?: bigint; // Usually 0
   }) => {
     writeContract({
@@ -48,6 +49,7 @@ export function useCreateMarket() {
         params.resolutionRules || '',
         params.imageUrl || '',
         params.expiryTimestamp,
+        params.heatLevel,
       ],
       value: params.creationFee || 0n,
     });
@@ -67,7 +69,7 @@ export function useCreateMarket() {
 /**
  * Create market AND buy first shares atomically
  * 
- * Contract: createMarketAndBuy(question, evidenceLink, resolutionRules, imageUrl, expiryTimestamp, buyYesSide, minSharesOut)
+ * Contract: createMarketAndBuy(question, evidenceLink, resolutionRules, imageUrl, expiryTimestamp, heatLevel, buyYesSide, minSharesOut)
  * This guarantees creator is first buyer - impossible to front-run
  * msg.value must cover: marketCreationFee + bet amount (min 0.005 BNB)
  */
@@ -84,6 +86,7 @@ export function useCreateMarketAndBuy() {
     resolutionRules?: string;
     imageUrl?: string;
     expiryTimestamp: bigint;
+    heatLevel: number; // 0=CRACK, 1=HIGH, 2=PRO
     buyYesSide: boolean;
     betAmount: string; // BNB as string (e.g., "0.1")
     minSharesOut?: bigint;
@@ -102,6 +105,7 @@ export function useCreateMarketAndBuy() {
         params.resolutionRules || '',
         params.imageUrl || '',
         params.expiryTimestamp,
+        params.heatLevel,
         params.buyYesSide,
         params.minSharesOut || 0n, // 0 = no slippage protection
       ],

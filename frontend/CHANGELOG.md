@@ -2,6 +2,37 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.5.1] - 2026-01-09
+
+### Added
+
+#### Heat Level Selector (Create Market Page)
+- **New Heat Level UI** with rich descriptions:
+  - ☢️ **DEGEN FLASH** - "The Moon-Bagger" (0.005 – 0.1 BNB) - "Total Chaos"
+  - 🔥 **STREET FIGHT** - "The Trader" (0.1 – 1.0 BNB) - "The Standard"
+  - 🧊 **WHALE POND** - "The Shark" (1.0 – 5.0+ BNB) - "Serious Stakes"
+- Each option shows target user, trade range, and expandable "vibe" description
+- Color-coded borders (red/yellow/cyan)
+
+#### Contract Integration
+- Added `heatLevel` parameter to `useCreateMarket` and `useCreateMarketAndBuy` hooks
+- Updated ABI with `heatLevel: uint8` for both createMarket functions
+
+### Changed
+- **Terminology**: Replaced "bet" with "trade" throughout UI
+  - "Min Bet" → "Min Trade"
+  - "First Bet" → "First Trade"
+  - Form fields renamed (wantFirstTrade, firstTradeSide, firstTradeAmount)
+- **Header Branding**: Fixed `JUNKIE.FUN` → `JUNKIEFUN`, now visible on mobile
+- **Connect Wallet Buttons**: Portfolio and Create pages now use styled cyber button instead of RainbowKit default
+
+### Fixed
+- **Portfolio Page**: Centered Connect Wallet button (was left-aligned)
+- **Create Page**: Centered Connect Wallet button
+- **Trade Panel**: Already had correct centering
+
+---
+
 ## [0.5.0] - 2026-01-09
 
 ### Added

@@ -47,8 +47,54 @@ const DURATION_PRESETS = [
   { label: '30D', hours: 720 },
 ];
 
-// First bet presets (in BNB)
-const BET_PRESETS = ['0.01', '0.05', '0.1', '0.5', '1'];
+// Heat level options (from contract enum)
+const HEAT_LEVELS = [
+  { 
+    value: 0, 
+    emoji: '☢️',
+    name: 'DEGEN FLASH',
+    targetUser: 'The Moon-Bagger',
+    userDescription: 'Small wallets, high adrenaline',
+    tradeRange: '0.005 – 0.1 BNB',
+    vibe: 'Total Chaos.',
+    vibeDescription: "A few bucks moves the price 10%. Perfect for viral trends that last 30 minutes.",
+    color: 'no', // red
+    borderColor: 'border-no',
+    bgColor: 'bg-no/10',
+    textColor: 'text-no',
+  },
+  { 
+    value: 1, 
+    emoji: '🔥',
+    name: 'STREET FIGHT',
+    targetUser: 'The Trader',
+    userDescription: 'Active battlers, middle-weights',
+    tradeRange: '0.1 – 1.0 BNB',
+    vibe: 'The Standard.',
+    vibeDescription: "This is for the tug-of-war battles. One person pumps, the next person dumps. High ROI potential.",
+    color: 'yellow-500',
+    borderColor: 'border-yellow-500',
+    bgColor: 'bg-yellow-500/10',
+    textColor: 'text-yellow-500',
+  },
+  { 
+    value: 2, 
+    emoji: '🧊',
+    name: 'WHALE POND',
+    targetUser: 'The Shark',
+    userDescription: 'Serious money, high conviction',
+    tradeRange: '1.0 – 5.0+ BNB',
+    vibe: 'Serious Stakes.',
+    vibeDescription: "Low slippage so big trades don't get 'eaten' by the curve. Built for accuracy, not just volatility.",
+    color: 'cyber',
+    borderColor: 'border-cyber',
+    bgColor: 'bg-cyber/10',
+    textColor: 'text-cyber',
+  },
+];
+
+// First trade presets (in BNB)
+const TRADE_PRESETS = ['0.01', '0.05', '0.1', '0.5', '1'];
 
 // Form validation schema
 const createMarketSchema = z.object({
@@ -72,10 +118,11 @@ const createMarketSchema = z.object({
     .optional()
     .or(z.literal('')),
   durationHours: z.number().min(1, 'Min 1 hour').max(8760, 'Max 365 days'),
-  // Optional first bet
-  wantFirstBet: z.boolean(),
-  firstBetSide: z.enum(['yes', 'no']),
-  firstBetAmount: z.string(),
+  heatLevel: z.number().min(0).max(2), // 0=CRACK, 1=HIGH, 2=PRO
+  // Optional first trade
+  wantFirstTrade: z.boolean(),
+  firstTradeSide: z.enum(['yes', 'no']),
+  firstTradeAmount: z.string(),
 });
 
 type CreateMarketForm = z.infer<typeof createMarketSchema>;
@@ -133,21 +180,23 @@ export function CreateMarketPage() {
       resolutionRules: '',
       imageUrl: '',
       durationHours: 24, // Default 1 day
-      wantFirstBet: false,
-      firstBetSide: 'yes',
-      firstBetAmount: '0.05',
+      heatLevel: 0, // Default CRACK (maximum volatility)
+      wantFirstTrade: false,
+      firstTradeSide: 'yes',
+      firstTradeAmount: '0.05',
     },
   });
 
   const watchedQuestion = watch('question');
   const watchedDuration = watch('durationHours');
-  const wantFirstBet = watch('wantFirstBet');
-  const firstBetSide = watch('firstBetSide');
-  const firstBetAmount = watch('firstBetAmount');
+  const watchedHeatLevel = watch('heatLevel');
+  const wantFirstTrade = watch('wantFirstTrade');
+  const firstTradeSide = watch('firstTradeSide');
+  const firstTradeAmount = watch('firstTradeAmount');
 
   // Calculate total cost
-  const firstBetWei = wantFirstBet && firstBetAmount ? parseEther(firstBetAmount || '0') : 0n;
-  const totalCost = creationFee + firstBetWei;
+  const firstTradeWei = wantFirstTrade && firstTradeAmount ? parseEther(firstTradeAmount || '0') : 0n;
+  const totalCost = creationFee + firstTradeWei;
   const hasEnoughBalance = balanceData ? balanceData.value >= totalCost : false;
   
   // Calculate expiry timestamp
@@ -166,7 +215,7 @@ export function CreateMarketPage() {
 
     const expiryTs = BigInt(Math.floor(Date.now() / 1000) + data.durationHours * 3600);
 
-    if (data.wantFirstBet && parseFloat(data.firstBetAmount) >= 0.005) {
+    if (data.wantFirstTrade && parseFloat(data.firstTradeAmount) >= 0.005) {
       // Create market AND buy first shares
       await createMarketAndBuy({
         question: data.question,
@@ -174,8 +223,9 @@ export function CreateMarketPage() {
         resolutionRules: data.resolutionRules || '',
         imageUrl: data.imageUrl || '',
         expiryTimestamp: expiryTs,
-        buyYesSide: data.firstBetSide === 'yes',
-        betAmount: data.firstBetAmount,
+        heatLevel: data.heatLevel,
+        buyYesSide: data.firstTradeSide === 'yes',
+        betAmount: data.firstTradeAmount,
         creationFee,
       });
     } else {
@@ -186,6 +236,7 @@ export function CreateMarketPage() {
         resolutionRules: data.resolutionRules || '',
         imageUrl: data.imageUrl || '',
         expiryTimestamp: expiryTs,
+        heatLevel: data.heatLevel,
         creationFee,
       });
     }
@@ -195,13 +246,19 @@ export function CreateMarketPage() {
   if (!isConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md flex flex-col items-center">
           <p className="text-6xl mb-6">🔐</p>
           <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
           <p className="text-text-secondary mb-6">
             Connect your wallet to create a prediction market.
           </p>
-          <ConnectButton />
+          <ConnectButton.Custom>
+            {({ openConnectModal }) => (
+              <Button variant="cyber" size="lg" onClick={openConnectModal}>
+                CONNECT WALLET
+              </Button>
+            )}
+          </ConnectButton.Custom>
         </div>
       </div>
     );
@@ -311,10 +368,65 @@ export function CreateMarketPage() {
             </p>
           </Card>
 
+          {/* Heat Level */}
+          <Card className="p-6">
+            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+              <span className="text-cyber">03</span> HEAT LEVEL
+            </h2>
+            <p className="text-sm text-text-secondary mb-4">
+              Choose the volatility level for your market. Higher heat = bigger price swings.
+            </p>
+            <div className="space-y-3">
+              {HEAT_LEVELS.map((level) => {
+                const isSelected = watchedHeatLevel === level.value;
+                return (
+                  <button
+                    key={level.value}
+                    type="button"
+                    onClick={() => setValue('heatLevel', level.value)}
+                    className={`w-full p-4 border-2 transition-all text-left ${
+                      isSelected
+                        ? `${level.borderColor} ${level.bgColor}`
+                        : 'border-dark-600 hover:border-dark-500'
+                    }`}
+                  >
+                    {/* Header row */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{level.emoji}</span>
+                        <div>
+                          <div className={`font-black text-lg ${level.textColor}`}>{level.name}</div>
+                          <div className="text-xs text-text-muted">
+                            <span className="text-white font-semibold">{level.targetUser}</span>
+                            {' · '}{level.userDescription}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`text-right ${isSelected ? 'opacity-100' : 'opacity-60'}`}>
+                        <div className="text-xs text-text-muted uppercase">Trade Range</div>
+                        <div className={`font-mono font-bold ${level.textColor}`}>{level.tradeRange}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Vibe section - only show when selected */}
+                    {isSelected && (
+                      <div className={`mt-3 pt-3 border-t border-dark-600`}>
+                        <div className="flex items-start gap-2">
+                          <span className={`font-black ${level.textColor}`}>"{level.vibe}"</span>
+                          <span className="text-sm text-text-secondary">{level.vibeDescription}</span>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
           {/* Evidence & Rules - Optional */}
           <Card className="p-6">
             <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
-              <span className="text-cyber">03</span> EVIDENCE & RULES
+              <span className="text-cyber">04</span> EVIDENCE & RULES
               <span className="text-text-muted text-xs font-normal">(optional)</span>
             </h2>
             <div className="space-y-4">
@@ -345,7 +457,7 @@ export function CreateMarketPage() {
           {/* Image - Optional */}
           <Card className="p-6">
             <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
-              <span className="text-cyber">04</span> IMAGE
+              <span className="text-cyber">05</span> IMAGE
               <span className="text-text-muted text-xs font-normal">(optional)</span>
             </h2>
             <Input
@@ -356,32 +468,32 @@ export function CreateMarketPage() {
             />
           </Card>
 
-          {/* First Bet - OPTIONAL */}
+          {/* First Trade - OPTIONAL */}
           <Card className="p-6">
             <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
-              <span className="text-cyber">05</span> FIRST BET
+              <span className="text-cyber">06</span> FIRST TRADE
               <span className="text-text-muted text-xs font-normal">(optional)</span>
             </h2>
             
             <p className="text-sm text-text-secondary mb-4">
-              Be the first buyer! Your bet is placed atomically with market creation - no one can front-run you.
+              Be the first buyer! Your trade is placed atomically with market creation - no one can front-run you.
             </p>
 
             {/* Toggle */}
             <label className="flex items-center gap-3 cursor-pointer mb-4 group">
               <input
                 type="checkbox"
-                {...register('wantFirstBet')}
+                {...register('wantFirstTrade')}
                 className="sr-only"
               />
               <div 
                 className={`w-6 h-6 border-2 flex items-center justify-center transition-all ${
-                  wantFirstBet 
+                  wantFirstTrade 
                     ? 'bg-cyber border-cyber' 
                     : 'bg-black border-dark-500 group-hover:border-cyber/50'
                 }`}
               >
-                {wantFirstBet && (
+                {wantFirstTrade && (
                   <svg 
                     className="w-4 h-4 text-black" 
                     fill="none" 
@@ -394,25 +506,25 @@ export function CreateMarketPage() {
                 )}
               </div>
               <span className={`font-mono text-sm uppercase tracking-wide transition-colors ${
-                wantFirstBet ? 'text-cyber' : 'text-text-secondary group-hover:text-white'
+                wantFirstTrade ? 'text-cyber' : 'text-text-secondary group-hover:text-white'
               }`}>
-                I want to place the first bet
+                I want to place the first trade
               </span>
             </label>
 
-            {wantFirstBet && (
+            {wantFirstTrade && (
               <div className="space-y-4 border-t border-dark-600 pt-4">
                 {/* Side selection */}
                 <div>
                   <label className="block text-sm font-mono text-text-secondary uppercase mb-2">
-                    Bet on
+                    Trade on
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setValue('firstBetSide', 'yes')}
+                      onClick={() => setValue('firstTradeSide', 'yes')}
                       className={`py-3 font-bold uppercase transition-colors ${
-                        firstBetSide === 'yes'
+                        firstTradeSide === 'yes'
                           ? 'bg-yes text-black border border-yes'
                           : 'bg-transparent text-yes border border-yes/50 hover:border-yes'
                       }`}
@@ -421,9 +533,9 @@ export function CreateMarketPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setValue('firstBetSide', 'no')}
+                      onClick={() => setValue('firstTradeSide', 'no')}
                       className={`py-3 font-bold uppercase transition-colors ${
-                        firstBetSide === 'no'
+                        firstTradeSide === 'no'
                           ? 'bg-no text-black border border-no'
                           : 'bg-transparent text-no border border-no/50 hover:border-no'
                       }`}
@@ -436,20 +548,20 @@ export function CreateMarketPage() {
                 {/* Amount */}
                 <div>
                   <Input
-                    {...register('firstBetAmount')}
+                    {...register('firstTradeAmount')}
                     type="number"
                     step="0.01"
-                    label="Bet Amount (BNB)"
-                    error={errors.firstBetAmount?.message}
+                    label="Trade Amount (BNB)"
+                    error={errors.firstTradeAmount?.message}
                   />
                   <div className="flex gap-2 mt-2">
-                    {BET_PRESETS.map((val) => (
+                    {TRADE_PRESETS.map((val) => (
                       <button
                         key={val}
                         type="button"
-                        onClick={() => setValue('firstBetAmount', val)}
+                        onClick={() => setValue('firstTradeAmount', val)}
                         className={`flex-1 py-2 text-sm font-mono border transition-colors ${
-                          firstBetAmount === val
+                          firstTradeAmount === val
                             ? 'border-cyber text-cyber bg-cyber/10'
                             : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
                         }`}
@@ -459,7 +571,7 @@ export function CreateMarketPage() {
                     ))}
                   </div>
                   <p className="text-xs text-text-muted mt-2">
-                    Minimum bet: 0.005 BNB. First buyer gets best price!
+                    Minimum trade: 0.005 BNB. First buyer gets best price!
                   </p>
                 </div>
               </div>
@@ -476,10 +588,16 @@ export function CreateMarketPage() {
                   {creationFee === 0n ? 'FREE' : `${formatBNB(creationFee)} BNB`}
                 </span>
               </div>
-              {wantFirstBet && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">Heat Level</span>
+                <span className="font-mono">
+                  {HEAT_LEVELS.find(h => h.value === watchedHeatLevel)?.emoji} {HEAT_LEVELS.find(h => h.value === watchedHeatLevel)?.name}
+                </span>
+              </div>
+              {wantFirstTrade && (
                 <div className="flex justify-between">
-                  <span className="text-text-muted">First Bet ({firstBetSide?.toUpperCase()})</span>
-                  <span className="font-mono">{firstBetAmount || '0'} BNB</span>
+                  <span className="text-text-muted">First Trade ({firstTradeSide?.toUpperCase()})</span>
+                  <span className="font-mono">{firstTradeAmount || '0'} BNB</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-dark-600 pt-2">
@@ -524,8 +642,8 @@ export function CreateMarketPage() {
                 </span>
               ) : !hasEnoughBalance ? (
                 'INSUFFICIENT BALANCE'
-              ) : wantFirstBet ? (
-                'CREATE MARKET & BET'
+              ) : wantFirstTrade ? (
+                'CREATE MARKET & TRADE'
               ) : (
                 'CREATE MARKET (FREE)'
               )}

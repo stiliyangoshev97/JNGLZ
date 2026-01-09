@@ -101,7 +101,7 @@ export function TermsPage() {
                   <span className="text-cyber">0.3%</span>
                   <span>Market Creation:</span>
                   <span className="text-yes">FREE</span>
-                  <span>Minimum Bet:</span>
+                  <span>Minimum Trade:</span>
                   <span className="text-white">0.005 BNB</span>
                 </div>
               </div>

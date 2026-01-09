@@ -61,13 +61,19 @@ export function PortfolioPage() {
   if (!isConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md flex flex-col items-center">
           <p className="text-6xl mb-6">🔐</p>
           <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
           <p className="text-text-secondary mb-6">
             Connect your wallet to view your positions and trading history.
           </p>
-          <ConnectButton />
+          <ConnectButton.Custom>
+            {({ openConnectModal }) => (
+              <Button variant="cyber" size="lg" onClick={openConnectModal}>
+                CONNECT WALLET
+              </Button>
+            )}
+          </ConnectButton.Custom>
         </div>
       </div>
     );

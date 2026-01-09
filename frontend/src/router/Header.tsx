@@ -34,8 +34,8 @@ export function Header() {
               alt="JunkieFun"
               className="h-10 w-10 transition-transform group-hover:scale-110"
             />
-            <span className="text-xl font-bold text-white tracking-tight hidden sm:block">
-              JUNKIE<span className="text-cyber">.FUN</span>
+            <span className="text-xl font-bold text-white tracking-tight">
+              JUNKIE<span className="text-cyber">FUN</span>
             </span>
           </Link>
 
