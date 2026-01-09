@@ -409,8 +409,25 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
               <div>
                 <p className="text-warning font-bold text-xs mb-1">SELLING ALL SHARES</p>
                 <p className="text-text-secondary text-xs">
-                  You will not receive any payout when the market resolves. 
-                  You are cashing out your current value now.
+                  You will exit your position and receive BNB now.
+                  You will NOT receive any payout when the market resolves.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pool Limited Info - explain remaining shares */}
+        {action === 'sell' && isPoolLimited && !isSellAll && (
+          <div className="p-3 bg-cyber/10 border border-cyber text-sm">
+            <div className="flex gap-2">
+              <span className="text-cyber">💡</span>
+              <div>
+                <p className="text-cyber font-bold text-xs mb-1">PARTIAL SELL DUE TO POOL LIQUIDITY</p>
+                <p className="text-text-secondary text-xs">
+                  You can sell up to {maxSellableShares ? formatShares(maxSellableShares) : '0'} shares now. 
+                  Your remaining shares stay in the market - if {direction.toUpperCase()} wins, 
+                  you'll receive the full payout for those shares!
                 </p>
               </div>
             </div>

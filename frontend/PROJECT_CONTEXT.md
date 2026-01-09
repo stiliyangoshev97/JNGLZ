@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 9, 2026  
-> **Version:** 0.5.1
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels)
+> **Version:** 0.5.2
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels + Sell Fixes)
 
 ---
 

@@ -2,6 +2,30 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.5.2] - 2026-01-09
+
+### Fixed
+- **Max Sell Calculation**: Fixed `getMaxSellableShares` ABI - was missing `userShares` parameter
+  - ABI now correctly includes `(marketId, userShares, isYes)` signature
+  - `useMaxSellableShares` hook updated with correct parameters
+  - Sell preset buttons (25%, 50%, 75%, MAX) now respect pool liquidity limits
+
+### Added
+- **Pool Liquidity Warning**: Shows warning when pool can't cover full sell
+  - Displays max sellable shares and estimated BNB return
+  - Explains remaining shares will still pay out if user's side wins
+
+- **Improved Sell Messages**:
+  - "Selling All Shares" warning: Clear explanation that user exits position
+  - "Partial Sell" info: Explains remaining shares stay for potential payout
+
+### Changed
+- **Market Redirect Timing**: Increased to 5s for subgraph indexing
+- **Market Detail Page**: Added retry mechanism (10 retries, 3s apart) for newly created markets
+- **Loading States**: Added "SYNCING FROM BLOCKCHAIN" message during retries
+
+---
+
 ## [0.5.1] - 2026-01-09
 
 ### Added
