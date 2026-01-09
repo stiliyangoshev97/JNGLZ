@@ -75,7 +75,7 @@ export function ChanceDisplay({
   const displayValue = percentage.toFixed(0);
 
   return (
-    <div className={cn('flex flex-col', className)}>
+    <div className={cn('flex flex-col items-center', className)}>
       {label && (
         <span
           className={cn(
@@ -105,7 +105,7 @@ export function ChanceDisplay({
 
 /**
  * Compact chance display for cards
- * Shows just the number with minimal styling
+ * Shows percentage only (no cents)
  */
 interface CompactChanceProps {
   value: number;
@@ -137,7 +137,7 @@ export function CompactChance({
 
 /**
  * Price display for YES/NO shares
- * Shows both prices side by side
+ * Shows prices in cents only (no percentage)
  */
 interface PriceDisplayProps {
   yesPrice: number;
@@ -153,44 +153,30 @@ export function PriceDisplay({
   className,
 }: PriceDisplayProps) {
   const textSizes = {
-    sm: 'text-lg',
-    md: 'text-2xl',
-    lg: 'text-4xl',
+    sm: 'text-sm',
+    md: 'text-lg',
+    lg: 'text-2xl',
   };
 
-  // Format as percentage (0-1 to 0-100%)
-  const formatPricePercent = (price: number): string => {
-    return `${Math.round(price * 100)}%`;
-  };
+  // Convert decimal (0-1) to percentage (0-100) which equals cents
+  const yesCents = Math.round(yesPrice * 100);
+  const noCents = Math.round(noPrice * 100);
 
   return (
     <div className={cn('flex items-center gap-4', className)}>
       {/* YES Price */}
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-mono text-text-secondary uppercase mb-1">YES</span>
-        <span
-          className={cn(
-            'font-mono font-bold text-yes',
-            textSizes[size]
-          )}
-        >
-          {formatPricePercent(yesPrice)}
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-mono text-text-secondary uppercase">YES</span>
+        <span className={cn('font-mono font-bold text-yes', textSizes[size])}>
+          {yesCents}¢
         </span>
       </div>
 
-      {/* Divider */}
-      <div className="h-12 w-px bg-dark-600" />
-
       {/* NO Price */}
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-mono text-text-secondary uppercase mb-1">NO</span>
-        <span
-          className={cn(
-            'font-mono font-bold text-no',
-            textSizes[size]
-          )}
-        >
-          {formatPricePercent(noPrice)}
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-mono text-text-secondary uppercase">NO</span>
+        <span className={cn('font-mono font-bold text-no', textSizes[size])}>
+          {noCents}¢
         </span>
       </div>
     </div>

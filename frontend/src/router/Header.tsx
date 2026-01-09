@@ -28,12 +28,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <img
-              src="/logo.png"
-              alt="JunkieFun"
-              className="h-10 w-10 transition-transform group-hover:scale-110"
-            />
+          <Link to="/" className="flex items-center group">
             <span className="text-xl font-bold text-white tracking-tight">
               JUNKIE<span className="text-cyber">FUN</span>
             </span>

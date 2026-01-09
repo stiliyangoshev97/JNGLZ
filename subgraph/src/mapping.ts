@@ -17,6 +17,7 @@ import {
   BondDistributed,
   JuryFeeDistributed,
   FundsSwept,
+  ProposerRewardPaid,
   PredictionMarket,
 } from "../generated/PredictionMarket/PredictionMarket";
 import {
@@ -29,6 +30,7 @@ import {
   EmergencyRefund,
   GlobalStats,
   FundsSweep,
+  ProposerReward,
 } from "../generated/schema";
 
 // ============================================
@@ -574,4 +576,29 @@ export function handleFundsSwept(event: FundsSwept): void {
   let stats = getOrCreateGlobalStats();
   stats.totalSwept = stats.totalSwept.plus(sweep.amount);
   stats.save();
+}
+
+/**
+ * Handle ProposerRewardPaid event (v3.3.0)
+ * Creates ProposerReward entity to track proposer incentive payments
+ */
+export function handleProposerRewardPaid(event: ProposerRewardPaid): void {
+  let rewardId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let marketId = event.params.marketId.toString();
+  let rewardAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user
+  let user = getOrCreateUser(event.params.proposer);
+
+  // Create ProposerReward entity
+  let reward = new ProposerReward(rewardId);
+  reward.market = marketId;
+  reward.proposer = user.id;
+  reward.proposerAddress = event.params.proposer;
+  reward.amount = rewardAmount;
+  reward.timestamp = event.block.timestamp;
+  reward.txHash = event.transaction.hash;
+  reward.blockNumber = event.block.number;
+  reward.save();
 }

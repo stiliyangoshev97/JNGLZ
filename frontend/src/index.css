@@ -28,11 +28,13 @@
 
   html {
     @apply scroll-smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-black text-white font-sans antialiased;
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* Brutalist scrollbar */

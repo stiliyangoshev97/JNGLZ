@@ -11,8 +11,8 @@ import { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { GET_USER_POSITIONS } from '@/shared/api';
-import type { GetUserPositionsResponse } from '@/shared/api';
+import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR } from '@/shared/api';
+import type { GetUserPositionsResponse, GetMarketsResponse } from '@/shared/api';
 import { PositionCard } from '../components';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
@@ -46,16 +46,29 @@ interface PositionWithMarket {
 }
 
 type FilterOption = 'all' | 'active' | 'needs-action' | 'claimable';
+type ViewMode = 'positions' | 'my-markets';
 
 export function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('positions');
 
   const { data, loading, error } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
-    pollInterval: 30000,
+    pollInterval: 10000, // Refresh every 10 seconds
   });
+
+  // Fetch markets created by this user
+  const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
+    variables: { creator: address?.toLowerCase(), first: 50 },
+    skip: !address || viewMode !== 'my-markets',
+    pollInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Only show loading on initial load, not polls
+  const isInitialLoading = loading && !data?.positions;
+  const isInitialMarketsLoading = myMarketsLoading && !myMarketsData?.markets;
 
   // Not connected state
   if (!isConnected) {
@@ -171,7 +184,7 @@ export function PortfolioPage() {
       </section>
 
       {/* Claimable Banner */}
-      {stats.claimable > 0 && (
+      {viewMode === 'positions' && stats.claimable > 0 && (
         <section className="bg-yes/10 border-b border-yes py-4">
           <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -188,12 +201,44 @@ export function PortfolioPage() {
         </section>
       )}
 
+      {/* View Mode Tabs */}
+      <section className="border-b border-dark-600">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-0">
+            <button
+              onClick={() => setViewMode('positions')}
+              className={cn(
+                "px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2",
+                viewMode === 'positions'
+                  ? "text-cyber border-cyber bg-cyber/5"
+                  : "text-text-secondary hover:text-white border-transparent"
+              )}
+            >
+              MY POSITIONS
+            </button>
+            <button
+              onClick={() => setViewMode('my-markets')}
+              className={cn(
+                "px-6 py-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2",
+                viewMode === 'my-markets'
+                  ? "text-cyber border-cyber bg-cyber/5"
+                  : "text-text-secondary hover:text-white border-transparent"
+              )}
+            >
+              MY MARKETS ({myMarketsData?.markets?.length || 0})
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Positions Grid */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4">
-          {/* Filter tabs */}
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span className="text-text-muted text-sm font-mono">FILTER:</span>
+          {viewMode === 'positions' ? (
+            <>
+              {/* Filter tabs */}
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="text-text-muted text-sm font-mono">FILTER:</span>
             <button 
               onClick={() => setFilterBy('all')}
               className={cn(
@@ -241,11 +286,11 @@ export function PortfolioPage() {
                     : "text-text-secondary hover:text-white"
               )}
             >
-              💰 CLAIMABLE ({categorizedPositions.claimable.length})
+              CLAIMABLE ({categorizedPositions.claimable.length})
             </button>
           </div>
 
-          {loading ? (
+          {isInitialLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <PositionCardSkeleton key={i} />
@@ -258,7 +303,6 @@ export function PortfolioPage() {
               <EmptyState />
             ) : (
               <div className="text-center py-16">
-                <p className="text-4xl mb-4">🔍</p>
                 <p className="text-xl font-bold text-white mb-2">NO {filterBy.toUpperCase().replace('-', ' ')} POSITIONS</p>
                 <p className="text-text-secondary mb-6">
                   {filterBy === 'needs-action' && "No markets need your vote right now"}
@@ -278,6 +322,35 @@ export function PortfolioPage() {
               {filteredPositions.map((position) => (
                 <PositionCard key={position.id} position={position} />
               ))}
+            </div>
+          )}
+            </>
+          ) : (
+            /* My Markets View */
+            <div>
+              {isInitialMarketsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <PositionCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : myMarketsData?.markets?.length === 0 ? (
+                <div className="text-center py-16">
+                  <p className="text-xl font-bold text-white mb-2">NO MARKETS CREATED</p>
+                  <p className="text-text-secondary mb-6">
+                    Create your first prediction market and earn 0.5% creator fees on all trades!
+                  </p>
+                  <Link to="/create">
+                    <Button variant="cyber">CREATE MARKET</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {myMarketsData?.markets?.map((market) => (
+                    <MyMarketCard key={market.id} market={market} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -341,7 +414,6 @@ function ErrorState({ message }: { message: string }) {
 function EmptyState() {
   return (
     <div className="text-center py-16">
-      <p className="text-6xl mb-4">📭</p>
       <p className="text-xl font-bold text-white mb-2">NO POSITIONS YET</p>
       <p className="text-text-secondary mb-6">
         Start trading to build your portfolio
@@ -409,6 +481,80 @@ function calculatePortfolioStats(
     totalPnL: totalValue - totalInvested,
     claimable: claimableValue,
   };
+}
+
+// Market card for "My Markets" tab
+interface MyMarketCardProps {
+  market: {
+    id: string;
+    marketId?: string;
+    question: string;
+    status: string;
+    resolved: boolean;
+    outcome?: boolean | null;
+    totalVolume: string;
+    totalTrades: string;
+    poolBalance: string;
+    expiryTimestamp: string;
+    imageUrl?: string | null;
+  };
+}
+
+function MyMarketCard({ market }: MyMarketCardProps) {
+  const now = Date.now();
+  const expiryMs = Number(market.expiryTimestamp) * 1000;
+  const isExpired = now > expiryMs;
+  
+  // Calculate creator earnings (0.5% of total volume)
+  const totalVolume = parseFloat(market.totalVolume || '0');
+  const creatorEarnings = totalVolume * 0.005;
+  
+  const statusColor = market.resolved 
+    ? 'text-text-muted' 
+    : isExpired 
+      ? 'text-warning' 
+      : 'text-yes';
+  
+  const statusText = market.resolved 
+    ? (market.outcome ? 'RESOLVED: YES' : 'RESOLVED: NO')
+    : isExpired 
+      ? 'EXPIRED' 
+      : 'ACTIVE';
+
+  return (
+    <Link to={`/market/${market.marketId || market.id}`}>
+      <Card className="hover:border-cyber transition-colors cursor-pointer h-full">
+        <div className="space-y-3">
+          {/* Question */}
+          <p className="font-bold text-white line-clamp-2 text-sm">
+            {market.question}
+          </p>
+          
+          {/* Status */}
+          <div className="flex items-center justify-between">
+            <span className={cn("text-xs font-mono font-bold", statusColor)}>
+              {statusText}
+            </span>
+            <span className="text-xs text-text-muted font-mono">
+              {market.totalTrades} trades
+            </span>
+          </div>
+          
+          {/* Stats */}
+          <div className="border-t border-dark-600 pt-3 grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-xs text-text-muted">VOLUME</p>
+              <p className="text-sm font-mono text-white">{totalVolume.toFixed(3)} BNB</p>
+            </div>
+            <div>
+              <p className="text-xs text-text-muted">YOUR EARNINGS</p>
+              <p className="text-sm font-mono text-yes">+{creatorEarnings.toFixed(4)} BNB</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
 }
 
 export default PortfolioPage;

@@ -1,7 +1,7 @@
 # JunkieFun - Master TODO
 
-> **Last Updated:** January 9, 2026  
-> **Status:** Smart Contracts ✅ v3.3.0 Deployed | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs ABI/Address Update  
+> **Last Updated:** January 10, 2026  
+> **Status:** Smart Contracts ✅ v3.3.0 Deployed | Subgraph ✅ v3.3.1 Deployed | Frontend ✅ v0.5.5 Updated  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -22,21 +22,21 @@
 
 ### Integration Checklist
 
-#### 1. Update Subgraph ⏳ PENDING
-- [ ] Update `subgraph/subgraph.yaml` with new contract address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- [ ] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)
-- [ ] Add `ProposerRewardPaid` event handler to `subgraph.yaml`
-- [ ] Add `ProposerReward` entity to `schema.graphql`
-- [ ] Update `src/mapping.ts` with `handleProposerRewardPaid` function
-- [ ] Run `npm run codegen && npm run build`
-- [ ] Deploy: `graph deploy --studio junkiefun-bnb-testnet`
+#### 1. Update Subgraph ✅ COMPLETE
+- [x] Update `subgraph/subgraph.yaml` with new contract address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- [x] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)
+- [x] Add `ProposerRewardPaid` event handler to `subgraph.yaml`
+- [x] Add `ProposerReward` entity to `schema.graphql`
+- [x] Update `src/mapping.ts` with `handleProposerRewardPaid` function
+- [x] Run `npm run codegen && npm run build`
+- [x] Deploy: `graph deploy --studio junkiefun-bnb-testnet`
 - [ ] Wait for sync (~5-10 min)
 - [ ] Verify data indexing correctly
 
-#### 2. Update Frontend ⏳ PENDING
-- [ ] Update `frontend/src/shared/config/contracts.ts` with new address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- [ ] Update ABI file with v3.3.0 ABI
-- [ ] Add proposer reward display to resolution UI (optional but nice)
+#### 2. Update Frontend ✅ COMPLETE
+- [x] Update `frontend/src/shared/config/contracts.ts` with new address: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- [x] Update `frontend/.env` with v3.3.0 contract address and subgraph URL
+- [x] Add proposer reward display to resolution UI
 - [ ] Test create market flow
 - [ ] Test buy/sell flow with slippage protection
 - [ ] Test propose/dispute/finalize flow

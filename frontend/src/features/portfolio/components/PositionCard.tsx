@@ -31,12 +31,20 @@ interface PositionWithMarket {
     imageUrl?: string;
     yesShares?: string;
     noShares?: string;
+    proposer?: string;
+    proposalTimestamp?: string;
+    disputer?: string;
+    disputeTimestamp?: string;
   };
   yesShares: string;
   noShares: string;
   totalInvested: string;
   claimed: boolean;
 }
+
+// Time constants (from contract)
+const DISPUTE_WINDOW = 30 * 60 * 1000; // 30 minutes
+const VOTING_WINDOW = 60 * 60 * 1000; // 1 hour
 
 interface PositionCardProps {
   position: PositionWithMarket;
@@ -79,9 +87,29 @@ export function PositionCard({ position }: PositionCardProps) {
   
   // Status checks
   const isResolved = market?.status === 'Resolved';
-  const canClaim = isResolved && (hasYes || hasNo);
+  const alreadyClaimed = position.claimed || isSuccess;
+  const canClaim = isResolved && (hasYes || hasNo) && !alreadyClaimed;
 
-  // Handle claim action
+  // Check if market needs finalization before claiming
+  // This happens when proposal exists but market not yet resolved
+  const now = Date.now();
+  const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
+  const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
+  const hasProposal = market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
+  const hasDispute = market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000';
+  
+  const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
+  const votingWindowEnd = disputeMs + VOTING_WINDOW;
+  
+  // Can finalize when: has proposal, not resolved, and either:
+  // - No dispute AND dispute window ended
+  // - Has dispute AND voting window ended  
+  const canFinalize = hasProposal && !isResolved && (
+    (hasDispute && now > votingWindowEnd) || 
+    (!hasDispute && now > disputeWindowEnd)
+  );
+
+  // Handle claim action (smart claim will auto-finalize if needed)
   const handleClaim = () => {
     const marketId = BigInt(market.marketId || market.id);
     smartClaim(marketId);
@@ -89,7 +117,7 @@ export function PositionCard({ position }: PositionCardProps) {
 
   // Get claim button state
   const getClaimButtonContent = () => {
-    if (isSuccess) return '✓ CLAIMED';
+    if (alreadyClaimed) return '✓ CLAIMED';
     if (isPending) return (
       <span className="flex items-center justify-center gap-2">
         <Spinner size="sm" variant="yes" />
@@ -189,7 +217,10 @@ export function PositionCard({ position }: PositionCardProps) {
       {!isResolved && (
         <div className="flex items-center justify-between text-sm mb-4">
           <span className="text-text-muted">Market Price</span>
-          <CompactChance value={yesPercent} />
+          <div className="text-right">
+            <CompactChance value={yesPercent} />
+            <span className="text-xs text-text-muted ml-1">({Math.round(yesPercent)}¢)</span>
+          </div>
         </div>
       )}
 
@@ -204,6 +235,24 @@ export function PositionCard({ position }: PositionCardProps) {
             disabled={isPending || isConfirming || isSuccess}
           >
             {getClaimButtonContent()}
+          </Button>
+        ) : canFinalize && (hasYes || hasNo) ? (
+          // Market needs finalization before claiming
+          <Button 
+            variant="cyber" 
+            size="sm" 
+            className="flex-1 !bg-yellow-500/20 !border-yellow-500 !text-yellow-500 hover:!bg-yellow-500 hover:!text-black"
+            onClick={handleClaim}
+            disabled={isPending || isConfirming}
+          >
+            {isPending || isConfirming ? (
+              <span className="flex items-center justify-center gap-2">
+                <Spinner size="sm" />
+                {step === 'finalizing' ? 'FINALIZING...' : 'PROCESSING...'}
+              </span>
+            ) : (
+              'FINALIZE TO CLAIM'
+            )}
           </Button>
         ) : (
           <Link to={`/market/${market.id}`} className="flex-1">

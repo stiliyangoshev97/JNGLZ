@@ -24,6 +24,18 @@ export function useMarketCreationFee() {
 }
 
 /**
+ * Get current proposer reward percentage (in basis points)
+ * Default is 50 bps = 0.5% of pool
+ */
+export function useProposerRewardBps() {
+  return useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: 'proposerRewardBps',
+  });
+}
+
+/**
  * Get YES price for a market
  */
 export function useYesPrice(marketId: bigint | undefined) {

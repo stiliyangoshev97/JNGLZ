@@ -1,8 +1,8 @@
 # 📋 Junkie.Fun - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 9, 2026  
-> **Status:** ✅ Deployed (v0.0.3)
+> **Last Updated:** January 10, 2026  
+> **Status:** ✅ Deployed (v3.3.1)
 
 ---
 
@@ -12,15 +12,15 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 ### GraphQL Endpoint (Testnet)
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.3.1
 ```
 
 ### Contract Details (Testnet)
-- **Address:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b`
+- **Address:** `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83314823
-- **BscScan:** https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b
-- **Contract Version:** v3.1.0 (Heat Levels + SweepFunds)
+- **Start Block:** 83435321
+- **BscScan:** https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
+- **Contract Version:** v3.3.0 (Proposer Rewards + Fixed Bonding Curve)
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)
@@ -33,12 +33,12 @@ https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Schema Definition | ✅ 100% | 9 entities (includes heatLevel, virtualLiquidity) |
-| Subgraph Config | ✅ 100% | subgraph.yaml updated for v3.1.0 |
-| Mappings | ✅ 100% | 11 event handlers (includes FundsSwept) |
+| Schema Definition | ✅ 100% | 10 entities (includes ProposerReward) |
+| Subgraph Config | ✅ 100% | subgraph.yaml updated for v3.3.0 |
+| Mappings | ✅ 100% | 12 event handlers (includes ProposerRewardPaid) |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Testnet Deployment | ✅ 100% | v0.0.3 deployed to The Graph Studio |
+| Testnet Deployment | ✅ 100% | v3.3.1 deployed to The Graph Studio |
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 

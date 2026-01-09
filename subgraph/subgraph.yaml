@@ -8,9 +8,9 @@ dataSources:
     name: PredictionMarket
     network: chapel # BNB Testnet (BSC Testnet)
     source:
-      address: "0x4C1508BA973856125a4F42c343560DB918c9EB2b"
+      address: "0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7"
       abi: PredictionMarket
-      startBlock: 83314823
+      startBlock: 83435321
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -25,6 +25,7 @@ dataSources:
         - EmergencyRefund
         - GlobalStats
         - FundsSweep
+        - ProposerReward
       abis:
         - name: PredictionMarket
           file: ./abis/PredictionMarket.json
@@ -58,6 +59,10 @@ dataSources:
           handler: handleBondDistributed
         - event: JuryFeeDistributed(indexed uint256,indexed address,uint256)
           handler: handleJuryFeeDistributed
+
+        # Proposer Rewards (v3.3.0 - new ProposerRewardPaid)
+        - event: ProposerRewardPaid(indexed uint256,indexed address,uint256)
+          handler: handleProposerRewardPaid
 
         # Governance (v3.1.0 - new SweepFunds)
         - event: FundsSwept(uint256,uint256,uint256)

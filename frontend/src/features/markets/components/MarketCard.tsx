@@ -16,6 +16,7 @@ import { Card } from '@/shared/components/ui/Card';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
 import { HeatBar } from '@/shared/components/ui/HeatBar';
 import { Badge } from '@/shared/components/ui/Badge';
+import { HeatLevelBadge } from '@/shared/components/ui/HeatLevelBadge';
 import { formatTimeRemaining, calculateYesPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
@@ -40,11 +41,8 @@ export function MarketCard({ market, className }: MarketCardProps) {
   const poolBalanceBNB = Number(poolBalanceWei) / 1e18;
   const heatValue = Math.min(poolBalanceBNB * 10, 100); // 10 BNB = 100%
 
-  // Volume display - totalVolume from subgraph is BigDecimal (already in BNB)
+  // Volume for HOT indicator - totalVolume from subgraph is BigDecimal (already in BNB)
   const volumeBNB = parseFloat(market.totalVolume || '0');
-  const volumeDisplay = volumeBNB >= 1000 
-    ? `${(volumeBNB / 1000).toFixed(1)}K` 
-    : volumeBNB.toFixed(2);
 
   // Status badge
   const getStatusBadge = () => {
@@ -75,7 +73,12 @@ export function MarketCard({ market, className }: MarketCardProps) {
             {/* Overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
             
-            {/* Status badge overlay */}
+            {/* Heat level badge (top left) */}
+            <div className="absolute top-2 left-2">
+              <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+            </div>
+            
+            {/* Status badge overlay (top right) */}
             {getStatusBadge() && (
               <div className="absolute top-2 right-2">
                 {getStatusBadge()}
@@ -84,28 +87,44 @@ export function MarketCard({ market, className }: MarketCardProps) {
           </div>
         )}
 
+        {/* Heat level badge (if no image, show above question) */}
+        {!market.imageUrl && (
+          <div className="flex items-center gap-2 mb-2">
+            <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+            {getStatusBadge()}
+          </div>
+        )}
+
         {/* Question */}
         <h3 className="text-base font-semibold text-white line-clamp-2 mb-3 group-hover:text-cyber transition-colors">
           {market.question}
         </h3>
 
-        {/* Chance Display */}
+        {/* Chance Display + Prices */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <span className="text-xs font-mono text-text-muted block mb-1">YES CHANCE</span>
+            <span className="text-xs font-mono text-text-muted block mb-1">CHANCE</span>
             <CompactChance value={yesPercent} className="text-3xl" />
           </div>
+          {/* YES/NO Prices in cents */}
           <div className="text-right">
-            <span className="text-xs font-mono text-text-muted block mb-1">VOLUME</span>
-            <span className="font-mono text-lg text-white">{volumeDisplay}</span>
-            <span className="text-xs text-text-muted ml-1">BNB</span>
+            <div className="flex items-center gap-3 text-sm font-mono">
+              <div>
+                <span className="text-text-muted text-xs">YES </span>
+                <span className="text-yes font-bold">{Math.round(yesPercent)}¢</span>
+              </div>
+              <div>
+                <span className="text-text-muted text-xs">NO </span>
+                <span className="text-no font-bold">{Math.round(100 - yesPercent)}¢</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Heat Bar with Liquidity */}
+        {/* Heat Bar with Pool Size */}
         <div className="mb-3">
           <div className="flex justify-between items-center text-xs font-mono mb-1">
-            <span className="text-text-secondary uppercase">LIQUIDITY</span>
+            <span className="text-text-secondary uppercase">POOL SIZE</span>
             <span className="text-text-muted">{poolBalanceBNB.toFixed(2)} BNB</span>
           </div>
           <HeatBar

@@ -7,9 +7,7 @@
  * @module shared/components/ui/Jazzicon
  */
 
-import { useMemo } from 'react';
 import { cn } from '@/shared/utils/cn';
-import { getJazziconStyle } from '@/shared/utils/jazzicon';
 
 interface JazziconProps {
   /** Ethereum/BSC address to generate avatar for */
@@ -36,17 +34,16 @@ export function Jazzicon({
   className,
   border = 'default',
 }: JazziconProps) {
-  // Generate style from address
-  const style = useMemo(() => getJazziconStyle(address, size), [address, size]);
-
   return (
-    <div
+    <img
+      src="/logo.png"
+      alt="User"
       className={cn(
-        'flex-shrink-0',
+        'flex-shrink-0 rounded-full object-cover',
         borderClasses[border],
         className
       )}
-      style={style}
+      style={{ width: size, height: size }}
       title={address}
     />
   );

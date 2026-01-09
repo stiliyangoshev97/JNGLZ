@@ -1,9 +1,9 @@
 # 📋 JunkieFun - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 9, 2026  
-> **Version:** 0.5.3
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels + Sell Fixes + Slippage Protection)
+> **Last Updated:** January 10, 2026  
+> **Version:** 0.5.5
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels + Sell Fixes + Slippage Protection + Resolution Economics)
 
 ---
 

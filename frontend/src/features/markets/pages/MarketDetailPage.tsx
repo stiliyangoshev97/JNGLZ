@@ -20,6 +20,7 @@ import type { GetMarketResponse } from '@/shared/api';
 import { ChanceDisplay, PriceDisplay } from '@/shared/components/ui/ChanceDisplay';
 import { SplitHeatBar } from '@/shared/components/ui/HeatBar';
 import { Badge, ActiveBadge, ExpiredBadge, DisputedBadge } from '@/shared/components/ui/Badge';
+import { HeatLevelBadge, HeatLevelInfo } from '@/shared/components/ui/HeatLevelBadge';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingOverlay } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
@@ -38,9 +39,19 @@ export function MarketDetailPage() {
 
   const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
     variables: { id: marketId },
-    pollInterval: 30000, // Refresh every 30 seconds
+    pollInterval: 5000, // Refresh every 5 seconds for real-time feel
     skip: !marketId,
+    notifyOnNetworkStatusChange: true, // So we can distinguish initial load from poll
   });
+
+  // Only show loading on initial load, not on polls/refetches
+  // networkStatus 1 = loading, 2 = setVariables, 3 = fetchMore, 4 = refetch, 6 = poll, 7 = ready, 8 = error
+  const isInitialLoading = loading && !data?.market;
+
+  // Function to trigger immediate refetch (called after trades)
+  const refreshMarket = () => {
+    refetch();
+  };
 
   // Retry fetching if market not found and we came from create page
   useEffect(() => {
@@ -53,8 +64,8 @@ export function MarketDetailPage() {
     }
   }, [loading, data?.market, retryCount, refetch]);
 
-  // Still loading or retrying
-  if (loading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {
+  // Still loading or retrying - only on INITIAL load, not polls
+  if (isInitialLoading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {
     return (
       <LoadingOverlay 
         message={retryCount > 0 ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
@@ -82,6 +93,7 @@ export function MarketDetailPage() {
 
   const market = data.market;
   const trades = data.market.trades || [];
+  const positions = data.market.positions || [];
 
   // Calculate prices using bonding curve formula (with virtual liquidity)
   const yesPercent = calculateYesPercent(market.yesShares, market.noShares);
@@ -130,7 +142,8 @@ export function MarketDetailPage() {
             {/* Left: Question & Info */}
             <div className="lg:col-span-2">
               {/* Status badges */}
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <HeatLevelBadge heatLevel={market.heatLevel} size="md" />
                 {isActive && <ActiveBadge />}
                 {isExpired && !isResolved && <ExpiredBadge />}
                 {isResolved && <Badge variant="yes">✓ RESOLVED</Badge>}
@@ -145,6 +158,11 @@ export function MarketDetailPage() {
               {/* Creator & Time */}
               <div className="flex flex-wrap items-center gap-4 text-sm font-mono">
                 <div className="flex items-center gap-2">
+                  <span className="text-text-muted">ID</span>
+                  <span className="text-cyber font-bold">#{market.marketId}</span>
+                </div>
+                <div className="h-4 w-px bg-dark-600" />
+                <div className="flex items-center gap-2">
                   <span className="text-text-muted">CREATED BY</span>
                   <AddressDisplay address={market.creatorAddress} iconSize={20} />
                 </div>
@@ -156,6 +174,11 @@ export function MarketDetailPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Market Info - Inline below header */}
+              <div className="mt-4 pt-4 border-t border-dark-700">
+                <MarketInfoCompact market={market} />
+              </div>
             </div>
 
             {/* Right: Big Chance Display */}
@@ -163,7 +186,7 @@ export function MarketDetailPage() {
               <ChanceDisplay
                 value={yesPercent}
                 size="hero"
-                label="YES CHANCE"
+                label="CHANCE"
                 animate={isActive}
               />
               <SplitHeatBar
@@ -180,8 +203,32 @@ export function MarketDetailPage() {
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Chart & History */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* Trade Panel - Shows first on mobile, right column on desktop */}
+            <div className="lg:col-span-1 lg:order-2">
+              <div className="sticky top-24 space-y-4">
+                <TradePanel
+                  market={market}
+                  yesPercent={yesPercent}
+                  noPercent={noPercent}
+                  isActive={isActive}
+                  onTradeSuccess={refreshMarket}
+                />
+                <ResolutionPanel market={market} />
+                
+                {/* Heat Level Info - Hidden on mobile, visible on desktop */}
+                <div className="hidden lg:block border border-dark-600 bg-dark-900">
+                  <div className="border-b border-dark-600 px-4 py-3">
+                    <h3 className="font-bold uppercase">MARKET TIER</h3>
+                  </div>
+                  <div className="p-4">
+                    <HeatLevelInfo heatLevel={market.heatLevel} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Left Column: Chart & History - Shows second on mobile */}
+            <div className="lg:col-span-2 lg:order-1 space-y-6">
               {/* Price Chart */}
               <div className="border border-dark-600 bg-dark-900">
                 <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
@@ -202,23 +249,21 @@ export function MarketDetailPage() {
                 <div className="border-b border-dark-600 px-4 py-3">
                   <h2 className="font-bold uppercase">RECENT TRADES</h2>
                 </div>
-                <TradeHistory trades={trades} />
-              </div>
-
-              {/* Market Info */}
-              <MarketInfo market={market} />
-            </div>
-
-            {/* Right Column: Trade Panel */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-4">
-                <TradePanel
-                  market={market}
-                  yesPercent={yesPercent}
-                  noPercent={noPercent}
-                  isActive={isActive}
+                <TradeHistory 
+                  trades={trades} 
+                  positions={positions}
+                  currentYesPercent={yesPercent}
                 />
-                <ResolutionPanel market={market} />
+              </div>
+              
+              {/* Heat Level Info - Mobile only, at bottom */}
+              <div className="lg:hidden border border-dark-600 bg-dark-900">
+                <div className="border-b border-dark-600 px-4 py-3">
+                  <h3 className="font-bold uppercase">MARKET TIER</h3>
+                </div>
+                <div className="p-4">
+                  <HeatLevelInfo heatLevel={market.heatLevel} />
+                </div>
               </div>
             </div>
           </div>
@@ -228,59 +273,63 @@ export function MarketDetailPage() {
   );
 }
 
-function MarketInfo({ market }: { market: Market }) {
+/**
+ * Compact market info displayed inline in the header area
+ */
+function MarketInfoCompact({ market }: { market: Market }) {
   // totalVolume is BigDecimal (already in BNB), poolBalance is BigInt (wei)
   const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
   const poolBalanceWei = BigInt(market.poolBalance || '0');
   const poolBalanceBNB = (Number(poolBalanceWei) / 1e18).toFixed(4);
 
   return (
-    <div className="border border-dark-600 bg-dark-900">
-      <div className="border-b border-dark-600 px-4 py-3">
-        <h2 className="font-bold uppercase">MARKET INFO</h2>
-      </div>
-      <div className="p-4 space-y-4">
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-text-muted font-mono uppercase">Total Volume</p>
-            <p className="text-xl font-bold font-mono text-white">{volumeBNB} BNB</p>
-          </div>
-          <div>
-            <p className="text-xs text-text-muted font-mono uppercase">Pool Balance</p>
-            <p className="text-xl font-bold font-mono text-white">{poolBalanceBNB} BNB</p>
-          </div>
-        </div>
-
-        {/* Evidence Link - Always show section */}
+    <div className="space-y-3">
+      {/* Stats row */}
+      <div className="flex flex-wrap items-center gap-6 text-sm">
         <div>
-          <p className="text-xs text-text-muted font-mono uppercase mb-1">Evidence Source</p>
-          {market.evidenceLink ? (
-            <a
-              href={market.evidenceLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-cyber hover:underline font-mono text-sm break-all"
-            >
-              {market.evidenceLink}
-            </a>
-          ) : (
-            <p className="text-text-muted text-sm font-mono">Not provided</p>
-          )}
+          <span className="text-text-muted font-mono">VOLUME: </span>
+          <span className="font-mono font-bold text-white">{volumeBNB} BNB</span>
         </div>
-
-        {/* Resolution Rules - Always show section */}
         <div>
-          <p className="text-xs text-text-muted font-mono uppercase mb-1">Resolution Rules</p>
-          {market.resolutionRules ? (
-            <p className="text-sm text-text-secondary whitespace-pre-wrap">
-              {market.resolutionRules}
-            </p>
-          ) : (
-            <p className="text-text-muted text-sm font-mono">Not provided</p>
-          )}
+          <span className="text-text-muted font-mono">POOL: </span>
+          <span className="font-mono font-bold text-white">{poolBalanceBNB} BNB</span>
+        </div>
+        <div>
+          <span className="text-text-muted font-mono">TRADES: </span>
+          <span className="font-mono font-bold text-white">{market.totalTrades}</span>
         </div>
       </div>
+
+      {/* Evidence & Rules */}
+      {(market.evidenceLink || market.resolutionRules) && (
+        <div className="space-y-2 text-xs">
+          {market.evidenceLink && (
+            <div>
+              <span className="text-text-muted font-mono">SOURCE: </span>
+              <a
+                href={market.evidenceLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyber hover:underline font-mono"
+              >
+                {market.evidenceLink.length > 60 
+                  ? market.evidenceLink.slice(0, 60) + '...' 
+                  : market.evidenceLink}
+              </a>
+            </div>
+          )}
+          {market.resolutionRules && (
+            <div>
+              <span className="text-text-muted font-mono">RULES: </span>
+              <span className="text-text-secondary">
+                {market.resolutionRules.length > 150 
+                  ? market.resolutionRules.slice(0, 150) + '...' 
+                  : market.resolutionRules}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

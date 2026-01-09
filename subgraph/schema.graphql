@@ -1,5 +1,5 @@
 # ============================================
-# JunkieFun Subgraph - Entity Schema (v3.1.0)
+# JunkieFun Subgraph - Entity Schema (v3.3.0)
 # ============================================
 # Indexes PredictionMarket contract events on BNB Chain
 # Provides GraphQL API for frontend queries
@@ -201,6 +201,22 @@ type FundsSweep @entity(immutable: true) {
   amount: BigDecimal! # Amount swept in BNB
   totalLocked: BigDecimal! # Total locked funds at time of sweep
   contractBalance: BigDecimal! # Contract balance at time of sweep
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# ProposerReward Entity - Proposer rewards (v3.3.0)
+# ============================================
+type ProposerReward @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  proposer: User! # Proposer who received reward
+  proposerAddress: Bytes! # Proposer address (for filtering)
+  # Reward Details
+  amount: BigDecimal! # Amount rewarded in BNB (0.5% of pool)
   # Transaction Info
   timestamp: BigInt! # Block timestamp
   txHash: Bytes! # Transaction hash

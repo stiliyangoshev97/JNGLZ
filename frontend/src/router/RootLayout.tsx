@@ -17,7 +17,7 @@ export function RootLayout() {
   const { isWrongNetwork } = useChainValidation();
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col overflow-x-hidden">
       {/* Entry Modal (first-time visitors) */}
       <EntryModal />
 

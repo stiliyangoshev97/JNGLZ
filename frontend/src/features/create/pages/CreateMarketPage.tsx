@@ -36,6 +36,7 @@ import {
   useMarketCreationFee,
 } from '@/shared/hooks';
 import { formatBNB } from '@/shared/utils/format';
+import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { PREDICTION_MARKET_ABI } from '@/shared/config/contracts';
 
 // Quick duration presets
@@ -46,52 +47,6 @@ const DURATION_PRESETS = [
   { label: '3D', hours: 72 },
   { label: '7D', hours: 168 },
   { label: '30D', hours: 720 },
-];
-
-// Heat level options (from contract enum)
-const HEAT_LEVELS = [
-  { 
-    value: 0, 
-    emoji: '☢️',
-    name: 'DEGEN FLASH',
-    targetUser: 'The Moon-Bagger',
-    userDescription: 'Small wallets, high adrenaline',
-    tradeRange: '0.005 – 0.1 BNB',
-    vibe: 'Total Chaos.',
-    vibeDescription: "A few bucks moves the price 10%. Perfect for viral trends that last 30 minutes.",
-    color: 'no', // red
-    borderColor: 'border-no',
-    bgColor: 'bg-no/10',
-    textColor: 'text-no',
-  },
-  { 
-    value: 1, 
-    emoji: '🔥',
-    name: 'STREET FIGHT',
-    targetUser: 'The Trader',
-    userDescription: 'Active battlers, middle-weights',
-    tradeRange: '0.1 – 1.0 BNB',
-    vibe: 'The Standard.',
-    vibeDescription: "This is for the tug-of-war battles. One person pumps, the next person dumps. High ROI potential.",
-    color: 'yellow-500',
-    borderColor: 'border-yellow-500',
-    bgColor: 'bg-yellow-500/10',
-    textColor: 'text-yellow-500',
-  },
-  { 
-    value: 2, 
-    emoji: '🧊',
-    name: 'WHALE POND',
-    targetUser: 'The Shark',
-    userDescription: 'Serious money, high conviction',
-    tradeRange: '1.0 – 5.0+ BNB',
-    vibe: 'Serious Stakes.',
-    vibeDescription: "Low slippage so big trades don't get 'eaten' by the curve. Built for accuracy, not just volatility.",
-    color: 'cyber',
-    borderColor: 'border-cyber',
-    bgColor: 'bg-cyber/10',
-    textColor: 'text-cyber',
-  },
 ];
 
 // First trade presets (in BNB)
@@ -183,11 +138,26 @@ export function CreateMarketPage() {
           topics: log.topics,
         });
         if (decoded.eventName === 'MarketCreated') {
-          // MarketCreated event has marketId as first argument
-          return (decoded.args as { marketId: bigint }).marketId?.toString();
+          // MarketCreated event has marketId as indexed (first topic after event signature)
+          const args = decoded.args as { marketId?: bigint };
+          if (args.marketId !== undefined) {
+            return args.marketId.toString();
+          }
         }
       } catch {
-        // Not the event we're looking for, continue
+        // Not the event we're looking for, try parsing marketId from topics directly
+        // topics[0] = event signature, topics[1] = marketId (indexed), topics[2] = creator (indexed)
+        if (log.topics.length >= 2) {
+          try {
+            const marketIdHex = log.topics[1];
+            if (marketIdHex) {
+              const marketId = BigInt(marketIdHex);
+              return marketId.toString();
+            }
+          } catch {
+            // Continue to next log
+          }
+        }
       }
     }
     return null;
@@ -579,9 +549,17 @@ export function CreateMarketPage() {
                 {/* Amount */}
                 <div>
                   <Input
-                    {...register('firstTradeAmount')}
-                    type="number"
-                    step="0.01"
+                    {...register('firstTradeAmount', {
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        // Replace comma with period and validate
+                        const value = e.target.value.replace(',', '.');
+                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                          setValue('firstTradeAmount', value);
+                        }
+                      }
+                    })}
+                    type="text"
+                    inputMode="decimal"
                     label="Trade Amount (BNB)"
                     error={errors.firstTradeAmount?.message}
                   />

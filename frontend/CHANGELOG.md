@@ -2,6 +2,66 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.5.5] - 2026-01-10
+
+### Changed
+
+#### Mobile UX - Trade Panel Priority
+- **Trade panel now shows FIRST on mobile** - No more scrolling past chart and history to trade
+- Desktop layout unchanged (chart left, trade panel right)
+- Used CSS grid ordering (`lg:order-1`, `lg:order-2`) for responsive reordering
+- Heat Level Info moved to bottom on mobile (less critical, shouldn't block trading)
+
+#### Heat Level Descriptions Updated
+- **DEGEN FLASH**: Changed from "Perfect for viral trends that last 30 minutes" to "Maximum volatility — a few bucks swings the price 10%. For traders who thrive on chaos."
+- **STREET FIGHT**: Changed from "One person pumps, the next person dumps" to "Classic tug-of-war battles. Momentum shifts fast, conviction gets rewarded. High ROI potential."
+- **WHALE POND**: Unchanged (already good)
+
+#### Resolution UI - Clearer Proposer Economics
+- Replaced "💰 EARN 0.5% REWARD" box with detailed **"💰 RESOLUTION ECONOMICS"** panel
+- Now shows:
+  - Your bond amount
+  - Potential reward (+X BNB)
+  - Clear success case: "If undisputed or you win vote: Bond back + reward"
+  - Clear risk case: "If disputed & you lose vote: Bond goes to disputer"
+- Added risk text below YES/NO buttons: "✗ If disputed & you lose: Bond goes to winner"
+
+---
+
+## [0.5.4] - 2026-01-10
+
+### Added
+
+#### Proposer Reward Display (Resolution UI)
+- **"💰 EARN 0.5% REWARD" Info Box** in ResolutionPanel
+  - Shows when user is about to propose an outcome
+  - Displays estimated reward based on current pool balance
+  - Dynamically calculates: `poolBalance × 0.5%`
+
+- **Reward Confirmation Text**
+  - Shows "✓ Bond returned + X BNB reward if correct" after proposing
+  - Encourages users to propose correct outcomes
+
+- **Finalize Section Enhancement**
+  - Displays proposer reward info in Finalize section
+  - Shows who proposed and estimated reward they'll receive
+
+- **New Hook: `useProposerRewardBps()`**
+  - Reads `proposerRewardBps` from contract (currently 50 = 0.5%)
+  - Used to calculate estimated rewards in UI
+
+#### Contract & Subgraph Updates
+- **Contract Address Updated**: `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7` (v3.3.0)
+- **Subgraph URL Updated**: v3.3.1 with `ProposerReward` entity
+- **ABI Updated**: Added `proposerRewardBps` view function and `ProposerRewardPaid` event
+
+### Changed
+- Updated `frontend/.env` with new contract address and subgraph URL
+- Updated `src/shared/config/env.ts` defaults
+- Updated `src/shared/config/contracts.ts` with v3.3.0 ABI additions
+
+---
+
 ## [0.5.3] - 2026-01-09
 
 ### Added

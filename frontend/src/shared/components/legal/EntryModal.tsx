@@ -131,6 +131,30 @@ export function EntryModal() {
           </div>
         </div>
 
+        {/* Market Rules Section */}
+        <div className="px-6 py-4 border-b border-dark-600">
+          <h3 className="text-sm font-bold text-white mb-3">📜 MARKET RULES</h3>
+          <div className="space-y-3 text-xs text-text-secondary">
+            <div>
+              <span className="text-cyber font-bold">Resolution Timeline:</span>
+              <ul className="mt-1 ml-4 list-disc space-y-1">
+                <li>Creator has 10-min priority to propose outcome</li>
+                <li>30-min dispute window after proposal</li>
+                <li>1-hour voting if disputed (shareholders vote)</li>
+                <li>Emergency refund after 24h if no resolution</li>
+              </ul>
+            </div>
+            <div>
+              <span className="text-cyber font-bold">Bonding Curve:</span>
+              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buy pushes price up, sell pushes it down. No arbitrage possible - instant buy→sell = guaranteed loss.</p>
+            </div>
+            <div>
+              <span className="text-cyber font-bold">Bond Requirements:</span>
+              <p className="mt-1">Proposer: max(0.005 BNB, 1% of pool). Disputer: 2× proposer bond. Winners get their bond back + share of loser's bond.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Risk Warning */}
         <div className="px-6 py-4 border-b border-dark-600 bg-no/5">
           <div className="flex gap-3">

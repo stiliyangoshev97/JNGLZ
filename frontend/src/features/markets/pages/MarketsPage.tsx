@@ -22,17 +22,21 @@ type FilterOption = 'active' | 'expired' | 'resolved';
 export function MarketsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('volume');
   const [filterBy, setFilterBy] = useState<FilterOption>('active');
+  const [marketIdSearch, setMarketIdSearch] = useState('');
 
   // Fetch ALL markets (not just active)
   const { data, loading, error } = useQuery<GetMarketsResponse>(GET_MARKETS, {
     variables: { first: 100 },
-    pollInterval: 60000, // Refresh every 60 seconds
+    pollInterval: 10000, // Refresh every 10 seconds for FOMO
   });
+
+  // Only show loading skeleton on initial load, not polls
+  const isInitialLoading = loading && !data?.markets;
 
   // Fetch recent trades for ticker
   const { data: tradesData } = useQuery<GetRecentTradesResponse>(GET_RECENT_TRADES, {
     variables: { first: 20 },
-    pollInterval: 30000, // Refresh every 30 seconds
+    pollInterval: 5000, // Refresh every 5 seconds for real-time ticker
   });
 
   const allMarkets = data?.markets || [];
@@ -41,7 +45,20 @@ export function MarketsPage() {
   // Filter markets based on selection
   const filteredMarkets = useMemo(() => {
     const now = Date.now();
-    return allMarkets.filter((market) => {
+    
+    // First, filter by market ID if search is active
+    let markets = allMarkets;
+    if (marketIdSearch.trim()) {
+      const searchId = marketIdSearch.trim().replace('#', '');
+      markets = allMarkets.filter((market) => 
+        market.marketId?.toString() === searchId || market.id === searchId
+      );
+      // If searching by ID, return all matches regardless of status
+      if (markets.length > 0) return markets;
+    }
+    
+    // Then filter by status
+    return markets.filter((market) => {
       const expiryMs = Number(market.expiryTimestamp) * 1000;
       const isExpired = now > expiryMs;
       const isResolved = market.resolved;
@@ -57,7 +74,7 @@ export function MarketsPage() {
           return true;
       }
     });
-  }, [allMarkets, filterBy]);
+  }, [allMarkets, filterBy, marketIdSearch]);
 
   // Sort markets
   const sortedMarkets = useMemo(() => {
@@ -132,20 +149,41 @@ export function MarketsPage() {
       <section className="border-b border-dark-600 py-4">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Filter tabs */}
-            <div className="flex items-center gap-2">
-              <FilterButton
-                active={filterBy === 'active'}
-                onClick={() => setFilterBy('active')}
-                count={marketCounts.active}
-              >
-                ACTIVE
-              </FilterButton>
-              <FilterButton
-                active={filterBy === 'expired'}
-                onClick={() => setFilterBy('expired')}
-                count={marketCounts.expired}
-              >
+            {/* Left: Filter tabs + ID search */}
+            <div className="flex items-center gap-4">
+              {/* Market ID Search */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="ID #"
+                  value={marketIdSearch}
+                  onChange={(e) => setMarketIdSearch(e.target.value)}
+                  className="w-20 px-2 py-1.5 bg-dark-800 border border-dark-600 text-white font-mono text-sm placeholder-dark-400 focus:outline-none focus:border-cyber"
+                />
+                {marketIdSearch && (
+                  <button
+                    onClick={() => setMarketIdSearch('')}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-white text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              
+              {/* Filter tabs */}
+              <div className="flex items-center gap-2">
+                <FilterButton
+                  active={filterBy === 'active'}
+                  onClick={() => setFilterBy('active')}
+                  count={marketCounts.active}
+                >
+                  ACTIVE
+                </FilterButton>
+                <FilterButton
+                  active={filterBy === 'expired'}
+                  onClick={() => setFilterBy('expired')}
+                  count={marketCounts.expired}
+                >
                 EXPIRED
               </FilterButton>
               <FilterButton
@@ -155,6 +193,7 @@ export function MarketsPage() {
               >
                 RESOLVED
               </FilterButton>
+              </div>
             </div>
 
             {/* Sort options */}
@@ -192,7 +231,7 @@ export function MarketsPage() {
       {/* Markets Grid */}
       <section className="py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
-          {loading ? (
+          {isInitialLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <MarketCardSkeleton key={i} />
@@ -287,8 +326,7 @@ function ErrorState({ message }: { message: string }) {
 function EmptyState() {
   return (
     <div className="text-center py-16">
-      <p className="text-4xl mb-4">🌴</p>
-      <p className="text-text-secondary font-mono">
+      <p className="text-text-secondary font-mono text-xl">
         NO MARKETS YET
       </p>
       <p className="text-sm text-text-muted mt-2">

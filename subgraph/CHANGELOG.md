@@ -2,6 +2,28 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.3.1] - 2026-01-10
+
+### Added
+- **ProposerReward Entity** - Tracks proposer reward payouts
+  - Fields: `id`, `market`, `proposer`, `amount`, `timestamp`, `txHash`, `blockNumber`
+  - Linked to `Market` entity via derived relation
+
+- **handleProposerRewardPaid Event Handler**
+  - Indexes `ProposerRewardPaid(marketId, proposer, amount)` events
+  - Creates `ProposerReward` entity for each payout
+
+### Changed
+- **Contract Address**: Updated to `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7` (v3.3.0)
+- **Start Block**: Updated to `83435321` (v3.3.0 deployment block)
+- **ABI**: Updated with fresh ABI from v3.3.0 contract (includes `ProposerRewardPaid` event)
+
+### Technical
+- Deployed as version `v3.3.1` to The Graph Studio
+- Synced successfully with all historical events indexed
+
+---
+
 ## [1.2.0] - 2026-01-08
 
 ### Fixed

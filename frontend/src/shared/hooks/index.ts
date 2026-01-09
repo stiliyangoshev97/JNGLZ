@@ -16,6 +16,7 @@ export {
 // Contract Read Hooks
 export {
   useMarketCreationFee,
+  useProposerRewardBps,
   useYesPrice,
   useNoPrice,
   useMarketPrices,

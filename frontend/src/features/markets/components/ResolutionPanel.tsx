@@ -26,6 +26,7 @@ import {
   useEmergencyRefund,
   useRequiredBond,
   usePosition,
+  useProposerRewardBps,
 } from '@/shared/hooks';
 import { formatBNB, formatShares } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
@@ -56,6 +57,14 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const baseBond = (requiredBond as bigint) || 0n;
   // Add ~0.5% to cover the 0.3% fee plus some buffer for rounding
   const bondAmount = baseBond > 0n ? (baseBond * 1005n) / 1000n : 0n;
+  
+  // Get proposer reward percentage (default 50 bps = 0.5%)
+  const { data: proposerRewardBps } = useProposerRewardBps();
+  const rewardBps = (proposerRewardBps as bigint) || 50n;
+  
+  // Calculate estimated proposer reward (0.5% of pool balance)
+  const poolBalance = BigInt(market.poolBalance || '0');
+  const estimatedReward = (poolBalance * rewardBps) / 10000n;
   
   // Dispute bond is 2× the actual proposerBond (stored in market after proposal)
   // Plus we need to add fee buffer for the dispute transaction too
@@ -228,6 +237,25 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 : 'Propose the market outcome. Bond will be returned if correct.'}
             </p>
             
+            {/* Proposer Reward Info Box */}
+            <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
+              <p className="text-cyber font-bold">💰 RESOLUTION ECONOMICS</p>
+              <div className="text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Your bond:</span>
+                  <span className="text-white font-mono">{formatBNB(bondAmount)} BNB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Potential reward:</span>
+                  <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
+                </div>
+              </div>
+              <div className="border-t border-dark-600 pt-2 text-xs">
+                <p className="text-yes mb-1">✓ <span className="font-bold">If undisputed or you win vote:</span> Bond back + reward</p>
+                <p className="text-no">✗ <span className="font-bold">If disputed & you lose vote:</span> Bond goes to disputer</p>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setProposedOutcome(true)}
@@ -253,9 +281,17 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
               </button>
             </div>
 
-            <div className="text-xs text-text-muted">
-              Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>
-              <span className="text-text-muted"> (includes 0.3% fee)</span>
+            <div className="text-xs text-text-muted space-y-1">
+              <div>
+                Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>
+                <span className="text-text-muted"> (includes 0.3% fee)</span>
+              </div>
+              <div className="text-yes">
+                ✓ If correct: Bond returned + {formatBNB(estimatedReward)} BNB reward
+              </div>
+              <div className="text-no">
+                ✗ If disputed & you lose: Bond goes to winner
+              </div>
             </div>
 
             <Button
@@ -358,6 +394,14 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
             <p className="text-sm text-text-secondary">
               {hasDispute ? 'Voting ended. Finalize to settle the market.' : 'Dispute window ended. Finalize to confirm the outcome.'}
             </p>
+            
+            {/* Proposer reward info */}
+            {estimatedReward > 0n && (
+              <div className="text-xs text-text-muted">
+                💰 Proposer will receive <span className="text-yes font-mono">{formatBNB(estimatedReward)} BNB</span> reward
+              </div>
+            )}
+            
             <Button
               variant="cyber"
               onClick={handleFinalize}

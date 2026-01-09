@@ -111,10 +111,112 @@ export function TermsPage() {
             </div>
           </section>
 
+          {/* Market Rules */}
+          <section>
+            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
+              5. MARKET RULES
+            </h2>
+            <div className="text-text-secondary space-y-6 pl-4">
+              {/* Bonding Curve */}
+              <div>
+                <h3 className="text-white font-bold mb-2">💹 Bonding Curve Pricing</h3>
+                <p className="mb-2">All trades execute on an automated bonding curve:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>YES + NO price always equals <strong className="text-white">0.01 BNB</strong></li>
+                  <li>Buying pushes price UP; Selling pushes price DOWN</li>
+                  <li>Initial price: YES = 0.005 BNB (50%), NO = 0.005 BNB (50%)</li>
+                  <li><strong className="text-no">No arbitrage possible</strong>: Instant buy→sell = guaranteed loss due to price impact + fees</li>
+                </ul>
+              </div>
+
+              {/* Heat Levels */}
+              <div>
+                <h3 className="text-white font-bold mb-2">🔥 Heat Levels</h3>
+                <p className="mb-2">Markets have different volatility settings:</p>
+                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <span className="text-no">☢️ DEGEN FLASH</span>
+                    <span>~25% per 0.1 BNB</span>
+                    <span className="text-text-muted">Meme markets</span>
+                    <span className="text-yellow-500">🔥 STREET FIGHT</span>
+                    <span>~7% per 0.1 BNB</span>
+                    <span className="text-text-muted">Standard markets</span>
+                    <span className="text-cyber">🧊 WHALE POND</span>
+                    <span>~3% per 0.1 BNB</span>
+                    <span className="text-text-muted">Whale markets</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resolution Timeline */}
+              <div>
+                <h3 className="text-white font-bold mb-2">⏱️ Resolution Timeline</h3>
+                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs space-y-2">
+                  <div className="flex justify-between">
+                    <span>Market Expires</span>
+                    <span className="text-text-muted">Trading stops</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Creator Priority Window</span>
+                    <span className="text-cyber">10 minutes</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Anyone Can Propose</span>
+                    <span className="text-text-muted">After 10 min</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Dispute Window</span>
+                    <span className="text-cyber">30 minutes</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Voting Period (if disputed)</span>
+                    <span className="text-cyber">1 hour</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Emergency Refund Available</span>
+                    <span className="text-no">24 hours after expiry</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bond Amounts */}
+              <div>
+                <h3 className="text-white font-bold mb-2">💎 Bond Requirements</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong className="text-white">Proposer Bond:</strong> max(0.005 BNB, 1% of pool)</li>
+                  <li><strong className="text-white">Disputer Bond:</strong> 2× the proposer's bond</li>
+                  <li><strong className="text-yes">Proposer Wins:</strong> Bond back + 0.5% of pool + 50% of disputer bond (if disputed)</li>
+                  <li><strong className="text-yes">Disputer Wins:</strong> Bond back + 50% of proposer bond</li>
+                  <li><strong className="text-no">Loser:</strong> Forfeits entire bond</li>
+                </ul>
+              </div>
+
+              {/* Voting */}
+              <div>
+                <h3 className="text-white font-bold mb-2">🗳️ Shareholder Voting</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Vote weight = total shares held (YES + NO combined)</li>
+                  <li>Majority wins; outcome is finalized</li>
+                  <li>Correct voters share 50% of losing bonder's bond</li>
+                  <li><strong className="text-white">Exact 50/50 tie:</strong> Both bonds returned, emergency refund available</li>
+                </ul>
+              </div>
+
+              {/* Emergency Refund */}
+              <div>
+                <h3 className="text-white font-bold mb-2">🆘 Emergency Refund</h3>
+                <p className="text-sm">
+                  If a market cannot be resolved (no proposal for 24h or exact tie), 
+                  all traders can claim a proportional refund based on their total shares.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Prohibited Jurisdictions */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-no pl-4 mb-4">
-              5. PROHIBITED JURISDICTIONS
+              6. PROHIBITED JURISDICTIONS
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -142,7 +244,7 @@ export function TermsPage() {
           {/* Information Protocol Disclaimer */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-warning pl-4 mb-4">
-              6. INFORMATION & PREDICTION PROTOCOL
+              7. INFORMATION & PREDICTION PROTOCOL
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -163,7 +265,7 @@ export function TermsPage() {
           {/* No Guarantee */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              7. NO GUARANTEE OF OUTCOME
+              8. NO GUARANTEE OF OUTCOME
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -182,7 +284,7 @@ export function TermsPage() {
           {/* Risks */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-no pl-4 mb-4">
-              8. RISK ACKNOWLEDGMENT
+              9. RISK ACKNOWLEDGMENT
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>By using JunkieFun, you acknowledge and accept:</p>
@@ -203,7 +305,7 @@ export function TermsPage() {
           {/* Prohibited Activities */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              9. PROHIBITED ACTIVITIES
+              10. PROHIBITED ACTIVITIES
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>You agree NOT to:</p>
@@ -221,7 +323,7 @@ export function TermsPage() {
           {/* Limitation of Liability */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              10. LIMITATION OF LIABILITY
+              11. LIMITATION OF LIABILITY
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -238,7 +340,7 @@ export function TermsPage() {
           {/* Changes to Terms */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              11. CHANGES TO TERMS
+              12. CHANGES TO TERMS
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -252,7 +354,7 @@ export function TermsPage() {
           {/* Contact */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              12. CONTACT
+              13. CONTACT
             </h2>
             <div className="text-text-secondary pl-4">
               <p>

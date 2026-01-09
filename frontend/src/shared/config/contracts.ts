@@ -11,7 +11,7 @@ import { env } from './env';
 
 /**
  * PredictionMarket Contract Address
- * v2.5.0 - with imageUrl + marketCreationFee
+ * v3.3.0 - with ProposerRewards (0.5% of pool)
  */
 export const PREDICTION_MARKET_ADDRESS = env.CONTRACT_ADDRESS as `0x${string}`;
 
@@ -118,6 +118,13 @@ export const PREDICTION_MARKET_ABI = [
   },
   {
     name: 'marketCreationFee',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'proposerRewardBps',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
@@ -264,6 +271,8 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'creator', type: 'address', indexed: true },
       { name: 'question', type: 'string', indexed: false },
       { name: 'expiryTimestamp', type: 'uint256', indexed: false },
+      { name: 'heatLevel', type: 'uint8', indexed: false },
+      { name: 'virtualLiquidity', type: 'uint256', indexed: false },
     ],
   },
   {
@@ -276,6 +285,15 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'isBuy', type: 'bool', indexed: false },
       { name: 'shares', type: 'uint256', indexed: false },
       { name: 'bnbAmount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'ProposerRewardPaid',
+    type: 'event',
+    inputs: [
+      { name: 'marketId', type: 'uint256', indexed: true },
+      { name: 'proposer', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
     ],
   },
 ] as const;

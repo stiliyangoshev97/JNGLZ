@@ -21,6 +21,7 @@ export const POSITION_FRAGMENT = gql`
     }
     market {
       id
+      marketId
       question
       status
       resolved
@@ -29,6 +30,10 @@ export const POSITION_FRAGMENT = gql`
       imageUrl
       yesShares
       noShares
+      proposer
+      proposalTimestamp
+      disputer
+      disputeTimestamp
     }
     yesShares
     noShares

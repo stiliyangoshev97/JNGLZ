@@ -36,6 +36,7 @@ interface TradePanelProps {
   yesPercent: number;
   noPercent: number;
   isActive: boolean;
+  onTradeSuccess?: () => void;
 }
 
 type TradeDirection = 'yes' | 'no';
@@ -44,7 +45,7 @@ type TradeAction = 'buy' | 'sell';
 // Quick amount presets for buying (BNB)
 const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
 
-export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePanelProps) {
+export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuccess }: TradePanelProps) {
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
   
@@ -53,6 +54,19 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
   
   // User's BNB balance
   const { data: balanceData } = useBalance({ address });
+  
+  // Find user's position from market data (for PNL display)
+  const userPositionData = useMemo(() => {
+    if (!address || !market.positions) return null;
+    const pos = market.positions.find(
+      (p: { user?: { address?: string } }) => 
+        p.user?.address?.toLowerCase() === address.toLowerCase()
+    );
+    if (!pos) return null;
+    return {
+      totalInvested: parseFloat(pos.totalInvested || '0'),
+    };
+  }, [address, market.positions]);
   
   // User's position in this market
   const marketId = BigInt(market.marketId);
@@ -134,6 +148,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
       setAmount('');
       // Refetch position after successful trade
       refetchPosition();
+      // Trigger market data refetch for instant UI update
+      onTradeSuccess?.();
       // Reset all write hooks
       setTimeout(() => {
         resetBuyYes();
@@ -142,7 +158,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
         resetSellNo();
       }, 2000);
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
@@ -281,8 +297,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
             )}
           >
             YES
-            <span className="block text-sm font-mono mt-1">
-              {yesPercent.toFixed(0)}%
+            <span className="block text-lg font-mono mt-1">
+              {Math.round(yesPercent)}¢
             </span>
           </button>
           <button
@@ -295,15 +311,16 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
             )}
           >
             NO
-            <span className="block text-sm font-mono mt-1">
-              {noPercent.toFixed(0)}%
+            <span className="block text-lg font-mono mt-1">
+              {Math.round(noPercent)}¢
             </span>
           </button>
         </div>
 
-        {/* User's Position */}
+        {/* User's Position with PNL */}
         {(userYesShares > 0n || userNoShares > 0n) && (
-          <div className="p-2 bg-dark-800 border border-dark-600 text-xs">
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
+            {/* Position shares */}
             <div className="flex justify-between">
               <span className="text-text-muted">Your Position:</span>
               <span>
@@ -315,9 +332,39 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
                 )}
               </span>
             </div>
+            
+            {/* PNL Display */}
+            {userPositionData && userPositionData.totalInvested > 0 && (() => {
+              // Calculate current value using UNIT_PRICE
+              const UNIT_PRICE = 0.01; // BNB
+              const yesPrice = UNIT_PRICE * yesPercent / 100;
+              const noPrice = UNIT_PRICE * noPercent / 100;
+              const yesSharesNum = Number(userYesShares) / 1e18;
+              const noSharesNum = Number(userNoShares) / 1e18;
+              const currentValue = (yesSharesNum * yesPrice) + (noSharesNum * noPrice);
+              const invested = userPositionData.totalInvested;
+              const pnl = currentValue - invested;
+              const pnlPercent = invested > 0 ? (pnl / invested) * 100 : 0;
+              
+              return (
+                <div className={cn(
+                  'flex justify-between pt-2 border-t border-dark-600',
+                  pnl >= 0 ? 'text-yes' : 'text-no'
+                )}>
+                  <span className="text-text-muted">P/L:</span>
+                  <span className="font-mono font-bold">
+                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} BNB
+                    <span className="text-xs ml-1 opacity-70">
+                      ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+                    </span>
+                  </span>
+                </div>
+              );
+            })()}
+            
             {/* Pool Liquidity Warning */}
             {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (
-              <div className="mt-2 pt-2 border-t border-dark-600">
+              <div className="pt-2 border-t border-dark-600">
                 <p className="text-warning text-xs">
                   ⚠️ Pool liquidity limits max sell to {formatShares(maxSellableShares)} {direction.toUpperCase()} shares
                   {maxSellBnbOut && ` (~${formatBNB(maxSellBnbOut)} BNB)`}
@@ -357,11 +404,18 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
 
         {/* Amount Input */}
         <Input
-          type="number"
-          step="0.01"
+          type="text"
+          inputMode="decimal"
           placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => {
+            // Replace comma with period for decimal input
+            const value = e.target.value.replace(',', '.');
+            // Only allow valid decimal numbers
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              setAmount(value);
+            }
+          }}
           label={action === 'buy' ? 'AMOUNT (BNB)' : 'SHARES'}
         />
 
