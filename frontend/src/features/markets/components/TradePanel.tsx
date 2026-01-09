@@ -23,6 +23,7 @@ import {
   usePreviewBuy,
   usePreviewSell,
   usePosition,
+  useMaxSellableShares,
 } from '@/shared/hooks';
 import { cn } from '@/shared/utils/cn';
 import { formatBNB, formatShares } from '@/shared/utils/format';
@@ -96,16 +97,31 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
   const userNoShares = position?.noShares || 0n;
   const currentShares = direction === 'yes' ? userYesShares : userNoShares;
 
+  // Get max sellable shares from contract (respects pool liquidity limits)
+  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes } = useMaxSellableShares(marketId, userYesShares, true);
+  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo } = useMaxSellableShares(marketId, userNoShares, false);
+  
+  const maxSellableShares = direction === 'yes' ? maxSellableYes : maxSellableNo;
+  const maxSellBnbOut = direction === 'yes' ? maxSellBnbYes : maxSellBnbNo;
+
+  // Check if pool liquidity limits selling all shares
+  const isPoolLimited = useMemo(() => {
+    if (currentShares === 0n || maxSellableShares === undefined) return false;
+    return maxSellableShares < currentShares;
+  }, [currentShares, maxSellableShares]);
+
   // Check if selling all shares
   const isSellAll = useMemo(() => {
     if (action !== 'sell' || !amount || currentShares === 0n) return false;
     try {
       const sharesToSell = parseEther(amount);
-      return sharesToSell >= currentShares;
+      // Use maxSellableShares if pool is limited
+      const effectiveMax = maxSellableShares !== undefined ? maxSellableShares : currentShares;
+      return sharesToSell >= effectiveMax;
     } catch {
       return false;
     }
-  }, [action, amount, currentShares]);
+  }, [action, amount, currentShares, maxSellableShares]);
 
   // Reset form on success
   useEffect(() => {
@@ -134,16 +150,18 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
     return '0';
   }, [action, previewBuyData, previewSellData]);
 
-  // Sell preset buttons (25%, 50%, 75%, MAX)
+  // Sell preset buttons (25%, 50%, 75%, MAX) - use maxSellableShares to respect pool limits
   const sellPresets = useMemo(() => {
-    if (currentShares === 0n) return [];
+    // Use maxSellableShares if available (respects pool liquidity), otherwise fall back to user shares
+    const effectiveMax = maxSellableShares !== undefined ? maxSellableShares : currentShares;
+    if (effectiveMax === 0n) return [];
     return [
-      { label: '25%', shares: currentShares / 4n },
-      { label: '50%', shares: currentShares / 2n },
-      { label: '75%', shares: (currentShares * 3n) / 4n },
-      { label: 'MAX', shares: currentShares },
+      { label: '25%', shares: effectiveMax / 4n },
+      { label: '50%', shares: effectiveMax / 2n },
+      { label: '75%', shares: (effectiveMax * 3n) / 4n },
+      { label: 'MAX', shares: effectiveMax },
     ];
-  }, [currentShares]);
+  }, [currentShares, maxSellableShares]);
 
   const handleTrade = async () => {
     if (!canTrade || !amount) return;
@@ -281,6 +299,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive }: TradePan
                 )}
               </span>
             </div>
+            {/* Pool Liquidity Warning */}
+            {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (
+              <div className="mt-2 pt-2 border-t border-dark-600">
+                <p className="text-warning text-xs">
+                  ⚠️ Pool liquidity limits max sell to {formatShares(maxSellableShares)} {direction.toUpperCase()} shares
+                  {maxSellBnbOut && ` (~${formatBNB(maxSellBnbOut)} BNB)`}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

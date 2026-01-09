@@ -168,14 +168,14 @@ export function useRequiredBond(marketId: bigint | undefined) {
 /**
  * Get max sellable shares (limited by pool liquidity)
  */
-export function useMaxSellableShares(marketId: bigint | undefined, isYes: boolean) {
+export function useMaxSellableShares(marketId: bigint | undefined, userShares: bigint | undefined, isYes: boolean) {
   const result = useReadContract({
     address: PREDICTION_MARKET_ADDRESS,
     abi: PREDICTION_MARKET_ABI,
     functionName: 'getMaxSellableShares',
-    args: marketId !== undefined ? [marketId, isYes] : undefined,
+    args: marketId !== undefined && userShares !== undefined ? [marketId, userShares, isYes] : undefined,
     query: {
-      enabled: marketId !== undefined,
+      enabled: marketId !== undefined && userShares !== undefined && userShares > 0n,
     },
   });
 

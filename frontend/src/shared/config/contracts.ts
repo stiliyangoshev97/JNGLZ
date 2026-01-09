@@ -101,6 +101,7 @@ export const PREDICTION_MARKET_ABI = [
     stateMutability: 'view',
     inputs: [
       { name: 'marketId', type: 'uint256' },
+      { name: 'userShares', type: 'uint256' },
       { name: 'isYes', type: 'bool' },
     ],
     outputs: [
