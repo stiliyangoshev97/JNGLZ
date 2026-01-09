@@ -186,8 +186,17 @@ If yesVotes == noVotes exactly:
   1. Proposer gets their bond back (no penalty)
   2. Disputer gets their bond back (no penalty)
   3. Market is NOT resolved (stays in limbo)
-  4. Emergency refund becomes available
+  4. Emergency refund available at: expiry + 24 hours
   5. All traders can claim proportional refund
+
+Timing example:
+  T+0:     Market expires
+  T+10m:   Proposal submitted
+  T+40m:   Disputed
+  T+1h40m: Voting ends → 50/50 TIE
+  T+24h:   Emergency refund opens (from original expiry!)
+  
+  Wait time after tie: ~22 hours (not a fresh 24h)
 
 Fair outcome: If the community can't decide, nobody gets punished.
 ```
