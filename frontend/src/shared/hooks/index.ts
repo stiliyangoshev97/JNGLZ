@@ -25,6 +25,10 @@ export {
   usePosition,
   useRequiredBond,
   useMaxSellableShares,
+  // Pull Pattern (v3.4.0)
+  usePendingWithdrawal,
+  usePendingCreatorFees,
+  usePendingWithdrawals,
 } from './useContractReads';
 
 // Contract Write Hooks
@@ -41,6 +45,9 @@ export {
   useFinalizeMarket,
   useClaim,
   useEmergencyRefund,
+  // Pull Pattern (v3.4.0)
+  useWithdrawBond,
+  useWithdrawCreatorFees,
 } from './useContractWrites';
 
 // Smart Hooks

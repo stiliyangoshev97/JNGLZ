@@ -490,3 +490,73 @@ export function useEmergencyRefund() {
     reset,
   };
 }
+
+// ============ Pull Pattern Withdrawals (v3.4.0) ============
+
+/**
+ * Withdraw pending bonds, jury fees, and other credits
+ * 
+ * Contract: withdrawBond()
+ * Pull Pattern - users must call this to receive their funds
+ * Used by: proposers, disputers, voters (jury fees)
+ */
+export function useWithdrawBond() {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const withdrawBond = async () => {
+    writeContract({
+      address: PREDICTION_MARKET_ADDRESS,
+      abi: PREDICTION_MARKET_ABI,
+      functionName: 'withdrawBond',
+      args: [],
+    });
+  };
+
+  return {
+    withdrawBond,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}
+
+/**
+ * Withdraw pending creator fees
+ * 
+ * Contract: withdrawCreatorFees()
+ * Pull Pattern - market creators must call this to receive their accumulated fees
+ * Fees: 0.5% of every trade on markets they created
+ */
+export function useWithdrawCreatorFees() {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const withdrawCreatorFees = async () => {
+    writeContract({
+      address: PREDICTION_MARKET_ADDRESS,
+      abi: PREDICTION_MARKET_ABI,
+      functionName: 'withdrawCreatorFees',
+      args: [],
+    });
+  };
+
+  return {
+    withdrawCreatorFees,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}

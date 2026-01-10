@@ -26,8 +26,8 @@ export const env = {
   // Contract (v3.4.1 - Pull Pattern, ReplaceSigner)
   CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x4e20Df1772D972f10E9604e7e9C775B1ae897464',
   
-  // The Graph (update after subgraph deployment)
-  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1',
+  // The Graph (Published Production URL - 100,000 queries/month)
+  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn',
   
   // Feature flags
   ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true' || true,

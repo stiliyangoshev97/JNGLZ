@@ -23,6 +23,8 @@ import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { cn } from '@/shared/utils/cn';
 import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees } from '@/shared/hooks';
+import { formatEther } from 'viem';
 
 
 // Position with full market data
@@ -71,6 +73,21 @@ export function PortfolioPage() {
     skip: !address || viewMode !== 'my-markets',
     pollInterval, // Dynamic: 60s when visible, 0 when hidden
   });
+
+  // Pull Pattern: Pending withdrawals (v3.4.0)
+  const { pendingBonds, pendingCreatorFees, refetch: refetchPending } = usePendingWithdrawals(address);
+  const { withdrawBond, isPending: isWithdrawingBond, isSuccess: bondWithdrawn } = useWithdrawBond();
+  const { withdrawCreatorFees, isPending: isWithdrawingFees, isSuccess: feesWithdrawn } = useWithdrawCreatorFees();
+
+  // Refetch pending withdrawals after successful withdrawal
+  if (bondWithdrawn || feesWithdrawn) {
+    refetchPending();
+  }
+
+  // Format pending amounts
+  const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
+  const pendingFeesFormatted = pendingCreatorFees ? parseFloat(formatEther(pendingCreatorFees)) : 0;
+  const hasPendingWithdrawals = pendingBondsFormatted > 0 || pendingFeesFormatted > 0;
 
   // Only show loading on initial load, not polls
   const isInitialLoading = loading && !data?.positions;
@@ -203,6 +220,53 @@ export function PortfolioPage() {
               </div>
             </div>
             <Button variant="yes">CLAIM ALL</Button>
+          </div>
+        </section>
+      )}
+
+      {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) */}
+      {hasPendingWithdrawals && (
+        <section className="bg-cyber/10 border-b border-cyber py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💎</span>
+                <div>
+                  <p className="text-cyber font-bold">PENDING WITHDRAWALS</p>
+                  <p className="text-sm text-text-secondary">
+                    {pendingBondsFormatted > 0 && (
+                      <span>Bonds/Jury: {pendingBondsFormatted.toFixed(4)} BNB</span>
+                    )}
+                    {pendingBondsFormatted > 0 && pendingFeesFormatted > 0 && ' • '}
+                    {pendingFeesFormatted > 0 && (
+                      <span>Creator Fees: {pendingFeesFormatted.toFixed(4)} BNB</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {pendingBondsFormatted > 0 && (
+                  <Button 
+                    variant="cyber" 
+                    size="sm"
+                    onClick={() => withdrawBond()}
+                    disabled={isWithdrawingBond}
+                  >
+                    {isWithdrawingBond ? 'WITHDRAWING...' : `CLAIM BONDS (${pendingBondsFormatted.toFixed(4)})`}
+                  </Button>
+                )}
+                {pendingFeesFormatted > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => withdrawCreatorFees()}
+                    disabled={isWithdrawingFees}
+                  >
+                    {isWithdrawingFees ? 'WITHDRAWING...' : `CLAIM FEES (${pendingFeesFormatted.toFixed(4)})`}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}

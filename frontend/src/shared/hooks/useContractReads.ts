@@ -199,3 +199,63 @@ export function useMaxSellableShares(marketId: bigint | undefined, userShares: b
     bnbOut: data?.[1],
   };
 }
+
+// ============ Pull Pattern Reads (v3.4.0) ============
+
+/**
+ * Get pending bond/jury fee withdrawals for an address
+ * 
+ * Contract: getPendingWithdrawal(address)
+ * Returns: amount in wei that can be withdrawn via withdrawBond()
+ */
+export function usePendingWithdrawal(userAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: 'getPendingWithdrawal',
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
+}
+
+/**
+ * Get pending creator fees for an address
+ * 
+ * Contract: getPendingCreatorFees(address)
+ * Returns: amount in wei that can be withdrawn via withdrawCreatorFees()
+ */
+export function usePendingCreatorFees(userAddress: `0x${string}` | undefined) {
+  return useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: 'getPendingCreatorFees',
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
+}
+
+/**
+ * Get both pending withdrawals for a user (bonds + creator fees)
+ * 
+ * Combines usePendingWithdrawal and usePendingCreatorFees
+ */
+export function usePendingWithdrawals(userAddress: `0x${string}` | undefined) {
+  const bondResult = usePendingWithdrawal(userAddress);
+  const creatorResult = usePendingCreatorFees(userAddress);
+
+  return {
+    pendingBonds: bondResult.data as bigint | undefined,
+    pendingCreatorFees: creatorResult.data as bigint | undefined,
+    totalPending: 
+      ((bondResult.data as bigint) || 0n) + ((creatorResult.data as bigint) || 0n),
+    isLoading: bondResult.isLoading || creatorResult.isLoading,
+    refetch: () => {
+      bondResult.refetch();
+      creatorResult.refetch();
+    },
+  };
+}

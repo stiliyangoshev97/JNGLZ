@@ -262,6 +262,36 @@ export const PREDICTION_MARKET_ABI = [
     outputs: [],
   },
 
+  // ===== PULL PATTERN (v3.4.0) =====
+  {
+    name: 'getPendingWithdrawal',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getPendingCreatorFees',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'withdrawBond',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [{ name: 'amount', type: 'uint256' }],
+  },
+  {
+    name: 'withdrawCreatorFees',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [{ name: 'amount', type: 'uint256' }],
+  },
+
   // ===== EVENTS =====
   {
     name: 'MarketCreated',

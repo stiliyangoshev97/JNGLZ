@@ -211,6 +211,19 @@ Timing example:
 Fair outcome: If the community can't decide, nobody gets punished.
 ```
 
+**🚫 What happens if a market has NO TRADES AT ALL?** ⭐ (SAFETY in v3.4.0)
+```
+If a market expires with 0 YES shares AND 0 NO shares:
+  1. proposeOutcome() is BLOCKED with error "NoTradesToResolve"
+  2. Nobody can propose, dispute, or resolve the market
+  3. No emergency refund needed (pool is empty anyway)
+
+Why block proposals on empty markets?
+  - Nothing to resolve - pool has 0 BNB
+  - Prevents wasted gas on pointless resolution
+  - No funds at risk, no action needed
+```
+
 **🛡️ What happens if winning side has NO holders?** ⭐ (SAFETY in v3.4.0)
 ```
 If the outcome would resolve to a side with 0 shares:
@@ -232,6 +245,16 @@ Example scenario:
 This prevents a griefing attack where someone can lock funds
 by proposing resolution to an empty side that nobody defends.
 ```
+
+**📊 Edge Case Summary Table:**
+| Scenario | YES Supply | NO Supply | Can Propose? | Resolution |
+|----------|------------|-----------|--------------|------------|
+| Normal market | > 0 | > 0 | ✅ Yes | Normal |
+| One-sided (YES only) | > 0 | 0 | ✅ Yes | Only YES can win* |
+| One-sided (NO only) | 0 | > 0 | ✅ Yes | Only NO can win* |
+| Empty market | 0 | 0 | ❌ No | N/A (blocked) |
+
+*If someone proposes the empty side wins, safety check blocks resolution and returns bonds.
 
 ---
 
