@@ -37,6 +37,7 @@ export function PriceChart({ marketId, className }: PriceChartProps) {
   const { data } = useQuery<{ trades: Trade[] }>(GET_MARKET_TRADES, {
     variables: { marketId, first: 200 },
     pollInterval, // Dynamic: 60s when visible, 0 when hidden
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   const trades = data?.trades || [];

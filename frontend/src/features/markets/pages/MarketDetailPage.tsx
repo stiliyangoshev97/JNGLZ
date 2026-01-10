@@ -50,7 +50,7 @@ export function MarketDetailPage() {
     variables: { id: marketId },
     pollInterval, // Dynamic: 15s when visible, 0 when hidden
     skip: !marketId,
-    notifyOnNetworkStatusChange: true, // So we can distinguish initial load from poll
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   // Only show loading on initial load, not on polls/refetches

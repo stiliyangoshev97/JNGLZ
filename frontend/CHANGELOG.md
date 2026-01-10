@@ -2,6 +2,101 @@
 
 All notable changes to the JunkieFun frontend will be documented in this file.
 
+## [0.6.0] - 2026-01-10
+
+### Added
+
+#### Smart Polling (Rate Limit Protection)
+- **`useSmartPolling.ts`** - New hook module for intelligent polling
+  - `usePageVisibility()` - Detects when browser tab is active/hidden
+  - `useSmartPollInterval()` - Returns 0 (pauses polling) when tab is hidden
+  - `POLL_INTERVALS` constants for different page contexts
+  - `calculateDailyQueries()` - Utility to estimate daily API usage
+
+- **Adaptive Poll Intervals by Context**
+  - Market Detail Page: 15s (was 5s)
+  - Markets List Page: 30s (was 10s)
+  - Portfolio Page: 60s (background)
+  - Price Chart: 60s (background)
+  - Ticker: 120s (was 5s)
+
+- **Automatic Polling Pause**
+  - Polling stops completely when user switches to another tab
+  - Resumes automatically when tab becomes visible again
+  - Reduces unnecessary API calls by ~40-60%
+
+#### Optimistic Trade Updates (Instant UI)
+- **`useOptimisticTrade.ts`** - Cache manipulation with rollback
+  - `applyOptimisticUpdate()` - Instantly updates market data in cache
+  - `rollback()` - Reverts to snapshot if transaction fails
+  - `confirmUpdate()` - Cleans up snapshot after success
+  - `refetchMarket()` - Force fresh data from network
+
+- **`useTradeWithOptimism.ts`** - Trade hooks with instant feedback
+  - `useBuyYesOptimistic()` - Buy YES with instant UI update
+  - `useBuyNoOptimistic()` - Buy NO with instant UI update
+  - `useSellYesOptimistic()` - Sell YES with instant UI update
+  - `useSellNoOptimistic()` - Sell NO with instant UI update
+  - Automatic rollback on transaction failure
+
+- **Trade Status States**
+  - `idle` → `optimistic` → `pending` → `confirming` → `success`/`error`
+
+#### Pull Pattern Withdrawals (v3.4.0 Contract Support)
+- **New Read Hooks**
+  - `usePendingWithdrawal(address)` - Check pending bond/jury fees
+  - `usePendingCreatorFees(address)` - Check pending creator fees
+  - `usePendingWithdrawals(address)` - Combined pending amounts
+
+- **New Write Hooks**
+  - `useWithdrawBond()` - Withdraw pending bonds and jury fees
+  - `useWithdrawCreatorFees()` - Withdraw accumulated creator fees
+
+- **Portfolio Page Enhancement**
+  - Shows "Pending Withdrawals" banner when user has unclaimed funds
+  - One-click withdraw buttons for bonds and creator fees
+  - Real-time balance display
+
+#### Data Minimization (Lower API Costs)
+- **`MARKET_CARD_FRAGMENT`** - Lightweight GraphQL fragment for list pages
+  - Only fetches: id, question, imageUrl, heatLevel, status, prices, volume
+  - ~60% smaller payload than full `MARKET_FRAGMENT`
+- **`GET_MARKETS_LIGHT`** - New query using card fragment
+  - Use for Market List/Discovery pages
+  - Reserve full `GET_MARKETS` for detail pages
+
+### Changed
+
+#### Contract & Subgraph Updates
+- **Contract Address**: `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` (v3.4.1)
+- **Subgraph**: Production gateway URL with 100k queries/month
+- **ABI**: Added Pull Pattern functions (`withdrawBond`, `withdrawCreatorFees`, `getPendingWithdrawal`, `getPendingCreatorFees`)
+
+#### Performance Improvements
+- Reduced polling frequency across all pages
+- Added tab visibility detection to pause background polling
+- Implemented cache-and-network fetch policy as default
+
+### Technical Details
+
+#### Daily Query Estimation (The Graph)
+```
+Market Detail (15s): 5,760 queries/day per active user
+Markets List (30s): 2,880 queries/day per active user
+With Tab Detection: ~40% reduction when users switch tabs
+Total Estimate: ~3,000-5,000 queries/day for typical user
+```
+
+#### Optimistic Update Flow
+```
+1. User clicks "Buy" → Cache updated instantly (optimistic)
+2. Transaction sent → Status: "pending"
+3a. Success → Snapshot cleared, next poll confirms
+3b. Failure → Rollback to snapshot, error toast
+```
+
+---
+
 ## [0.5.5] - 2026-01-10
 
 ### Changed

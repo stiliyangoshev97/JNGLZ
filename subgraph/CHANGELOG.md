@@ -2,6 +2,43 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.4.1] - 2026-01-10
+
+### Added
+- **Pull Pattern Entities** - Tracks pending withdrawals from v3.4.0+ contracts
+  - `PendingWithdrawal` - Bonds and jury fees awaiting claim
+    - Fields: `id`, `user`, `amount`, `reason`, `creditedAt`, `txHash`, `blockNumber`
+  - `PendingCreatorFee` - Creator fees awaiting claim
+    - Fields: `id`, `creator`, `market`, `amount`, `creditedAt`, `txHash`, `blockNumber`
+  - `WithdrawalClaim` - Completed withdrawal records
+    - Fields: `id`, `user`, `amount`, `claimedAt`, `txHash`, `blockNumber`
+  - `CreatorFeeClaim` - Completed creator fee claim records
+    - Fields: `id`, `creator`, `amount`, `claimedAt`, `txHash`, `blockNumber`
+
+- **New Event Handlers**
+  - `handleWithdrawalCredited` - Indexes `WithdrawalCredited(user, amount, reason)`
+  - `handleWithdrawalClaimed` - Indexes `WithdrawalClaimed(user, amount)`
+  - `handleCreatorFeesCredited` - Indexes `CreatorFeesCredited(creator, marketId, amount)`
+  - `handleCreatorFeesClaimed` - Indexes `CreatorFeesClaimed(creator, amount)`
+
+- **User Entity Extensions**
+  - `totalPendingWithdrawals` - Sum of unclaimed bonds/jury fees
+  - `totalPendingCreatorFees` - Sum of unclaimed creator fees
+  - `totalWithdrawn` - Lifetime withdrawn amount
+  - `totalCreatorFeesCollected` - Lifetime creator fees collected
+
+### Changed
+- **Contract Address**: `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` (v3.4.1)
+- **Start Block**: `83514593` (v3.4.1 deployment block)
+- **ABI**: Updated with Pull Pattern events and functions
+
+### Deployed
+- **Studio URL**: `https://api.studio.thegraph.com/query/.../junkiefun-bnb-testnet/...`
+- **Production URL**: `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn`
+- **Rate Limit**: 100,000 queries/month (production gateway)
+
+---
+
 ## [3.3.1] - 2026-01-10
 
 ### Added

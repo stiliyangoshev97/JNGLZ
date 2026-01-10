@@ -65,6 +65,7 @@ export function PortfolioPage() {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
     pollInterval, // Dynamic: 60s when visible, 0 when hidden
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   // Fetch markets created by this user
@@ -72,6 +73,7 @@ export function PortfolioPage() {
     variables: { creator: address?.toLowerCase(), first: 50 },
     skip: !address || viewMode !== 'my-markets',
     pollInterval, // Dynamic: 60s when visible, 0 when hidden
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   // Pull Pattern: Pending withdrawals (v3.4.0)

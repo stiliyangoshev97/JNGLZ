@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 10, 2026  
-> **Version:** 0.5.5
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Heat Levels + Sell Fixes + Slippage Protection + Resolution Economics)
+> **Version:** 0.6.0
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Smart Polling + Optimistic Updates + Pull Pattern)
 
 ---
 
@@ -15,6 +15,7 @@
 - View real-time prices via bonding curve
 - Resolve markets via Street Consensus (bettors vote)
 - Claim winnings after resolution
+- Withdraw pending bonds/fees (Pull Pattern)
 
 ---
 
@@ -23,21 +24,22 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.1.0) | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` |
+| PredictionMarket (v3.4.1) | `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x4C1508BA973856125a4F42c343560DB918c9EB2b |
+| BscScan | https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464 |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| GraphQL Endpoint | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3` |
-| Studio Dashboard | https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet |
+| Production URL | `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn` |
+| Studio URL | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1` |
+| Rate Limit | 100,000 queries/month (production) |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet (v3.1.0)
-VITE_CONTRACT_ADDRESS=0x4C1508BA973856125a4F42c343560DB918c9EB2b
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
+# BNB Testnet (v3.4.1)
+VITE_CONTRACT_ADDRESS=0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
@@ -58,17 +60,20 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | Chain Validation | ✅ 100% | WrongNetworkModal, prevents Phantom stuck issue |
 | Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |
-| Markets Page | ✅ 100% | Grid, filters (Active/Expired/Resolved with counts) |
-| Market Detail Page | ✅ 100% | Chart, trade panel, resolution panel |
+| Markets Page | ✅ 100% | Grid, filters, smart polling (30s) |
+| Market Detail Page | ✅ 100% | Chart, trade panel, smart polling (15s) |
 | Create Market Page | ✅ 100% | Fully wired to contract + Heat Levels |
-| Portfolio Page | ✅ 100% | Positions with filters (All/Active/Needs Action/Claimable) |
-| Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds |
-| Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim |
-| Trade Panel | ✅ 100% | Buy/sell wired to contract |
-| Resolution Panel | ✅ 100% | Propose, dispute, vote, claim (bond fees fixed) |
+| Portfolio Page | ✅ 100% | Positions + Pending Withdrawals banner |
+| Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds, pending withdrawals |
+| Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim, withdraw |
+| Trade Panel | ✅ 100% | Buy/sell with optimistic updates |
+| Resolution Panel | ✅ 100% | Propose, dispute, vote, claim |
+| Smart Polling | ✅ 100% | Tab visibility detection, adaptive intervals |
+| Optimistic Updates | ✅ 100% | Instant UI with rollback on failure |
+| Pull Pattern | ✅ 100% | Withdraw bonds/creator fees UI |
 | Supabase (Comments) | ⬜ 0% | Future phase |
 
-**Overall Progress: ~95% (Contract integration complete, comments pending)**
+**Overall Progress: ~98% (Comments pending)**
 
 ---
 
@@ -97,27 +102,11 @@ src/
 │   ├── config/            # wagmi, env, contracts, graphql
 │   ├── hooks/             # Contract hooks + chain validation
 │   │   ├── useChainValidation.ts
-│   │   ├── useContractReads.ts   # Price, position, preview hooks
-│   │   └── useContractWrites.ts  # Trade, create, resolve hooks
-│   ├── schemas/           # Zod schemas
-│   └── utils/             # cn(), formatters
-├── providers/
-│   ├── Web3Provider.tsx   # Wagmi + RainbowKit (brutalist theme)
-│   ├── QueryProvider.tsx  # React Query
-│   ├── GraphQLProvider.tsx # Apollo Client
-│   └── index.ts
-├── router/
-│   ├── Header.tsx         # Navigation
-│   ├── RootLayout.tsx     # Layout wrapper
-│   ├── routes.tsx         # Route definitions
-│   └── index.ts
-├── App.tsx
-├── main.tsx
-└── index.css              # Global styles, fonts, animations
-```
-├── App.tsx
-├── main.tsx
-└── index.css
+│   │   ├── useContractReads.ts     # Price, position, preview, pending withdrawal hooks
+│   │   ├── useContractWrites.ts    # Trade, create, resolve, withdraw hooks
+│   │   ├── useSmartPolling.ts      # Tab visibility + adaptive poll intervals
+│   │   ├── useOptimisticTrade.ts   # Cache manipulation with rollback
+│   │   └── useTradeWithOptimism.ts # Trade hooks with instant UI feedback
 ```
 
 ---

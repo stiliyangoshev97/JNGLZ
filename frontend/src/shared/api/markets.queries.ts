@@ -2,11 +2,37 @@
  * ===== MARKET GRAPHQL QUERIES =====
  *
  * GraphQL queries for fetching market data from The Graph subgraph.
+ * 
+ * Data Minimization Strategy (v3.4.1):
+ * - MARKET_CARD_FRAGMENT: Lightweight for list/discovery pages
+ * - MARKET_FRAGMENT: Full data for detail pages
  *
  * @module shared/api/markets.queries
  */
 
 import { gql } from '@apollo/client';
+
+/**
+ * Lightweight market fragment for list/card views
+ * Only essential fields for displaying market cards
+ * ~60% smaller payload than full fragment
+ */
+export const MARKET_CARD_FRAGMENT = gql`
+  fragment MarketCardFields on Market {
+    id
+    marketId
+    question
+    imageUrl
+    heatLevel
+    status
+    expiryTimestamp
+    yesShares
+    noShares
+    poolBalance
+    totalVolume
+    createdAt
+  }
+`;
 
 /**
  * Market fragment - common fields
@@ -71,6 +97,31 @@ export const GET_MARKETS = gql`
       where: $where
     ) {
       ...MarketFields
+    }
+  }
+`;
+
+/**
+ * Lightweight markets query for list pages (v3.4.1)
+ * Uses minimal fields for faster loading and lower API costs
+ */
+export const GET_MARKETS_LIGHT = gql`
+  ${MARKET_CARD_FRAGMENT}
+  query GetMarketsLight(
+    $first: Int = 50
+    $skip: Int = 0
+    $orderBy: Market_orderBy = createdAt
+    $orderDirection: OrderDirection = desc
+    $where: Market_filter
+  ) {
+    markets(
+      first: $first
+      skip: $skip
+      orderBy: $orderBy
+      orderDirection: $orderDirection
+      where: $where
+    ) {
+      ...MarketCardFields
     }
   }
 `;

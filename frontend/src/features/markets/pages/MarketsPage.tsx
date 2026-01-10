@@ -37,6 +37,7 @@ export function MarketsPage() {
   const { data, loading, error } = useQuery<GetMarketsResponse>(GET_MARKETS, {
     variables: { first: 100 },
     pollInterval: listPollInterval, // Dynamic: 30s when visible, 0 when hidden
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   // Only show loading skeleton on initial load, not polls
@@ -46,6 +47,7 @@ export function MarketsPage() {
   const { data: tradesData } = useQuery<GetRecentTradesResponse>(GET_RECENT_TRADES, {
     variables: { first: 20 },
     pollInterval: tickerPollInterval, // Dynamic: 2min when visible, 0 when hidden
+    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
   const allMarkets = data?.markets || [];

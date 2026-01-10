@@ -2,24 +2,44 @@
  * Apollo Client Configuration
  *
  * Configures Apollo Client for The Graph subgraph queries.
- * No authentication needed - subgraph is public.
+ * Uses Bearer token authentication for production gateway.
  *
  * @module shared/config/graphql
  */
 
-import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
+import { ApolloClient, InMemoryCache, HttpLink, from } from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
 import { env } from './env';
+
+/**
+ * HTTP Link - connects to The Graph gateway
+ */
+const httpLink = new HttpLink({
+  uri: env.SUBGRAPH_URL,
+});
+
+/**
+ * Auth Link - adds Bearer token for The Graph production gateway
+ * Required for published subgraphs with rate limit protection
+ */
+const authLink = setContext((_, { headers }) => {
+  return {
+    headers: {
+      ...headers,
+      Authorization: env.GRAPH_API_KEY ? `Bearer ${env.GRAPH_API_KEY}` : '',
+    },
+  };
+});
 
 /**
  * Apollo Client for The Graph
  * 
- * Connected to: junkiefun-bnb-testnet subgraph
- * Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
+ * Connected to: junkiefun-bnb-testnet subgraph (Production Gateway)
+ * Rate Limit: 100,000 queries/month
+ * Domains: localhost, junkie.fun (whitelisted)
  */
 export const apolloClient = new ApolloClient({
-  link: new HttpLink({
-    uri: env.SUBGRAPH_URL,
-  }),
+  link: from([authLink, httpLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

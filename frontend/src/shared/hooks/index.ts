@@ -61,3 +61,16 @@ export {
   POLL_INTERVALS,
   calculateDailyQueries,
 } from './useSmartPolling';
+
+// Optimistic Trade Hooks (v3.4.1 - instant UI feedback)
+export {
+  useOptimisticTrade,
+  useOptimisticPosition,
+} from './useOptimisticTrade';
+
+export {
+  useBuyYesOptimistic,
+  useBuyNoOptimistic,
+  useSellYesOptimistic,
+  useSellNoOptimistic,
+} from './useTradeWithOptimism';

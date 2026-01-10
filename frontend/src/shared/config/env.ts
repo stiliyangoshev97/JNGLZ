@@ -21,21 +21,23 @@
 export const env = {
   // Web3
   WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
-  CHAIN_ID: Number(import.meta.env.VITE_CHAIN_ID) || 97, // Default to BNB Testnet
+  CHAIN_ID: Number(import.meta.env.VITE_CHAIN_ID) || 97,
   
-  // Contract (v3.4.1 - Pull Pattern, ReplaceSigner)
-  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '0x4e20Df1772D972f10E9604e7e9C775B1ae897464',
+  // Contract
+  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '',
   
-  // The Graph (Published Production URL - 100,000 queries/month)
-  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || 'https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn',
+  // The Graph
+  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || '',
+  GRAPH_API_KEY: import.meta.env.VITE_GRAPH_API_KEY || '',
   
   // Feature flags
-  ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true' || true,
+  ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true',
   
   // Admin wallets (MultiSig signers)
-  ADMIN_ADDRESSES: (import.meta.env.VITE_ADMIN_ADDRESSES || '0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1')
+  ADMIN_ADDRESSES: (import.meta.env.VITE_ADMIN_ADDRESSES || '')
     .split(',')
-    .map((addr: string) => addr.trim().toLowerCase()),
+    .map((addr: string) => addr.trim().toLowerCase())
+    .filter((addr: string) => addr.length > 0),
   
   // Environment
   IS_DEV: import.meta.env.DEV,
