@@ -54,7 +54,7 @@ function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="JNGLZ.FUN" className="h-6 w-6" />
+            <img src="/jnglz-logo.png" alt="JNGLZ.FUN" className="h-6 w-6" />
             <span className="text-sm text-text-secondary">
               © 2026 JNGLZ.FUN - Decentralized Prediction Markets
             </span>

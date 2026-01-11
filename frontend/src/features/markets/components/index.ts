@@ -7,6 +7,6 @@
 export { MarketCard } from './MarketCard';
 export { LiveTicker } from './LiveTicker';
 export { TradePanel } from './TradePanel';
-export { TradeHistory } from './TradeHistory';
+export { TradeHistory, RealizedPnl } from './TradeHistory';
 export { PriceChart } from './PriceChart';
 export { ResolutionPanel } from './ResolutionPanel';

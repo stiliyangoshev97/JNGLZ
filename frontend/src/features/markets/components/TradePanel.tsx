@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, formatEther } from 'viem';
 import { Button } from '@/shared/components/ui/Button';
@@ -48,12 +49,13 @@ const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
 export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuccess }: TradePanelProps) {
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
+  const queryClient = useQueryClient();
   
   // Slippage settings (default 1%)
   const { slippageBps, slippagePercent } = useSlippage();
   
   // User's BNB balance
-  const { data: balanceData } = useBalance({ address });
+  const { data: balanceData, refetch: refetchBalance } = useBalance({ address });
   
   // Find user's position from market data (for PNL display)
   const userPositionData = useMemo(() => {
@@ -148,6 +150,10 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       setAmount('');
       // Refetch position after successful trade
       refetchPosition();
+      // Refetch user's BNB balance (local)
+      refetchBalance();
+      // Invalidate ALL balance queries so Header/other components update too
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Trigger market data refetch for instant UI update
       onTradeSuccess?.();
       // Reset all write hooks
@@ -158,7 +164,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
         resetSellNo();
       }, 2000);
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {

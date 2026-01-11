@@ -1,21 +1,22 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 11, 2026  
-> **Version:** 0.7.1
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting)
+> **Last Updated:** January 12, 2026  
+> **Version:** 0.7.2
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L)
 
 ---
 
 ## 🎯 Platform Overview
 
 **JNGLZ.FUN** is a decentralized prediction market launchpad with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
-- Create prediction markets (free)
+- Create prediction markets (free, image required)
 - Trade YES/NO shares with native BNB
 - View real-time prices via bonding curve
 - Resolve markets via Street Consensus (bettors vote)
 - Claim winnings after resolution
 - Withdraw pending bonds/fees (Pull Pattern)
+- Track realized P/L per wallet
 
 ---
 

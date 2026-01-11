@@ -9,8 +9,9 @@
  * @module features/portfolio/pages/PortfolioPage
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR } from '@/shared/api';
@@ -80,11 +81,16 @@ export function PortfolioPage() {
   const { pendingBonds, pendingCreatorFees, refetch: refetchPending } = usePendingWithdrawals(address);
   const { withdrawBond, isPending: isWithdrawingBond, isSuccess: bondWithdrawn } = useWithdrawBond();
   const { withdrawCreatorFees, isPending: isWithdrawingFees, isSuccess: feesWithdrawn } = useWithdrawCreatorFees();
+  const queryClient = useQueryClient();
 
-  // Refetch pending withdrawals after successful withdrawal
-  if (bondWithdrawn || feesWithdrawn) {
-    refetchPending();
-  }
+  // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
+  useEffect(() => {
+    if (bondWithdrawn || feesWithdrawn) {
+      refetchPending();
+      // Invalidate balance queries so Header updates
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+    }
+  }, [bondWithdrawn, feesWithdrawn, refetchPending, queryClient]);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
@@ -296,7 +302,7 @@ export function PortfolioPage() {
                   : "text-text-secondary hover:text-white border-transparent"
               )}
             >
-              MY MARKETS ({myMarketsData?.markets?.length || 0})
+              MY MARKETS
             </button>
           </div>
         </div>
@@ -509,24 +515,28 @@ function calculatePortfolioStats(
   let totalValue = 0;
   let claimableValue = 0;
 
+  const UNIT_PRICE = 0.01; // BNB - each winning share pays out 0.01 BNB
+
   positions.forEach((pos) => {
-    const invested = Number(pos.totalInvested || 0) / 1e18;
+    const invested = parseFloat(pos.totalInvested || '0');
     totalInvested += invested;
 
-    // Calculate current value based on market prices
+    // Calculate current value based on bonding curve prices
     if (pos.market) {
-      const yesShares = BigInt(pos.yesShares || '0');
-      const noShares = BigInt(pos.noShares || '0');
-      const marketYes = BigInt(pos.market.yesShares || '0');
-      const marketNo = BigInt(pos.market.noShares || '0');
+      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
+      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
+      const marketYes = Number(BigInt(pos.market.yesShares || '0')) / 1e18;
+      const marketNo = Number(BigInt(pos.market.noShares || '0')) / 1e18;
       const total = marketYes + marketNo;
 
-      if (total > 0n) {
-        const yesPrice = Number(marketNo) / Number(total);
-        const noPrice = Number(marketYes) / Number(total);
+      if (total > 0) {
+        // Bonding curve: price = opposite side / total
+        // YES price = NO_supply / (YES_supply + NO_supply) * UNIT_PRICE
+        // NO price = YES_supply / (YES_supply + NO_supply) * UNIT_PRICE
+        const yesPrice = (marketNo / total) * UNIT_PRICE;
+        const noPrice = (marketYes / total) * UNIT_PRICE;
         
-        totalValue += (Number(yesShares) / 1e18) * yesPrice;
-        totalValue += (Number(noShares) / 1e18) * noPrice;
+        totalValue += (yesShares * yesPrice) + (noShares * noPrice);
       }
     }
   });
@@ -536,12 +546,12 @@ function calculatePortfolioStats(
     const outcome = pos.market.outcome;
     if (outcome === true) {
       // YES won - user gets 0.01 BNB per YES share
-      const yesShares = Number(pos.yesShares || '0') / 1e18;
-      claimableValue += yesShares * 0.01;
+      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
+      claimableValue += yesShares * UNIT_PRICE;
     } else if (outcome === false) {
       // NO won - user gets 0.01 BNB per NO share
-      const noShares = Number(pos.noShares || '0') / 1e18;
-      claimableValue += noShares * 0.01;
+      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
+      claimableValue += noShares * UNIT_PRICE;
     }
   });
 
@@ -583,7 +593,7 @@ function MyMarketCard({ market }: MyMarketCardProps) {
   const statusColor = market.resolved 
     ? 'text-text-muted' 
     : isExpired 
-      ? 'text-warning' 
+      ? 'text-no' 
       : 'text-yes';
   
   const statusText = market.resolved 
@@ -594,25 +604,62 @@ function MyMarketCard({ market }: MyMarketCardProps) {
 
   return (
     <Link to={`/market/${market.marketId || market.id}`}>
-      <Card className="hover:border-cyber transition-colors cursor-pointer h-full">
-        <div className="space-y-3">
+      <Card className="hover:border-cyber transition-colors cursor-pointer h-full flex flex-col overflow-hidden">
+        {/* Market Image */}
+        {market.imageUrl && (
+          <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
+            <img
+              src={market.imageUrl}
+              alt=""
+              className="w-full h-full object-cover market-image"
+            />
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
+            {/* Status badge overlay */}
+            <div className="absolute top-2 right-2">
+              <span className={cn(
+                "text-xs font-mono font-bold px-2 py-1 rounded",
+                market.resolved 
+                  ? "bg-dark-800/80 text-text-muted"
+                  : isExpired 
+                    ? "bg-no/20 text-no"
+                    : "bg-yes/20 text-yes"
+              )}>
+                {statusText}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex-1 flex flex-col">
           {/* Question */}
-          <p className="font-bold text-white line-clamp-2 text-sm">
+          <p className="font-bold text-white line-clamp-2 text-sm min-h-[40px]">
             {market.question}
           </p>
           
-          {/* Status */}
-          <div className="flex items-center justify-between">
-            <span className={cn("text-xs font-mono font-bold", statusColor)}>
-              {statusText}
-            </span>
-            <span className="text-xs text-text-muted font-mono">
-              {market.totalTrades} trades
-            </span>
-          </div>
+          {/* Status (only if no image) */}
+          {!market.imageUrl && (
+            <div className="flex items-center justify-between mt-3">
+              <span className={cn("text-xs font-mono font-bold", statusColor)}>
+                {statusText}
+              </span>
+              <span className="text-xs text-text-muted font-mono">
+                {market.totalTrades} trades
+              </span>
+            </div>
+          )}
+          
+          {/* Trade count (if has image) */}
+          {market.imageUrl && (
+            <div className="flex justify-end mt-2">
+              <span className="text-xs text-text-muted font-mono">
+                {market.totalTrades} trades
+              </span>
+            </div>
+          )}
           
           {/* Stats */}
-          <div className="border-t border-dark-600 pt-3 grid grid-cols-2 gap-2">
+          <div className="border-t border-dark-600 pt-3 mt-auto grid grid-cols-2 gap-2">
             <div>
               <p className="text-xs text-text-muted">VOLUME</p>
               <p className="text-sm font-mono text-white">{totalVolume.toFixed(3)} BNB</p>

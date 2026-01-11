@@ -93,6 +93,8 @@ export function SlippageSettings({ onSlippageChange, className }: SlippageSettin
     setIsCustom(false);
     setCustomInput('');
     saveSlippage(bps);
+    // Notify other components
+    window.dispatchEvent(new Event('slippage-updated'));
   };
 
   const handleCustomChange = (value: string) => {
@@ -103,6 +105,8 @@ export function SlippageSettings({ onSlippageChange, className }: SlippageSettin
       setSlippageBps(bps);
       setIsCustom(true);
       saveSlippage(bps);
+      // Notify other components
+      window.dispatchEvent(new Event('slippage-updated'));
     }
   };
 
@@ -212,17 +216,44 @@ export function SlippageSettings({ onSlippageChange, className }: SlippageSettin
 
 /**
  * Hook to use slippage in components
+ * Uses storage event to sync across components
  */
 export function useSlippage() {
   const [slippageBps, setSlippageBps] = useState(DEFAULT_SLIPPAGE_BPS);
 
   useEffect(() => {
+    // Initial load
     setSlippageBps(getSavedSlippage());
+
+    // Listen for storage changes (from other components or tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SLIPPAGE_STORAGE_KEY && e.newValue) {
+        const parsed = parseInt(e.newValue, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 5000) {
+          setSlippageBps(parsed);
+        }
+      }
+    };
+
+    // Also listen for custom event (for same-tab updates)
+    const handleSlippageUpdate = () => {
+      setSlippageBps(getSavedSlippage());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('slippage-updated', handleSlippageUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('slippage-updated', handleSlippageUpdate);
+    };
   }, []);
 
   const updateSlippage = (bps: number) => {
     setSlippageBps(bps);
     saveSlippage(bps);
+    // Dispatch custom event to notify other components in the same tab
+    window.dispatchEvent(new Event('slippage-updated'));
   };
 
   return {

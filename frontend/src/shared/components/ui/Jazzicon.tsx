@@ -108,7 +108,6 @@ interface AddressDisplayProps {
 export function AddressDisplay({
   address,
   truncateLength = 4,
-  iconSize = 24,
   showFullOnHover = true,
   className,
 }: AddressDisplayProps) {
@@ -122,7 +121,6 @@ export function AddressDisplay({
       )}
       title={showFullOnHover ? address : undefined}
     >
-      <Jazzicon address={address} size={iconSize} border="none" />
       <span className="text-text-secondary">{truncated}</span>
     </div>
   );

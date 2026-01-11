@@ -2,6 +2,56 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.2] - 2026-01-12
+
+### Added
+
+#### Trade History Improvements
+- **New REALIZED P/L tab** in market detail page showing per-wallet realized profit/loss
+- Only wallets that have sold shares appear in Realized P/L
+- Uses average cost basis calculation for accurate P/L
+- Shows profit/loss in BNB and percentage
+- Sorted by absolute P/L (biggest winners/losers first)
+
+#### Market Creation Enhancements
+- Image URL is now **required** when creating markets
+- Added helper link to [postimages.org](https://postimages.org/) for easy image uploads
+
+### Changed
+
+#### Simplified Trade History
+- Removed PNL badges and tooltips from TRADES tab
+- Clean trade list showing: side, amount, shares, trader, time
+- No hover effects or expandable details - keeps it simple
+
+#### Improved Finalize/Claim Flow
+- **Separated finalize and claim into two distinct actions**
+- First click: "FINALIZE" button (one transaction)
+- After finalize: "CLAIM" button appears (separate transaction)
+- After claim: Shows "✓ CLAIMED" (disabled)
+- Local state updates immediately - no page refresh needed
+
+#### Portfolio Position Cards
+- Removed "If Sold Now" row (unreliable due to bonding curve)
+- Button states now properly show: FINALIZE → CLAIM → CLAIMED
+- Position cards update after successful finalize without refresh
+
+#### UI Cleanup
+- Removed Jazzicon (colored circle) from wallet address displays
+- Addresses now shown as plain text only
+- Changed "NO HOLDERS YET" to "NO HOLDERS" (someone could have sold)
+- Removed "*required" label from Image field (validation handles it)
+
+### Fixed
+
+#### Finalize/Claim Double Transaction Bug
+- Previously clicking "FINALIZE TO CLAIM" triggered both transactions at once
+- Now properly separates into two distinct user actions
+- Users can finalize first, then claim separately
+- If someone else finalizes, you immediately see "CLAIM" button
+
+---
+
 ## [0.7.1] - 2026-01-11
 
 ### Added
@@ -20,7 +70,29 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 - WalletConnect and Rainbow wallet connections now work properly
 - Mobile wallet connections (MetaMask app, etc.) now functional
 
+#### Wrong Win/Loss Status in Resolution Panel
+- Fixed users with 0 winning shares incorrectly seeing "YOU WON!" message
+- `canClaim` now checks for **winning shares** instead of **total shares**
+- Added explicit `winningShares` and `losingShares` variables for clarity
+- Users with shares on the losing side now correctly see "YOU LOST" message
+
+#### Balance Not Updating After Trades
+- Added `queryClient.invalidateQueries({ queryKey: ['balance'] })` after successful trades
+- Balance in Header (RainbowKit) now updates immediately after trades
+- Fixed in: TradePanel, CreateMarketPage, PortfolioPage withdrawals
+
+#### Slippage Settings Not Syncing
+- Added custom event `slippage-updated` to sync slippage across components
+- `useSlippage()` hook now listens for storage changes and custom events
+- Changing slippage in dropdown now immediately updates trade calculations
+- No longer need to refresh page to see new slippage value
+
 ### Changed
+
+#### Updated Logo Assets
+- **New site logo**: `jnglz-logo.png` (JNGLZFUN brand logo) for favicon, EntryModal header, and footer
+- **Monkey logo**: `logo.png` remains for trader avatars (Jazzicon component) only
+- Cleaner brand identity throughout the site
 
 #### Dependency Updates
 - Downgraded `wagmi` from 3.2.0 to 2.19.5 (RainbowKit compatibility)

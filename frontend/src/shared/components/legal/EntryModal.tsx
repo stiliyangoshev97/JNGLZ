@@ -80,7 +80,7 @@ export function EntryModal() {
         {/* Header */}
         <div className="border-b border-cyber px-6 py-4 bg-cyber/10">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
+            <img src="/jnglz-logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
             <div>
               <h1 className="text-2xl font-black text-cyber">JNGLZ.FUN</h1>
               <p className="text-xs text-text-secondary font-mono">PREDICTION MARKETS ON BNB CHAIN</p>
@@ -176,6 +176,15 @@ export function EntryModal() {
             {/* Bond Rewards - WITH DISPUTE */}
             <div>
               <span className="text-yellow-500 font-bold">⚔️ If Disputed (Voting Decides):</span>
+              
+              {/* Vote Weight Clarification */}
+              <div className="mt-2 p-2 bg-cyber/10 border border-cyber/30 rounded text-xs">
+                <p className="text-cyber font-bold mb-1">📊 How Voting Works:</p>
+                <p className="text-text-secondary">
+                  Your vote weight = <strong className="text-white">ALL your shares</strong> (YES + NO combined).
+                  You're voting on <em>which resolution is correct</em>, not which side wins.
+                </p>
+              </div>
               
               {/* Sub-scenario: Original Proposer Wins */}
               <div className="mt-2 ml-2 border-l-2 border-yes/30 pl-3">

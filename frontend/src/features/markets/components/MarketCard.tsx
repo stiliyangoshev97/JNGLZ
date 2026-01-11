@@ -95,8 +95,8 @@ export function MarketCard({ market, className }: MarketCardProps) {
           </div>
         )}
 
-        {/* Question */}
-        <h3 className="text-base font-semibold text-white line-clamp-2 mb-3 group-hover:text-cyber transition-colors">
+        {/* Question - fixed min-height for consistent layout across cards */}
+        <h3 className="text-base font-semibold text-white line-clamp-2 mb-3 min-h-[48px] group-hover:text-cyber transition-colors">
           {market.question}
         </h3>
 

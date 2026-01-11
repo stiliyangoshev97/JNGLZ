@@ -24,7 +24,7 @@ import type { Market } from '@/shared/schemas';
 import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
-type FilterOption = 'active' | 'expired' | 'resolved';
+type FilterOption = 'active' | 'pending' | 'resolved';
 
 export function MarketsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('volume');
@@ -35,6 +35,7 @@ export function MarketsPage() {
   const { data, loading, error, refetch } = useQuery<GetMarketsResponse>(GET_MARKETS, {
     variables: { first: 100 },
     notifyOnNetworkStatusChange: false,
+    fetchPolicy: 'cache-and-network', // Always fetch fresh data on mount
   });
 
   // Setup focus refetch (triggers refetch when tab becomes visible)
@@ -87,7 +88,8 @@ export function MarketsPage() {
       switch (filterBy) {
         case 'active':
           return !isExpired && !isResolved;
-        case 'expired':
+        case 'pending':
+          // Pending resolution: expired but not resolved (proposal/dispute/voting)
           return isExpired && !isResolved;
         case 'resolved':
           return isResolved;
@@ -118,14 +120,14 @@ export function MarketsPage() {
   // Count markets by category
   const marketCounts = useMemo(() => {
     const now = Date.now();
-    let active = 0, expired = 0, resolved = 0;
+    let active = 0, pending = 0, resolved = 0;
     allMarkets.forEach((market) => {
       const expiryMs = Number(market.expiryTimestamp) * 1000;
       if (market.resolved) resolved++;
-      else if (now > expiryMs) expired++;
+      else if (now > expiryMs) pending++;
       else active++;
     });
-    return { active, expired, resolved };
+    return { active, pending, resolved };
   }, [allMarkets]);
 
   return (
@@ -201,19 +203,19 @@ export function MarketsPage() {
                   ACTIVE
                 </FilterButton>
                 <FilterButton
-                  active={filterBy === 'expired'}
-                  onClick={() => setFilterBy('expired')}
-                  count={marketCounts.expired}
+                  active={filterBy === 'pending'}
+                  onClick={() => setFilterBy('pending')}
+                  count={marketCounts.pending}
                 >
-                EXPIRED
-              </FilterButton>
-              <FilterButton
-                active={filterBy === 'resolved'}
-                onClick={() => setFilterBy('resolved')}
-                count={marketCounts.resolved}
-              >
-                RESOLVED
-              </FilterButton>
+                  PENDING
+                </FilterButton>
+                <FilterButton
+                  active={filterBy === 'resolved'}
+                  onClick={() => setFilterBy('resolved')}
+                  count={marketCounts.resolved}
+                >
+                  RESOLVED
+                </FilterButton>
               </div>
             </div>
 

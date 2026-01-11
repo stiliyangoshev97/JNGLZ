@@ -11,7 +11,7 @@
  * @module features/markets/components/ResolutionPanel
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
@@ -34,6 +34,7 @@ import type { Market } from '@/shared/schemas';
 
 interface ResolutionPanelProps {
   market: Market;
+  onActionSuccess?: () => void;
 }
 
 // Time constants (from contract)
@@ -42,7 +43,7 @@ const DISPUTE_WINDOW = 30 * 60 * 1000; // 30 minutes
 const VOTING_WINDOW = 60 * 60 * 1000; // 1 hour
 const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 
-export function ResolutionPanel({ market }: ResolutionPanelProps) {
+export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProps) {
   const { address } = useAccount();
   const { canTrade } = useChainValidation();
   
@@ -82,16 +83,31 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const hasVoted = position?.hasVoted || false;
   const hasEmergencyRefunded = position?.emergencyRefunded || false;
   
+  // Calculate winning shares based on market outcome
+  const winningShares = market.outcome ? userYesShares : userNoShares;
+  const losingShares = market.outcome ? userNoShares : userYesShares;
+  
   // Form states
   const [proposedOutcome, setProposedOutcome] = useState<boolean>(true);
 
   // Contract write hooks
-  const { proposeOutcome, isPending: isProposing, isConfirming: isConfirmingPropose } = useProposeOutcome();
-  const { dispute, isPending: isDisputing, isConfirming: isConfirmingDispute } = useDispute();
-  const { vote, isPending: isVoting, isConfirming: isConfirmingVote } = useVote();
-  const { finalizeMarket, isPending: isFinalizing, isConfirming: isConfirmingFinalize } = useFinalizeMarket();
+  const { proposeOutcome, isPending: isProposing, isConfirming: isConfirmingPropose, isSuccess: proposeSuccess } = useProposeOutcome();
+  const { dispute, isPending: isDisputing, isConfirming: isConfirmingDispute, isSuccess: disputeSuccess } = useDispute();
+  const { vote, isPending: isVoting, isConfirming: isConfirmingVote, isSuccess: voteSuccess } = useVote();
+  const { finalizeMarket, isPending: isFinalizing, isConfirming: isConfirmingFinalize, isSuccess: finalizeSuccess } = useFinalizeMarket();
   const { claim, isPending: isClaiming, isConfirming: isConfirmingClaim } = useClaim();
   const { emergencyRefund, isPending: isRefunding, isConfirming: isConfirmingRefund } = useEmergencyRefund();
+
+  // Trigger refetch when any action succeeds
+  useEffect(() => {
+    if (proposeSuccess || disputeSuccess || voteSuccess || finalizeSuccess) {
+      // Wait for subgraph to index (3 seconds)
+      const timer = setTimeout(() => {
+        onActionSuccess?.();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [proposeSuccess, disputeSuccess, voteSuccess, finalizeSuccess, onActionSuccess]);
 
   // Calculate timestamps
   const expiryMs = Number(market.expiryTimestamp) * 1000;
@@ -115,11 +131,15 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const inCreatorPriority = isExpired && now < expiryMs + CREATOR_PRIORITY_WINDOW;
   const isCreator = address?.toLowerCase() === market.creatorAddress?.toLowerCase();
   
+  // Check if current user is the proposer (proposer cannot dispute their own proposal)
+  const isProposer = address?.toLowerCase() === market.proposer?.toLowerCase();
+  
   // Can only propose if market has participants (contract will revert with NoTradesToResolve otherwise)
   const canPropose = isExpired && !hasProposal && !isEmptyMarket && (inCreatorPriority ? isCreator : true);
   
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
-  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd;
+  // Proposer cannot dispute their own proposal
+  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd && !isProposer;
   
   const votingWindowEnd = disputeMs + VOTING_WINDOW;
   const canVote = hasDispute && now < votingWindowEnd && totalShares > 0n && !hasVoted;
@@ -129,7 +149,8 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
     (!hasDispute && now > disputeWindowEnd)
   );
   
-  const canClaim = isResolved && totalShares > 0n && !hasClaimed;
+  // Can only claim if resolved AND user has shares on the WINNING side
+  const canClaim = isResolved && winningShares > 0n && !hasClaimed;
   
   // Emergency refund: 24h after expiry, market not resolved, user has shares, hasn't refunded
   // NOTE: Contract allows emergency refund even if there IS a proposal (as long as not resolved)
@@ -147,6 +168,12 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
+
+  // Detect tie scenario: disputed, voting ended, equal votes, not resolved
+  const proposerVotes = BigInt(market.proposerVoteWeight || '0');
+  const disputerVotes = BigInt(market.disputerVoteWeight || '0');
+  const isTie = hasDispute && now > votingWindowEnd && !isResolved && 
+    proposerVotes === disputerVotes && (proposerVotes > 0n || disputerVotes > 0n);
 
   // Don't show panel if market is active
   if (!isExpired && !isResolved) {
@@ -230,13 +257,32 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         )}
 
         {/* Resolution Failed Warning */}
-        {resolutionMayHaveFailed && !canEmergencyRefund && (
+        {resolutionMayHaveFailed && !canEmergencyRefund && !isTie && (
           <div className="p-3 bg-dark-800 border border-no/50 text-sm">
             <p className="text-no font-bold mb-2">⚠️ RESOLUTION BLOCKED</p>
             <p className="text-text-secondary text-xs mb-2">
               The proposed outcome ({market.proposedOutcome ? 'YES' : 'NO'}) has no shareholders. 
               The market cannot resolve to an empty side.
             </p>
+            <p className="text-text-muted text-xs">
+              Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Tie Warning */}
+        {isTie && !canEmergencyRefund && (
+          <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
+            <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING ENDED IN TIE</p>
+            <p className="text-text-secondary text-xs mb-2">
+              The vote ended with equal support for both sides ({formatShares(proposerVotes)} votes each). 
+              When the community can't decide, nobody gets punished.
+            </p>
+            <div className="text-xs space-y-1 mb-2">
+              <p className="text-yes">✓ Proposer bond returned (no penalty)</p>
+              <p className="text-yes">✓ Disputer bond returned (no penalty)</p>
+              <p className="text-cyber">⏳ Emergency refund available for all traders</p>
+            </div>
             <p className="text-text-muted text-xs">
               Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
             </p>
@@ -291,7 +337,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
             
             {/* Proposer Reward Info Box */}
             <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
-              <p className="text-cyber font-bold">💰 RESOLUTION ECONOMICS</p>
+              <p className="text-cyber font-bold">RESOLUTION ECONOMICS</p>
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-text-muted">Your bond:</span>
@@ -367,17 +413,27 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {/* Dispute Section */}
         {canDispute && !isResolved && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
-            <p className="text-sm text-text-secondary">
-              Disagree with the proposal? Dispute it to trigger shareholder voting.
-            </p>
+            {/* Dispute Economics Box */}
+            <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
+              <p className="text-no font-bold">⚔️ DISPUTE ECONOMICS</p>
+              <div className="text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-text-muted">Your bond:</span>
+                  <span className="text-white font-mono">{formatBNB(disputeBond)} BNB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted">If you win vote:</span>
+                  <span className="text-yes font-mono">+{formatBNB(proposerBondFromMarket)} BNB (proposer's bond)</span>
+                </div>
+              </div>
+              <div className="border-t border-dark-600 pt-2 text-xs">
+                <p className="text-yes mb-1">✓ <span className="font-bold">If you win:</span> Your bond back + proposer's bond</p>
+                <p className="text-no">✗ <span className="font-bold">If you lose:</span> Your bond goes to proposer</p>
+              </div>
+            </div>
             
             <div className="text-xs text-text-muted">
               Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(disputeWindowEnd)}</span>
-            </div>
-
-            <div className="text-xs text-text-muted">
-              Required bond: <span className="text-no font-mono">{formatBNB(disputeBond)} BNB</span>
-              <span className="text-text-muted"> (2× proposer bond + 0.3% fee)</span>
             </div>
 
             <Button
@@ -398,6 +454,19 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
           </div>
         )}
 
+        {/* Proposer Can't Dispute Notice */}
+        {isProposer && hasProposal && !hasDispute && now < disputeWindowEnd && !isResolved && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+            <p className="text-text-muted">
+              ✓ You proposed <span className={market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold'}>{market.proposedOutcome ? 'YES' : 'NO'}</span>. 
+              Waiting for dispute window to end.
+            </p>
+            <p className="text-xs text-text-muted mt-1">
+              Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(disputeWindowEnd)}</span>
+            </p>
+          </div>
+        )}
+
         {/* Vote Section */}
         {canVote && !isResolved && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
@@ -406,11 +475,15 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
               <p className="text-text-secondary text-xs">
                 Vote weight: <span className="text-cyber font-mono">{formatShares(totalShares)}</span> shares
               </p>
+              <p className="text-text-muted text-xs mt-1">
+                Your weight = <strong className="text-white">ALL shares</strong> (YES + NO). You're voting on which resolution is correct, not which side wins.
+              </p>
             </div>
 
             <div className="text-xs text-text-muted space-y-1">
               <div>Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(votingWindowEnd)}</span></div>
-              <div className="text-yes">💰 No bond required! Only pay gas (~$0.01). Correct voters share jury fees.</div>
+              <div className="text-yes">✓ No bond required - only gas (~$0.01)</div>
+              <div className="text-yes">✓ Winning voters share <span className="text-white font-mono">{formatBNB(disputeBond)}</span> BNB (loser's bond)</div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -478,7 +551,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
             <div className="p-3 bg-yes/10 border border-yes text-sm">
               <p className="text-yes font-bold mb-1">🎉 YOU WON!</p>
               <p className="text-text-secondary text-xs">
-                You have {formatShares(market.outcome ? userYesShares : userNoShares)} winning shares
+                You have {formatShares(winningShares)} winning shares
               </p>
             </div>
             <Button
@@ -510,9 +583,32 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {/* Emergency Refund */}
         {canEmergencyRefund && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
-            <p className="text-sm text-text-secondary">
-              This market hasn't been resolved within 24h after expiry. You can claim a proportional refund.
-            </p>
+            {/* Explain why refund is available */}
+            {isTie ? (
+              <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
+                <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING TIED - REFUND AVAILABLE</p>
+                <p className="text-text-secondary text-xs">
+                  The vote ended in an exact 50/50 tie. Since the community couldn't reach consensus, 
+                  all traders can claim a proportional refund based on their total shares.
+                </p>
+              </div>
+            ) : resolutionMayHaveFailed ? (
+              <div className="p-3 bg-dark-800 border border-no/50 text-sm">
+                <p className="text-no font-bold mb-2">🛡️ EMPTY WINNER PROTECTION</p>
+                <p className="text-text-secondary text-xs">
+                  The proposed winning side ({market.proposedOutcome ? 'YES' : 'NO'}) had no shareholders.
+                  Resolution was blocked to protect funds. All traders can claim a proportional refund.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+                <p className="text-cyber font-bold mb-2">🆘 EMERGENCY REFUND</p>
+                <p className="text-text-secondary text-xs">
+                  This market wasn't resolved within 24 hours after expiry. 
+                  You can claim a proportional refund based on your total shares.
+                </p>
+              </div>
+            )}
             <Button
               variant="ghost"
               onClick={handleEmergencyRefund}
@@ -525,7 +621,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                   REFUNDING...
                 </span>
               ) : (
-                'EMERGENCY REFUND'
+                'CLAIM REFUND'
               )}
             </Button>
           </div>
@@ -559,8 +655,8 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
             {totalShares === 0n ? (
               <p className="text-text-muted text-xs mt-1">You didn't participate in this market</p>
             ) : (
-              <p className="text-text-muted text-xs mt-1">
-                You had {market.outcome ? formatShares(userNoShares) : formatShares(userYesShares)} losing shares
+              <p className="text-no text-xs mt-1">
+                You lost with {formatShares(losingShares)} shares on the wrong side
               </p>
             )}
           </div>

@@ -35,13 +35,22 @@ import { Button } from '@/shared/components/ui/Button';
 import { LoadingOverlay } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { TradePanel } from '../components';
-import { TradeHistory } from '../components';
+import { TradeHistory, RealizedPnl } from '../components/TradeHistory';
 import { PriceChart } from '../components';
 import { ResolutionPanel } from '../components';
 import { formatTimeRemaining, calculateYesPercent, calculateNoPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
+import type { Trade } from '@/shared/schemas';
+
+// Position data interface for holders
+interface HolderPosition {
+  user: { address: string };
+  yesShares: string;
+  noShares: string;
+  totalInvested: string;
+}
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
@@ -269,7 +278,7 @@ export function MarketDetailPage() {
                   isActive={isActive}
                   onTradeSuccess={refreshMarket}
                 />
-                <ResolutionPanel market={market} />
+                <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
                 
                 {/* Heat Level Info - Hidden on mobile, visible on desktop */}
                 <div className="hidden lg:block border border-dark-600 bg-dark-900">
@@ -301,15 +310,11 @@ export function MarketDetailPage() {
                 </div>
               </div>
 
-              {/* Trade History */}
+              {/* Trade History & Holders Tabs */}
               <div className="border border-dark-600 bg-dark-900">
-                <div className="border-b border-dark-600 px-4 py-3">
-                  <h2 className="font-bold uppercase">RECENT TRADES</h2>
-                </div>
-                <TradeHistory 
-                  trades={trades} 
+                <TradesAndHoldersTabs
+                  trades={trades}
                   positions={positions}
-                  currentYesPercent={yesPercent}
                 />
               </div>
               
@@ -387,6 +392,168 @@ function MarketInfoCompact({ market }: { market: Market }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Tabbed interface for Trades, Realized P/L, and Holders
+ */
+function TradesAndHoldersTabs({ 
+  trades, 
+  positions, 
+}: { 
+  trades: Trade[]; 
+  positions: HolderPosition[];
+}) {
+  const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders'>('trades');
+
+  return (
+    <>
+      {/* Tab Headers */}
+      <div className="border-b border-dark-600 flex">
+        <button
+          onClick={() => setActiveTab('trades')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold uppercase transition-colors",
+            activeTab === 'trades'
+              ? "text-cyber border-b-2 border-cyber bg-cyber/5"
+              : "text-text-secondary hover:text-white"
+          )}
+        >
+          TRADES
+        </button>
+        <button
+          onClick={() => setActiveTab('realized')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold uppercase transition-colors",
+            activeTab === 'realized'
+              ? "text-cyber border-b-2 border-cyber bg-cyber/5"
+              : "text-text-secondary hover:text-white"
+          )}
+        >
+          REALIZED P/L
+        </button>
+        <button
+          onClick={() => setActiveTab('holders')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold uppercase transition-colors",
+            activeTab === 'holders'
+              ? "text-cyber border-b-2 border-cyber bg-cyber/5"
+              : "text-text-secondary hover:text-white"
+          )}
+        >
+          HOLDERS
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'trades' ? (
+        <TradeHistory trades={trades} />
+      ) : activeTab === 'realized' ? (
+        <RealizedPnl trades={trades} />
+      ) : (
+        <HoldersTable positions={positions} />
+      )}
+    </>
+  );
+}
+
+/**
+ * Holders table showing shareholders sorted by total shares
+ */
+function HoldersTable({ positions }: { positions: HolderPosition[] }) {
+  // Process and sort holders by total shares
+  const sortedHolders = useMemo(() => {
+    return positions
+      .map(pos => {
+        const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
+        const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
+        const totalShares = yesShares + noShares;
+        return {
+          address: pos.user.address,
+          yesShares,
+          noShares,
+          totalShares,
+        };
+      })
+      .filter(h => h.totalShares > 0)
+      .sort((a, b) => b.totalShares - a.totalShares);
+  }, [positions]);
+
+  // Get status badge based on shares
+  const getStatusBadge = (totalShares: number) => {
+    if (totalShares > 1000) {
+      return { label: 'Apex', emoji: '👑', color: 'text-yellow-400' };
+    } else if (totalShares >= 500) {
+      return { label: 'Predator', emoji: '🐆', color: 'text-purple-400' };
+    }
+    return { label: 'Monke', emoji: '🐒', color: 'text-text-muted' };
+  };
+
+  if (sortedHolders.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-text-muted font-mono">NO HOLDERS</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-dark-700">
+      {/* Header */}
+      <div className="px-4 py-2 bg-dark-800 flex items-center gap-3 text-xs font-mono text-text-muted">
+        <div className="w-8 text-center">#</div>
+        <div className="flex-1">HOLDER</div>
+        <div className="w-24 text-right">SHARES</div>
+        <div className="w-20 text-center">SIDE</div>
+        <div className="w-24 text-right">STATUS</div>
+      </div>
+      
+      {/* Rows */}
+      {sortedHolders.map((holder, index) => {
+        const status = getStatusBadge(holder.totalShares);
+        const hasYes = holder.yesShares > 0;
+        const hasNo = holder.noShares > 0;
+        
+        return (
+          <div key={holder.address} className="px-4 py-3 flex items-center gap-3 hover:bg-dark-800/50">
+            {/* Rank */}
+            <div className="w-8 text-center font-mono text-text-muted">
+              {index + 1}
+            </div>
+            
+            {/* Address */}
+            <div className="flex-1 min-w-0">
+              <AddressDisplay address={holder.address} iconSize={20} truncateLength={4} />
+            </div>
+            
+            {/* Total Shares */}
+            <div className="w-24 text-right font-mono text-white">
+              {holder.totalShares.toFixed(2)}
+            </div>
+            
+            {/* Side */}
+            <div className="w-20 text-center flex justify-center gap-1">
+              {hasYes && hasNo ? (
+                <>
+                  <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
+                  <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
+                </>
+              ) : hasYes ? (
+                <span className="text-yes text-xs font-bold">YES</span>
+              ) : (
+                <span className="text-no text-xs font-bold">NO</span>
+              )}
+            </div>
+            
+            {/* Status Badge */}
+            <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
+              {status.emoji} {status.label}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

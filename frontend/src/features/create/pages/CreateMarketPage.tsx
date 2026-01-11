@@ -20,6 +20,7 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -70,9 +71,8 @@ const createMarketSchema = z.object({
     .or(z.literal('')),
   imageUrl: z
     .string()
-    .url('Must be a valid URL')
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'Image URL is required')
+    .url('Must be a valid URL'),
   durationHours: z.number().min(1, 'Min 1 hour').max(8760, 'Max 365 days'),
   heatLevel: z.number().min(0).max(2), // 0=CRACK, 1=HIGH, 2=PRO
   // Optional first trade
@@ -87,6 +87,7 @@ export function CreateMarketPage() {
   const navigate = useNavigate();
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
+  const queryClient = useQueryClient();
   
   // Get user's BNB balance
   const { data: balanceData } = useBalance({
@@ -202,14 +203,18 @@ export function CreateMarketPage() {
   // Navigate on success - redirect to the created market
   useEffect(() => {
     if (isSuccess && createdMarketId) {
+      // Invalidate balance queries so Header updates
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Wait a bit longer for subgraph to index (5 seconds)
       // The market page will show loading state if not indexed yet
       setTimeout(() => navigate(`/market/${createdMarketId}`), 5000);
     } else if (isSuccess && hash && !createdMarketId) {
+      // Invalidate balance queries so Header updates
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Fallback: if we couldn't parse marketId, go to markets page
       setTimeout(() => navigate('/'), 3000);
     }
-  }, [isSuccess, hash, createdMarketId, navigate]);
+  }, [isSuccess, hash, createdMarketId, navigate, queryClient]);
 
   const onSubmit = async (data: CreateMarketForm) => {
     if (!canTrade) return;
@@ -449,15 +454,19 @@ export function CreateMarketPage() {
                 {errors.resolutionRules && (
                   <p className="text-no text-xs mt-1">{errors.resolutionRules.message}</p>
                 )}
+                <p className="text-text-muted text-xs mt-2">
+                  <span className="text-yellow-500">⚠️ Note:</span> These rules are guidelines for proposers and voters. 
+                  Final outcome is determined by Street Consensus (proposal → dispute → vote). 
+                  The market may resolve differently if disputed.
+                </p>
               </div>
             </div>
           </Card>
 
-          {/* Image - Optional */}
+          {/* Image */}
           <Card className="p-6">
             <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
               <span className="text-cyber">05</span> IMAGE
-              <span className="text-text-muted text-xs font-normal">(optional)</span>
             </h2>
             <Input
               {...register('imageUrl')}
@@ -465,6 +474,18 @@ export function CreateMarketPage() {
               error={errors.imageUrl?.message}
               helperText="Direct link to an image (JPG, PNG, GIF)"
             />
+            <p className="text-xs text-text-muted mt-2">
+              💡 Need to upload an image? Use{' '}
+              <a 
+                href="https://postimages.org/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-cyber hover:underline"
+              >
+                postimages.org
+              </a>
+              {' '}to upload and get a direct link.
+            </p>
           </Card>
 
           {/* First Trade - OPTIONAL */}

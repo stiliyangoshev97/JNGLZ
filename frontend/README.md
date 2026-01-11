@@ -394,4 +394,4 @@ src/
 
 ## 📈 Version
 
-**Current:** 0.7.0 (Predator Polling Engine v2)
+**Current:** 0.7.2 (Realized P/L + Finalize/Claim Flow)
