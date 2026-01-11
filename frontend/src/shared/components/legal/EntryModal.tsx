@@ -1,7 +1,7 @@
 /**
  * ===== ENTRY MODAL COMPONENT =====
  *
- * First-time visitor modal explaining how JunkieFun works.
+ * First-time visitor modal explaining how JNGLZ.FUN works.
  * Includes: 3-step guide, age verification, risk disclaimer.
  * Must be confirmed before using the platform.
  *
@@ -80,9 +80,9 @@ export function EntryModal() {
         {/* Header */}
         <div className="border-b border-cyber px-6 py-4 bg-cyber/10">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="JunkieFun" className="h-10 w-10" />
+            <img src="/logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
             <div>
-              <h1 className="text-2xl font-black text-cyber">JUNKIEFUN</h1>
+              <h1 className="text-2xl font-black text-cyber">JNGLZ.FUN</h1>
               <p className="text-xs text-text-secondary font-mono">PREDICTION MARKETS ON BNB CHAIN</p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export function EntryModal() {
             <div>
               <h3 className="text-sm font-bold text-no mb-1">RISK DISCLAIMER</h3>
               <p className="text-xs text-text-secondary leading-relaxed">
-                JunkieFun is a <strong className="text-white">decentralized protocol</strong>. 
+                JNGLZ.FUN is a <strong className="text-white">decentralized protocol</strong>. 
                 All markets are user-created. You are interacting directly with smart contracts 
                 at your own risk. Past performance does not guarantee future results. 
                 Never invest more than you can afford to lose.

@@ -12,7 +12,7 @@
 
 /**
  * Color palette for jazzicons
- * Based on the JunkieFun theme colors
+ * Based on the JNGLZ.FUN theme colors
  */
 const COLORS = [
   '#39FF14', // Electric Lime (YES)

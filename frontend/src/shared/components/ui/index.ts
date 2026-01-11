@@ -1,7 +1,7 @@
 /**
  * UI Components Barrel Export
  *
- * All brutalist UI components for JunkieFun.
+ * All brutalist UI components for JNGLZ.FUN.
  *
  * @module shared/components/ui
  */

@@ -79,7 +79,7 @@ export function ErrorBoundary() {
 
           {/* Description */}
           <p className="text-text-secondary font-mono mb-6 leading-relaxed">
-            A new version of JUNKIEFUN is available. Hit refresh to get the latest 
+            A new version of JNGLZ.FUN is available. Hit refresh to get the latest 
             updates and continue trading.
           </p>
 
@@ -171,7 +171,7 @@ export function ErrorBoundary() {
         <p className="mt-6 text-xs text-text-muted font-mono">
           If this keeps happening, try clearing your cache or{' '}
           <a 
-            href="https://twitter.com/junkiefun" 
+            href="https://twitter.com/jnglzfun" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-cyber hover:underline"

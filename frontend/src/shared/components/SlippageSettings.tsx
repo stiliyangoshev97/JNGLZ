@@ -19,7 +19,7 @@ const SLIPPAGE_PRESETS = [
 ];
 
 // Local storage key
-const SLIPPAGE_STORAGE_KEY = 'junkiefun_slippage_bps';
+const SLIPPAGE_STORAGE_KEY = 'jnglz_slippage_bps';
 
 // Default slippage: 1% (100 bps)
 export const DEFAULT_SLIPPAGE_BPS = 100;

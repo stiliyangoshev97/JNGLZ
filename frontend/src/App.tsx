@@ -1,5 +1,5 @@
 /**
- * JunkieFun App Root
+ * JNGLZ.FUN App Root
  *
  * Main application component that wraps everything with providers
  * and renders the router.

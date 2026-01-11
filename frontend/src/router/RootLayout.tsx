@@ -54,16 +54,16 @@ function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="JunkieFun" className="h-6 w-6" />
+            <img src="/logo.png" alt="JNGLZ.FUN" className="h-6 w-6" />
             <span className="text-sm text-text-secondary">
-              © 2026 JunkieFun - Decentralized Prediction Markets
+              © 2026 JNGLZ.FUN - Decentralized Prediction Markets
             </span>
           </div>
 
           {/* Links */}
           <div className="flex items-center gap-6 text-sm font-mono">
             <a
-              href="https://github.com/junkiefun"
+              href="https://github.com/jnglz"
               target="_blank"
               rel="noopener noreferrer"
               className="text-text-secondary hover:text-cyber transition-colors"
@@ -71,7 +71,7 @@ function Footer() {
               GITHUB
             </a>
             <a
-              href="https://twitter.com/junkiefun"
+              href="https://twitter.com/jnglzfun"
               target="_blank"
               rel="noopener noreferrer"
               className="text-text-secondary hover:text-cyber transition-colors"

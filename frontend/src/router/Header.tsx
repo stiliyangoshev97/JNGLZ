@@ -30,7 +30,7 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center group">
             <span className="text-xl font-bold text-white tracking-tight">
-              JUNKIE<span className="text-cyber">FUN</span>
+              JNGLZ<span className="text-cyber">.FUN</span>
             </span>
           </Link>
 

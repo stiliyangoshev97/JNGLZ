@@ -1,7 +1,7 @@
 /**
  * ===== PRIVACY POLICY PAGE =====
  *
- * Privacy policy for JunkieFun platform.
+ * Privacy policy for JNGLZ.FUN platform.
  * Emphasizes decentralized nature and on-chain transparency.
  *
  * @module features/legal/pages/PrivacyPage
@@ -35,7 +35,7 @@ export function PrivacyPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                JunkieFun ("Protocol", "we", "us") is a <strong className="text-white">decentralized application</strong> that 
+                JNGLZ.FUN ("Protocol", "we", "us") is a <strong className="text-white">decentralized application</strong> that 
                 respects user privacy. This Privacy Policy explains what data we collect, how we use it, 
                 and your rights regarding your information.
               </p>
@@ -58,7 +58,7 @@ export function PrivacyPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                <strong className="text-white">IMPORTANT:</strong> JunkieFun operates on the BNB Chain blockchain. 
+                <strong className="text-white">IMPORTANT:</strong> JNGLZ.FUN operates on the BNB Chain blockchain. 
                 By nature of blockchain technology:
               </p>
               <ul className="list-disc list-inside space-y-2">
@@ -69,7 +69,7 @@ export function PrivacyPage() {
               </ul>
               <p className="text-no mt-4">
                 This data CANNOT be deleted or made private. This is inherent to blockchain technology, 
-                not a choice made by JunkieFun.
+                not a choice made by JNGLZ.FUN.
               </p>
             </div>
           </section>
@@ -135,7 +135,7 @@ export function PrivacyPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                The following third-party services may process data when you use JunkieFun:
+                The following third-party services may process data when you use JNGLZ.FUN:
               </p>
               <ul className="list-disc list-inside space-y-2">
                 <li>
@@ -198,7 +198,7 @@ export function PrivacyPage() {
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
                 As a decentralized protocol that does not collect personal information, 
-                JunkieFun is designed with privacy by default.
+                JNGLZ.FUN is designed with privacy by default.
               </p>
               <p>
                 If you believe we hold any personal data about you, contact us and we will 
@@ -214,7 +214,7 @@ export function PrivacyPage() {
             </h2>
             <div className="text-text-secondary pl-4">
               <p>
-                JunkieFun is <strong className="text-no">NOT intended for anyone under 18 years old</strong> 
+                JNGLZ.FUN is <strong className="text-no">NOT intended for anyone under 18 years old</strong> 
                 (or 21 in jurisdictions where required). We do not knowingly interact with minors.
               </p>
             </div>
@@ -243,8 +243,8 @@ export function PrivacyPage() {
                 For privacy-related questions, contact us via:
               </p>
               <ul className="list-disc list-inside mt-2">
-                <li>Twitter: <a href="https://twitter.com/junkiefun" className="text-cyber hover:underline">@junkiefun</a></li>
-                <li>GitHub: <a href="https://github.com/junkiefun" className="text-cyber hover:underline">github.com/junkiefun</a></li>
+                <li>Twitter: <a href="https://twitter.com/jnglzfun" className="text-cyber hover:underline">@jnglzfun</a></li>
+                <li>GitHub: <a href="https://github.com/jnglzfun" className="text-cyber hover:underline">github.com/jnglzfun</a></li>
               </ul>
             </div>
           </section>

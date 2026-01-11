@@ -38,7 +38,7 @@ const chains = env.ENABLE_TESTNET
  * - Auto-reconnect on page load
  */
 export const wagmiConfig = getDefaultConfig({
-  appName: 'JunkieFun',
+  appName: 'JNGLZ.FUN',
   projectId: env.WALLETCONNECT_PROJECT_ID,
   chains,
   transports: {

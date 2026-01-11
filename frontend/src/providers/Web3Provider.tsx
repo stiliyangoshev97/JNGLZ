@@ -93,8 +93,8 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         theme={brutalistTheme}
         modalSize="compact"
         appInfo={{
-          appName: 'JunkieFun',
-          learnMoreUrl: 'https://junkiefun.xyz/about',
+          appName: 'JNGLZ.FUN',
+          learnMoreUrl: 'https://jnglz.fun/about',
         }}
       >
         {children}

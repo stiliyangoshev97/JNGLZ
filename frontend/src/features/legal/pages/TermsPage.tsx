@@ -1,7 +1,7 @@
 /**
  * ===== TERMS OF SERVICE PAGE =====
  *
- * Legal terms for using JunkieFun platform.
+ * Legal terms for using JNGLZ.FUN platform.
  * Clean, professional, readable.
  *
  * @module features/legal/pages/TermsPage
@@ -35,12 +35,12 @@ export function TermsPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                Welcome to JunkieFun ("Platform", "Protocol", "we", "us", or "our"). 
+                Welcome to JNGLZ.FUN ("Platform", "Protocol", "we", "us", or "our"). 
                 By accessing or using our decentralized prediction market protocol, 
                 you agree to be bound by these Terms of Service ("Terms").
               </p>
               <p>
-                JunkieFun is a <strong className="text-white">decentralized, non-custodial protocol</strong> deployed 
+                JNGLZ.FUN is a <strong className="text-white">decentralized, non-custodial protocol</strong> deployed 
                 on the BNB Chain blockchain. We do not control, manage, or have custody over 
                 any user funds. All interactions occur directly with smart contracts.
               </p>
@@ -53,7 +53,7 @@ export function TermsPage() {
               2. ELIGIBILITY
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
-              <p>By using JunkieFun, you represent and warrant that:</p>
+              <p>By using JNGLZ.FUN, you represent and warrant that:</p>
               <ul className="list-disc list-inside space-y-2">
                 <li>You are at least 18 years old (or 21 in jurisdictions where required)</li>
                 <li>You have full legal capacity to enter into these Terms</li>
@@ -69,7 +69,7 @@ export function TermsPage() {
               3. PROTOCOL DESCRIPTION
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
-              <p>JunkieFun enables users to:</p>
+              <p>JNGLZ.FUN enables users to:</p>
               <ul className="list-disc list-inside space-y-2">
                 <li><strong className="text-white">Create Markets:</strong> Ask any yes/no prediction question (FREE)</li>
                 <li><strong className="text-white">Trade Shares:</strong> Buy/sell YES or NO shares using BNB via bonding curve</li>
@@ -221,7 +221,7 @@ export function TermsPage() {
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
                 <strong className="text-no">YOU ARE SOLELY RESPONSIBLE</strong> for determining whether 
-                accessing or using JunkieFun is legal in your jurisdiction.
+                accessing or using JNGLZ.FUN is legal in your jurisdiction.
               </p>
               <p>
                 Users from the following jurisdictions are <strong className="text-no">PROHIBITED</strong> from 
@@ -248,7 +248,7 @@ export function TermsPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                JunkieFun is an <strong className="text-white">information and prediction protocol</strong>. 
+                JNGLZ.FUN is an <strong className="text-white">information and prediction protocol</strong>. 
                 Users trade on the probability of future events based on publicly available information.
               </p>
               <div className="bg-warning/10 border border-warning p-4 my-4">
@@ -287,7 +287,7 @@ export function TermsPage() {
               9. RISK ACKNOWLEDGMENT
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
-              <p>By using JunkieFun, you acknowledge and accept:</p>
+              <p>By using JNGLZ.FUN, you acknowledge and accept:</p>
               <ul className="list-disc list-inside space-y-2">
                 <li><strong className="text-white">Smart Contract Risk:</strong> Bugs or exploits could result in loss of funds</li>
                 <li><strong className="text-white">Market Risk:</strong> You may lose your entire investment</li>
@@ -327,7 +327,7 @@ export function TermsPage() {
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, JUNKIEFUN AND ITS CONTRIBUTORS 
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, JNGLZ.FUN AND ITS CONTRIBUTORS 
                 SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, 
                 OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR FUNDS.
               </p>
@@ -361,8 +361,8 @@ export function TermsPage() {
                 For questions about these Terms, contact us via:
               </p>
               <ul className="list-disc list-inside mt-2">
-                <li>Twitter: <a href="https://twitter.com/junkiefun" className="text-cyber hover:underline">@junkiefun</a></li>
-                <li>GitHub: <a href="https://github.com/junkiefun" className="text-cyber hover:underline">github.com/junkiefun</a></li>
+                <li>Twitter: <a href="https://twitter.com/jnglzfun" className="text-cyber hover:underline">@jnglzfun</a></li>
+                <li>GitHub: <a href="https://github.com/jnglzfun" className="text-cyber hover:underline">github.com/jnglzfun</a></li>
               </ul>
             </div>
           </section>

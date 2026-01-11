@@ -34,9 +34,9 @@ const authLink = setContext((_, { headers }) => {
 /**
  * Apollo Client for The Graph
  * 
- * Connected to: junkiefun-bnb-testnet subgraph (Production Gateway)
+ * Connected to: jnglz-bnb-testnet subgraph (Production Gateway)
  * Rate Limit: 100,000 queries/month
- * Domains: localhost, junkie.fun (whitelisted)
+ * Domains: localhost, jnglz.fun (whitelisted)
  */
 export const apolloClient = new ApolloClient({
   link: from([authLink, httpLink]),
