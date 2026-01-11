@@ -2,13 +2,16 @@ I'm working on JNGLZ.FUN - a decentralized prediction market launchpad on BNB Ch
 
 Please read these files to understand the project:
 
-1. /PROJECT.md - Business model & how it works
+1. /PROJECT.md - Summary of the project
 2. /TODO.md - What's done and what's pending
 3. /contracts/PROJECT_CONTEXT.md - Smart contract details
 4. /contracts/CHANGELOG.md - Contract version history
-5. /frontend/PROJECT_CONTEXT.md - Frontend architecture
-6. /frontend/CHANGELOG.md - Frontend changes
-7. /PROJECT_CONTEXT_SUBGRAPH.md - Subgraph setup
-8. /subgraph/CHANGELOG.md - Subgraph changes
+5. /contracts/README.MD - Detailed explanation of how smart contracts work and business model
+6. /frontend/PROJECT_CONTEXT.md - Frontend architecture
+7. /frontend/CHANGELOG.md - Frontend changes
+8. /PROJECT_CONTEXT_SUBGRAPH.md - Subgraph setup
+9. /subgraph/CHANGELOG.md - Subgraph changes
+
+
 
 After reading, summarize the current state and ask what I want to work on.

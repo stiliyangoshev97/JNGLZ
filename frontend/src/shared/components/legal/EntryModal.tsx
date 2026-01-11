@@ -14,7 +14,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 
 const ENTRY_ACCEPTED_KEY = 'junkie_entry_accepted';
-const ENTRY_ACCEPTED_VERSION = '1.1'; // Increment to re-show modal after ToS changes (1.1 = added empty winning side info)
+const ENTRY_ACCEPTED_VERSION = '1.2'; // Increment to re-show modal after ToS changes (1.2 = clarified disputed resolution rewards)
 
 interface Step {
   emoji: string;
@@ -176,12 +176,32 @@ export function EntryModal() {
             {/* Bond Rewards - WITH DISPUTE */}
             <div>
               <span className="text-yellow-500 font-bold">⚔️ If Disputed (Voting Decides):</span>
-              <ul className="mt-1 ml-4 list-disc space-y-1">
-                <li><strong className="text-white">Winner</strong> (Proposer or Disputer): Bond back + <strong className="text-yes">50% of loser's bond</strong></li>
-                <li><strong className="text-white">Loser</strong>: <strong className="text-no">Loses entire bond</strong></li>
-                <li><strong className="text-white">Correct Voters</strong>: Share <strong className="text-yes">50% of loser's bond</strong> (proportional to votes)</li>
-                <li>If Proposer wins: Also gets <strong className="text-yes">0.5% of pool</strong> reward</li>
-              </ul>
+              
+              {/* Sub-scenario: Original Proposer Wins */}
+              <div className="mt-2 ml-2 border-l-2 border-yes/30 pl-3">
+                <span className="text-yes text-xs font-bold">If ORIGINAL PROPOSER wins the vote:</span>
+                <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs">
+                  <li><strong className="text-white">Proposer</strong>: Bond back + 50% of disputer's bond + <strong className="text-yes">0.5% pool reward</strong></li>
+                  <li><strong className="text-white">Disputer</strong>: <strong className="text-no">Loses entire bond</strong></li>
+                  <li><strong className="text-white">Voters on proposer's side</strong>: Share remaining 50% of disputer's bond</li>
+                </ul>
+              </div>
+              
+              {/* Sub-scenario: Disputer Wins */}
+              <div className="mt-2 ml-2 border-l-2 border-cyber/30 pl-3">
+                <span className="text-cyber text-xs font-bold">If DISPUTER wins the vote:</span>
+                <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs">
+                  <li><strong className="text-white">Disputer</strong>: Bond back + 50% of proposer's bond (no pool reward)</li>
+                  <li><strong className="text-white">Proposer</strong>: <strong className="text-no">Loses entire bond</strong></li>
+                  <li><strong className="text-white">Voters on disputer's side</strong>: Share remaining 50% of proposer's bond</li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Winner Payouts - SEPARATE from bonds */}
+            <div>
+              <span className="text-cyber font-bold">💰 Winner Payouts (After Resolution):</span>
+              <p className="mt-1"><strong className="text-white">Winning shareholders</strong> (YES or NO) claim the <strong className="text-yes">entire pool</strong> proportionally. Losing shareholders get <strong className="text-no">nothing</strong>. This is separate from bond/voter rewards above.</p>
             </div>
 
             {/* Empty Winning Side */}

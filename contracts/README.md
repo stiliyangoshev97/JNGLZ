@@ -73,6 +73,219 @@
 
 ---
 
+## 🔬 TECHNOLOGY: AMM-Based Prediction Markets
+
+> **What makes JNGLZ.FUN different from traditional prediction markets?**
+
+### The Innovation: Constant Sum AMM + Pump/Dump Trading
+
+Traditional prediction markets (Polymarket, Augur) use order books or simple token minting. **JNGLZ.FUN uses an Automated Market Maker (AMM)** with a **Constant Sum Bonding Curve**, enabling:
+
+1. **Pump & Dump Trading** - Profit from price movements, not just being "right"
+2. **Instant Liquidity** - No waiting for counterparty, trade anytime
+3. **Guaranteed Solvency** - Pool can ALWAYS pay all winners
+4. **Dynamic Pricing** - Prices reflect real-time market sentiment
+
+---
+
+### 📐 The Math: Constant Sum Bonding Curve
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    CONSTANT SUM AMM FORMULA                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   PRICE FORMULA (always sums to 0.01 BNB):                              │
+│   ─────────────────────────────────────────                             │
+│                                                                          │
+│   P(YES) = UNIT_PRICE × virtualYes / (virtualYes + virtualNo)           │
+│   P(NO)  = UNIT_PRICE × virtualNo  / (virtualYes + virtualNo)           │
+│                                                                          │
+│   Where:                                                                 │
+│   • UNIT_PRICE = 0.01 BNB (constant)                                    │
+│   • virtualYes = yesSupply + virtualLiquidity                           │
+│   • virtualNo  = noSupply + virtualLiquidity                            │
+│                                                                          │
+│   INVARIANT: P(YES) + P(NO) = 0.01 BNB (always!)                        │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   BUY FORMULA (how many shares you get):                                │
+│   ──────────────────────────────────────                                │
+│                                                                          │
+│   shares = (bnbAmount × totalVirtual × 1e18) / (UNIT_PRICE × virtualSide)│
+│                                                                          │
+│   • Buying pushes YOUR side's price UP                                  │
+│   • You get fewer shares as price increases                             │
+│   • Early buyers get better prices                                      │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   SELL FORMULA (how much BNB you get back):                             │
+│   ─────────────────────────────────────────                             │
+│                                                                          │
+│   bnbOut = (shares × UNIT_PRICE × virtualSideAfter) /                   │
+│            (totalVirtualAfter × 1e18)                                   │
+│                                                                          │
+│   • Uses POST-SELL state (virtualSideAfter = virtualSide - shares)      │
+│   • Selling pushes YOUR side's price DOWN                               │
+│   • You get less BNB as you sell (price impact)                         │
+│   • This prevents arbitrage (buy→sell = guaranteed loss)                │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 🎰 Why Pump & Dump Works (Unlike Traditional Markets)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│         TRADITIONAL PREDICTION MARKET vs JNGLZ.FUN                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   TRADITIONAL (Polymarket, Augur):                                      │
+│   ─────────────────────────────────                                     │
+│   • Buy shares at fixed price OR via order book                         │
+│   • Shares worth $1 if you're RIGHT, $0 if WRONG                       │
+│   • ONLY way to profit: Be correct about the outcome                    │
+│   • Must wait until market resolves to know if you won                  │
+│                                                                          │
+│   JNGLZ.FUN (AMM Bonding Curve):                                        │
+│   ─────────────────────────────────                                     │
+│   • Buy shares → Price goes UP                                          │
+│   • Sell shares → You get BNB back (at new price)                      │
+│   • Profit from PRICE MOVEMENT, not just being right                    │
+│   • Can exit anytime before resolution!                                 │
+│                                                                          │
+│   PUMP & DUMP EXAMPLE:                                                  │
+│   ────────────────────                                                  │
+│   1. You buy YES early at 0.003 BNB/share                              │
+│   2. Others buy YES, price pumps to 0.007 BNB/share                    │
+│   3. You SELL your shares at higher price                              │
+│   4. PROFIT! Even if YES ultimately loses!                             │
+│                                                                          │
+│   This is IMPOSSIBLE in traditional prediction markets.                 │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 💰 Guaranteed Pool Solvency
+
+> **The pool can ALWAYS pay all winners. Here's why:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│              WHY THE POOL NEVER GOES BROKE                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   KEY INSIGHT: BNB goes IN when buying, comes OUT when selling.         │
+│   The bonding curve ensures sellers ALWAYS get less than buyers paid.   │
+│                                                                          │
+│   MATHEMATICAL GUARANTEE:                                               │
+│   ───────────────────────                                               │
+│   • When you BUY: BNB enters pool, shares are minted                    │
+│   • When you SELL: Shares are burned, BNB leaves pool                   │
+│   • Sell formula uses POST-SELL price (lower than buy price)            │
+│   • Plus 1.5% fees are extracted                                        │
+│                                                                          │
+│   RESULT: Pool always has enough to pay remaining shareholders.         │
+│                                                                          │
+│   EXAMPLE:                                                              │
+│   ────────                                                              │
+│   Alice buys 100 YES shares for 1 BNB → Pool: 0.985 BNB (after fees)   │
+│   Bob buys 100 YES shares for 1.2 BNB → Pool: 2.153 BNB               │
+│   Alice sells 100 shares → Gets ~0.95 BNB → Pool: 1.203 BNB           │
+│   Bob sells 100 shares → Gets ~1.1 BNB → Pool: 0.103 BNB              │
+│                                                                          │
+│   Pool NEVER goes negative. Math guarantees it.                         │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   SAFETY CHECK (InsufficientPoolBalance):                               │
+│   ───────────────────────────────────────                               │
+│   Contract reverts if: grossBnbOut > market.poolBalance                 │
+│   This should NEVER happen with correct math, but we check anyway.      │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 🌊 Virtual Liquidity (The Secret Sauce)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│              VIRTUAL LIQUIDITY EXPLAINED                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   PROBLEM: New markets have 0 shares. How do you price 0/0?             │
+│                                                                          │
+│   SOLUTION: Add "virtual" shares that don't actually exist.             │
+│                                                                          │
+│   virtualYes = realYesShares + virtualLiquidity                         │
+│   virtualNo  = realNoShares  + virtualLiquidity                         │
+│                                                                          │
+│   EXAMPLE (virtualLiquidity = 20):                                      │
+│   ─────────────────────────────────                                     │
+│   Market created: yesSupply = 0, noSupply = 0                           │
+│   Virtual state:  virtualYes = 20, virtualNo = 20                       │
+│   Initial price:  P(YES) = 0.01 × 20/40 = 0.005 BNB (50%)              │
+│                                                                          │
+│   After buying 10 YES shares:                                           │
+│   Real state:     yesSupply = 10, noSupply = 0                          │
+│   Virtual state:  virtualYes = 30, virtualNo = 20                       │
+│   New price:      P(YES) = 0.01 × 30/50 = 0.006 BNB (60%)              │
+│                                                                          │
+│   HEAT LEVELS control virtualLiquidity:                                 │
+│   • CRACK (5):  Small trades = BIG price swings                        │
+│   • HIGH (20):  Balanced for normal trading                            │
+│   • PRO (50):   Stable prices, good for whales                         │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### ⚙️ Configurable Parameters (3-of-3 MultiSig)
+
+> **All economic parameters can be adjusted for NEW markets via governance:**
+
+| Parameter | Default | Range | What It Does |
+|-----------|---------|-------|--------------|
+| `platformFeeBps` | 100 (1%) | 0-500 (0-5%) | Fee to treasury per trade |
+| `creatorFeeBps` | 50 (0.5%) | 0-200 (0-2%) | Fee to market creator per trade |
+| `resolutionFeeBps` | 30 (0.3%) | 0-100 (0-1%) | Fee on claims/refunds |
+| `proposerRewardBps` | 50 (0.5%) | 0-200 (0-2%) | Reward to proposer from pool |
+| `minBet` | 0.005 BNB | 0.001-0.1 | Minimum trade size |
+| `minBondFloor` | 0.005 BNB | 0.005-0.1 | Minimum proposer bond |
+| `dynamicBondBps` | 100 (1%) | 50-500 (0.5-5%) | Bond as % of pool |
+| `bondWinnerShareBps` | 5000 (50%) | 2000-8000 | Winner's share of loser's bond |
+| `heatLevelCrack` | 5 × 1e18 | 1-200 | Virtual liquidity for CRACK |
+| `heatLevelHigh` | 20 × 1e18 | 1-200 | Virtual liquidity for HIGH |
+| `heatLevelPro` | 50 × 1e18 | 1-200 | Virtual liquidity for PRO |
+| `marketCreationFee` | 0 | 0-0.1 BNB | Fee to create market |
+
+**Note:** Changes only affect NEW markets. Existing markets keep their original parameters.
+
+---
+
+### 🆚 JNGLZ.FUN vs Competitors
+
+| Feature | JNGLZ.FUN | Polymarket | Augur | PredictIt |
+|---------|-----------|------------|-------|-----------|
+| **Pricing Model** | AMM Bonding Curve | Order Book | AMM (Uniswap-style) | Order Book |
+| **Pump & Dump** | ✅ YES | ❌ No | ⚠️ Limited | ❌ No |
+| **Instant Liquidity** | ✅ Always | ⚠️ Depends on orders | ✅ Yes | ⚠️ Depends |
+| **Resolution** | Street Consensus (30-90 min) | UMA Oracle (48h+) | REP Token Voting | Manual Review |
+| **Chain** | BNB Chain | Polygon | Ethereum | Centralized |
+| **Fees** | 1.5% trade + 0.3% claim | 2% on winnings | ~1% | 10% on profits |
+| **Create Markets** | FREE, anyone | Approval needed | Anyone (fees) | No |
+
+---
+
 ## 📜 RULES OF THE GAME
 
 > **Everything you need to understand JNGLZ.FUN in one place.**
@@ -344,6 +557,105 @@ Total winning votes: 10000 shares
 Alice gets: 0.1 × (6000/10000) = 0.06 BNB
 Bob gets:   0.1 × (4000/10000) = 0.04 BNB
 ```
+
+---
+
+### 🔟➕ COMPLETE DISPUTE RESOLUTION SUMMARY ⭐
+
+> **This section ties everything together.** Read this if you want to understand exactly who gets what in every scenario.
+
+#### ✅ SCENARIO 1: NO DISPUTE (Proposal Accepted After 30 min)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PROPOSER proposed YES (or NO), nobody disputed for 30 minutes          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  💰 PROPOSER gets:                                                       │
+│     ✓ Bond back (100%)                                                   │
+│     ✓ 0.5% of pool as reward                                             │
+│                                                                          │
+│  📊 WINNING SHAREHOLDERS (YES or NO holders based on outcome):          │
+│     ✓ Split the ENTIRE POOL proportionally                               │
+│                                                                          │
+│  ❌ LOSING SHAREHOLDERS:                                                 │
+│     ✗ Get nothing (lost the prediction)                                  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### ⚔️ SCENARIO 2: DISPUTED → ORIGINAL PROPOSER WINS THE VOTE
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PROPOSER proposed YES, DISPUTER challenged, VOTERS agreed with YES     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  💰 ORIGINAL PROPOSER gets:                                              │
+│     ✓ Bond back (100%)                                                   │
+│     ✓ 50% of disputer's bond                                             │
+│     ✓ 0.5% of pool as reward  ← ONLY PROPOSER CAN GET THIS              │
+│                                                                          │
+│  ❌ DISPUTER gets:                                                       │
+│     ✗ LOSES entire bond (2× the proposer's bond!)                        │
+│     ✗ No pool reward (disputers never get pool reward)                   │
+│                                                                          │
+│  🗳️ VOTERS who voted with PROPOSER (correct side):                      │
+│     ✓ Share the OTHER 50% of disputer's bond (proportional to votes)    │
+│                                                                          │
+│  📊 WINNING SHAREHOLDERS (YES holders in this example):                 │
+│     ✓ Split the ENTIRE POOL proportionally                               │
+│                                                                          │
+│  ❌ LOSING SHAREHOLDERS (NO holders):                                    │
+│     ✗ Get nothing (lost the prediction)                                  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### ⚔️ SCENARIO 3: DISPUTED → DISPUTER WINS THE VOTE
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PROPOSER proposed YES, DISPUTER challenged, VOTERS agreed with NO      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  💰 DISPUTER gets:                                                       │
+│     ✓ Bond back (100%)                                                   │
+│     ✓ 50% of proposer's bond                                             │
+│     ✗ NO pool reward (only original proposer can get this)              │
+│                                                                          │
+│  ❌ ORIGINAL PROPOSER gets:                                              │
+│     ✗ LOSES entire bond                                                  │
+│     ✗ No pool reward (they were wrong!)                                  │
+│                                                                          │
+│  🗳️ VOTERS who voted with DISPUTER (correct side):                      │
+│     ✓ Share the OTHER 50% of proposer's bond (proportional to votes)    │
+│                                                                          │
+│  📊 WINNING SHAREHOLDERS (NO holders in this example):                  │
+│     ✓ Split the ENTIRE POOL proportionally                               │
+│                                                                          │
+│  ❌ LOSING SHAREHOLDERS (YES holders):                                   │
+│     ✗ Get nothing (lost the prediction)                                  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 🔑 KEY CLARIFICATIONS
+
+| Question | Answer |
+|----------|--------|
+| **Who gets the 0.5% pool reward?** | ONLY the original proposer, and ONLY if they win (no dispute OR dispute + win vote) |
+| **Does the disputer get pool reward?** | ❌ NEVER. Disputers only get bond back + 50% of proposer's bond |
+| **Who are "winning voters"?** | Shareholders who voted on the side that WON the vote (not the shareholders of winning outcome) |
+| **What do winning shareholders get?** | The ENTIRE POOL (minus proposer reward) split proportionally. This is SEPARATE from bond rewards. |
+| **Do losing shareholders get anything?** | ❌ NO. They lost the prediction. |
+| **Can someone be both a voter AND a shareholder?** | YES! You can earn jury fees (as voter) AND claim pool winnings (as shareholder) |
 
 ---
 
