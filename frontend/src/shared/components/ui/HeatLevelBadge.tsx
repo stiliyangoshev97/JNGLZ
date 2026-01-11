@@ -49,7 +49,6 @@ export function HeatLevelBadge({
           className
         )}
       >
-        <span>{config.emoji}</span>
         <span>{config.shortName}</span>
       </span>
       
@@ -78,7 +77,6 @@ export function HeatLevelInfo({ heatLevel, className }: HeatLevelInfoProps) {
     <div className={cn('border p-4 space-y-3', config.bgColor, config.borderColor, className)}>
       {/* Header */}
       <div className="flex items-center gap-2">
-        <span className="text-2xl">{config.emoji}</span>
         <div>
           <h3 className={cn('font-bold text-lg', config.textColor)}>{config.name}</h3>
           <p className="text-xs text-text-muted">{config.vibe}</p>
@@ -115,7 +113,6 @@ function HeatLevelTooltip({ config }: { config: HeatLevelConfig }) {
       config.borderColor
     )}>
       <div className="flex items-center gap-2">
-        <span className="text-lg">{config.emoji}</span>
         <span className={cn('font-bold', config.textColor)}>{config.name}</span>
       </div>
       

@@ -35,9 +35,9 @@ Markets aren't resolved by a central authority. Shareholders vote on outcomes:
 
 ### Heat Levels (v3.1.0)
 Markets can have different volatility levels:
-- ☢️ **DEGEN FLASH** - Maximum volatility for meme markets (0.005-0.1 BNB trades)
-- 🔥 **STREET FIGHT** - High action for trending topics (0.1-1.0 BNB trades)
-- 🧊 **WHALE POND** - Stable prices for serious predictions (1.0-5.0+ BNB trades)
+- **DEGEN FLASH** - Maximum volatility for meme markets (0.005-0.1 BNB trades)
+- **STREET FIGHT** - High action for trending topics (0.1-1.0 BNB trades)
+- **WHALE POND** - Stable prices for serious predictions (1.0-5.0+ BNB trades)
 
 ### Fee Structure
 | Fee | Amount | Recipient |

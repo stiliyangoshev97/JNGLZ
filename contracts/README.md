@@ -146,9 +146,9 @@ Bottom line: Buy→Sell = guaranteed loss. No free money!
 
 | Level | Virtual Liquidity | Best For | Price Impact |
 |-------|-------------------|----------|--------------|
-| ☢️ **CRACK** | 5 | Meme/degen markets | ~25% per 0.1 BNB |
-| 🔥 **HIGH** (default) | 20 | General markets | ~7% per 0.1 BNB |
-| 🧊 **PRO** | 50 | Whale/serious markets | ~3% per 0.1 BNB |
+| **CRACK** | 5 | Meme/degen markets | ~25% per 0.1 BNB |
+| **HIGH** (default) | 20 | General markets | ~7% per 0.1 BNB |
+| **PRO** | 50 | Whale/serious markets | ~3% per 0.1 BNB |
 
 ---
 
@@ -413,6 +413,71 @@ Note: 0.3% resolution fee is deducted from each refund.
 - Prevents gaming: Can't force a tie to delay resolution
 - Simple rule: One deadline to remember
 - Fair: By tie time (~2h), most of 24h has passed anyway
+
+---
+
+### 1️⃣2️⃣.5️⃣ EMPTY WINNING SIDE (Safety Mechanism v3.4.0) ⭐
+
+**The Problem:**
+What if a market resolves to YES, but nobody holds YES shares?
+- Example: Everyone bought NO, someone proposes YES wins
+- Nobody disputes (why would NO holders defend YES winning?)
+- Without protection: Division by zero, funds locked FOREVER
+
+**The Solution:**
+When `finalizeMarket()` is called, we check if the winning side has 0 supply:
+```solidity
+if (winningOutcome && market.yesSupply == 0) {
+    // Cannot resolve to YES - no YES holders!
+    → Return bonds, emit MarketResolutionFailed
+}
+if (!winningOutcome && market.noSupply == 0) {
+    // Cannot resolve to NO - no NO holders!
+    → Return bonds, emit MarketResolutionFailed
+}
+```
+
+**What Happens When Resolution is Blocked:**
+```
+1. Market stays UNRESOLVED (resolved = false)
+2. Proposer gets bond back (no penalty) → credited to pendingWithdrawals
+3. Disputer gets bond back (no penalty) → credited to pendingWithdrawals
+4. Pool balance remains UNCHANGED
+5. Emergency refund available after 24h from expiry
+6. All shareholders can claim proportional refund
+```
+
+**Example Scenario:**
+```
+Market: "Will BTC hit $100k?"
+- Alice buys 100 YES shares for 1 BNB
+- Bob buys 100 YES shares for 1 BNB
+- Nobody buys NO shares (NO supply = 0)
+- Pool balance: 2 BNB
+
+Attacker (Charlie):
+- Market expires
+- Proposes NO wins (with 0.02 BNB bond)
+- Nobody disputes (Alice/Bob don't want NO to win!)
+- 30 min passes → finalize() called
+
+WITHOUT safety check:
+❌ Market resolves to NO
+❌ 0 NO holders to distribute pool to
+❌ 2 BNB locked forever!
+
+WITH safety check (v3.4.0+):
+✅ Resolution blocked
+✅ Charlie gets bond back (0.02 BNB)
+✅ Pool still has 2 BNB
+✅ After 24h: Alice & Bob claim emergency refund
+```
+
+**Key Points:**
+- Bonds are returned, NOT slashed (no one is penalized)
+- Shareholders keep their funds safe
+- Emergency refund ensures no funds are ever locked
+- This is a SAFETY mechanism, not a bug
 
 ---
 
@@ -788,7 +853,7 @@ Initial State:           After YES Buying:        After NO Buying:
 
 ---
 
-## 🔥 Heat Levels
+## Heat Levels
 
 Heat Levels control market volatility through per-market virtual liquidity. Choose the right level for your market type:
 
@@ -797,19 +862,19 @@ Heat Levels control market volatility through per-market virtual liquidity. Choo
 │                          HEAT LEVELS                                     │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ☢️ CRACK (Degen Flash)              │  Virtual Liquidity: 5            │
+│  CRACK (Degen Flash)                 │  Virtual Liquidity: 5            │
 │  ─────────────────────               │  Target Bet: 0.005-0.1 BNB       │
 │  • Maximum volatility                │  Price Impact: ~15% per 0.05 BNB │
 │  • Small bets move prices BIG        │  Best for: Meme markets, degen   │
 │  • Wild swings, pure chaos           │                                   │
 │                                                                          │
-│  🔥 HIGH (Street Fight) - DEFAULT    │  Virtual Liquidity: 20           │
+│  HIGH (Street Fight) - DEFAULT       │  Virtual Liquidity: 20           │
 │  ─────────────────────────────────   │  Target Bet: 0.1-1.0 BNB         │
 │  • Balanced volatility               │  Price Impact: ~15% per 0.5 BNB  │
 │  • Good price discovery              │  Best for: General markets       │
 │  • Default for most markets          │                                   │
 │                                                                          │
-│  🧊 PRO (Whale Pond)                 │  Virtual Liquidity: 50           │
+│  PRO (Whale Pond)                    │  Virtual Liquidity: 50           │
 │  ───────────────────                 │  Target Bet: 1.0-5.0+ BNB        │
 │  • Low slippage                      │  Price Impact: ~15% per 2.0 BNB  │
 │  • Stable prices                     │  Best for: Serious/whale markets │
@@ -837,11 +902,11 @@ Example: 0.1 BNB bet
 
 | Market Type | Recommended Heat | Why |
 |-------------|------------------|-----|
-| Meme/joke markets | ☢️ CRACK | Max entertainment |
-| Sports predictions | 🔥 HIGH | Balanced trading |
-| Crypto price bets | 🔥 HIGH | Good price discovery |
-| Political events | 🧊 PRO | Stable, serious |
-| Whale-heavy markets | 🧊 PRO | Low slippage |
+| Meme/joke markets | CRACK | Max entertainment |
+| Sports predictions | HIGH | Balanced trading |
+| Crypto price bets | HIGH | Good price discovery |
+| Political events | PRO | Stable, serious |
+| Whale-heavy markets | PRO | Low slippage |
 
 ---
 

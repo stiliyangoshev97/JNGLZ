@@ -14,7 +14,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 
 const ENTRY_ACCEPTED_KEY = 'junkie_entry_accepted';
-const ENTRY_ACCEPTED_VERSION = '1.0'; // Increment to re-show modal after ToS changes
+const ENTRY_ACCEPTED_VERSION = '1.1'; // Increment to re-show modal after ToS changes (1.1 = added empty winning side info)
 
 interface Step {
   emoji: string;
@@ -135,22 +135,59 @@ export function EntryModal() {
         <div className="px-6 py-4 border-b border-dark-600">
           <h3 className="text-sm font-bold text-white mb-3">📜 MARKET RULES</h3>
           <div className="space-y-3 text-xs text-text-secondary">
+            
+            {/* Bonding Curve */}
+            <div>
+              <span className="text-cyber font-bold">Bonding Curve Pricing:</span>
+              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buying pushes price up, selling pushes it down. <strong className="text-no">No arbitrage</strong> - instant buy→sell = guaranteed loss due to price impact + fees.</p>
+            </div>
+
+            {/* Resolution Timeline */}
             <div>
               <span className="text-cyber font-bold">Resolution Timeline:</span>
               <ul className="mt-1 ml-4 list-disc space-y-1">
-                <li>Creator has 10-min priority to propose outcome</li>
-                <li>30-min dispute window after proposal</li>
-                <li>1-hour voting if disputed (shareholders vote)</li>
-                <li>Emergency refund after 24h if no resolution</li>
+                <li>Market expires → <strong className="text-white">Trading stops</strong></li>
+                <li>First <strong className="text-white">10 min</strong>: Only creator can propose the outcome</li>
+                <li>After 10 min: <strong className="text-white">Anyone</strong> can propose (if creator didn't)</li>
+                <li>After proposal → <strong className="text-white">30 min</strong> dispute window (anyone can challenge)</li>
+                <li>If disputed → <strong className="text-white">1 hour</strong> shareholder voting</li>
+                <li>If no proposal for 24h → <strong className="text-white">Emergency refund</strong> available</li>
               </ul>
             </div>
+
+            {/* Bond Formula */}
             <div>
-              <span className="text-cyber font-bold">Bonding Curve:</span>
-              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buy pushes price up, sell pushes it down. No arbitrage possible - instant buy→sell = guaranteed loss.</p>
+              <span className="text-cyber font-bold">Bond Formula:</span>
+              <div className="mt-1 bg-dark-800 border border-dark-600 p-2 font-mono">
+                <div>Proposer Bond = <strong className="text-white">max(0.005 BNB, 1% of pool)</strong></div>
+                <div>Disputer Bond = <strong className="text-white">2× Proposer Bond</strong></div>
+              </div>
+              <p className="mt-1 text-text-muted">Example: Pool has 2 BNB → Proposer needs 0.02 BNB, Disputer needs 0.04 BNB</p>
             </div>
+
+            {/* Bond Rewards - NO DISPUTE */}
             <div>
-              <span className="text-cyber font-bold">Bond Requirements:</span>
-              <p className="mt-1">Proposer: max(0.005 BNB, 1% of pool). Disputer: 2× proposer bond. Winners get their bond back + share of loser's bond.</p>
+              <span className="text-yes font-bold">✓ If NOT Disputed (Proposal Accepted):</span>
+              <ul className="mt-1 ml-4 list-disc space-y-1">
+                <li>Proposer gets <strong className="text-white">bond back</strong> + <strong className="text-yes">0.5% of pool</strong> as reward</li>
+              </ul>
+            </div>
+
+            {/* Bond Rewards - WITH DISPUTE */}
+            <div>
+              <span className="text-yellow-500 font-bold">⚔️ If Disputed (Voting Decides):</span>
+              <ul className="mt-1 ml-4 list-disc space-y-1">
+                <li><strong className="text-white">Winner</strong> (Proposer or Disputer): Bond back + <strong className="text-yes">50% of loser's bond</strong></li>
+                <li><strong className="text-white">Loser</strong>: <strong className="text-no">Loses entire bond</strong></li>
+                <li><strong className="text-white">Correct Voters</strong>: Share <strong className="text-yes">50% of loser's bond</strong> (proportional to votes)</li>
+                <li>If Proposer wins: Also gets <strong className="text-yes">0.5% of pool</strong> reward</li>
+              </ul>
+            </div>
+
+            {/* Empty Winning Side */}
+            <div>
+              <span className="text-yellow-500 font-bold">⚠️ Empty Winning Side Protection:</span>
+              <p className="mt-1">If market resolves to an outcome with <strong className="text-white">0 shareholders</strong> (e.g., YES wins but nobody holds YES): Resolution is blocked, <strong className="text-yes">all bonds returned</strong>, shareholders can claim emergency refund after 24h.</p>
             </div>
           </div>
         </div>

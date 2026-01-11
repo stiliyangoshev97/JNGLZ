@@ -131,17 +131,17 @@ export function TermsPage() {
 
               {/* Heat Levels */}
               <div>
-                <h3 className="text-white font-bold mb-2">🔥 Heat Levels</h3>
+                <h3 className="text-white font-bold mb-2">Heat Levels</h3>
                 <p className="mb-2">Markets have different volatility settings:</p>
                 <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs">
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-no">☢️ DEGEN FLASH</span>
+                    <span className="text-no">DEGEN FLASH</span>
                     <span>~25% per 0.1 BNB</span>
                     <span className="text-text-muted">Meme markets</span>
-                    <span className="text-yellow-500">🔥 STREET FIGHT</span>
+                    <span className="text-yellow-500">STREET FIGHT</span>
                     <span>~7% per 0.1 BNB</span>
                     <span className="text-text-muted">Standard markets</span>
-                    <span className="text-cyber">🧊 WHALE POND</span>
+                    <span className="text-cyber">WHALE POND</span>
                     <span>~3% per 0.1 BNB</span>
                     <span className="text-text-muted">Whale markets</span>
                   </div>
@@ -154,27 +154,27 @@ export function TermsPage() {
                 <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs space-y-2">
                   <div className="flex justify-between">
                     <span>Market Expires</span>
-                    <span className="text-text-muted">Trading stops</span>
+                    <span className="text-white">Trading stops</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Creator Priority Window</span>
-                    <span className="text-cyber">10 minutes</span>
+                    <span>First 10 minutes</span>
+                    <span className="text-cyber">Only creator can propose</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Anyone Can Propose</span>
-                    <span className="text-text-muted">After 10 min</span>
+                    <span>After 10 minutes</span>
+                    <span className="text-white">Anyone can propose (if creator didn't)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Dispute Window</span>
-                    <span className="text-cyber">30 minutes</span>
+                    <span>After proposal</span>
+                    <span className="text-cyber">30 min dispute window</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Voting Period (if disputed)</span>
-                    <span className="text-cyber">1 hour</span>
+                    <span>If disputed</span>
+                    <span className="text-cyber">1 hour shareholder voting</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Emergency Refund Available</span>
-                    <span className="text-no">24 hours after expiry</span>
+                    <span>If no proposal for 24h</span>
+                    <span className="text-no">Emergency refund available</span>
                   </div>
                 </div>
               </div>
@@ -182,12 +182,27 @@ export function TermsPage() {
               {/* Bond Amounts */}
               <div>
                 <h3 className="text-white font-bold mb-2">💎 Bond Requirements</h3>
+                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-sm mb-3">
+                  <div className="space-y-1">
+                    <div>Proposer Bond = <strong className="text-cyber">max(0.005 BNB, 1% of pool)</strong></div>
+                    <div>Disputer Bond = <strong className="text-cyber">2× Proposer Bond</strong></div>
+                  </div>
+                </div>
+                <p className="text-sm text-text-muted mb-3">
+                  Example: If pool has 2 BNB → Proposer needs 0.02 BNB, Disputer needs 0.04 BNB
+                </p>
+                
+                <h4 className="text-white font-bold mb-2 text-sm">✓ If NOT Disputed (Proposal Accepted):</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm mb-3">
+                  <li>Proposer gets <strong className="text-white">bond back</strong> + <strong className="text-yes">0.5% of pool</strong> as reward</li>
+                </ul>
+                
+                <h4 className="text-white font-bold mb-2 text-sm">⚔️ If Disputed (Voting Decides):</h4>
                 <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li><strong className="text-white">Proposer Bond:</strong> max(0.005 BNB, 1% of pool)</li>
-                  <li><strong className="text-white">Disputer Bond:</strong> 2× the proposer's bond</li>
-                  <li><strong className="text-yes">Proposer Wins:</strong> Bond back + 0.5% of pool + 50% of disputer bond (if disputed)</li>
-                  <li><strong className="text-yes">Disputer Wins:</strong> Bond back + 50% of proposer bond</li>
-                  <li><strong className="text-no">Loser:</strong> Forfeits entire bond</li>
+                  <li><strong className="text-white">Winner</strong> (Proposer or Disputer): Bond back + <strong className="text-yes">50% of loser's bond</strong></li>
+                  <li><strong className="text-white">Loser</strong>: <strong className="text-no">Loses entire bond</strong></li>
+                  <li><strong className="text-white">Correct Voters</strong>: Share <strong className="text-yes">50% of loser's bond</strong> (proportional to votes)</li>
+                  <li>If Proposer wins: Also gets <strong className="text-yes">0.5% of pool</strong> reward</li>
                 </ul>
               </div>
 
@@ -209,6 +224,21 @@ export function TermsPage() {
                   If a market cannot be resolved (no proposal for 24h or exact tie), 
                   all traders can claim a proportional refund based on their total shares.
                 </p>
+              </div>
+
+              {/* Empty Winning Side */}
+              <div>
+                <h3 className="text-white font-bold mb-2">⚠️ Empty Winning Side (Edge Case)</h3>
+                <p className="text-sm mb-2">
+                  If a market resolves to an outcome with <strong className="text-white">zero shareholders</strong> (e.g., resolves YES but nobody holds YES shares):
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong className="text-white">Resolution is blocked</strong> - market stays unresolved</li>
+                  <li><strong className="text-yes">Proposer gets bond back</strong> (no penalty)</li>
+                  <li><strong className="text-yes">Disputer gets bond back</strong> (if disputed, no penalty)</li>
+                  <li><strong className="text-cyber">Shareholders keep their funds</strong> - can claim emergency refund after 24h</li>
+                  <li className="text-text-muted">This prevents funds from being locked forever in edge cases</li>
+                </ul>
               </div>
             </div>
           </section>

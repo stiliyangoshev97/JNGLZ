@@ -28,7 +28,7 @@ export interface HeatLevelConfig {
 export const HEAT_LEVELS: HeatLevelConfig[] = [
   { 
     value: 0, 
-    emoji: '☢️',
+    emoji: '',
     name: 'DEGEN FLASH',
     shortName: 'DEGEN',
     targetUser: 'The Moon-Bagger',
@@ -43,7 +43,7 @@ export const HEAT_LEVELS: HeatLevelConfig[] = [
   },
   { 
     value: 1, 
-    emoji: '🔥',
+    emoji: '',
     name: 'STREET FIGHT',
     shortName: 'STREET',
     targetUser: 'The Trader',
@@ -58,7 +58,7 @@ export const HEAT_LEVELS: HeatLevelConfig[] = [
   },
   { 
     value: 2, 
-    emoji: '🧊',
+    emoji: '',
     name: 'WHALE POND',
     shortName: 'WHALE',
     targetUser: 'The Shark',

@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 11, 2026  
-> **Version:** 0.6.2
+> **Version:** 0.6.4
 > **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Smart Polling + Optimistic Updates + Pull Pattern)
 
 ---
@@ -197,15 +197,15 @@ For real-time data:
 
 ---
 
-## 🔥 Heat Levels (Market Volatility)
+## Heat Levels (Market Volatility)
 
 Markets can be created with different volatility levels:
 
 | Level | Name | Target User | Trade Range | Vibe |
 |-------|------|-------------|-------------|------|
-| ☢️ 0 | DEGEN FLASH | "The Moon-Bagger" (small wallets) | 0.005 – 0.1 BNB | "Total Chaos" - A few bucks moves price 10% |
-| 🔥 1 | STREET FIGHT | "The Trader" (active battlers) | 0.1 – 1.0 BNB | "The Standard" - Tug-of-war battles |
-| 🧊 2 | WHALE POND | "The Shark" (serious money) | 1.0 – 5.0+ BNB | "Serious Stakes" - Low slippage for accuracy |
+| 0 | DEGEN FLASH | "The Moon-Bagger" (small wallets) | 0.005 – 0.1 BNB | "Total Chaos" - A few bucks moves price 10% |
+| 1 | STREET FIGHT | "The Trader" (active battlers) | 0.1 – 1.0 BNB | "The Standard" - Tug-of-war battles |
+| 2 | WHALE POND | "The Shark" (serious money) | 1.0 – 5.0+ BNB | "Serious Stakes" - Low slippage for accuracy |
 
 Contract parameter: `heatLevel: uint8` (0, 1, or 2)
 

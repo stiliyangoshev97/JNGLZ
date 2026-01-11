@@ -394,7 +394,6 @@ export function CreateMarketPage() {
                     {/* Header row */}
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{level.emoji}</span>
                         <div>
                           <div className={`font-black text-lg ${level.textColor}`}>{level.name}</div>
                           <div className="text-xs text-text-muted">
@@ -600,7 +599,7 @@ export function CreateMarketPage() {
               <div className="flex justify-between">
                 <span className="text-text-muted">Heat Level</span>
                 <span className="font-mono">
-                  {HEAT_LEVELS.find(h => h.value === watchedHeatLevel)?.emoji} {HEAT_LEVELS.find(h => h.value === watchedHeatLevel)?.name}
+                  {HEAT_LEVELS.find(h => h.value === watchedHeatLevel)?.name}
                 </span>
               </div>
               {wantFirstTrade && (

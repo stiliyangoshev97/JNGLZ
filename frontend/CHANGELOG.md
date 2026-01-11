@@ -2,6 +2,45 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.6.4] - 2026-01-11
+
+### Changed
+
+#### Improved Market Rules Documentation (EntryModal + TermsPage)
+- Completely rewrote bond requirements section for clarity
+- Added **Bond Formula** with visual example: `max(0.005 BNB, 1% of pool)`
+- Split rewards into clear sections: "If NOT Disputed" vs "If Disputed"
+- Added concrete example: "Pool has 2 BNB → Proposer needs 0.02 BNB"
+- Made voter rewards explicit: "Correct Voters share 50% of loser's bond"
+- Users now see these rules before they can use the platform
+
+---
+
+## [0.6.3] - 2026-01-11
+
+### Changed
+
+#### Removed Heat Level Emojis
+- Removed ☢️, 🔥, 🧊 emojis from heat level names throughout the UI
+- Heat levels now display as clean text: **DEGEN FLASH**, **STREET FIGHT**, **WHALE POND**
+- Updated `HeatLevelBadge` component to not show emojis
+- Updated `CreateMarketPage` heat level selector
+- Updated `TermsPage` documentation
+- Cleaner, more professional appearance
+
+### Added
+
+#### Empty Winning Side Documentation
+- Added "Empty Winning Side" section to TermsPage Market Rules
+- Added explanation to EntryModal so users see this before using the app
+- Explains what happens when market resolves to an outcome with 0 shareholders:
+  - Resolution is blocked (market stays unresolved)
+  - Proposer and disputer get bonds back (no penalty)
+  - Shareholders can claim emergency refund after 24h
+  - Protects funds from being locked forever
+
+---
+
 ## [0.6.2] - 2026-01-11
 
 ### Fixed
@@ -281,9 +320,9 @@ Now with 1% default slippage:
 
 #### Heat Level Selector (Create Market Page)
 - **New Heat Level UI** with rich descriptions:
-  - ☢️ **DEGEN FLASH** - "The Moon-Bagger" (0.005 – 0.1 BNB) - "Total Chaos"
-  - 🔥 **STREET FIGHT** - "The Trader" (0.1 – 1.0 BNB) - "The Standard"
-  - 🧊 **WHALE POND** - "The Shark" (1.0 – 5.0+ BNB) - "Serious Stakes"
+  - **DEGEN FLASH** - "The Moon-Bagger" (0.005 – 0.1 BNB) - "Total Chaos"
+  - **STREET FIGHT** - "The Trader" (0.1 – 1.0 BNB) - "The Standard"
+  - **WHALE POND** - "The Shark" (1.0 – 5.0+ BNB) - "Serious Stakes"
 - Each option shows target user, trade range, and expandable "vibe" description
 - Color-coded borders (red/yellow/cyan)
 

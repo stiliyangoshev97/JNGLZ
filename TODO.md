@@ -128,9 +128,9 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 
 | Level | Name | Virtual Liquidity | Target Bet | ~15% Price Impact |
 |-------|------|-------------------|------------|-------------------|
-| ☢️ CRACK | Degen Flash | 5 × 1e18 | 0.005-0.1 BNB | 0.05 BNB |
-| 🔥 HIGH | Street Fight (DEFAULT) | 20 × 1e18 | 0.1-1.0 BNB | 0.5 BNB |
-| 🧊 PRO | Whale Pond | 50 × 1e18 | 1.0-5.0+ BNB | 2.0 BNB |
+| CRACK | Degen Flash | 5 × 1e18 | 0.005-0.1 BNB | 0.05 BNB |
+| HIGH | Street Fight (DEFAULT) | 20 × 1e18 | 0.1-1.0 BNB | 0.5 BNB |
+| PRO | Whale Pond | 50 × 1e18 | 1.0-5.0+ BNB | 2.0 BNB |
 
 ### Implementation Checklist
 
