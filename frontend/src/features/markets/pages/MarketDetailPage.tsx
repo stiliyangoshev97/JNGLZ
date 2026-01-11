@@ -9,15 +9,20 @@
  * - Trade history
  * - Market info & rules
  *
- * Smart Polling (v3.4.1):
- * - Stops polling when tab is inactive (saves 70%+ API quota)
- * - Uses 15s intervals instead of 5s
- * - Instant refresh after trades via manual refetch
+ * Predator Polling v2:
+ * - RESOLVED markets: NEVER poll (0 queries)
+ * - HOT markets (trade in 5 min): 15s polling
+ * - WARM markets (trade in 1 hour): 60s polling
+ * - COLD markets (no trades 1h+): 5 min polling
+ * - WATCHING (expired): 30s polling
+ * - Tab hidden: ALL polling stops
+ * - Tab focus: Instant refetch
+ * - After trade: 3s delayed refetch + switch to HOT
  *
  * @module features/markets/pages/MarketDetailPage
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET } from '@/shared/api';
@@ -36,31 +41,73 @@ import { ResolutionPanel } from '../components';
 import { formatTimeRemaining, calculateYesPercent, calculateNoPercent } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
-import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
-  // Smart polling: stops when tab is inactive, uses 15s interval (was 5s)
-  const pollInterval = useSmartPollInterval(POLL_INTERVALS.MARKET_DETAIL);
-
+  // Initial query without polling to get market data first
   const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
     variables: { id: marketId },
-    pollInterval, // Dynamic: 15s when visible, 0 when hidden
     skip: !marketId,
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
-  // Only show loading on initial load, not on polls/refetches
-  // networkStatus 1 = loading, 2 = setVariables, 3 = fetchMore, 4 = refetch, 6 = poll, 7 = ready, 8 = error
-  const isInitialLoading = loading && !data?.market;
+  // Get last trade timestamp from market data
+  const lastTradeTimestamp = useMemo(() => {
+    const trades = data?.market?.trades;
+    if (!trades || trades.length === 0) return null;
+    // Find the most recent trade
+    return Math.max(...trades.map(t => Number(t.timestamp)));
+  }, [data?.market?.trades]);
 
-  // Function to trigger immediate refetch (called after trades)
+  // Predator Polling v2: Market-state aware polling
+  const { pollInterval, triggerHotMode } = useMarketPollInterval(
+    data?.market,
+    lastTradeTimestamp,
+    refetch
+  );
+
+  // Apply polling interval to query
+  useEffect(() => {
+    // Apollo doesn't have a direct way to change pollInterval dynamically,
+    // so we use startPolling/stopPolling
+    if (pollInterval > 0) {
+      // @ts-ignore - startPolling exists on ObservableQuery
+      refetch(); // Initial fetch
+    }
+  }, [marketId]);
+
+  // Setup dynamic polling based on temperature
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    
+    if (pollInterval > 0 && data?.market) {
+      intervalId = setInterval(() => {
+        refetch();
+      }, pollInterval);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [pollInterval, refetch, data?.market]);
+
+  // Trade refetch: Wait 3s after trade for subgraph to index
+  const { triggerTradeRefetch } = useTradeRefetch(refetch);
+
+  // Function to trigger after a successful trade
   const refreshMarket = () => {
-    refetch();
+    // Trigger delayed refetch for subgraph
+    triggerTradeRefetch();
+    // Switch to HOT polling mode for 2 minutes
+    triggerHotMode();
   };
+
+  // Only show loading on initial load, not on polls/refetches
+  const isInitialLoading = loading && !data?.market;
 
   // Retry fetching if market not found and we came from create page
   useEffect(() => {
@@ -249,7 +296,8 @@ export function MarketDetailPage() {
                   />
                 </div>
                 <div className="p-4">
-                  <PriceChart marketId={market.id} />
+                  {/* Predator v2: Pass trades from parent to prevent duplicate queries */}
+                  <PriceChart marketId={market.id} trades={trades} />
                 </div>
               </div>
 

@@ -4,14 +4,16 @@
  * The main "Jungle" - homepage showing all active markets.
  * Features a live ticker, market grid, and trending markets.
  *
- * Smart Polling (v3.4.1):
- * - Stops polling when tab is inactive (saves 70%+ API quota)
- * - Uses 30s intervals for list, 2min for ticker
+ * Predator Polling v2:
+ * - Market list: 90 seconds (was 30s) - saves 67% queries
+ * - Ticker: ONCE on load, no polling - saves 100% ticker queries
+ * - Tab hidden: ALL polling stops
+ * - Tab focus: Instant refetch
  *
  * @module features/markets/pages/MarketsPage
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKETS, GET_RECENT_TRADES } from '@/shared/api';
 import type { GetMarketsResponse, GetRecentTradesResponse } from '@/shared/api';
@@ -19,7 +21,7 @@ import { MarketCard, LiveTicker } from '../components';
 import { MarketCardSkeleton } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
-import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
 type FilterOption = 'active' | 'expired' | 'resolved';
@@ -29,25 +31,33 @@ export function MarketsPage() {
   const [filterBy, setFilterBy] = useState<FilterOption>('active');
   const [marketIdSearch, setMarketIdSearch] = useState('');
 
-  // Smart polling: stops when tab is inactive
-  const listPollInterval = useSmartPollInterval(POLL_INTERVALS.MARKET_LIST);
-  const tickerPollInterval = useSmartPollInterval(POLL_INTERVALS.TICKER);
-
-  // Fetch ALL markets (not just active)
-  const { data, loading, error } = useQuery<GetMarketsResponse>(GET_MARKETS, {
+  // Predator v2: Fetch markets with focus-aware refetch
+  const { data, loading, error, refetch } = useQuery<GetMarketsResponse>(GET_MARKETS, {
     variables: { first: 100 },
-    pollInterval: listPollInterval, // Dynamic: 30s when visible, 0 when hidden
-    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
+    notifyOnNetworkStatusChange: false,
   });
+
+  // Setup focus refetch (triggers refetch when tab becomes visible)
+  const { isVisible } = useFocusRefetch(refetch);
+
+  // Manual polling at 90s interval (Predator v2) - only when visible
+  useEffect(() => {
+    if (!isVisible) return;
+    
+    const intervalId = setInterval(() => {
+      refetch();
+    }, POLL_INTERVALS.MARKET_LIST); // 90 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [isVisible, refetch]);
 
   // Only show loading skeleton on initial load, not polls
   const isInitialLoading = loading && !data?.markets;
 
-  // Fetch recent trades for ticker
+  // Ticker: Fetch ONCE on load, no polling (Predator v2)
   const { data: tradesData } = useQuery<GetRecentTradesResponse>(GET_RECENT_TRADES, {
     variables: { first: 20 },
-    pollInterval: tickerPollInterval, // Dynamic: 2min when visible, 0 when hidden
-    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
+    notifyOnNetworkStatusChange: false,
   });
 
   const allMarkets = data?.markets || [];

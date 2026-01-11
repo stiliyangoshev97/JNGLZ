@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 11, 2026  
-> **Version:** 0.6.4
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Smart Polling + Optimistic Updates + Pull Pattern)
+> **Version:** 0.7.0
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern)
 
 ---
 
@@ -61,14 +61,14 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |
 | Markets Page | ✅ 100% | Grid, filters, smart polling (30s) |
-| Market Detail Page | ✅ 100% | Chart, trade panel, smart polling (15s) |
+| Market Detail Page | ✅ 100% | Chart, trade panel, Predator Polling v2 (dynamic 15s-5min) |
 | Create Market Page | ✅ 100% | Fully wired to contract + Heat Levels |
 | Portfolio Page | ✅ 100% | Positions + Pending Withdrawals banner |
 | Contract Read Hooks | ✅ 100% | Prices, positions, previews, bonds, pending withdrawals |
 | Contract Write Hooks | ✅ 100% | Create, trade, resolve, claim, withdraw |
 | Trade Panel | ✅ 100% | Buy/sell with optimistic updates |
 | Resolution Panel | ✅ 100% | Propose, dispute, vote, claim |
-| Smart Polling | ✅ 100% | Tab visibility detection, adaptive intervals |
+| Smart Polling | ✅ 100% | **Predator v2**: Temperature-based, tab visibility, focus refetch |
 | Optimistic Updates | ✅ 100% | Instant UI with rollback on failure |
 | Pull Pattern | ✅ 100% | Withdraw bonds/creator fees UI |
 | Supabase (Comments) | ⬜ 0% | Future phase |
@@ -104,7 +104,7 @@ src/
 │   │   ├── useChainValidation.ts
 │   │   ├── useContractReads.ts     # Price, position, preview, pending withdrawal hooks
 │   │   ├── useContractWrites.ts    # Trade, create, resolve, withdraw hooks
-│   │   ├── useSmartPolling.ts      # Tab visibility + adaptive poll intervals
+│   │   ├── useSmartPolling.ts      # Predator v2: Temperature polling, tab visibility, focus refetch
 │   │   ├── useOptimisticTrade.ts   # Cache manipulation with rollback
 │   │   └── useTradeWithOptimism.ts # Trade hooks with instant UI feedback
 ```

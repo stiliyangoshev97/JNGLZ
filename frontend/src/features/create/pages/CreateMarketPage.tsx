@@ -248,7 +248,6 @@ export function CreateMarketPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md flex flex-col items-center">
-          <p className="text-6xl mb-6">🔐</p>
           <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
           <p className="text-text-secondary mb-6">
             Connect your wallet to create a prediction market.

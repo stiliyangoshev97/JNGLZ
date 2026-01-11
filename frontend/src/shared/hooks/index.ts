@@ -53,13 +53,19 @@ export {
 // Smart Hooks
 export { useSmartClaim } from './useSmartClaim';
 
-// Smart Polling (v3.4.1 - rate limit protection)
+// Smart Polling (Predator v2 - intelligent rate limit protection)
 export {
   usePageVisibility,
   useSmartPollInterval,
+  useFocusRefetch,
+  useMarketPollInterval,
   useImmediateRefetch,
+  useTradeRefetch,
+  getMarketTemperature,
+  getTemperatureInterval,
   POLL_INTERVALS,
   calculateDailyQueries,
+  type MarketTemperature,
 } from './useSmartPolling';
 
 // Optimistic Trade Hooks (v3.4.1 - instant UI feedback)

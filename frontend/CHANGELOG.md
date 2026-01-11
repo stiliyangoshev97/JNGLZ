@@ -2,6 +2,57 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.0] - 2026-01-11
+
+### Added
+
+#### Predator Polling Engine v2
+Intelligent polling system that reduces API calls by **80-95%**:
+
+- **Temperature-Based Polling** for market detail pages:
+  - 🔥 HOT (trade in 5 min): 15s polling
+  - 🌡️ WARM (trade in 1 hour): 60s polling  
+  - ❄️ COLD (no trades 1h+): 5 min polling
+  - 👁️ WATCHING (expired): 30s polling
+  - 💀 RESOLVED: **NEVER poll** (0 queries)
+
+- **Tab Visibility Detection** - All polling stops when tab is hidden
+- **Focus Refetch** - One-time refetch when tab regains focus
+- **Trade-Triggered Mode** - `triggerHotMode()` switches to 15s polling for 2 minutes after trades
+- **Parent-Child Data Sharing** - PriceChart receives trades from MarketDetailPage (no duplicate queries)
+
+#### New Hooks
+- `usePageVisibility()` - Detects tab visibility
+- `useFocusRefetch()` - Triggers refetch on tab focus
+- `useMarketPollInterval()` - Temperature-based polling with HOT mode trigger
+- `useTradeRefetch()` - 3-second delayed refetch for subgraph indexing
+- `getMarketTemperature()` - Calculates HOT/WARM/COLD/WATCHING/RESOLVED
+
+### Changed
+
+#### Polling Intervals (Massive Savings)
+| Component | Old Interval | New Interval | Savings |
+|-----------|--------------|--------------|---------|
+| Markets List | 30s | 90s | **67%** |
+| Market Detail | 15s (always) | 15s-5min (dynamic) | **up to 95%** |
+| PriceChart | 60s (own query) | 0 (uses parent data) | **100%** |
+| Portfolio | 60s | 120s | **50%** |
+| Ticker | 120s | ONCE (no polling) | **100%** |
+| Resolved Markets | 15s | 0 (never poll) | **100%** |
+| Hidden Tab | normal polling | 0 | **100%** |
+
+### Fixed
+
+#### React Hooks Order Error in PortfolioPage
+- Fixed "Rendered more hooks than during the previous render" error
+- Moved all `useMemo` hooks BEFORE the `if (!isConnected)` early return
+- React hooks must be called unconditionally in the same order every render
+
+### Removed
+- Removed 🔐 lock emoji from Portfolio and Create pages "Connect Wallet" screens
+
+---
+
 ## [0.6.4] - 2026-01-11
 
 ### Changed

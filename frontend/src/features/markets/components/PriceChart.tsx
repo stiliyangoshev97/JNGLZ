@@ -4,7 +4,10 @@
  * Real-time price chart showing YES/NO price movements based on trades.
  * Creates FOMO by visualizing pumps and dumps!
  *
- * Smart Polling (v3.4.1): Uses background interval, stops when tab inactive
+ * Predator Polling v2:
+ * - NO OWN POLLING - receives trades from parent via props
+ * - This prevents duplicate queries (parent polls, child displays)
+ * - Falls back to own query (NO polling) if trades not provided
  *
  * @module features/markets/components/PriceChart
  */
@@ -13,7 +16,6 @@ import { useMemo } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET_TRADES } from '@/shared/api';
 import { cn } from '@/shared/utils/cn';
-import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
 interface Trade {
   id: string;
@@ -26,21 +28,22 @@ interface Trade {
 
 interface PriceChartProps {
   marketId: string;
+  /** Optional: trades passed from parent (Predator v2 - no own polling) */
+  trades?: Trade[];
   className?: string;
 }
 
-export function PriceChart({ marketId, className }: PriceChartProps) {
-  // Smart polling: stops when tab is inactive
-  const pollInterval = useSmartPollInterval(POLL_INTERVALS.BACKGROUND);
-
-  // Fetch trades for this market
+export function PriceChart({ marketId, trades: propTrades, className }: PriceChartProps) {
+  // Only fetch if trades not provided by parent
+  // NO POLLING - just initial fetch as fallback
   const { data } = useQuery<{ trades: Trade[] }>(GET_MARKET_TRADES, {
     variables: { marketId, first: 200 },
-    pollInterval, // Dynamic: 60s when visible, 0 when hidden
-    notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
+    skip: !!propTrades, // Skip if parent provides trades
+    notifyOnNetworkStatusChange: false,
   });
 
-  const trades = data?.trades || [];
+  // Use prop trades if available, otherwise fall back to own query
+  const trades = propTrades || data?.trades || [];
 
   // Process trades into chart data points
   const chartData = useMemo(() => {

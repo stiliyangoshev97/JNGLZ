@@ -4,7 +4,7 @@
  * Shows user's positions across all markets.
  * Displays P/L, claimable winnings, and trade history.
  *
- * Smart Polling (v3.4.1): Uses background interval, stops when tab inactive
+ * Predator Polling v2: Uses 120s interval (was 60s), stops when tab inactive
  *
  * @module features/portfolio/pages/PortfolioPage
  */
@@ -58,13 +58,13 @@ export function PortfolioPage() {
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('positions');
 
-  // Smart polling: stops when tab is inactive
-  const pollInterval = useSmartPollInterval(POLL_INTERVALS.BACKGROUND);
+  // Predator Polling v2: 120s interval (was 60s), stops when tab is inactive
+  const pollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
 
   const { data, loading, error } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
-    pollInterval, // Dynamic: 60s when visible, 0 when hidden
+    pollInterval, // Dynamic: 120s when visible, 0 when hidden
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
@@ -72,7 +72,7 @@ export function PortfolioPage() {
   const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
     variables: { creator: address?.toLowerCase(), first: 50 },
     skip: !address || viewMode !== 'my-markets',
-    pollInterval, // Dynamic: 60s when visible, 0 when hidden
+    pollInterval, // Dynamic: 120s when visible, 0 when hidden
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
@@ -95,31 +95,9 @@ export function PortfolioPage() {
   const isInitialLoading = loading && !data?.positions;
   const isInitialMarketsLoading = myMarketsLoading && !myMarketsData?.markets;
 
-  // Not connected state
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md flex flex-col items-center">
-          <p className="text-6xl mb-6">🔐</p>
-          <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
-          <p className="text-text-secondary mb-6">
-            Connect your wallet to view your positions and trading history.
-          </p>
-          <ConnectButton.Custom>
-            {({ openConnectModal }) => (
-              <Button variant="cyber" size="lg" onClick={openConnectModal}>
-                CONNECT WALLET
-              </Button>
-            )}
-          </ConnectButton.Custom>
-        </div>
-      </div>
-    );
-  }
-
   const positions = (data?.positions || []) as PositionWithMarket[];
   
-  // Categorize positions
+  // Categorize positions - MUST be before any conditional returns (React hooks rule)
   const categorizedPositions = useMemo(() => {
     const now = Date.now();
     const categories = {
@@ -174,6 +152,27 @@ export function PortfolioPage() {
 
   // Calculate portfolio stats
   const stats = calculatePortfolioStats(positions, categorizedPositions);
+
+  // Not connected state - AFTER all hooks
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md flex flex-col items-center">
+          <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
+          <p className="text-text-secondary mb-6">
+            Connect your wallet to view your positions and trading history.
+          </p>
+          <ConnectButton.Custom>
+            {({ openConnectModal }) => (
+              <Button variant="cyber" size="lg" onClick={openConnectModal}>
+                CONNECT WALLET
+              </Button>
+            )}
+          </ConnectButton.Custom>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
