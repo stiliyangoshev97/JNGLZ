@@ -265,3 +265,112 @@ export function formatVolume(value: bigint | undefined): string {
     return `${num.toFixed(2)} BNB`;
   }
 }
+
+/**
+ * Format blockchain/wallet errors into user-friendly messages
+ * @param error - Error object from wagmi/viem
+ * @returns User-friendly error message
+ */
+export function formatError(error: Error | null | undefined): string {
+  if (!error) return 'An unknown error occurred';
+  
+  const message = error.message || String(error);
+  
+  // User rejected transaction
+  if (
+    message.includes('User rejected') ||
+    message.includes('User denied') ||
+    message.includes('user rejected') ||
+    message.includes('user denied')
+  ) {
+    return 'Transaction cancelled';
+  }
+  
+  // Insufficient funds
+  if (
+    message.includes('insufficient funds') ||
+    message.includes('Insufficient funds')
+  ) {
+    return 'Insufficient BNB balance for this transaction';
+  }
+  
+  // Gas estimation failed
+  if (message.includes('gas required exceeds allowance')) {
+    return 'Transaction would fail - check your inputs';
+  }
+  
+  // Contract revert errors (common ones)
+  if (message.includes('BelowMinBet')) {
+    return 'Amount is below minimum bet (0.005 BNB)';
+  }
+  if (message.includes('SlippageExceeded')) {
+    return 'Price moved too much - try again or increase slippage';
+  }
+  if (message.includes('MarketNotActive')) {
+    return 'This market is no longer active';
+  }
+  if (message.includes('InsufficientShares')) {
+    return 'You don\'t have enough shares to sell';
+  }
+  if (message.includes('InsufficientPoolBalance')) {
+    return 'Pool doesn\'t have enough liquidity';
+  }
+  if (message.includes('InvalidExpiryTimestamp')) {
+    return 'Expiry time must be in the future';
+  }
+  if (message.includes('EmptyQuestion')) {
+    return 'Question cannot be empty';
+  }
+  if (message.includes('InsufficientBond')) {
+    return 'Bond amount is too low';
+  }
+  if (message.includes('AlreadyProposed')) {
+    return 'An outcome has already been proposed';
+  }
+  if (message.includes('AlreadyDisputed')) {
+    return 'This market is already disputed';
+  }
+  if (message.includes('AlreadyVoted')) {
+    return 'You have already voted on this market';
+  }
+  if (message.includes('NoSharesForVoting')) {
+    return 'You need shares to vote';
+  }
+  if (message.includes('AlreadyClaimed')) {
+    return 'You have already claimed your winnings';
+  }
+  if (message.includes('NothingToClaim')) {
+    return 'No winnings to claim';
+  }
+  if (message.includes('NoTradesToResolve')) {
+    return 'This market has no trades to resolve';
+  }
+  
+  // Network errors
+  if (message.includes('network') || message.includes('Network')) {
+    return 'Network error - please check your connection';
+  }
+  
+  // Timeout
+  if (message.includes('timeout') || message.includes('Timeout')) {
+    return 'Request timed out - please try again';
+  }
+  
+  // Generic contract revert
+  if (message.includes('reverted') || message.includes('revert')) {
+    // Try to extract the reason
+    const match = message.match(/reason="([^"]+)"/);
+    if (match) {
+      return `Transaction failed: ${match[1]}`;
+    }
+    return 'Transaction failed - the contract rejected this action';
+  }
+  
+  // If message is very long (raw error), truncate it
+  if (message.length > 100) {
+    return 'Transaction failed - please try again';
+  }
+  
+  // Return original message if none of the above
+  return message;
+}

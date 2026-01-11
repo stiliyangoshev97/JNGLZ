@@ -2,6 +2,33 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.1] - 2026-01-11
+
+### Added
+
+#### User-Friendly Error Messages
+- Added `formatError()` utility function to parse blockchain/wallet errors
+- Converts raw error messages like "User denied transaction signature" to "Transaction cancelled"
+- Handles common errors: rejected transactions, insufficient funds, slippage, contract reverts
+- Used in CreateMarketPage error display
+
+### Fixed
+
+#### WalletConnect & RainbowKit Not Working
+- Installed missing `@walletconnect/ethereum-provider@2.23.1` dependency
+- Installed missing `rxjs@7.8.2` (peer dependency of @apollo/client v4)
+- WalletConnect and Rainbow wallet connections now work properly
+- Mobile wallet connections (MetaMask app, etc.) now functional
+
+### Changed
+
+#### Dependency Updates
+- Downgraded `wagmi` from 3.2.0 to 2.19.5 (RainbowKit compatibility)
+- Added `rxjs@7.8.2` for Apollo Client v4 compatibility
+- Fixed all peer dependency warnings
+
+---
+
 ## [0.7.0] - 2026-01-11
 
 ### Added

@@ -35,7 +35,7 @@ import {
   useCreateMarketAndBuy,
   useMarketCreationFee,
 } from '@/shared/hooks';
-import { formatBNB } from '@/shared/utils/format';
+import { formatBNB, formatError } from '@/shared/utils/format';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { PREDICTION_MARKET_ABI } from '@/shared/config/contracts';
 
@@ -626,7 +626,7 @@ export function CreateMarketPage() {
             {/* Error display */}
             {error && (
               <div className="mb-4 p-3 border border-no bg-no/10 text-no text-sm">
-                {error.message || 'Transaction failed'}
+                {formatError(error)}
               </div>
             )}
 
