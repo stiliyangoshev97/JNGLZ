@@ -1,4 +1,4 @@
-# Junkie.Fun - Workflow Rules
+# JNGLZ.FUN - Workflow Rules
 
 > **Read this file at the start of every chat session.**  
 > These are the rules for how we work together on this project.

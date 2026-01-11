@@ -1,4 +1,4 @@
-# JunkieFun Subgraph
+# JNGLZ.FUN Subgraph
 
 Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API for the frontend.
 
@@ -6,17 +6,22 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 | Metric | Value |
 |--------|-------|
-| Status | ✅ Deployed (v0.0.3) |
+| Status | ✅ Deployed (v3.4.1) |
 | Network | BNB Testnet (Chapel) |
-| Contract | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` |
-| Start Block | 83314823 |
+| Contract | `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` |
+| Start Block | 83514593 |
 | Entities | 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep) |
 
 ## 🔗 GraphQL Endpoint
 
-**Testnet:**
+**Production:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
+https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+```
+
+**Studio:**
+```
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1
 ```
 
 **Studio Dashboard:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet

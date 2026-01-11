@@ -1,4 +1,4 @@
-# JunkieFun Subgraph - Changelog
+# JNGLZ.FUN Subgraph - Changelog
 
 All notable changes to the subgraph will be documented here.
 

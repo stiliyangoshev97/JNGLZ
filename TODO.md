@@ -1,7 +1,7 @@
-# JunkieFun - Master TODO
+# JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 10, 2026  
-> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ⚠️ Needs Update | Frontend ⚠️ Needs Update  
+> **Last Updated:** January 11, 2026  
+> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ✅ v3.4.1 | Frontend ✅ v0.6.2  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -28,7 +28,7 @@
 
 ### Integration Checklist
 
-#### 1. Update Subgraph ⏳ PENDING
+#### 1. Update Subgraph ✅ DONE
 - [ ] Update `subgraph/subgraph.yaml` with new contract address: `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
 - [ ] Update `subgraph/subgraph.yaml` startBlock to `83514593`
 - [ ] Update `subgraph/abis/PredictionMarket.json` with new ABI (copy from `contracts/out/PredictionMarket.sol/PredictionMarket.json`)

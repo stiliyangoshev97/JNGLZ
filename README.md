@@ -1,6 +1,6 @@
-# 🎲 JunkieFun
+# 🎲 JNGLZ.FUN
 
-> **Decentralized Prediction Markets on BNB Chain**
+> **Decentralized Prediction Market Launchpad on BNB Chain**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org/)
@@ -8,9 +8,9 @@
 
 ---
 
-## 🌐 What is JunkieFun?
+## 🌐 What is JNGLZ.FUN?
 
-JunkieFun is a **fully decentralized, non-custodial prediction market protocol** where anyone can:
+JNGLZ.FUN is a **fully decentralized, non-custodial prediction market launchpad** where anyone can:
 
 - 🎯 **Create Markets** - Ask any yes/no prediction question (FREE)
 - 📈 **Trade on a Bonding Curve** - Buy/sell YES or NO shares with BNB
@@ -73,11 +73,8 @@ JunkieDotFun/
 
 | Component | Address/URL | Status |
 |-----------|-------------|--------|
-| **Contract (v3.2.0)** | TBD | ⏳ Pending |
-| **Contract (v3.1.0)** | `0x4C1508BA973856125a4F42c343560DB918c9EB2b` | ⚠️ DEPRECATED |
-| **Subgraph (v0.0.3)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ⚠️ Needs Update |
-
-> ⚠️ **v3.1.0 has a critical bug** - see [contracts/CHANGELOG.md](contracts/CHANGELOG.md) for details.
+| **Contract (v3.4.1)** | [`0x4e20Df1772D972f10E9604e7e9C775B1ae897464`](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464) | ✅ Live |
+| **Subgraph (v3.4.1)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ✅ Live |
 
 ---
 
@@ -127,7 +124,7 @@ npm run build
 
 ## ⚠️ Disclaimer
 
-JunkieFun is a **decentralized protocol**. All markets are user-created. You are interacting directly with smart contracts at your own risk. 
+JNGLZ.FUN is a **decentralized protocol**. All markets are user-created. You are interacting directly with smart contracts at your own risk. 
 
 - This is NOT financial advice
 - Prediction markets may be illegal in your jurisdiction
@@ -144,10 +141,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
-- **Website**: [junkiefun.xyz](https://junkiefun.xyz) (coming soon)
-- **Twitter**: [@junkiefun](https://twitter.com/junkiefun)
-- **GitHub**: [github.com/junkiefun](https://github.com/junkiefun)
+- **Website**: [jnglz.fun](https://jnglz.fun)
+- **Twitter**: [@jnglzfun](https://x.com/jnglzfun)
+- **GitHub**: [github.com/jnglz](https://github.com/jnglz)
 
 ---
 
-Built with 💊 by the JunkieFun team
+Built with 🔥 by the JNGLZ team

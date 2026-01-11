@@ -1,8 +1,8 @@
-# 📋 Junkie.Fun - Subgraph Project Context
+# 📋 JNGLZ.FUN - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 10, 2026  
-> **Status:** ✅ Deployed (v3.3.1)
+> **Last Updated:** January 11, 2026  
+> **Status:** ✅ Deployed (v3.4.1)
 
 ---
 
@@ -10,17 +10,22 @@
 
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
 
-### GraphQL Endpoint (Testnet)
+### GraphQL Endpoint (Production)
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.3.1
+https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+```
+
+### GraphQL Endpoint (Studio)
+```
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1
 ```
 
 ### Contract Details (Testnet)
-- **Address:** `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
+- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83435321
-- **BscScan:** https://testnet.bscscan.com/address/0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
-- **Contract Version:** v3.3.0 (Proposer Rewards + Fixed Bonding Curve)
+- **Start Block:** 83514593
+- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Contract Version:** v3.4.1 (Pull Pattern + ReplaceSigner + Sweep Protection)
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)

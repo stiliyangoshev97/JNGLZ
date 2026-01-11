@@ -1,4 +1,4 @@
-# 🎰 Junkie.Fun - Prediction Market Smart Contracts
+# 🎰 JNGLZ.FUN - Prediction Market Smart Contracts
 
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
@@ -75,7 +75,7 @@
 
 ## 📜 RULES OF THE GAME
 
-> **Everything you need to understand JunkieFun in one place.**
+> **Everything you need to understand JNGLZ.FUN in one place.**
 
 ### 1️⃣ TRADING FEES (When You Buy/Sell Shares)
 

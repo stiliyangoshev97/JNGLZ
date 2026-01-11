@@ -1,5 +1,5 @@
 ========================================
-JunkieFun Deployment v3.4.1
+JNGLZ.FUN Deployment v3.4.1
 ========================================
 
 Network: BNB Testnet (Chain ID: 97)

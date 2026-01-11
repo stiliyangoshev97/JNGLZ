@@ -1,15 +1,15 @@
-# 📋 JunkieFun - Frontend Project Context
+# 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 10, 2026  
-> **Version:** 0.6.0
+> **Last Updated:** January 11, 2026  
+> **Version:** 0.6.2
 > **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Smart Polling + Optimistic Updates + Pull Pattern)
 
 ---
 
 ## 🎯 Platform Overview
 
-**JunkieFun** is a decentralized prediction market platform with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
+**JNGLZ.FUN** is a decentralized prediction market launchpad with a **"High-Energy Brutalism"** aesthetic (trading terminal × street market) where users can:
 - Create prediction markets (free)
 - Trade YES/NO shares with native BNB
 - View real-time prices via bonding curve

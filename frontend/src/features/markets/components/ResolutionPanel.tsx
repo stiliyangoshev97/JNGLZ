@@ -80,6 +80,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const totalShares = userYesShares + userNoShares;
   const hasClaimed = position?.claimed || false;
   const hasVoted = position?.hasVoted || false;
+  const hasEmergencyRefunded = position?.emergencyRefunded || false;
   
   // Form states
   const [proposedOutcome, setProposedOutcome] = useState<boolean>(true);
@@ -98,6 +99,12 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
   const now = Date.now();
   
+  // Market total supply (from subgraph)
+  const marketYesSupply = BigInt(market.yesShares || '0');
+  const marketNoSupply = BigInt(market.noShares || '0');
+  const marketTotalSupply = marketYesSupply + marketNoSupply;
+  const isEmptyMarket = marketTotalSupply === 0n;
+  
   // Status checks
   const isExpired = now > expiryMs;
   const isResolved = market.resolved;
@@ -107,7 +114,9 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   // Time windows
   const inCreatorPriority = isExpired && now < expiryMs + CREATOR_PRIORITY_WINDOW;
   const isCreator = address?.toLowerCase() === market.creatorAddress?.toLowerCase();
-  const canPropose = isExpired && !hasProposal && (inCreatorPriority ? isCreator : true);
+  
+  // Can only propose if market has participants (contract will revert with NoTradesToResolve otherwise)
+  const canPropose = isExpired && !hasProposal && !isEmptyMarket && (inCreatorPriority ? isCreator : true);
   
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
   const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd;
@@ -121,7 +130,23 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   );
   
   const canClaim = isResolved && totalShares > 0n && !hasClaimed;
-  const canEmergencyRefund = isExpired && !hasProposal && now > expiryMs + EMERGENCY_REFUND_DELAY && totalShares > 0n;
+  
+  // Emergency refund: 24h after expiry, market not resolved, user has shares, hasn't refunded
+  // NOTE: Contract allows emergency refund even if there IS a proposal (as long as not resolved)
+  const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
+  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded;
+  
+  // Show "waiting for emergency refund" when market stuck but 24h not passed yet
+  const isWaitingForEmergencyRefund = isExpired && !isResolved && now <= emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded;
+  
+  // Detect "Resolution Failed" scenario:
+  // - Has proposal (or dispute)
+  // - Finalize window has passed
+  // - Market still NOT resolved (means empty winning side safety triggered)
+  const resolutionMayHaveFailed = hasProposal && !isResolved && (
+    (hasDispute && now > votingWindowEnd) || 
+    (!hasDispute && now > disputeWindowEnd)
+  );
 
   // Don't show panel if market is active
   if (!isExpired && !isResolved) {
@@ -167,8 +192,10 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
   const formatTimeLeft = (endMs: number) => {
     const diff = endMs - now;
     if (diff <= 0) return 'Ended';
-    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
+    if (hours > 0) return `${hours}h ${mins}m`;
     if (mins > 0) return `${mins}m ${secs}s`;
     return `${secs}s`;
   };
@@ -181,6 +208,8 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
           <Badge variant={market.outcome ? 'yes' : 'no'}>
             {market.outcome ? 'YES WINS' : 'NO WINS'}
           </Badge>
+        ) : isEmptyMarket ? (
+          <Badge variant="neutral">NO ACTIVITY</Badge>
         ) : hasDispute ? (
           <Badge variant="neutral">DISPUTED</Badge>
         ) : hasProposal ? (
@@ -191,8 +220,31 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Empty Market Message */}
+        {isEmptyMarket && !isResolved && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
+            <p className="text-text-muted text-sm">
+              This market had no participants. Nothing to resolve.
+            </p>
+          </div>
+        )}
+
+        {/* Resolution Failed Warning */}
+        {resolutionMayHaveFailed && !canEmergencyRefund && (
+          <div className="p-3 bg-dark-800 border border-no/50 text-sm">
+            <p className="text-no font-bold mb-2">⚠️ RESOLUTION BLOCKED</p>
+            <p className="text-text-secondary text-xs mb-2">
+              The proposed outcome ({market.proposedOutcome ? 'YES' : 'NO'}) has no shareholders. 
+              The market cannot resolve to an empty side.
+            </p>
+            <p className="text-text-muted text-xs">
+              Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
+            </p>
+          </div>
+        )}
+
         {/* Status Display */}
-        {hasProposal && !isResolved && (
+        {hasProposal && !isResolved && !resolutionMayHaveFailed && (
           <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
             <div className="flex justify-between mb-2">
               <span className="text-text-muted">Proposed Outcome:</span>
@@ -459,7 +511,7 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
         {canEmergencyRefund && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
             <p className="text-sm text-text-secondary">
-              No one proposed an outcome within 24h. You can claim a refund.
+              This market hasn't been resolved within 24h after expiry. You can claim a proportional refund.
             </p>
             <Button
               variant="ghost"
@@ -476,6 +528,25 @@ export function ResolutionPanel({ market }: ResolutionPanelProps) {
                 'EMERGENCY REFUND'
               )}
             </Button>
+          </div>
+        )}
+
+        {/* Already Emergency Refunded */}
+        {hasEmergencyRefunded && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
+            <p className="text-yes font-bold">✓ REFUNDED</p>
+            <p className="text-text-muted text-xs mt-1">You have already claimed your emergency refund</p>
+          </div>
+        )}
+
+        {/* Waiting for Emergency Refund */}
+        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
+            <p className="text-text-secondary text-sm">⏳ Emergency refund available in:</p>
+            <p className="text-cyber font-mono text-lg mt-1">{formatTimeLeft(emergencyRefundTime)}</p>
+            <p className="text-text-muted text-xs mt-2">
+              If the market isn't resolved, you can claim a proportional refund
+            </p>
           </div>
         )}
 

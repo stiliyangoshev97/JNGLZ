@@ -1,7 +1,7 @@
-# Junkie.Fun - Dependencies
+# JNGLZ.FUN - Dependencies
 
-> **Last Updated:** January 8, 2026  
-> **Status:** Testnet Deployed (v2.5.0)  
+> **Last Updated:** January 11, 2026  
+> **Status:** Testnet Deployed (v3.4.1)  
 
 This file documents all dependencies for deployment and PC migration.
 

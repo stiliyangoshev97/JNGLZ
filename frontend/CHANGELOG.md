@@ -1,6 +1,60 @@
 # Frontend Changelog
 
-All notable changes to the JunkieFun frontend will be documented in this file.
+All notable changes to the JNGLZ.FUN frontend will be documented in this file.
+
+## [0.6.2] - 2026-01-11
+
+### Fixed
+
+#### Resolution Panel Edge Cases
+- **Empty Market Detection** - Now detects markets with 0 participants
+  - Shows "NO ACTIVITY" badge instead of "AWAITING"
+  - Displays "This market had no participants. Nothing to resolve."
+  - Hides "Propose" button (contract would revert with `NoTradesToResolve`)
+
+- **Resolution Failed Detection** - Detects "empty winning side" scenario
+  - When proposal outcome has 0 shareholders, finalize is blocked by contract
+  - Shows "RESOLUTION BLOCKED" warning with explanation
+  - Shows countdown to emergency refund availability
+
+- **Improved Emergency Refund UX**
+  - Shows clear countdown when waiting for 24h period
+  - Better messaging explaining why emergency refund is available
+  - Properly hides propose button for empty markets
+
+### Changed
+- `canPropose` now checks `!isEmptyMarket` before allowing proposal
+- Added `marketYesSupply`, `marketNoSupply`, `marketTotalSupply` from subgraph
+- Added `resolutionMayHaveFailed` detection for stuck markets
+
+---
+
+## [0.6.1] - 2026-01-11
+
+### Fixed
+
+#### Emergency Refund UI Bug
+- **Fixed `canEmergencyRefund` condition** - Was incorrectly requiring `!hasProposal`
+  - Contract allows emergency refund even WITH a proposal (as long as not resolved)
+  - Frontend was hiding the button when someone had proposed an outcome
+  - Now correctly shows emergency refund for any unresolved market 24h after expiry
+
+- **Added `emergencyRefunded` state tracking**
+  - Now checks `position.emergencyRefunded` to hide button after refund claimed
+  - Added "✓ REFUNDED" confirmation UI for users who already claimed
+
+- **Added "Waiting for Emergency Refund" countdown**
+  - Shows time remaining until emergency refund becomes available
+  - Helpful for users with stuck markets who need to wait 24h
+
+- **Improved `formatTimeLeft()` helper**
+  - Now shows hours for longer durations (e.g., "23h 45m" instead of "1425m 30s")
+
+- **Updated message text**
+  - Changed from "No one proposed an outcome" to more accurate description
+  - Emergency refund is for ANY unresolved market 24h after expiry
+
+---
 
 ## [0.6.0] - 2026-01-10
 

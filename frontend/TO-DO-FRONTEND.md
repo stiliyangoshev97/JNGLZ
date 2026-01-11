@@ -1,7 +1,7 @@
-# JunkieFun Frontend - TODO
+# JNGLZ.FUN Frontend - TODO
 
-> **Last Updated:** January 8, 2026  
-> **Status:** Phase 1 - Foundation  
+> **Last Updated:** January 11, 2026  
+> **Status:** Phase 2+ Complete  
 > **Design:** "High-Energy Brutalism" - Trading Terminal × Street Market
 
 ---

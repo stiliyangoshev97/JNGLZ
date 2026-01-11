@@ -1,7 +1,7 @@
 # ============================================
-# JunkieFun - Deployed Contracts
+# JNGLZ.FUN - Deployed Contracts
 # ============================================
-# Last Updated: January 10, 2026
+# Last Updated: January 11, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)

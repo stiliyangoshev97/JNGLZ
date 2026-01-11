@@ -1,4 +1,4 @@
-I'm working on JunkieFun - a decentralized prediction market on BNB Chain.
+I'm working on JNGLZ.FUN - a decentralized prediction market launchpad on BNB Chain.
 
 Please read these files to understand the project:
 

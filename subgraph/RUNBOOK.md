@@ -1,4 +1,4 @@
-# JunkieFun Subgraph - Runbook
+# JNGLZ.FUN Subgraph - Runbook
 
 Quick reference for common subgraph operations.
 

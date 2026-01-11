@@ -1,7 +1,7 @@
-# 📋 Junkie.Fun - Contracts Project Context
+# 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 10, 2026  
+> **Last Updated:** January 11, 2026  
 > **Status:** ✅ Smart Contracts Deployed (v3.4.1, 164 tests)
 
 ---
