@@ -25,6 +25,7 @@
 
 import { useRouteError, isRouteErrorResponse, Link } from 'react-router-dom';
 import { Button } from './ui/Button';
+import { env } from '@/shared/config/env';
 
 /**
  * Checks if the error is related to chunk/module loading failures.
@@ -171,7 +172,7 @@ export function ErrorBoundary() {
         <p className="mt-6 text-xs text-text-muted font-mono">
           If this keeps happening, try clearing your cache or{' '}
           <a 
-            href="https://twitter.com/jnglzfun" 
+            href={env.X_URL} 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-cyber hover:underline"

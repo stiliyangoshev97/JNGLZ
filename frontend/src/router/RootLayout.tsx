@@ -12,6 +12,7 @@ import { Header } from './Header';
 import { WrongNetworkModal, WrongNetworkBanner } from '@/shared/components/WrongNetworkModal';
 import { EntryModal, CookieBanner } from '@/shared/components/legal';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import { env } from '@/shared/config/env';
 
 export function RootLayout() {
   const { isWrongNetwork } = useChainValidation();
@@ -69,12 +70,20 @@ function Footer() {
               HOW TO PLAY
             </Link>
             <a
-              href="https://twitter.com/jnglzfun"
+              href={env.X_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-text-secondary hover:text-cyber transition-colors"
             >
-              TWITTER
+              X
+            </a>
+            <a
+              href={env.TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text-secondary hover:text-cyber transition-colors"
+            >
+              TELEGRAM
             </a>
             <Link
               to="/terms"

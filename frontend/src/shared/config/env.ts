@@ -39,6 +39,10 @@ export const env = {
     .map((addr: string) => addr.trim().toLowerCase())
     .filter((addr: string) => addr.length > 0),
   
+  // Social Links
+  X_URL: import.meta.env.VITE_X_URL || 'https://x.com/jnglzdotfun',
+  TELEGRAM_URL: import.meta.env.VITE_TELEGRAM_URL || 'https://t.me/jnglzdotfun',
+  
   // Environment
   IS_DEV: import.meta.env.DEV,
   IS_PROD: import.meta.env.PROD,

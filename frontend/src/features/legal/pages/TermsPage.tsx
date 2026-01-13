@@ -9,6 +9,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { env } from '@/shared/config/env';
 
 export function TermsPage() {
   return (
@@ -297,8 +298,8 @@ export function TermsPage() {
                 For questions about these Terms, contact us via:
               </p>
               <ul className="list-disc list-inside mt-2">
-                <li>Twitter: <a href="https://twitter.com/jnglzfun" className="text-cyber hover:underline">@jnglzfun</a></li>
-                <li>GitHub: <a href="https://github.com/jnglzfun" className="text-cyber hover:underline">github.com/jnglzfun</a></li>
+                <li>X: <a href={env.X_URL} className="text-cyber hover:underline" target="_blank" rel="noopener noreferrer">@jnglzdotfun</a></li>
+                <li>Telegram: <a href={env.TELEGRAM_URL} className="text-cyber hover:underline" target="_blank" rel="noopener noreferrer">t.me/jnglzdotfun</a></li>
               </ul>
             </div>
           </section>
