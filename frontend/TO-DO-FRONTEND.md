@@ -59,6 +59,46 @@
 
 ---
 
+## 🚨 CONTRACT REDEPLOYMENT REQUIRED
+
+### Virtual Liquidity Recalibration (CRITICAL)
+
+**Problem:** Current virtual liquidity values are too small, causing excessive price volatility.
+- Example: 0.7 BNB trade in PRO tier (vLiq=50e18) moved price from 50% → 75% (25 points!)
+- This makes markets unplayable - one trade kills the market
+
+**Current Contract Values (3 tiers only):**
+| Level | vLiq (1e18) | Result |
+|-------|-------------|--------|
+| CRACK | 5 | Way too volatile |
+| HIGH | 20 | Too volatile |
+| PRO | 50 | Still too volatile |
+
+**Proposed New Values (5 tiers, 10x increase):**
+| Level | Name | New vLiq (1e18) | Trade Range | Expected Impact |
+|-------|------|-----------------|-------------|-----------------|
+| CRACK | DEGEN FLASH | **50** | 0.005–0.1 BNB | ~5-10% per 0.1 BNB |
+| HIGH | STREET FIGHT | **200** | 0.1–1.0 BNB | ~3-5% per 1 BNB |
+| PRO | WHALE POND | **500** | 1.0–5.0 BNB | ~2-3% per 5 BNB |
+| APEX | INSTITUTION | **2000** | 5.0–20.0 BNB | ~2% per 20 BNB |
+| CORE | DEEP SPACE | **10000** | 20.0–100+ BNB | ~1% per 100 BNB |
+
+**Contract Changes Needed:**
+1. Add `HeatLevel.APEX` and `HeatLevel.CORE` to enum
+2. Add `heatLevelApex = 2000 * 1e18` 
+3. Add `heatLevelCore = 10000 * 1e18`
+4. Update existing values: CRACK=50e18, HIGH=200e18, PRO=500e18
+5. Update `_getVirtualLiquidity()` function to handle 5 levels
+6. Update frontend `CreateMarketPage.tsx` to show 5 heat level options
+7. Update subgraph to handle new heat levels
+
+**Math Verification (BNB = $900):**
+- PRO (500e18): 0.7 BNB buy ≈ 2-3% price move ✅
+- APEX (2000e18): 10 BNB buy ≈ 2% price move ✅
+- CORE (10000e18): 50 BNB buy ≈ 2% price move ✅
+
+---
+
 ## ⬜ PENDING FEATURES
 
 ### Social Features (Phase 4 - Not Started)

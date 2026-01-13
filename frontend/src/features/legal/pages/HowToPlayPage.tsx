@@ -80,15 +80,15 @@ export function HowToPlayPage() {
                   <tr className="border-b border-dark-700">
                     <td className="p-3 text-no">☢️ CRACK</td>
                     <td className="p-3 text-no">DEGEN FLASH</td>
-                    <td className="p-3 text-white">5</td>
+                    <td className="p-3 text-white">50</td>
                     <td className="p-3 text-text-secondary">Moon-Bagger</td>
                     <td className="p-3 text-text-secondary">0.005 – 0.1 BNB</td>
-                    <td className="p-3 text-text-muted text-xs">Total Chaos. Tiny trades move the needle. 700% swings are common.</td>
+                    <td className="p-3 text-text-muted text-xs">Total Chaos. Small trades move the needle. High volatility playground.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
                     <td className="p-3 text-yellow-500">🔥 HIGH</td>
                     <td className="p-3 text-yellow-500">STREET FIGHT</td>
-                    <td className="p-3 text-white">20</td>
+                    <td className="p-3 text-white">200</td>
                     <td className="p-3 text-text-secondary">The Trader</td>
                     <td className="p-3 text-text-secondary">0.1 – 1.0 BNB</td>
                     <td className="p-3 text-text-muted text-xs">The Standard. Strategic tug-of-war. Perfect for active day-trading.</td>
@@ -96,7 +96,7 @@ export function HowToPlayPage() {
                   <tr className="border-b border-dark-700">
                     <td className="p-3 text-cyber">🧊 PRO</td>
                     <td className="p-3 text-cyber">WHALE POND</td>
-                    <td className="p-3 text-white">50</td>
+                    <td className="p-3 text-white">500</td>
                     <td className="p-3 text-text-secondary">The Shark</td>
                     <td className="p-3 text-text-secondary">1.0 – 5.0 BNB</td>
                     <td className="p-3 text-text-muted text-xs">Serious Stakes. Balanced slippage for high-conviction players.</td>
@@ -104,7 +104,7 @@ export function HowToPlayPage() {
                   <tr className="border-b border-dark-700">
                     <td className="p-3 text-blue-400">🏛️ APEX</td>
                     <td className="p-3 text-blue-400">INSTITUTION</td>
-                    <td className="p-3 text-white">150</td>
+                    <td className="p-3 text-white">2000</td>
                     <td className="p-3 text-text-secondary">The Whale</td>
                     <td className="p-3 text-text-secondary">5.0 – 20.0 BNB</td>
                     <td className="p-3 text-text-muted text-xs">The Professional. Deep liquidity. Price moves are slow and measured.</td>
@@ -112,7 +112,7 @@ export function HowToPlayPage() {
                   <tr>
                     <td className="p-3 text-purple-400">🌌 CORE</td>
                     <td className="p-3 text-purple-400">DEEP SPACE</td>
-                    <td className="p-3 text-white">500</td>
+                    <td className="p-3 text-white">10000</td>
                     <td className="p-3 text-text-secondary">The Titan</td>
                     <td className="p-3 text-text-secondary">20.0 – 100+ BNB</td>
                     <td className="p-3 text-text-muted text-xs">Infinite Depth. Built for massive capital. The final source of truth.</td>

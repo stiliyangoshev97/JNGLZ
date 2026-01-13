@@ -1,8 +1,92 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 13, 2026  
-> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ✅ v3.4.1 | Frontend ✅ v0.7.5  
+> **Last Updated:** January 14, 2026  
+> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ✅ v3.4.1 | Frontend ✅ v0.7.12  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🚨 NEXT PRIORITY: Contract v3.5.0 - Heat Level Rebalance
+
+### Problem
+- Current virtual liquidity values are **WAY TOO SMALL**
+- 0.7 BNB buy in PRO/WHALE POND moved price 50% → 75% (25pp move!)
+- Markets become "dead" after one big trade - price gets pushed to extreme
+- Contract only has 3 tiers, frontend HOW TO PLAY shows 5
+
+### Current State
+| Component | Tiers |
+|-----------|-------|
+| Contract | 3 (CRACK=5e18, HIGH=20e18, PRO=50e18) |
+| Frontend HOW TO PLAY | 5 (CRACK, HIGH, PRO, APEX, CORE) |
+| Frontend HeatSelector | 3 (only wired to contract) |
+
+### Proposed Changes (5 Tiers) - 10x INCREASE
+
+**BNB Price Reference: $900 USD**
+
+| Tier | Name | Display Name | Current VL | **NEW VL** | Target Trade | Expected Move |
+|------|------|--------------|------------|------------|--------------|---------------|
+| 0 | CRACK | DEGEN FLASH | 5e18 | **50e18** | 0.005-0.1 BNB | ~5-10% |
+| 1 | HIGH | STREET FIGHT | 20e18 | **200e18** | 0.1-1.0 BNB | ~3-5% |
+| 2 | PRO | WHALE POND | 50e18 | **500e18** | 1.0-5.0 BNB | ~2-3% |
+| 3 | APEX | INSTITUTION | N/A | **2000e18** | 5.0-20.0 BNB | ~2% |
+| 4 | CORE | DEEP SPACE | N/A | **10000e18** | 20.0-100+ BNB | ~1% |
+
+### Why These Values?
+
+**Rule:** Virtual liquidity should be ~50-100x the "typical max trade" for ~2-5% price impact.
+
+**Verification with your trade:**
+- OLD PRO (50e18): 0.7 BNB trade → 25% price move ❌ BROKEN
+- NEW PRO (500e18): 0.7 BNB trade → ~2-3% price move ✅ PLAYABLE
+
+**Example math for PRO (500e18 = 500 BNB virtual liquidity):**
+- At 50/50: virtualYes=500, virtualNo=500
+- 5 BNB trade = 5/500 = 1% of virtual supply
+- Price impact ≈ 2-3% ✅ Reasonable for "serious stakes"
+
+**Example math for CORE (10000e18 = 10,000 BNB virtual liquidity):**
+- 100 BNB trade = 100/10000 = 1% of virtual supply
+- Price impact ≈ 1-2% ✅ True whale territory
+
+### Contract Changes Required
+```solidity
+// OLD (3 tiers)
+enum HeatLevel { CRACK, HIGH, PRO }
+uint256 public heatLevelCrack = 5 * 1e18;
+uint256 public heatLevelHigh = 20 * 1e18;
+uint256 public heatLevelPro = 50 * 1e18;
+
+// NEW (5 tiers) - 10x increase!
+enum HeatLevel { CRACK, HIGH, PRO, APEX, CORE }
+uint256 public heatLevelCrack = 50 * 1e18;    // 10x
+uint256 public heatLevelHigh = 200 * 1e18;    // 10x
+uint256 public heatLevelPro = 500 * 1e18;     // 10x
+uint256 public heatLevelApex = 2000 * 1e18;   // NEW
+uint256 public heatLevelCore = 10000 * 1e18;  // NEW
+```
+
+### Tasks
+- [ ] Update `PredictionMarket.sol`:
+  - [ ] Add APEX and CORE to HeatLevel enum
+  - [ ] Add heatLevelApex and heatLevelCore state variables
+  - [ ] Update _getVirtualLiquidity() for 5 levels
+  - [ ] Increase existing values (CRACK 5→50, HIGH 20→200, PRO 50→500)
+  - [ ] Add SetHeatLevelApex and SetHeatLevelCore to MultiSigAction enum
+- [ ] Run full test suite (update test values)
+- [ ] Deploy new contract v3.5.0
+- [ ] Update subgraph:
+  - [ ] New contract address
+  - [ ] Heat level mapping (5 tiers)
+  - [ ] Redeploy subgraph
+- [ ] Update frontend:
+  - [ ] `HeatSelector` component (5 options)
+  - [ ] `CreateMarketPage.tsx` (wire 5 tiers)
+  - [ ] `HowToPlayPage.tsx` - update vLiq numbers to match
+  - [ ] `format.ts` - update DEFAULT_VIRTUAL_LIQUIDITY
+  - [ ] Contract address in `.env`
+  - [ ] All components using virtualLiquidity
 
 ---
 
