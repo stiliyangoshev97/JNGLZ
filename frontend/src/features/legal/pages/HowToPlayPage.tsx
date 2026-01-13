@@ -32,7 +32,7 @@ export function HowToPlayPage() {
           {/* ===== THE GOAL OF JNGLZ ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              🎯 THE GOAL OF JNGLZ
+              THE GOAL OF JNGLZ
             </h2>
             <div className="bg-dark-800 border border-cyber/30 p-6">
               <p className="text-text-secondary text-lg leading-relaxed mb-4">
@@ -55,7 +55,7 @@ export function HowToPlayPage() {
           {/* ===== HEAT LEVELS ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              🚀 THE JNGLZ HEAT LEVELS
+              THE JNGLZ HEAT LEVELS
             </h2>
             <p className="text-text-secondary mb-6">
               Each jungle uses a specific <strong className="text-white">Virtual Liquidity (vLiq)</strong> setting. 
@@ -78,7 +78,7 @@ export function HowToPlayPage() {
                 </thead>
                 <tbody className="font-mono">
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-no">☢️ CRACK</td>
+                    <td className="p-3 text-no">CRACK</td>
                     <td className="p-3 text-no">DEGEN FLASH</td>
                     <td className="p-3 text-white">50</td>
                     <td className="p-3 text-text-secondary">Moon-Bagger</td>
@@ -86,7 +86,7 @@ export function HowToPlayPage() {
                     <td className="p-3 text-text-muted text-xs">Total Chaos. Small trades move the needle. High volatility playground.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-yellow-500">🔥 HIGH</td>
+                    <td className="p-3 text-yellow-500">HIGH</td>
                     <td className="p-3 text-yellow-500">STREET FIGHT</td>
                     <td className="p-3 text-white">200</td>
                     <td className="p-3 text-text-secondary">The Trader</td>
@@ -94,7 +94,7 @@ export function HowToPlayPage() {
                     <td className="p-3 text-text-muted text-xs">The Standard. Strategic tug-of-war. Perfect for active day-trading.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-cyber">🧊 PRO</td>
+                    <td className="p-3 text-cyber">PRO</td>
                     <td className="p-3 text-cyber">WHALE POND</td>
                     <td className="p-3 text-white">500</td>
                     <td className="p-3 text-text-secondary">The Shark</td>
@@ -102,7 +102,7 @@ export function HowToPlayPage() {
                     <td className="p-3 text-text-muted text-xs">Serious Stakes. Balanced slippage for high-conviction players.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-blue-400">🏛️ APEX</td>
+                    <td className="p-3 text-blue-400">APEX</td>
                     <td className="p-3 text-blue-400">INSTITUTION</td>
                     <td className="p-3 text-white">2000</td>
                     <td className="p-3 text-text-secondary">The Whale</td>
@@ -110,7 +110,7 @@ export function HowToPlayPage() {
                     <td className="p-3 text-text-muted text-xs">The Professional. Deep liquidity. Price moves are slow and measured.</td>
                   </tr>
                   <tr>
-                    <td className="p-3 text-purple-400">🌌 CORE</td>
+                    <td className="p-3 text-purple-400">CORE</td>
                     <td className="p-3 text-purple-400">DEEP SPACE</td>
                     <td className="p-3 text-white">10000</td>
                     <td className="p-3 text-text-secondary">The Titan</td>
@@ -123,30 +123,30 @@ export function HowToPlayPage() {
 
             {/* Slippage Reference */}
             <div className="bg-dark-800 border border-dark-600 p-4">
-              <h4 className="text-white font-bold mb-3">📊 SLIPPAGE & IMPACT REFERENCE</h4>
+              <h4 className="text-white font-bold mb-3">SLIPPAGE & IMPACT REFERENCE</h4>
               <p className="text-text-secondary text-sm mb-3">
-                How much a <strong className="text-white">0.1 BNB trade (~$60)</strong> shifts the market price at each level:
+                How much a <strong className="text-white">1.0 BNB trade (~$600)</strong> shifts the market price at each level:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-sm">
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-no">CRACK (5)</span>
+                  <span className="text-no">CRACK (50)</span>
                   <span className="text-white">~25.0%</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-yellow-500">HIGH (20)</span>
+                  <span className="text-yellow-500">HIGH (200)</span>
                   <span className="text-white">~7.0%</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-cyber">PRO (50)</span>
+                  <span className="text-cyber">PRO (500)</span>
                   <span className="text-white">~3.0%</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-blue-400">APEX (150)</span>
-                  <span className="text-white">~1.0%</span>
+                  <span className="text-blue-400">APEX (2000)</span>
+                  <span className="text-white">~0.75%</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-purple-400">CORE (500)</span>
-                  <span className="text-white">~0.3%</span>
+                  <span className="text-purple-400">CORE (10000)</span>
+                  <span className="text-white">~0.15%</span>
                 </div>
               </div>
             </div>
@@ -155,7 +155,7 @@ export function HowToPlayPage() {
           {/* ===== STRATEGIES ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              🦁 THE JUNGLE STRATEGIES
+              THE JUNGLE STRATEGIES
             </h2>
             <p className="text-text-secondary mb-6">
               <strong className="text-cyber">JNGLZ.FUN</strong> is more than a prediction market—it's a tactical battlefield 
@@ -166,7 +166,7 @@ export function HowToPlayPage() {
             <div className="space-y-6">
               {/* THE HUNTER */}
               <div className="bg-dark-800 border border-yellow-500/30 p-5">
-                <h3 className="text-xl font-black text-yellow-500 mb-2">🐆 THE HUNTER <span className="text-sm font-normal text-text-muted">(Sentiment Arbitrage)</span></h3>
+                <h3 className="text-xl font-black text-yellow-500 mb-2">THE HUNTER <span className="text-sm font-normal text-text-muted">(Sentiment Arbitrage)</span></h3>
                 <p className="text-text-secondary mb-3">
                   <strong className="text-white">The Goal:</strong> Find mispriced truth.
                 </p>
@@ -185,7 +185,7 @@ export function HowToPlayPage() {
 
               {/* THE SQUEEZE */}
               <div className="bg-dark-800 border border-purple-500/30 p-5">
-                <h3 className="text-xl font-black text-purple-400 mb-2">🐍 THE SQUEEZE <span className="text-sm font-normal text-text-muted">(Volatility Ninja)</span></h3>
+                <h3 className="text-xl font-black text-purple-400 mb-2">THE SQUEEZE <span className="text-sm font-normal text-text-muted">(Volatility Ninja)</span></h3>
                 <p className="text-text-secondary mb-3">
                   <strong className="text-white">The Goal:</strong> Tax the Whales.
                 </p>
@@ -205,7 +205,7 @@ export function HowToPlayPage() {
 
               {/* THE DEFENDER */}
               <div className="bg-dark-800 border border-cyber/30 p-5">
-                <h3 className="text-xl font-black text-cyber mb-2">🦍 THE DEFENDER <span className="text-sm font-normal text-text-muted">(The Moon Bagger)</span></h3>
+                <h3 className="text-xl font-black text-cyber mb-2">THE DEFENDER <span className="text-sm font-normal text-text-muted">(The Moon Bagger)</span></h3>
                 <p className="text-text-secondary mb-3">
                   <strong className="text-white">The Goal:</strong> Hold for the Final Payout.
                 </p>
@@ -226,68 +226,82 @@ export function HowToPlayPage() {
           {/* ===== RESOLUTION ROLES ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              ⚖️ RESOLUTION ROLES
+              RESOLUTION ROLES
             </h2>
             <p className="text-text-secondary mb-6">
-              After a market expires, a new game begins: <strong className="text-white">determining the truth</strong>. 
-              These roles let you earn rewards for helping resolve markets correctly.
+              After a market expires, <strong className="text-white">resolution</strong> determines which side wins the pool. 
+              These roles let you earn rewards for participating in the resolution process.
             </p>
 
             <div className="space-y-6">
               {/* THE PROPOSER */}
               <div className="bg-dark-800 border border-yes/30 p-5">
-                <h3 className="text-xl font-black text-yes mb-2">👑 THE PROPOSER <span className="text-sm font-normal text-text-muted">(The Oracle)</span></h3>
+                <h3 className="text-xl font-black text-yes mb-2">THE PROPOSER</h3>
                 <p className="text-text-secondary mb-3">
-                  <strong className="text-white">The Goal:</strong> Settle the market and collect the bounty.
+                  <strong className="text-white">Role:</strong> Submit the outcome (YES or NO) to resolve the market.
                 </p>
                 <div className="space-y-2 text-sm">
                   <p className="text-text-secondary">
-                    <strong className="text-cyber">The Play:</strong> Once a market expires, the "Oracle" window opens. 
-                    The creator has 10 minutes to propose the outcome. If they fail, <strong className="text-white">the window opens to you</strong>. 
-                    Stake a bond (1% of the pool) to propose the truth.
+                    <strong className="text-cyber">How it works:</strong> Once a market expires, the creator has 10 minutes to propose. 
+                    After that, <strong className="text-white">anyone can propose</strong>. 
+                    Stake a bond (1% of the pool, minimum 0.005 BNB) to submit your proposed outcome.
                   </p>
                   <p className="text-text-secondary">
-                    <strong className="text-yes">The Win:</strong> If your proposal is accepted, you get your 
-                    <strong className="text-white"> bond back PLUS a 0.5% reward</strong> of the entire pool. You get paid to tell the truth.
+                    <strong className="text-yes">If accepted:</strong> You get your 
+                    <strong className="text-white"> bond back + 0.5% of the pool</strong> as a reward.
+                  </p>
+                  <p className="text-text-secondary">
+                    <strong className="text-no">If disputed & you lose the vote:</strong> 
+                    You <strong className="text-no">lose your ENTIRE bond</strong>. 
+                    50% goes to the disputer, 50% goes to voters who voted against you.
                   </p>
                 </div>
               </div>
 
               {/* THE DISPUTER */}
               <div className="bg-dark-800 border border-no/30 p-5">
-                <h3 className="text-xl font-black text-no mb-2">⚔️ THE DISPUTER <span className="text-sm font-normal text-text-muted">(Street Justice)</span></h3>
+                <h3 className="text-xl font-black text-no mb-2">THE DISPUTER</h3>
                 <p className="text-text-secondary mb-3">
-                  <strong className="text-white">The Goal:</strong> Punish the liars.
+                  <strong className="text-white">Role:</strong> Challenge a proposal and trigger a shareholder vote.
                 </p>
                 <div className="space-y-2 text-sm">
                   <p className="text-text-secondary">
-                    <strong className="text-cyber">The Play:</strong> Did a Proposer try to steal the pool by lying about the outcome? 
-                    This is your time. Stake a 2x bond to <strong className="text-white">Dispute</strong> their claim and trigger a shareholder vote.
+                    <strong className="text-cyber">How it works:</strong> If you disagree with a proposal, 
+                    stake a <strong className="text-white">2x bond</strong> (double the proposer's bond) to dispute it. 
+                    This triggers a 1-hour shareholder vote.
                   </p>
                   <p className="text-text-secondary">
-                    <strong className="text-yes">The Win:</strong> If the voters agree with you, the original Proposer is 
-                    <strong className="text-no"> REKT</strong> and loses their bond. You get your bond back 
-                    <strong className="text-white"> plus 50% of the liar's bond</strong> as a bounty.
+                    <strong className="text-yes">If you win the vote:</strong> You get your bond back 
+                    <strong className="text-white"> + 50% of the proposer's bond</strong>. The market resolves to the OPPOSITE outcome.
+                  </p>
+                  <p className="text-text-secondary">
+                    <strong className="text-no">If you lose the vote:</strong> 
+                    You <strong className="text-no">lose your ENTIRE 2x bond</strong>. 
+                    50% goes to the proposer, 50% goes to voters who voted against you.
                   </p>
                 </div>
               </div>
 
               {/* THE JURY */}
               <div className="bg-dark-800 border border-cyber/30 p-5">
-                <h3 className="text-xl font-black text-cyber mb-2">🗳️ THE JURY <span className="text-sm font-normal text-text-muted">(Voter Rewards)</span></h3>
+                <h3 className="text-xl font-black text-cyber mb-2">THE JURY</h3>
                 <p className="text-text-secondary mb-3">
-                  <strong className="text-white">The Goal:</strong> Protect the Jungle.
+                  <strong className="text-white">Role:</strong> Vote on disputed markets and earn jury fees.
                 </p>
                 <div className="space-y-2 text-sm">
                   <p className="text-text-secondary">
-                    <strong className="text-cyber">The Play:</strong> When a dispute happens, shareholders become the Jury. 
-                    Your vote weight depends on your total shares (YES + NO combined). 
-                    You can vote for <strong className="text-white">any</strong> outcome—your goal is to side with the truth.
+                    <strong className="text-cyber">How it works:</strong> When a dispute happens, all shareholders can vote. 
+                    Your vote weight = <strong className="text-white">total shares (YES + NO combined)</strong>. 
+                    Vote for whichever side you want—proposer or disputer.
                   </p>
                   <p className="text-text-secondary">
-                    <strong className="text-yes">The Win:</strong> If you vote with the winning side of a dispute, 
-                    you earn a share of the <strong className="text-white">Losing Bonder's bond</strong> as a Jury Fee. 
-                    You get paid for your service to the Protocol.
+                    <strong className="text-yes">If you vote with the winning side:</strong> 
+                    You earn a share of <strong className="text-white">50% of the loser's bond</strong> (proportional to your vote weight).
+                  </p>
+                  <p className="text-text-secondary">
+                    <strong className="text-no">If you vote with the losing side:</strong> 
+                    You get <strong className="text-no">ZERO jury fees</strong>. 
+                    Only voters on the winning side split the jury fee portion.
                   </p>
                 </div>
               </div>
@@ -297,44 +311,61 @@ export function HowToPlayPage() {
           {/* ===== STREET CONSENSUS - IMPORTANT ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-warning pl-4 mb-6">
-              🗳️ STREET CONSENSUS VOTING
+              STREET CONSENSUS VOTING
             </h2>
             
             <div className="bg-warning/10 border-2 border-warning p-6">
-              <p className="text-warning font-black text-lg mb-4">⚠️ CRITICAL: VOTING IS ABOUT TRUTH, NOT YOUR POSITION</p>
+              <p className="text-warning font-black text-lg mb-4">HOW DISPUTE VOTING WORKS</p>
               
               <div className="space-y-4 text-sm">
                 <div>
-                  <p className="text-white font-bold">Vote weight = ALL your shares (YES + NO combined)</p>
+                  <p className="text-white font-bold">Vote Weight Calculation</p>
                   <p className="text-text-secondary">
+                    Your vote weight = <strong className="text-cyber">ALL your shares (YES + NO combined)</strong>.
                     If you hold 100 YES and 50 NO shares, your vote weight is <strong className="text-cyber">150</strong>.
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-white font-bold">Voting determines what actually happened</p>
+                  <p className="text-white font-bold">What Your Vote Does</p>
                   <p className="text-text-secondary">
-                    NOT which side wins the pool. You are voting on whether the proposed outcome is 
-                    <strong className="text-yes"> TRUE</strong> or <strong className="text-no">FALSE</strong>.
+                    You vote for either the <strong className="text-yes">Proposer</strong> or the <strong className="text-no">Disputer</strong>.
+                    The side with more vote weight wins. The winning side determines the market outcome.
                   </p>
                 </div>
 
                 <div className="bg-dark-900/50 p-4 border border-dark-600">
-                  <p className="text-white font-bold mb-2">📖 Example:</p>
+                  <p className="text-white font-bold mb-2">Example:</p>
                   <p className="text-text-secondary mb-2">
-                    You hold only <span className="text-yes">YES</span> shares. The question was "Will BTC hit $100K?" 
-                    and the proposer says <span className="text-yes">YES</span>. But you <strong className="text-white">know</strong> BTC never hit $100K.
+                    Question: "Will BTC hit $100K by Dec 31?" — Proposer submitted <span className="text-yes">YES</span>, someone disputed.
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-text-secondary">
-                    <li>If you vote <span className="text-yes">YES</span> (to protect your position): You're voting for a <strong className="text-no">lie</strong></li>
-                    <li>If you vote <span className="text-no">NO</span> (truthfully): You'll <strong className="text-no">lose your shares</strong> but earn voting rewards</li>
+                    <li>Proposer wins vote → Market resolves <span className="text-yes">YES</span> → YES shareholders claim the pool</li>
+                    <li>Disputer wins vote → Market resolves <span className="text-no">NO</span> → NO shareholders claim the pool</li>
                   </ul>
                 </div>
 
-                <p className="text-cyber font-bold">
-                  💡 The system incentivizes truth-telling. Voting the truth earns you a share of the losing 
-                  bonder's bond - which may partially offset your losses from being on the wrong side of the market.
-                </p>
+                <div className="bg-cyber/10 p-4 border border-cyber">
+                  <p className="text-cyber font-bold mb-2">JURY FEE DISTRIBUTION</p>
+                  <ul className="list-disc list-inside space-y-1 text-text-secondary">
+                    <li>The losing bonder forfeits their entire bond</li>
+                    <li><strong className="text-white">50%</strong> → Winning bonder</li>
+                    <li><strong className="text-white">50%</strong> → Split among voters who voted for the winning side (proportional to vote weight)</li>
+                    <li className="text-no">Voters on the losing side receive <strong>ZERO</strong> jury fees</li>
+                  </ul>
+                </div>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600">
+                  <p className="text-white font-bold mb-2">Vote vs. Share Position</p>
+                  <p className="text-text-secondary">
+                    Your vote and your shares are <strong className="text-white">independent</strong>. 
+                    You can vote for either side regardless of which shares you hold.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-text-secondary mt-2">
+                    <li>Jury fees are earned based on <strong className="text-cyber">how you voted</strong></li>
+                    <li>Pool winnings are earned based on <strong className="text-cyber">which shares you hold</strong></li>
+                  </ul>
+                </div>
               </div>
             </div>
           </section>
@@ -342,7 +373,7 @@ export function HowToPlayPage() {
           {/* ===== BONDING CURVE BASICS ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              💹 BONDING CURVE BASICS
+              BONDING CURVE BASICS
             </h2>
             
             <div className="space-y-4">
@@ -358,13 +389,13 @@ export function HowToPlayPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-dark-800 border border-yes/30 p-4">
-                  <h4 className="text-yes font-bold mb-2">📈 Buying</h4>
+                  <h4 className="text-yes font-bold mb-2">Buying</h4>
                   <p className="text-text-secondary text-sm">
                     Buying pushes price <strong className="text-white">UP</strong>. More demand = higher price.
                   </p>
                 </div>
                 <div className="bg-dark-800 border border-no/30 p-4">
-                  <h4 className="text-no font-bold mb-2">📉 Selling</h4>
+                  <h4 className="text-no font-bold mb-2">Selling</h4>
                   <p className="text-text-secondary text-sm">
                     Selling pushes price <strong className="text-white">DOWN</strong>. Uses post-sale state (natural slippage).
                   </p>
@@ -380,7 +411,7 @@ export function HowToPlayPage() {
               </div>
 
               <div className="bg-no/10 border border-no p-4">
-                <h4 className="text-no font-bold mb-2">⚠️ No Free Lunch</h4>
+                <h4 className="text-no font-bold mb-2">No Free Lunch</h4>
                 <p className="text-text-secondary text-sm">
                   <strong className="text-white">Instant buy→sell = guaranteed loss</strong> due to price impact + fees. 
                   There is no risk-free arbitrage in the Jungle.
@@ -392,45 +423,71 @@ export function HowToPlayPage() {
           {/* ===== FEE STRUCTURE ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              💰 FEE STRUCTURE
+              FEE STRUCTURE
             </h2>
             
             <div className="bg-dark-800 border border-dark-600 p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 font-mono">
-                <div className="p-3 bg-dark-900">
-                  <p className="text-text-muted text-xs mb-1">Platform Fee</p>
-                  <p className="text-cyber text-xl">1.0%</p>
-                  <p className="text-text-muted text-[10px]">on trades</p>
+              {/* Fee Grid with Destinations */}
+              <div className="space-y-4">
+                {/* Trading Fees */}
+                <div>
+                  <h4 className="text-white font-bold mb-3">Trading Fees (on every buy/sell)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-dark-900 flex justify-between items-center">
+                      <div>
+                        <p className="text-text-muted text-xs">Platform Fee</p>
+                        <p className="text-cyber text-xl font-mono">1.0%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-text-muted text-xs">goes to</p>
+                        <p className="text-cyber text-sm font-bold">Treasury</p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-dark-900 flex justify-between items-center">
+                      <div>
+                        <p className="text-text-muted text-xs">Creator Fee</p>
+                        <p className="text-yellow-500 text-xl font-mono">0.5%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-text-muted text-xs">goes to</p>
+                        <p className="text-yellow-500 text-sm font-bold">Market Creator</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-text-muted text-xs mt-2 text-center">Total trading fee: 1.5% per trade</p>
                 </div>
-                <div className="p-3 bg-dark-900">
-                  <p className="text-text-muted text-xs mb-1">Creator Fee</p>
-                  <p className="text-cyber text-xl">0.5%</p>
-                  <p className="text-text-muted text-[10px]">on trades</p>
+
+                {/* Resolution Fee */}
+                <div>
+                  <h4 className="text-white font-bold mb-3">Resolution Fee (on winning claims)</h4>
+                  <div className="p-3 bg-dark-900 flex justify-between items-center">
+                    <div>
+                      <p className="text-text-muted text-xs">Resolution Fee</p>
+                      <p className="text-cyber text-xl font-mono">0.3%</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-text-muted text-xs">goes to</p>
+                      <p className="text-cyber text-sm font-bold">Treasury</p>
+                    </div>
+                  </div>
+                  <p className="text-text-muted text-xs mt-2 text-center">Deducted from your payout when you claim winnings</p>
                 </div>
-                <div className="p-3 bg-dark-900">
-                  <p className="text-text-muted text-xs mb-1">Resolution Fee</p>
-                  <p className="text-cyber text-xl">0.3%</p>
-                  <p className="text-text-muted text-[10px]">on winning claims</p>
-                </div>
-                <div className="p-3 bg-dark-900">
-                  <p className="text-text-muted text-xs mb-1">Market Creation</p>
-                  <p className="text-yes text-xl">FREE</p>
-                </div>
-                <div className="p-3 bg-dark-900">
-                  <p className="text-text-muted text-xs mb-1">Min Trade</p>
-                  <p className="text-white text-xl">0.005 BNB</p>
+
+                {/* Other Info */}
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-dark-600">
+                  <div className="p-3 bg-dark-900">
+                    <p className="text-text-muted text-xs mb-1">Market Creation</p>
+                    <p className="text-yes text-xl font-mono">FREE</p>
+                  </div>
+                  <div className="p-3 bg-dark-900">
+                    <p className="text-text-muted text-xs mb-1">Minimum Trade</p>
+                    <p className="text-white text-xl font-mono">0.005 BNB</p>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-dark-900 border border-dark-600">
-                <p className="text-text-secondary text-xs">
-                  <span className="text-cyber font-bold">Trading fees (1.5% total):</span> Deducted when you buy or sell shares.
-                </p>
-                <p className="text-text-secondary text-xs mt-1">
-                  <span className="text-cyber font-bold">Resolution fee (0.3%):</span> Deducted from your payout when you claim winnings after a market resolves.
-                </p>
-              </div>
-              <p className="text-text-muted text-xs mt-3 text-center">
-                Fees are non-refundable and automatically deducted by the smart contract.
+
+              <p className="text-text-muted text-xs mt-4 text-center">
+                All fees are non-refundable and automatically deducted by the smart contract.
               </p>
             </div>
           </section>
@@ -438,7 +495,7 @@ export function HowToPlayPage() {
           {/* ===== BOND REQUIREMENTS ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              💎 BOND REQUIREMENTS
+              BOND REQUIREMENTS
             </h2>
             
             <div className="space-y-4">
@@ -456,7 +513,7 @@ export function HowToPlayPage() {
               </div>
 
               <div className="bg-dark-800 border border-dark-600 p-4">
-                <h4 className="text-white font-bold mb-3">📊 Example Calculations</h4>
+                <h4 className="text-white font-bold mb-3">Example Calculations</h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm font-mono">
                     <thead>
@@ -492,12 +549,12 @@ export function HowToPlayPage() {
           {/* ===== RESOLUTION TIMELINE ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              ⏱️ RESOLUTION TIMELINE
+              RESOLUTION TIMELINE
             </h2>
             
             <div className="space-y-3">
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-dark-600">
-                <span className="text-2xl">⏰</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-text-muted font-bold">1</div>
                 <div>
                   <p className="text-white font-bold">Market Expires</p>
                   <p className="text-text-secondary text-sm">Trading stops. Resolution begins.</p>
@@ -505,7 +562,7 @@ export function HowToPlayPage() {
               </div>
               
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-cyber/30">
-                <span className="text-2xl">👤</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-cyber font-bold">2</div>
                 <div>
                   <p className="text-cyber font-bold">First 10 Minutes</p>
                   <p className="text-text-secondary text-sm">Only the creator can propose the outcome.</p>
@@ -513,7 +570,7 @@ export function HowToPlayPage() {
               </div>
               
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-dark-600">
-                <span className="text-2xl">🌐</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-text-muted font-bold">3</div>
                 <div>
                   <p className="text-white font-bold">After 10 Minutes</p>
                   <p className="text-text-secondary text-sm">Anyone can propose (if creator didn't).</p>
@@ -521,7 +578,7 @@ export function HowToPlayPage() {
               </div>
               
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-yellow-500/30">
-                <span className="text-2xl">⚔️</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-yellow-500 font-bold">4</div>
                 <div>
                   <p className="text-yellow-500 font-bold">30-Minute Dispute Window</p>
                   <p className="text-text-secondary text-sm">Anyone can challenge the proposal with a 2x bond.</p>
@@ -529,7 +586,7 @@ export function HowToPlayPage() {
               </div>
               
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-purple-500/30">
-                <span className="text-2xl">🗳️</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-purple-400 font-bold">5</div>
                 <div>
                   <p className="text-purple-400 font-bold">If Disputed: 1-Hour Voting</p>
                   <p className="text-text-secondary text-sm">Shareholders vote. Majority wins.</p>
@@ -537,7 +594,7 @@ export function HowToPlayPage() {
               </div>
               
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-no/30">
-                <span className="text-2xl">🆘</span>
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-no font-bold">!</div>
                 <div>
                   <p className="text-no font-bold">If No Proposal for 24h</p>
                   <p className="text-text-secondary text-sm">Emergency refund becomes available for all shareholders.</p>
@@ -549,7 +606,7 @@ export function HowToPlayPage() {
           {/* ===== HOW WINNINGS ARE DISTRIBUTED ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-yes pl-4 mb-6">
-              💰 HOW WINNINGS ARE DISTRIBUTED
+              HOW WINNINGS ARE DISTRIBUTED
             </h2>
             
             <div className="bg-yes/10 border-2 border-yes p-6 mb-6">
@@ -573,7 +630,7 @@ export function HowToPlayPage() {
                 </div>
 
                 <div className="bg-dark-900/50 p-4 border border-dark-600">
-                  <p className="text-white font-bold mb-2">📖 Example:</p>
+                  <p className="text-white font-bold mb-2">Example:</p>
                   <div className="text-text-secondary space-y-2">
                     <p>Market resolves to <span className="text-yes font-bold">YES</span>. Pool has <span className="text-cyber">10 BNB</span>.</p>
                     <p>Total YES shares in existence: <span className="text-white">1,000 shares</span></p>
@@ -587,7 +644,7 @@ export function HowToPlayPage() {
                 </div>
 
                 <p className="text-cyber font-bold">
-                  💡 The more shares you hold on the winning side, the bigger your slice of the pie!
+                  The more shares you hold on the winning side, the bigger your slice of the pie!
                 </p>
               </div>
             </div>
@@ -596,7 +653,7 @@ export function HowToPlayPage() {
           {/* ===== WHY PRICE TRADING WORKS ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
-              💡 WHY PRICE-BASED TRADING WORKS
+              WHY PRICE-BASED TRADING WORKS
             </h2>
             
             <div className="grid md:grid-cols-2 gap-4">

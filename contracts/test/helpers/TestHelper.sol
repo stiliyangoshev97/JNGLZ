@@ -42,8 +42,9 @@ contract TestHelper is Test {
     /// @notice Unit price: 0.01 BNB
     uint256 public constant UNIT_PRICE = 0.01 ether;
 
-    /// @notice Virtual liquidity: 100 shares each side (scaled to 1e18)
-    uint256 public constant VIRTUAL_LIQUIDITY = 100 * 1e18;
+    /// @notice Virtual liquidity: 200 shares each side for HIGH tier (scaled to 1e18)
+    /// @dev v3.5.0: CRACK=50, HIGH=200, PRO=500, APEX=2000, CORE=10000
+    uint256 public constant VIRTUAL_LIQUIDITY = 200 * 1e18;
 
     /// @notice Default platform fee: 1% (100 basis points)
     uint256 public constant DEFAULT_FEE_BPS = 100;
@@ -190,6 +191,44 @@ contract TestHelper is Test {
             "https://i.imgur.com/btc.png",
             block.timestamp + expiryOffset,
             PredictionMarket.HeatLevel.PRO // PRO for large bets
+        );
+    }
+
+    /**
+     * @notice Create an APEX market (institutional-grade liquidity)
+     * @dev Use this for tests with very large BNB amounts (10+ BNB)
+     */
+    function createApexMarket(
+        address creator,
+        uint256 expiryOffset
+    ) internal returns (uint256 marketId) {
+        vm.prank(creator);
+        marketId = market.createMarket(
+            "Will ETH hit $10k by end of year?",
+            "https://coinmarketcap.com/currencies/ethereum/",
+            "Resolve YES if ETH price > $10k USD at expiry",
+            "https://i.imgur.com/eth.png",
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.APEX // APEX for institutional bets
+        );
+    }
+
+    /**
+     * @notice Create a CORE market (maximum liquidity, minimal volatility)
+     * @dev Use this for tests with massive BNB amounts (50+ BNB)
+     */
+    function createCoreMarket(
+        address creator,
+        uint256 expiryOffset
+    ) internal returns (uint256 marketId) {
+        vm.prank(creator);
+        marketId = market.createMarket(
+            "Will total crypto market cap hit $10T?",
+            "https://coinmarketcap.com/charts/",
+            "Resolve YES if total crypto market cap > $10T at expiry",
+            "https://i.imgur.com/crypto.png",
+            block.timestamp + expiryOffset,
+            PredictionMarket.HeatLevel.CORE // CORE for maximum stability
         );
     }
 

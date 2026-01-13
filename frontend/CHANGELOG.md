@@ -2,6 +2,46 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.13] - 2026-01-14
+
+### Changed
+
+#### Legal Pages Complete Overhaul
+- **HowToPlayPage**: Removed all emojis for cleaner, professional look
+- **HowToPlayPage**: Rewrote Resolution Roles section - removed "truth/lies" moralizing, now purely mechanical explanations
+- **HowToPlayPage**: Rewrote Street Consensus Voting section - clear mechanics without advice on how to vote
+- **HowToPlayPage**: Updated fee structure to show where each fee goes (Treasury vs Market Creator)
+- **HowToPlayPage**: Fixed slippage reference values for v3.5.0 heat levels (50, 200, 500, 2000, 10000)
+
+#### Terms of Service Major Update
+- **TermsPage**: Removed all emojis
+- **TermsPage**: Added Section 5 - European Union & MiCA Regulation (EEA users prohibited)
+- **TermsPage**: Updated Prohibited Jurisdictions to include EEA (all 27 EU states + Iceland, Liechtenstein, Norway)
+- **TermsPage**: Added Hong Kong, Macau, Crimea, Donetsk, Luhansk to prohibited list
+- **TermsPage**: Added Section 12 - Protocol Fees (explicit breakdown)
+- **TermsPage**: Added Section 14 - Governing Law & Disputes (BVI jurisdiction)
+- **TermsPage**: Enhanced protocol description emphasizing decentralized, non-custodial, permissionless nature
+- **TermsPage**: Now 15 sections (up from 12)
+
+#### EntryModal v2.0 (Forces Re-acceptance)
+- **EntryModal**: Version bumped to 2.0 - all existing users will see modal again
+- **EntryModal**: Removed all emojis throughout
+- **EntryModal**: Added prominent Prohibited Jurisdictions section at top (red warning box)
+- **EntryModal**: Added EEA to prohibited jurisdictions list
+- **EntryModal**: Added third checkbox - jurisdiction confirmation (not from prohibited areas, not using VPN)
+- **EntryModal**: Updated fee structure to show destinations (Treasury vs Market Creator)
+- **EntryModal**: Added "Voters on losing side: Get ZERO jury fees" to dispute scenarios
+- **EntryModal**: Added VPN warning text under checkboxes
+- **EntryModal**: Changed button text from "LET'S GO 🚀" to "ENTER THE JUNGLE"
+
+### Technical
+- Updated `ENTRY_ACCEPTED_VERSION` from `1.2` to `2.0`
+- Added `jurisdictionConfirmed` state to EntryModal
+- All three checkboxes now required to proceed
+- Step icons changed from emojis to styled numbered badges
+
+---
+
 ## [0.7.12] - 2026-01-14
 
 ### Fixed

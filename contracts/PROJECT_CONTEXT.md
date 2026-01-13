@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 11, 2026  
-> **Status:** ✅ Smart Contracts Deployed (v3.4.1, 164 tests)
+> **Last Updated:** January 14, 2026  
+> **Status:** ✅ Smart Contracts v3.5.0 Ready (164 tests)
 
 ---
 
@@ -10,9 +10,10 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
+| v3.5.0 | ⏳ READY | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
 | v3.4.1 | ✅ DEPLOYED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Deployed Contract
+### Previous Deployment (v3.4.1)
 - **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
 - **Network:** BNB Testnet (Chain ID: 97)
 - **Block:** 83514593
@@ -25,7 +26,7 @@
 
 **PredictionMarket.sol** is a single monolithic smart contract that handles:
 - Market creation with optional fee (defaults to 0 = free) with **imageUrl** support
-- **Heat Levels** - configurable per-market virtual liquidity (CRACK/HIGH/PRO)
+- **Heat Levels** - 5 configurable per-market virtual liquidity tiers (v3.5.0)
 - Trading YES/NO shares via bonding curve
 - **Street Consensus** resolution (bettors vote on outcomes)
 - **Proposer Reward** - 0.5% of pool to incentivize quick resolution
@@ -78,21 +79,26 @@
 
 ---
 
-## Heat Levels (v3.1.0)
+## Heat Levels (v3.5.0)
 
-Configurable per-market virtual liquidity for different trading styles:
+5 configurable per-market virtual liquidity tiers for different trading styles.
+**v3.5.0: 10x liquidity increase + 2 new tiers (APEX, CORE)**
 
 | Level | Name | Virtual Liquidity | Target Bet | Price Impact |
 |-------|------|-------------------|------------|--------------|
-| CRACK | Degen Flash | 5 × 1e18 | 0.005-0.1 BNB | ~15% per 0.05 BNB |
-| HIGH | Street Fight (DEFAULT) | 20 × 1e18 | 0.1-1.0 BNB | ~15% per 0.5 BNB |
-| PRO | Whale Pond | 50 × 1e18 | 1.0-5.0+ BNB | ~15% per 2.0 BNB |
+| CRACK | ☢️ Degen Flash | 50 × 1e18 | 0.005-0.1 BNB | ~5-10% per 0.1 BNB |
+| HIGH | 🔥 Street Fight (DEFAULT) | 200 × 1e18 | 0.1-1.0 BNB | ~3-5% per 1 BNB |
+| PRO | 🧊 Whale Pond | 500 × 1e18 | 1.0-5.0 BNB | ~2-3% per 5 BNB |
+| APEX | 🏛️ Institution | 2,000 × 1e18 | 5.0-20.0 BNB | ~2% per 20 BNB |
+| CORE | 🌌 Deep Space | 10,000 × 1e18 | 20.0-100+ BNB | ~1% per 100 BNB |
 
 **State Variables:**
 ```solidity
-uint256 public heatLevelCrack = 5 * 1e18;   // Configurable by MultiSig
-uint256 public heatLevelHigh = 20 * 1e18;   // Configurable by MultiSig
-uint256 public heatLevelPro = 50 * 1e18;    // Configurable by MultiSig
+uint256 public heatLevelCrack = 50 * 1e18;    // ☢️ CRACK (was 5)
+uint256 public heatLevelHigh = 200 * 1e18;    // 🔥 HIGH (was 20)
+uint256 public heatLevelPro = 500 * 1e18;     // 🧊 PRO (was 50)
+uint256 public heatLevelApex = 2000 * 1e18;   // 🏛️ APEX (NEW)
+uint256 public heatLevelCore = 10000 * 1e18;  // 🌌 CORE (NEW)
 ```
 
 **Market Struct Fields:**

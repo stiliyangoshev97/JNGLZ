@@ -1,15 +1,31 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.4.1  
-**Audit Date:** January 10, 2026  
+**Version:** v3.5.0  
+**Audit Date:** January 14, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
-**Status:** ✅ DEPLOYED to BNB Testnet
+**Status:** ⏳ Ready for Deployment (Not yet deployed)
 
-### Deployment Information
-- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
-- **Network:** BNB Testnet (Chain ID: 97)
+### Previous Deployment (v3.4.1)
+- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae89### 1. Heat Levels Are Immutable Per Market
+**Decision:** virtualLiquidity set at creation, cannot change  
+**Mitigation:** Five options available at creation time (CRACK, HIGH, PRO, APEX, CORE)4`
+- **Network:** BNB Testnet (### Parameters Configured
+- `platformFeeBps`: 100 (1%)
+- `creatorFeeBps`: 50 (0.5%)
+- `resolutionFeeBps`: 30 (0.3%)
+- `proposerRewardBps`: 50 (0.5%)
+- `minBet`: 0.005 ether
+- `minBondFloor`: 0.005 ether
+- `dynamicBondBps`: 100 (1%)
+- `bondWinnerShareBps`: 5000 (50%)
+- `marketCreationFee`: 0 (free)
+- `heatLevelCrack`: 50 * 1e18 (10x increase in v3.5.0)
+- `heatLevelHigh`: 200 * 1e18 (10x increase in v3.5.0)
+- `heatLevelPro`: 500 * 1e18 (10x increase in v3.5.0)
+- `heatLevelApex`: 2000 * 1e18 (NEW in v3.5.0)
+- `heatLevelCore`: 10000 * 1e18 (NEW in v3.5.0)
 - **Block:** 83514593
 - **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
 - **Verified:** ✅ Yes
@@ -20,7 +36,8 @@
 
 The PredictionMarket contract implements a decentralized binary prediction market on BNB Chain with:
 - **Bonding Curve Pricing:** Linear constant sum model where P(YES) + P(NO) = 0.01 BNB
-- **Heat Levels:** Configurable per-market virtual liquidity for different trading styles
+- **Heat Levels:** 5 configurable tiers (CRACK, HIGH, PRO, APEX, CORE) - **v3.5.0 NEW**
+- **10x Virtual Liquidity:** All tiers increased 10x for better price stability - **v3.5.0 NEW**
 - **Street Consensus Resolution:** Shareholder voting system for outcome determination
 - **Proposer Rewards:** 0.5% of pool paid to successful proposers
 - **Pull Pattern:** Griefing-resistant withdrawals for bonds, jury fees, and creator fees (v3.4.0)
@@ -33,19 +50,85 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,000 |
+| Total Lines of Code | ~2,026 |
 | Total Tests | **164** |
 | Test Suites | **10** |
 | Slither Findings | 45 (see breakdown below) |
 | Critical Issues | 0 |
-| High Issues | 0 (false positives - reentrancy mitigated) |
+| High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
 
 ---
 
-## Version 3.4.1 Changes Since Last Audit
+## Version 3.5.0 Changes Since Last Audit
+
+### Major Feature: Heat Level Rebalance (10x Increase)
+
+**Problem Solved:**
+Markets were too volatile - a 0.7 BNB trade in PRO tier moved price from 50% to 75% (25 percentage points), making markets unplayable.
+
+**Solution:**
+Increased all virtual liquidity values by 10x and added 2 new tiers for institutional-grade markets.
+
+### New Heat Level System (5 Tiers)
+
+| Tier | Name | OLD Value | NEW Value | Target Trade | Expected Impact |
+|------|------|-----------|-----------|--------------|-----------------|
+| CRACK | ☢️ DEGEN FLASH | 5 BNB | **50 BNB** | 0.005-0.1 BNB | ~5-10% |
+| HIGH | 🔥 STREET FIGHT | 20 BNB | **200 BNB** | 0.1-1.0 BNB | ~3-5% |
+| PRO | 🧊 WHALE POND | 50 BNB | **500 BNB** | 1.0-5.0 BNB | ~2-3% |
+| APEX | 🏛️ INSTITUTION | N/A | **2,000 BNB** | 5.0-20.0 BNB | ~2% |
+| CORE | 🌌 DEEP SPACE | N/A | **10,000 BNB** | 20.0-100+ BNB | ~1% |
+
+### Contract Changes
+
+1. **HeatLevel Enum Extended:**
+   ```solidity
+   enum HeatLevel { CRACK, HIGH, PRO, APEX, CORE }  // Was 3, now 5
+   ```
+
+2. **New State Variables:**
+   ```solidity
+   uint256 public heatLevelApex = 2000 * 1e18;   // NEW
+   uint256 public heatLevelCore = 10000 * 1e18;  // NEW
+   ```
+
+3. **Existing Values Updated:**
+   ```solidity
+   uint256 public heatLevelCrack = 50 * 1e18;    // Was 5
+   uint256 public heatLevelHigh = 200 * 1e18;    // Was 20
+   uint256 public heatLevelPro = 500 * 1e18;     // Was 50
+   ```
+
+4. **MAX_HEAT_LEVEL Constant:**
+   ```solidity
+   uint256 public constant MAX_HEAT_LEVEL = 15000 * 1e18;  // Was 200
+   ```
+
+5. **New ActionTypes for MultiSig:**
+   - `SetHeatLevelApex` - Governance can adjust APEX liquidity
+   - `SetHeatLevelCore` - Governance can adjust CORE liquidity
+
+6. **_createMarket() Updated:**
+   - Now handles all 5 heat levels in switch statement
+
+### Security Impact Assessment
+
+| Change | Risk Level | Notes |
+|--------|------------|-------|
+| New enum values (APEX, CORE) | NONE | Additive change, no breaking |
+| 10x liquidity increase | NONE | Economic parameter, no security impact |
+| New state variables | NONE | Standard storage, no external calls |
+| New ActionTypes | NONE | Same MultiSig pattern, 3-of-3 required |
+| MAX_HEAT_LEVEL increase | NONE | Validation still enforced |
+
+**Conclusion:** v3.5.0 changes are purely additive economic parameters. No new attack vectors introduced.
+
+---
+
+## Version 3.4.1 Changes (Previous Release)
 
 ### New Features
 1. **ReplaceSigner (2-of-3)** - Emergency escape hatch for compromised/lost signer keys
@@ -71,7 +154,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 ---
 
-## Slither Static Analysis Results (v3.4.1)
+## Slither Static Analysis Results (v3.5.0)
 
 **Tool:** Slither v0.11.x  
 **Detectors Run:** 100  
@@ -290,7 +373,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ### 1. Heat Levels Are Immutable Per Market
 **Decision:** virtualLiquidity set at creation, cannot change  
-**Mitigation:** Three options available at creation time
+**Mitigation:** Five options available at creation time
 
 ### 2. No Oracle Dependency
 **Decision:** "Street Consensus" resolution by shareholders  
@@ -346,9 +429,11 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 - `dynamicBondBps`: 100 (1%)
 - `bondWinnerShareBps`: 5000 (50%)
 - `marketCreationFee`: 0 (free)
-- `heatLevelCrack`: 5 * 1e18
-- `heatLevelHigh`: 20 * 1e18
-- `heatLevelPro`: 50 * 1e18
+- `heatLevelCrack`: 50 * 1e18
+- `heatLevelHigh`: 200 * 1e18
+- `heatLevelPro`: 500 * 1e18
+- `heatLevelApex`: 2000 * 1e18
+- `heatLevelCore`: 10000 * 1e18
 
 ### Operational
 - [ ] MultiSig signers verified (3 separate entities/devices)
@@ -379,7 +464,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ## Conclusion
 
-The PredictionMarket contract v3.4.1 demonstrates solid security practices:
+The PredictionMarket contract v3.5.0 demonstrates solid security practices:
 
 1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
@@ -388,10 +473,10 @@ The PredictionMarket contract v3.4.1 demonstrates solid security practices:
 5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
 6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery
 
-**v3.4.1 Security Additions:**
-- ReplaceSigner 2-of-3 with duplicate prevention
-- Constructor duplicate signer validation
-- Sweep protection for Pull Pattern funds
+**v3.5.0 Security Additions:**
+- Heat Level rebalance (10x liquidity increase)
+- Two new heat levels (APEX, CORE)
+- MAX_HEAT_LEVEL increased to 15,000 BNB
 - 28 new tests for Pull Pattern and ReplaceSigner
 
 **Recommended Actions Before Mainnet:**

@@ -5,6 +5,65 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-01-14
+
+### NOT YET DEPLOYED ⏳
+- Pending deployment to BNB Testnet
+
+### Added
+
+#### Two New Heat Levels - APEX and CORE 🔥
+Expanded the heat level system from 3 tiers to 5 tiers to support institutional-grade markets.
+
+**New Heat Levels:**
+| Tier | Name | Virtual Liquidity | Target Use Case |
+|------|------|-------------------|-----------------|
+| APEX | INSTITUTION | 2,000 BNB | Large-cap markets, ~2% per 20 BNB |
+| CORE | DEEP SPACE | 10,000 BNB | Maximum stability, ~1% per 100 BNB |
+
+**New State Variables:**
+```solidity
+uint256 public heatLevelApex = 2000 * 1e18;
+uint256 public heatLevelCore = 10000 * 1e18;
+```
+
+**New ActionTypes:**
+- `SetHeatLevelApex` - Governance can adjust APEX liquidity
+- `SetHeatLevelCore` - Governance can adjust CORE liquidity
+
+**Updated Enum:**
+```solidity
+enum HeatLevel { CRACK, HIGH, PRO, APEX, CORE }
+```
+
+### Changed
+
+#### Virtual Liquidity Rebalance (10x Increase) 💧
+All existing heat levels increased by 10x to improve price stability and playability.
+
+**Problem Solved:**
+Markets were too volatile - a 0.7 BNB trade in PRO tier moved price from 50% to 75% (25 points), making markets unplayable for serious betting.
+
+**Before → After:**
+| Tier | Name | OLD | NEW | Price Impact |
+|------|------|-----|-----|--------------|
+| CRACK | DEGEN FLASH | 5 BNB | 50 BNB | ~5-10% per 0.1 BNB |
+| HIGH | STREET FIGHT | 20 BNB | 200 BNB | ~3-5% per 1 BNB |
+| PRO | WHALE POND | 50 BNB | 500 BNB | ~2-3% per 5 BNB |
+
+**Updated Constant:**
+```solidity
+uint256 public constant MAX_HEAT_LEVEL = 15000 * 1e18; // was 200
+```
+
+### Migration Notes
+- **Breaking:** MarketCreated event now emits new virtual liquidity values
+- **Breaking:** Subgraph must be updated to handle 5 heat levels
+- **Frontend:** HeatSelector must show 5 options instead of 3
+- **Existing markets unaffected:** Virtual liquidity is stored per-market
+
+---
+
 ## [3.4.1] - 2026-01-10
 
 ### Deployed ✅

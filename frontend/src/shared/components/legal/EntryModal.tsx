@@ -2,7 +2,7 @@
  * ===== ENTRY MODAL COMPONENT =====
  *
  * First-time visitor modal explaining how JNGLZ.FUN works.
- * Includes: 3-step guide, age verification, risk disclaimer.
+ * Includes: prohibited jurisdictions, 3-step guide, age verification, risk disclaimer.
  * Must be confirmed before using the platform.
  *
  * @module shared/components/legal/EntryModal
@@ -14,29 +14,29 @@ import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 
 const ENTRY_ACCEPTED_KEY = 'junkie_entry_accepted';
-const ENTRY_ACCEPTED_VERSION = '1.2'; // Increment to re-show modal after ToS changes (1.2 = clarified disputed resolution rewards)
+const ENTRY_ACCEPTED_VERSION = '2.0'; // v2.0 = Added EEA/MiCA restrictions, removed emojis
 
 interface Step {
-  emoji: string;
+  number: string;
   title: string;
   description: string;
 }
 
 const STEPS: Step[] = [
   {
-    emoji: '🎯',
-    title: '1. CREATE A MARKET',
+    number: '1',
+    title: 'CREATE A MARKET',
     description: 'Anyone can create a prediction market for FREE. Ask any yes/no question about future events.',
   },
   {
-    emoji: '📈',
-    title: '2. TRADE ON THE CURVE',
+    number: '2',
+    title: 'TRADE ON THE CURVE',
     description: 'Buy YES or NO shares using BNB. Prices move on a bonding curve - early believers profit when others join.',
   },
   {
-    emoji: '🗳️',
-    title: '3. STREET CONSENSUS',
-    description: 'Markets resolve via shareholder voting. No centralized oracle - the crowd decides the truth.',
+    number: '3',
+    title: 'STREET CONSENSUS',
+    description: 'Markets resolve via shareholder voting. No centralized oracle - the crowd decides the outcome.',
   },
 ];
 
@@ -44,6 +44,7 @@ export function EntryModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [termsConfirmed, setTermsConfirmed] = useState(false);
+  const [jurisdictionConfirmed, setJurisdictionConfirmed] = useState(false);
 
   // Check if user has already accepted
   useEffect(() => {
@@ -59,14 +60,14 @@ export function EntryModal() {
   }, []);
 
   const handleConfirm = () => {
-    if (ageConfirmed && termsConfirmed) {
+    if (ageConfirmed && termsConfirmed && jurisdictionConfirmed) {
       localStorage.setItem(ENTRY_ACCEPTED_KEY, ENTRY_ACCEPTED_VERSION);
       setIsOpen(false);
       document.body.style.overflow = '';
     }
   };
 
-  const canConfirm = ageConfirmed && termsConfirmed;
+  const canConfirm = ageConfirmed && termsConfirmed && jurisdictionConfirmed;
 
   if (!isOpen) return null;
 
@@ -83,9 +84,44 @@ export function EntryModal() {
             <img src="/jnglz-logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
             <div>
               <h1 className="text-2xl font-black text-cyber">JNGLZ.FUN</h1>
-              <p className="text-xs text-text-secondary font-mono">PREDICTION MARKETS ON BNB CHAIN</p>
+              <p className="text-xs text-text-secondary font-mono">DECENTRALIZED PREDICTION PROTOCOL ON BNB CHAIN</p>
             </div>
           </div>
+        </div>
+
+        {/* PROHIBITED JURISDICTIONS - FIRST AND PROMINENT */}
+        <div className="px-6 py-4 border-b border-no bg-no/10">
+          <h3 className="text-sm font-bold text-no mb-3">PROHIBITED JURISDICTIONS</h3>
+          <p className="text-xs text-text-secondary mb-3">
+            This Protocol is <strong className="text-no">NOT AVAILABLE</strong> to users from the following jurisdictions:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <div className="space-y-1">
+              <p className="text-white font-bold">United States</p>
+              <p className="text-text-muted">Including all U.S. territories</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold">European Economic Area (EEA)</p>
+              <p className="text-text-muted">All 27 EU states + Iceland, Liechtenstein, Norway</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold">United Kingdom</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold">Singapore</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold">China</p>
+              <p className="text-text-muted">Including Hong Kong and Macau</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold">OFAC Sanctioned Countries</p>
+              <p className="text-text-muted">Cuba, Iran, North Korea, Syria, Crimea</p>
+            </div>
+          </div>
+          <p className="text-xs text-no mt-3 font-bold">
+            If you are located in any of these jurisdictions, you must exit this site immediately.
+          </p>
         </div>
 
         {/* How It Works */}
@@ -94,7 +130,9 @@ export function EntryModal() {
           <div className="space-y-4">
             {STEPS.map((step, index) => (
               <div key={index} className="flex gap-4 items-start">
-                <div className="text-3xl">{step.emoji}</div>
+                <div className="w-8 h-8 bg-cyber/20 border border-cyber rounded flex items-center justify-center text-cyber font-bold text-lg">
+                  {step.number}
+                </div>
                 <div>
                   <h3 className="font-bold text-cyber text-sm">{step.title}</h3>
                   <p className="text-text-secondary text-sm">{step.description}</p>
@@ -106,40 +144,54 @@ export function EntryModal() {
 
         {/* Fees Section */}
         <div className="px-6 py-4 border-b border-dark-600 bg-dark-800">
-          <h3 className="text-sm font-bold text-white mb-2">💰 FEE STRUCTURE</h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="flex justify-between">
+          <h3 className="text-sm font-bold text-white mb-2">FEE STRUCTURE</h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between items-center">
               <span className="text-text-muted">Platform Fee:</span>
-              <span className="font-mono text-white">1%</span>
+              <div className="text-right">
+                <span className="font-mono text-white">1%</span>
+                <span className="text-text-muted ml-1">→ Treasury</span>
+              </div>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-text-muted">Creator Fee:</span>
-              <span className="font-mono text-white">0.5%</span>
+              <div className="text-right">
+                <span className="font-mono text-white">0.5%</span>
+                <span className="text-text-muted ml-1">→ Market Creator</span>
+              </div>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-text-muted">Resolution Fee:</span>
-              <span className="font-mono text-white">0.3%</span>
+              <div className="text-right">
+                <span className="font-mono text-white">0.3%</span>
+                <span className="text-text-muted ml-1">→ Treasury</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-text-muted">Market Creation:</span>
-              <span className="font-mono text-yes">FREE</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-muted">Min Trade:</span>
-              <span className="font-mono text-white">0.005 BNB</span>
+            <div className="border-t border-dark-600 pt-2 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-text-muted">Market Creation:</span>
+                <span className="font-mono text-yes">FREE</span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-text-muted">Min Trade:</span>
+                <span className="font-mono text-white">0.005 BNB</span>
+              </div>
             </div>
           </div>
+          <p className="text-[10px] text-text-muted mt-2">
+            Trading fees (1.5% total) are deducted on buy/sell. Resolution fee (0.3%) is deducted when claiming winnings.
+          </p>
         </div>
 
         {/* Market Rules Section */}
         <div className="px-6 py-4 border-b border-dark-600">
-          <h3 className="text-sm font-bold text-white mb-3">📜 MARKET RULES</h3>
+          <h3 className="text-sm font-bold text-white mb-3">MARKET RULES</h3>
           <div className="space-y-3 text-xs text-text-secondary">
             
             {/* Bonding Curve */}
             <div>
               <span className="text-cyber font-bold">Bonding Curve Pricing:</span>
-              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buying pushes price up, selling pushes it down. <strong className="text-no">No arbitrage</strong> - instant buy→sell = guaranteed loss due to price impact + fees.</p>
+              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buying pushes price up, selling pushes it down. <strong className="text-no">No arbitrage</strong> - instant buy/sell = guaranteed loss due to price impact + fees.</p>
             </div>
 
             {/* Resolution Timeline */}
@@ -149,7 +201,7 @@ export function EntryModal() {
                 <li>Market expires → <strong className="text-white">Trading stops</strong></li>
                 <li>First <strong className="text-white">10 min</strong>: Only creator can propose the outcome</li>
                 <li>After 10 min: <strong className="text-white">Anyone</strong> can propose (if creator didn't)</li>
-                <li>After proposal → <strong className="text-white">30 min</strong> dispute window (anyone can challenge)</li>
+                <li>After proposal → <strong className="text-white">30 min</strong> dispute window</li>
                 <li>If disputed → <strong className="text-white">1 hour</strong> shareholder voting</li>
                 <li>If no proposal for 24h → <strong className="text-white">Emergency refund</strong> available</li>
               </ul>
@@ -160,14 +212,13 @@ export function EntryModal() {
               <span className="text-cyber font-bold">Bond Formula:</span>
               <div className="mt-1 bg-dark-800 border border-dark-600 p-2 font-mono">
                 <div>Proposer Bond = <strong className="text-white">max(0.005 BNB, 1% of pool)</strong></div>
-                <div>Disputer Bond = <strong className="text-white">2× Proposer Bond</strong></div>
+                <div>Disputer Bond = <strong className="text-white">2x Proposer Bond</strong></div>
               </div>
-              <p className="mt-1 text-text-muted">Example: Pool has 2 BNB → Proposer needs 0.02 BNB, Disputer needs 0.04 BNB</p>
             </div>
 
             {/* Bond Rewards - NO DISPUTE */}
             <div>
-              <span className="text-yes font-bold">✓ If NOT Disputed (Proposal Accepted):</span>
+              <span className="text-yes font-bold">If NOT Disputed (Proposal Accepted):</span>
               <ul className="mt-1 ml-4 list-disc space-y-1">
                 <li>Proposer gets <strong className="text-white">bond back</strong> + <strong className="text-yes">0.5% of pool</strong> as reward</li>
               </ul>
@@ -175,24 +226,25 @@ export function EntryModal() {
 
             {/* Bond Rewards - WITH DISPUTE */}
             <div>
-              <span className="text-yellow-500 font-bold">⚔️ If Disputed (Voting Decides):</span>
+              <span className="text-yellow-500 font-bold">If Disputed (Voting Decides):</span>
               
               {/* Vote Weight Clarification */}
               <div className="mt-2 p-2 bg-cyber/10 border border-cyber/30 rounded text-xs">
-                <p className="text-cyber font-bold mb-1">📊 How Voting Works:</p>
+                <p className="text-cyber font-bold mb-1">How Voting Works:</p>
                 <p className="text-text-secondary">
                   Your vote weight = <strong className="text-white">ALL your shares</strong> (YES + NO combined).
-                  You're voting on <em>which resolution is correct</em>, not which side wins.
+                  You vote for either the Proposer or the Disputer.
                 </p>
               </div>
               
               {/* Sub-scenario: Original Proposer Wins */}
               <div className="mt-2 ml-2 border-l-2 border-yes/30 pl-3">
-                <span className="text-yes text-xs font-bold">If ORIGINAL PROPOSER wins the vote:</span>
+                <span className="text-yes text-xs font-bold">If PROPOSER wins the vote:</span>
                 <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs">
                   <li><strong className="text-white">Proposer</strong>: Bond back + 50% of disputer's bond + <strong className="text-yes">0.5% pool reward</strong></li>
                   <li><strong className="text-white">Disputer</strong>: <strong className="text-no">Loses entire bond</strong></li>
-                  <li><strong className="text-white">Voters on proposer's side</strong>: Share remaining 50% of disputer's bond</li>
+                  <li><strong className="text-white">Voters on winning side</strong>: Share remaining 50% of disputer's bond</li>
+                  <li><strong className="text-no">Voters on losing side</strong>: Get ZERO jury fees</li>
                 </ul>
               </div>
               
@@ -202,21 +254,22 @@ export function EntryModal() {
                 <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs">
                   <li><strong className="text-white">Disputer</strong>: Bond back + 50% of proposer's bond (no pool reward)</li>
                   <li><strong className="text-white">Proposer</strong>: <strong className="text-no">Loses entire bond</strong></li>
-                  <li><strong className="text-white">Voters on disputer's side</strong>: Share remaining 50% of proposer's bond</li>
+                  <li><strong className="text-white">Voters on winning side</strong>: Share remaining 50% of proposer's bond</li>
+                  <li><strong className="text-no">Voters on losing side</strong>: Get ZERO jury fees</li>
                 </ul>
               </div>
             </div>
             
             {/* Winner Payouts - SEPARATE from bonds */}
             <div>
-              <span className="text-cyber font-bold">💰 Winner Payouts (After Resolution):</span>
+              <span className="text-cyber font-bold">Winner Payouts (After Resolution):</span>
               <p className="mt-1"><strong className="text-white">Winning shareholders</strong> (YES or NO) claim the <strong className="text-yes">entire pool</strong> proportionally. Losing shareholders get <strong className="text-no">nothing</strong>. This is separate from bond/voter rewards above.</p>
             </div>
 
             {/* Empty Winning Side */}
             <div>
-              <span className="text-yellow-500 font-bold">⚠️ Empty Winning Side Protection:</span>
-              <p className="mt-1">If market resolves to an outcome with <strong className="text-white">0 shareholders</strong> (e.g., YES wins but nobody holds YES): Resolution is blocked, <strong className="text-yes">all bonds returned</strong>, shareholders can claim emergency refund after 24h.</p>
+              <span className="text-yellow-500 font-bold">Empty Winning Side Protection:</span>
+              <p className="mt-1">If market resolves to an outcome with <strong className="text-white">0 shareholders</strong>: Resolution is blocked, <strong className="text-yes">all bonds returned</strong>, shareholders can claim emergency refund after 24h.</p>
             </div>
           </div>
         </div>
@@ -224,14 +277,16 @@ export function EntryModal() {
         {/* Risk Warning */}
         <div className="px-6 py-4 border-b border-dark-600 bg-no/5">
           <div className="flex gap-3">
-            <span className="text-2xl">⚠️</span>
+            <div className="w-8 h-8 bg-no/20 border border-no rounded flex items-center justify-center text-no font-bold text-lg flex-shrink-0">
+              !
+            </div>
             <div>
               <h3 className="text-sm font-bold text-no mb-1">RISK DISCLAIMER</h3>
               <p className="text-xs text-text-secondary leading-relaxed">
-                JNGLZ.FUN is a <strong className="text-white">decentralized protocol</strong>. 
-                All markets are user-created. You are interacting directly with smart contracts 
-                at your own risk. Past performance does not guarantee future results. 
-                Never invest more than you can afford to lose.
+                JNGLZ.FUN is a <strong className="text-white">decentralized, non-custodial protocol</strong>. 
+                All markets are user-created and user-resolved. You are interacting directly with 
+                immutable smart contracts at your own risk. Protocol contributors DO NOT control 
+                market outcomes. Never invest more than you can afford to lose.
               </p>
             </div>
           </div>
@@ -239,6 +294,21 @@ export function EntryModal() {
 
         {/* Checkboxes */}
         <div className="px-6 py-4 space-y-3">
+          {/* Jurisdiction Confirmation - NEW */}
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={jurisdictionConfirmed}
+              onChange={(e) => setJurisdictionConfirmed(e.target.checked)}
+              className="mt-1 min-w-5 min-h-5 w-5 h-5 flex-shrink-0 bg-dark-800 border-2 border-dark-600 checked:bg-cyber checked:border-cyber appearance-none cursor-pointer relative after:content-['✓'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-black after:font-bold after:opacity-0 checked:after:opacity-100"
+            />
+            <span className="text-sm text-text-secondary group-hover:text-white transition-colors">
+              I confirm that I am <strong className="text-no">NOT</strong> a resident, citizen, or entity of any 
+              <strong className="text-white"> Prohibited Jurisdiction</strong> (USA, EEA, UK, Singapore, China, or OFAC sanctioned countries) 
+              and I am not using a VPN to circumvent geographic restrictions.
+            </span>
+          </label>
+
           {/* Age Verification */}
           <label className="flex items-start gap-3 cursor-pointer group">
             <input
@@ -272,9 +342,14 @@ export function EntryModal() {
           {/* Game Rules Link */}
           <div className="pt-2 text-center">
             <a href="/how-to-play" target="_blank" className="text-cyber hover:underline text-sm font-bold">
-              📖 Read the full Game Rules & Strategies →
+              Read the full Game Rules & Strategies →
             </a>
           </div>
+
+          {/* VPN Warning */}
+          <p className="text-xs text-text-muted text-center mt-3 px-2">
+            Accessing this protocol from a prohibited jurisdiction via VPN is a breach of our Terms and may result in the loss of access to the interface.
+          </p>
         </div>
 
         {/* Confirm Button */}
@@ -289,7 +364,7 @@ export function EntryModal() {
               !canConfirm && 'opacity-50 cursor-not-allowed'
             )}
           >
-            {canConfirm ? "LET'S GO 🚀" : 'CONFIRM ABOVE TO CONTINUE'}
+            {canConfirm ? "ENTER THE JUNGLE" : 'CONFIRM ALL ABOVE TO CONTINUE'}
           </Button>
         </div>
       </div>

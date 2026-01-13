@@ -7,7 +7,7 @@
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.4.1-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.5.0-blue)]()
 
 ---
 
@@ -21,7 +21,8 @@
 | v3.2.0 | ✅ FIXED | Bonding curve corrected |
 | v3.3.0 | ✅ STABLE | Added proposer rewards |
 | v3.4.0 | ✅ STABLE | Pull Pattern, griefing protection |
-| v3.4.1 | ✅ LATEST | ReplaceSigner (2-of-3), sweep protection |
+| v3.4.1 | ✅ DEPLOYED | ReplaceSigner (2-of-3), sweep protection |
+| v3.5.0 | ⏳ READY | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
 
 ---
 
@@ -29,15 +30,16 @@
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.4.1** | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ✅ DEPLOYED |
+| **v3.5.0** | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⏳ READY |
+| v3.4.1 | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ✅ DEPLOYED |
 
-### Deployed Contract (BNB Testnet)
+### Previous Deployment (v3.4.1 - BNB Testnet)
 - **Address:** [`0x4e20Df1772D972f10E9604e7e9C775B1ae897464`](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464)
 - **Network:** BNB Testnet (Chain ID: 97)
 - **Block:** 83514593
 - **Verified:** ✅ Yes
 
-> **v3.4.1 Features:** Pull Pattern (griefing protection), ReplaceSigner (2-of-3 emergency), Sweep protection, Proposer Rewards (0.5%), Heat Levels, 164 tests passing
+> **v3.5.0 Features:** 5 Heat Level tiers (CRACK, HIGH, PRO, APEX, CORE), 10x virtual liquidity increase for better price stability, Pull Pattern, ReplaceSigner (2-of-3), Sweep protection, Proposer Rewards (0.5%), 164 tests passing
 
 ---
 
@@ -239,10 +241,12 @@ Traditional prediction markets (Polymarket, Augur) use order books or simple tok
 │   Virtual state:  virtualYes = 30, virtualNo = 20                       │
 │   New price:      P(YES) = 0.01 × 30/50 = 0.006 BNB (60%)              │
 │                                                                          │
-│   HEAT LEVELS control virtualLiquidity:                                 │
-│   • CRACK (5):  Small trades = BIG price swings                        │
-│   • HIGH (20):  Balanced for normal trading                            │
-│   • PRO (50):   Stable prices, good for whales                         │
+│   HEAT LEVELS control virtualLiquidity (v3.5.0 - 5 tiers):             │
+│   • CRACK (50):    Degen Flash - high volatility                       │
+│   • HIGH (200):    Street Fight - balanced (DEFAULT)                   │
+│   • PRO (500):     Whale Pond - stable for large bets                  │
+│   • APEX (2000):   Institution - professional trading                  │
+│   • CORE (10000):  Deep Space - maximum depth                          │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -263,9 +267,11 @@ Traditional prediction markets (Polymarket, Augur) use order books or simple tok
 | `minBondFloor` | 0.005 BNB | 0.005-0.1 | Minimum proposer bond |
 | `dynamicBondBps` | 100 (1%) | 50-500 (0.5-5%) | Bond as % of pool |
 | `bondWinnerShareBps` | 5000 (50%) | 2000-8000 | Winner's share of loser's bond |
-| `heatLevelCrack` | 5 × 1e18 | 1-200 | Virtual liquidity for CRACK |
-| `heatLevelHigh` | 20 × 1e18 | 1-200 | Virtual liquidity for HIGH |
-| `heatLevelPro` | 50 × 1e18 | 1-200 | Virtual liquidity for PRO |
+| `heatLevelCrack` | 50 × 1e18 | 1-15000 | Virtual liquidity for CRACK |
+| `heatLevelHigh` | 200 × 1e18 | 1-15000 | Virtual liquidity for HIGH |
+| `heatLevelPro` | 500 × 1e18 | 1-15000 | Virtual liquidity for PRO |
+| `heatLevelApex` | 2000 × 1e18 | 1-15000 | Virtual liquidity for APEX |
+| `heatLevelCore` | 10000 × 1e18 | 1-15000 | Virtual liquidity for CORE |
 | `marketCreationFee` | 0 | 0-0.1 BNB | Fee to create market |
 
 **Note:** Changes only affect NEW markets. Existing markets keep their original parameters.
@@ -355,13 +361,15 @@ Bottom line: Buy→Sell = guaranteed loss. No free money!
 
 ---
 
-### 5️⃣ HEAT LEVELS (Market Volatility)
+### 5️⃣ HEAT LEVELS (Market Volatility) - v3.5.0
 
 | Level | Virtual Liquidity | Best For | Price Impact |
 |-------|-------------------|----------|--------------|
-| **CRACK** | 5 | Meme/degen markets | ~25% per 0.1 BNB |
-| **HIGH** (default) | 20 | General markets | ~7% per 0.1 BNB |
-| **PRO** | 50 | Whale/serious markets | ~3% per 0.1 BNB |
+| **CRACK** ☢️ | 50 BNB | Meme/degen markets | ~5-10% per 0.1 BNB |
+| **HIGH** 🔥 (default) | 200 BNB | General markets | ~3-5% per 1 BNB |
+| **PRO** 🧊 | 500 BNB | Whale/serious markets | ~2-3% per 5 BNB |
+| **APEX** 🏛️ | 2,000 BNB | Institutional markets | ~2% per 20 BNB |
+| **CORE** 🌌 | 10,000 BNB | Maximum depth markets | ~1% per 100 BNB |
 
 ---
 
@@ -560,6 +568,59 @@ Bob gets:   0.1 × (4000/10000) = 0.04 BNB
 
 ---
 
+### ❌ WHAT HAPPENS IF YOU LOSE (Resolution Roles)
+
+> **Every role has risk.** Here's exactly what you lose if things go wrong.
+
+| Role | Your Risk | What You Lose | Who Gets Your Bond? |
+|------|-----------|---------------|---------------------|
+| **Proposer** | 1% of pool bond | Entire bond (100%) | 50% to disputer, 50% to winning voters |
+| **Disputer** | 2× proposer bond | Entire bond (100%) | 50% to proposer, 50% to winning voters |
+| **Voter** | No bond required | Nothing directly* | N/A |
+
+*Voters don't lose a bond, but voting with the losing side means: (1) No share of the bond distribution, (2) If the resolution goes against your shares, those shares become worthless.
+
+**Proposer Loss Example (10 BNB pool):**
+```
+Your bond:         0.1 BNB (1% of pool)
+You propose YES, but YES is wrong...
+Someone disputes and voters agree with NO.
+
+You lose:          0.1 BNB (entire bond)
+Where it goes:     0.05 BNB (50%) → Disputer
+                   0.05 BNB (50%) → Voters who voted NO
+You get:           NOTHING
+```
+
+**Disputer Loss Example (10 BNB pool):**
+```
+Proposer bond:     0.1 BNB
+Your bond:         0.2 BNB (2× - double the risk!)
+You dispute, but voters side with proposer...
+
+You lose:          0.2 BNB (entire bond)
+Where it goes:     0.1 BNB (50%) → Proposer
+                   0.1 BNB (50%) → Voters who voted with proposer
+You get:           NOTHING
+```
+
+**Voter Loss Example:**
+```
+You vote with the losing side of a dispute...
+
+You lose:          $0 bond (voters don't stake)
+You miss out on:   Share of losing bonder's bond
+Additional risk:   If resolution goes against your shares,
+                   those shares are now worth $0
+```
+
+**⚠️ KEY TAKEAWAYS:**
+- **Proposers:** Only propose if you KNOW the truth. Lying = lose your bond.
+- **Disputers:** Only dispute if you're CERTAIN. You risk 2× and can only gain 25% ROI.
+- **Voters:** Vote for what actually happened, not what you want. Truth = rewards.
+
+---
+
 ### 🔟➕ COMPLETE DISPUTE RESOLUTION SUMMARY ⭐
 
 > **This section ties everything together.** Read this if you want to understand exactly who gets what in every scenario.
@@ -653,9 +714,21 @@ Bob gets:   0.1 × (4000/10000) = 0.04 BNB
 | **Who gets the 0.5% pool reward?** | ONLY the original proposer, and ONLY if they win (no dispute OR dispute + win vote) |
 | **Does the disputer get pool reward?** | ❌ NEVER. Disputers only get bond back + 50% of proposer's bond |
 | **Who are "winning voters"?** | Shareholders who voted on the side that WON the vote (not the shareholders of winning outcome) |
+| **Do losing voters get jury fees?** | ❌ NEVER. Only voters on the WINNING side split the 50% jury fee portion of the loser's bond |
 | **What do winning shareholders get?** | The ENTIRE POOL (minus proposer reward) split proportionally. This is SEPARATE from bond rewards. |
 | **Do losing shareholders get anything?** | ❌ NO. They lost the prediction. |
 | **Can someone be both a voter AND a shareholder?** | YES! You can earn jury fees (as voter) AND claim pool winnings (as shareholder) |
+
+---
+
+#### ⚠️ LOSS SCENARIOS — WHAT YOU RISK
+
+| Role | What Happens If You Lose | Risk Level |
+|------|-------------------------|------------|
+| **Proposer** | Lose ENTIRE bond (1% of pool) if disputed and vote goes against you | ⚠️ High |
+| **Disputer** | Lose ENTIRE bond (2× proposer bond) if vote goes against you | 🔴 Very High |
+| **Voter (losing side)** | Get ZERO jury fees — only winning side voters split the 50% | ⚠️ Medium |
+| **Shareholder (losing side)** | Get ZERO from pool — winning side takes all | 🔴 Total Loss |
 
 ---
 
@@ -1169,29 +1242,42 @@ Initial State:           After YES Buying:        After NO Buying:
 
 Heat Levels control market volatility through per-market virtual liquidity. Choose the right level for your market type:
 
+**v3.5.0: 5 tiers with 10x liquidity increase for better price stability**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          HEAT LEVELS                                     │
+│                          HEAT LEVELS (v3.5.0)                            │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  CRACK (Degen Flash)                 │  Virtual Liquidity: 5            │
+│  ☢️ CRACK (Degen Flash)              │  Virtual Liquidity: 50 BNB       │
 │  ─────────────────────               │  Target Bet: 0.005-0.1 BNB       │
-│  • Maximum volatility                │  Price Impact: ~15% per 0.05 BNB │
-│  • Small bets move prices BIG        │  Best for: Meme markets, degen   │
-│  • Wild swings, pure chaos           │                                   │
+│  • High volatility                   │  Price Impact: ~5-10% per 0.1 BNB│
+│  • Small bets move prices            │  Best for: Meme markets, degen   │
+│  • Exciting swings                   │                                   │
 │                                                                          │
-│  HIGH (Street Fight) - DEFAULT       │  Virtual Liquidity: 20           │
+│  🔥 HIGH (Street Fight) - DEFAULT    │  Virtual Liquidity: 200 BNB      │
 │  ─────────────────────────────────   │  Target Bet: 0.1-1.0 BNB         │
-│  • Balanced volatility               │  Price Impact: ~15% per 0.5 BNB  │
+│  • Balanced volatility               │  Price Impact: ~3-5% per 1 BNB   │
 │  • Good price discovery              │  Best for: General markets       │
 │  • Default for most markets          │                                   │
 │                                                                          │
-│  PRO (Whale Pond)                    │  Virtual Liquidity: 50           │
-│  ───────────────────                 │  Target Bet: 1.0-5.0+ BNB        │
-│  • Low slippage                      │  Price Impact: ~15% per 2.0 BNB  │
+│  🧊 PRO (Whale Pond)                 │  Virtual Liquidity: 500 BNB      │
+│  ───────────────────                 │  Target Bet: 1.0-5.0 BNB         │
+│  • Low slippage                      │  Price Impact: ~2-3% per 5 BNB   │
 │  • Stable prices                     │  Best for: Serious/whale markets │
-│  • Whales can trade without moving   │                                   │
-│    price too much                    │                                   │
+│  • Good for larger bets              │                                   │
+│                                                                          │
+│  🏛️ APEX (Institution)              │  Virtual Liquidity: 2,000 BNB    │
+│  ─────────────────────               │  Target Bet: 5.0-20.0 BNB        │
+│  • Professional grade                │  Price Impact: ~2% per 20 BNB    │
+│  • Very stable pricing               │  Best for: Institutional markets │
+│  • Ideal for large positions         │                                   │
+│                                                                          │
+│  🌌 CORE (Deep Space)                │  Virtual Liquidity: 10,000 BNB   │
+│  ───────────────────                 │  Target Bet: 20.0-100+ BNB       │
+│  • Maximum depth                     │  Price Impact: ~1% per 100 BNB   │
+│  • Near-zero slippage                │  Best for: Maximum liquidity     │
+│  • For massive positions             │                                   │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1204,21 +1290,25 @@ Price Impact = f(bet_size / virtual_liquidity)
 Lower vLiq = More price movement per BNB
 Higher vLiq = Less price movement per BNB
 
-Example: 0.1 BNB bet
-├── CRACK (5 vLiq):  ~25% price swing
-├── HIGH (20 vLiq):  ~7% price swing  
-└── PRO (50 vLiq):   ~3% price swing
+Example: 1 BNB bet
+├── CRACK (50 vLiq):    ~20% price swing
+├── HIGH (200 vLiq):    ~5% price swing  
+├── PRO (500 vLiq):     ~2% price swing
+├── APEX (2000 vLiq):   ~0.5% price swing
+└── CORE (10000 vLiq):  ~0.1% price swing
 ```
 
 ### Choosing the Right Heat Level
 
 | Market Type | Recommended Heat | Why |
 |-------------|------------------|-----|
-| Meme/joke markets | CRACK | Max entertainment |
-| Sports predictions | HIGH | Balanced trading |
-| Crypto price bets | HIGH | Good price discovery |
-| Political events | PRO | Stable, serious |
-| Whale-heavy markets | PRO | Low slippage |
+| Meme/joke markets | ☢️ CRACK | Max entertainment |
+| Sports predictions | 🔥 HIGH | Balanced trading |
+| Crypto price bets | 🔥 HIGH | Good price discovery |
+| Political events | 🧊 PRO | Stable, serious |
+| Whale-heavy markets | 🧊 PRO | Low slippage |
+| Professional trading | 🏛️ APEX | Institutional grade |
+| Maximum liquidity | 🌌 CORE | Near-zero slippage |
 
 ---
 

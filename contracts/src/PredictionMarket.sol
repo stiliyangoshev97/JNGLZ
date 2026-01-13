@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
- * @custom:version 3.4.1 - Pull Pattern consistency fix, pending funds sweep protection, signer replacement
+ * @custom:version 3.5.0 - Heat Level rebalance (5 tiers, 10x virtual liquidity increase)
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
@@ -59,9 +59,10 @@ contract PredictionMarket is ReentrancyGuard {
     /// @notice Maximum market creation fee (0.1 BNB)
     uint256 public constant MAX_MARKET_CREATION_FEE = 0.1 ether;
 
-    /// @notice Heat level bounds for governance (1 to 200 base units * 1e18)
+    /// @notice Heat level bounds for governance (1 to 15000 base units * 1e18)
+    /// @dev Increased in v3.5.0 to support CORE tier (10000e18)
     uint256 public constant MIN_HEAT_LEVEL = 1 * 1e18;
-    uint256 public constant MAX_HEAT_LEVEL = 200 * 1e18;
+    uint256 public constant MAX_HEAT_LEVEL = 15000 * 1e18;
 
     // ============ Street Consensus Constants ============
 
@@ -84,12 +85,14 @@ contract PredictionMarket is ReentrancyGuard {
         Resolved // Final outcome set
     }
 
-    /// @notice Heat levels for market volatility
-    /// @dev CRACK = high volatility (5 vLiq), HIGH = balanced (20 vLiq), PRO = low slippage (50 vLiq)
+    /// @notice Heat levels for market volatility (v3.5.0: 5 tiers)
+    /// @dev Virtual liquidity values increased 10x for better price stability
     enum HeatLevel {
-        CRACK, // ☢️ Degen Flash - 5 virtual liquidity - max volatility
-        HIGH, // 🔥 Street Fight - 20 virtual liquidity - balanced (DEFAULT)
-        PRO // 🧊 Whale Pond - 50 virtual liquidity - low slippage
+        CRACK, // ☢️ Degen Flash - 50 virtual liquidity - high volatility
+        HIGH, // 🔥 Street Fight - 200 virtual liquidity - balanced (DEFAULT)
+        PRO, // 🧊 Whale Pond - 500 virtual liquidity - low slippage
+        APEX, // 🏛️ Institution - 2000 virtual liquidity - professional
+        CORE // 🌌 Deep Space - 10000 virtual liquidity - maximum depth
     }
 
     enum ActionType {
@@ -107,6 +110,8 @@ contract PredictionMarket is ReentrancyGuard {
         SetHeatLevelCrack, // NEW: Set CRACK level virtual liquidity
         SetHeatLevelHigh, // NEW: Set HIGH level virtual liquidity
         SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
+        SetHeatLevelApex, // v3.5.0: Set APEX level virtual liquidity
+        SetHeatLevelCore, // v3.5.0: Set CORE level virtual liquidity
         SweepFunds, // NEW: Sweep dust/surplus BNB to treasury
         SetProposerReward, // v3.3.0: Set proposer reward percentage
         ReplaceSigner // v3.4.1: Emergency signer replacement (2-of-3)
@@ -180,9 +185,12 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public marketCreationFee = 0;
 
     // Heat Level virtual liquidity settings (configurable by MultiSig, affects NEW markets only)
-    uint256 public heatLevelCrack = 5 * 1e18; // ☢️ CRACK: High volatility
-    uint256 public heatLevelHigh = 20 * 1e18; // 🔥 HIGH: Balanced (DEFAULT)
-    uint256 public heatLevelPro = 50 * 1e18; // 🧊 PRO: Low slippage
+    // v3.5.0: Increased 10x for better price stability
+    uint256 public heatLevelCrack = 50 * 1e18; // ☢️ CRACK: High volatility (was 5)
+    uint256 public heatLevelHigh = 200 * 1e18; // 🔥 HIGH: Balanced (was 20)
+    uint256 public heatLevelPro = 500 * 1e18; // 🧊 PRO: Low slippage (was 50)
+    uint256 public heatLevelApex = 2000 * 1e18; // 🏛️ APEX: Institution (NEW)
+    uint256 public heatLevelCore = 10000 * 1e18; // 🌌 CORE: Deep Space (NEW)
 
     // Pause state
     bool public paused;
@@ -555,13 +563,17 @@ contract PredictionMarket is ReentrancyGuard {
         market.expiryTimestamp = expiryTimestamp;
         market.heatLevel = heatLevel;
 
-        // Set virtual liquidity based on heat level
+        // Set virtual liquidity based on heat level (v3.5.0: 5 tiers)
         if (heatLevel == HeatLevel.CRACK) {
             market.virtualLiquidity = heatLevelCrack;
         } else if (heatLevel == HeatLevel.HIGH) {
             market.virtualLiquidity = heatLevelHigh;
         } else if (heatLevel == HeatLevel.PRO) {
             market.virtualLiquidity = heatLevelPro;
+        } else if (heatLevel == HeatLevel.APEX) {
+            market.virtualLiquidity = heatLevelApex;
+        } else if (heatLevel == HeatLevel.CORE) {
+            market.virtualLiquidity = heatLevelCore;
         }
 
         emit MarketCreated(
@@ -1896,6 +1908,20 @@ contract PredictionMarket is ReentrancyGuard {
                 newHeatLevelPro > MAX_HEAT_LEVEL
             ) revert InvalidFee();
             heatLevelPro = newHeatLevelPro;
+        } else if (action.actionType == ActionType.SetHeatLevelApex) {
+            uint256 newHeatLevelApex = abi.decode(action.data, (uint256));
+            if (
+                newHeatLevelApex < MIN_HEAT_LEVEL ||
+                newHeatLevelApex > MAX_HEAT_LEVEL
+            ) revert InvalidFee();
+            heatLevelApex = newHeatLevelApex;
+        } else if (action.actionType == ActionType.SetHeatLevelCore) {
+            uint256 newHeatLevelCore = abi.decode(action.data, (uint256));
+            if (
+                newHeatLevelCore < MIN_HEAT_LEVEL ||
+                newHeatLevelCore > MAX_HEAT_LEVEL
+            ) revert InvalidFee();
+            heatLevelCore = newHeatLevelCore;
         } else if (action.actionType == ActionType.SweepFunds) {
             // Calculate total locked funds across all markets
             uint256 totalLocked = _calculateTotalLockedFunds();

@@ -1,7 +1,7 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 14, 2026  
-> **Status:** Smart Contracts ✅ v3.4.1 Deployed | Subgraph ✅ v3.4.1 | Frontend ✅ v0.7.12  
+> **Status:** Smart Contracts ✅ v3.5.0 Ready | Subgraph ✅ v3.4.1 | Frontend ✅ v0.7.12  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -68,13 +68,15 @@ uint256 public heatLevelCore = 10000 * 1e18;  // NEW
 ```
 
 ### Tasks
-- [ ] Update `PredictionMarket.sol`:
-  - [ ] Add APEX and CORE to HeatLevel enum
-  - [ ] Add heatLevelApex and heatLevelCore state variables
-  - [ ] Update _getVirtualLiquidity() for 5 levels
-  - [ ] Increase existing values (CRACK 5→50, HIGH 20→200, PRO 50→500)
-  - [ ] Add SetHeatLevelApex and SetHeatLevelCore to MultiSigAction enum
-- [ ] Run full test suite (update test values)
+- [x] Update `PredictionMarket.sol`:
+  - [x] Add APEX and CORE to HeatLevel enum
+  - [x] Add heatLevelApex and heatLevelCore state variables
+  - [x] Update _createMarket() for 5 levels
+  - [x] Increase existing values (CRACK 5→50, HIGH 20→200, PRO 50→500)
+  - [x] Add SetHeatLevelApex and SetHeatLevelCore to ActionType enum
+  - [x] Add MultiSig action handlers for APEX and CORE
+  - [x] Update MAX_HEAT_LEVEL constant (200 → 15000)
+- [x] Run full test suite (update test values) - 164 tests passing ✅
 - [ ] Deploy new contract v3.5.0
 - [ ] Update subgraph:
   - [ ] New contract address
@@ -83,7 +85,7 @@ uint256 public heatLevelCore = 10000 * 1e18;  // NEW
 - [ ] Update frontend:
   - [ ] `HeatSelector` component (5 options)
   - [ ] `CreateMarketPage.tsx` (wire 5 tiers)
-  - [ ] `HowToPlayPage.tsx` - update vLiq numbers to match
+  - [x] `HowToPlayPage.tsx` - update vLiq numbers to match (done in v0.7.12)
   - [ ] `format.ts` - update DEFAULT_VIRTUAL_LIQUIDITY
   - [ ] Contract address in `.env`
   - [ ] All components using virtualLiquidity

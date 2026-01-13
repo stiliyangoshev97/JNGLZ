@@ -66,7 +66,7 @@ contract PredictionMarketTest is TestHelper {
             "Test question",
             expiryTime,
             PredictionMarket.HeatLevel.HIGH,
-            20 * 1e18 // Default HIGH liquidity
+            200 * 1e18 // Default HIGH liquidity (10x increase in v3.5.0)
         );
 
         vm.prank(marketCreator);
@@ -190,8 +190,8 @@ contract PredictionMarketTest is TestHelper {
 
         assertEq(
             virtualLiquidity,
-            5 * 1e18,
-            "CRACK should have 5e18 liquidity"
+            50 * 1e18,
+            "CRACK should have 50e18 liquidity"
         );
         assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.CRACK));
     }
@@ -237,8 +237,8 @@ contract PredictionMarketTest is TestHelper {
 
         assertEq(
             virtualLiquidity,
-            20 * 1e18,
-            "HIGH should have 20e18 liquidity"
+            200 * 1e18,
+            "HIGH should have 200e18 liquidity"
         );
         assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.HIGH));
     }
@@ -284,8 +284,8 @@ contract PredictionMarketTest is TestHelper {
 
         assertEq(
             virtualLiquidity,
-            50 * 1e18,
-            "PRO should have 50e18 liquidity"
+            500 * 1e18,
+            "PRO should have 500e18 liquidity"
         );
         assertEq(uint256(heatLevel), uint256(PredictionMarket.HeatLevel.PRO));
     }
@@ -401,17 +401,14 @@ contract PredictionMarketTest is TestHelper {
     // ============================================
 
     /**
-     * @notice Test CRACK heat level math: 0.01 BNB buy should move price significantly
-     * @dev virtualLiquidity = 5e18, so small bets have HUGE impact
+     * @notice Test CRACK heat level math: 0.01 BNB buy should move price moderately
+     * @dev virtualLiquidity = 50e18 (10x increase in v3.5.0), so price impact is more stable
      *
-     * Math walkthrough for 0.01 BNB buy on CRACK:
-     * - Initial: virtualYes = 5e18, virtualNo = 5e18, total = 10e18
-     * - Initial price: P(YES) = 0.01 * 5 / 10 = 0.005 BNB (50%)
+     * Math walkthrough for 0.01 BNB buy on CRACK (v3.5.0):
+     * - Initial: virtualYes = 50e18, virtualNo = 50e18, total = 100e18
+     * - Initial price: P(YES) = 0.01 * 50 / 100 = 0.005 BNB (50%)
      * - After fee (1.5%): 0.01 * 0.985 = 0.00985 BNB to pool
-     * - Shares = (0.00985 * 10e18 * 1e18) / (0.01 * 5e18) = ~19.7e18 shares
-     * - New virtualYes = 5e18 + 19.7e18 = 24.7e18
-     * - New P(YES) = 0.01 * 24.7 / (24.7 + 5) = ~0.00831 BNB (~83%)
-     * - Price moved from 50% to ~83% = 33% swing!
+     * - Price impact is ~10x lower than before with vLiq=5
      */
     function test_HeatLevel_CRACK_PriceImpact_SmallBet() public {
         uint256 marketId = createTestMarketWithHeatLevel(
@@ -439,30 +436,26 @@ contract PredictionMarketTest is TestHelper {
         uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
             initialPrice;
 
-        console.log("=== CRACK Heat Level (vLiq=5) - 0.01 BNB buy ===");
+        console.log("=== CRACK Heat Level (vLiq=50) - 0.01 BNB buy ===");
         console.log("Initial YES price:", initialPrice);
         console.log("Shares bought:", sharesBought);
         console.log("New YES price:", newPrice);
         console.log("Price change (bps):", priceChangeBps);
         console.log("Price change %:", priceChangeBps / 100);
 
-        // CRACK should have significant price impact (~16% for 0.01 BNB)
-        // Actual math: vLiq=5, shares=1.97, price moves from 50% to ~58%
-        assertGt(priceChangeBps, 1000, "CRACK 0.01 BNB should move price >10%");
-        assertLt(priceChangeBps, 2500, "CRACK 0.01 BNB should move price <25%");
+        // CRACK with 10x liquidity has lower price impact (~1.9% for 0.01 BNB)
+        assertGt(priceChangeBps, 100, "CRACK 0.01 BNB should move price >1%");
+        assertLt(priceChangeBps, 400, "CRACK 0.01 BNB should move price <4%");
     }
 
     /**
-     * @notice Test HIGH heat level math: 0.01 BNB buy should have moderate impact
-     * @dev virtualLiquidity = 20e18, balanced volatility
+     * @notice Test HIGH heat level math: 0.01 BNB buy should have minimal impact
+     * @dev virtualLiquidity = 200e18 (10x increase in v3.5.0), very stable
      *
-     * Math for 0.01 BNB on HIGH:
-     * - Initial: virtualYes = 20e18, virtualNo = 20e18, total = 40e18
+     * Math for 0.01 BNB on HIGH (v3.5.0):
+     * - Initial: virtualYes = 200e18, virtualNo = 200e18, total = 400e18
      * - After fee: ~0.00985 BNB to pool
-     * - Shares = (0.00985 * 40e18 * 1e18) / (0.01 * 20e18) = ~19.7e18 shares
-     * - New virtualYes = 20e18 + 19.7e18 = 39.7e18
-     * - New P(YES) = 0.01 * 39.7 / (39.7 + 20) = ~0.00665 BNB (~66.5%)
-     * - Price moved from 50% to ~66.5% = 16.5% swing
+     * - Price impact is ~10x lower than before with vLiq=20
      */
     function test_HeatLevel_HIGH_PriceImpact_SmallBet() public {
         uint256 marketId = createTestMarketWithHeatLevel(
@@ -485,29 +478,30 @@ contract PredictionMarketTest is TestHelper {
         uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
             initialPrice;
 
-        console.log("=== HIGH Heat Level (vLiq=20) - 0.01 BNB buy ===");
+        console.log("=== HIGH Heat Level (vLiq=200) - 0.01 BNB buy ===");
         console.log("Initial YES price:", initialPrice);
         console.log("Shares bought:", sharesBought);
         console.log("New YES price:", newPrice);
         console.log("Price change (bps):", priceChangeBps);
         console.log("Price change %:", priceChangeBps / 100);
 
-        // HIGH should have moderate price impact (~4.7% for 0.01 BNB)
-        assertGt(priceChangeBps, 300, "HIGH 0.01 BNB should move price >3%");
-        assertLt(priceChangeBps, 800, "HIGH 0.01 BNB should move price <8%");
+        // HIGH with 10x liquidity has very low price impact (~0.5% for 0.01 BNB)
+        assertLt(priceChangeBps, 100, "HIGH 0.01 BNB should move price <1%");
+        assertGt(
+            priceChangeBps,
+            25,
+            "HIGH 0.01 BNB should still move price >0.25%"
+        );
     }
 
     /**
-     * @notice Test PRO heat level math: 0.01 BNB buy should have minimal impact
-     * @dev virtualLiquidity = 50e18, designed for whale trades
+     * @notice Test PRO heat level math: 0.01 BNB buy should have very minimal impact
+     * @dev virtualLiquidity = 500e18 (10x increase in v3.5.0), designed for whale trades
      *
-     * Math for 0.01 BNB on PRO:
-     * - Initial: virtualYes = 50e18, virtualNo = 50e18, total = 100e18
+     * Math for 0.01 BNB on PRO (v3.5.0):
+     * - Initial: virtualYes = 500e18, virtualNo = 500e18, total = 1000e18
      * - After fee: ~0.00985 BNB to pool
-     * - Shares = (0.00985 * 100e18 * 1e18) / (0.01 * 50e18) = ~19.7e18 shares
-     * - New virtualYes = 50e18 + 19.7e18 = 69.7e18
-     * - New P(YES) = 0.01 * 69.7 / (69.7 + 50) = ~0.00582 BNB (~58.2%)
-     * - Price moved from 50% to ~58.2% = 8.2% swing
+     * - Price impact is ~10x lower than before with vLiq=50
      */
     function test_HeatLevel_PRO_PriceImpact_SmallBet() public {
         uint256 marketId = createTestMarketWithHeatLevel(
@@ -530,19 +524,19 @@ contract PredictionMarketTest is TestHelper {
         uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
             initialPrice;
 
-        console.log("=== PRO Heat Level (vLiq=50) - 0.01 BNB buy ===");
+        console.log("=== PRO Heat Level (vLiq=500) - 0.01 BNB buy ===");
         console.log("Initial YES price:", initialPrice);
         console.log("Shares bought:", sharesBought);
         console.log("New YES price:", newPrice);
         console.log("Price change (bps):", priceChangeBps);
         console.log("Price change %:", priceChangeBps / 100);
 
-        // PRO should have minimal price impact (~1.9% for 0.01 BNB)
-        assertLt(priceChangeBps, 400, "PRO 0.01 BNB should move price <4%");
+        // PRO with 10x liquidity has very minimal price impact (~0.2% for 0.01 BNB)
+        assertLt(priceChangeBps, 50, "PRO 0.01 BNB should move price <0.5%");
         assertGt(
             priceChangeBps,
-            100,
-            "PRO 0.01 BNB should still move price >1%"
+            10,
+            "PRO 0.01 BNB should still move price >0.1%"
         );
     }
 
@@ -607,7 +601,7 @@ contract PredictionMarketTest is TestHelper {
 
     /**
      * @notice Test larger bet amounts on each heat level
-     * @dev Verifies the "target bet" ranges from documentation
+     * @dev Verifies the "target bet" ranges for v3.5.0 (10x liquidity)
      */
     function test_HeatLevel_CRACK_LargeBetImpact() public {
         uint256 marketId = createTestMarketWithHeatLevel(
@@ -616,32 +610,7 @@ contract PredictionMarketTest is TestHelper {
             PredictionMarket.HeatLevel.CRACK
         );
 
-        // 0.05 BNB should cause ~15% price impact on CRACK (per documentation)
-        uint256 buyAmount = 0.05 ether;
-        uint256 initialPrice = market.getYesPrice(marketId);
-
-        buyYesFor(alice, marketId, buyAmount, 0);
-
-        uint256 newPrice = market.getYesPrice(marketId);
-        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
-            initialPrice;
-
-        console.log("=== CRACK: 0.05 BNB (target bet) ===");
-        console.log("Price change %:", priceChangeBps / 100);
-
-        // CRACK with 0.05 BNB should have ~49% price change (74% price)
-        assertGt(priceChangeBps, 4000, "CRACK 0.05 BNB should move price >40%");
-        assertLt(priceChangeBps, 6000, "CRACK 0.05 BNB should move price <60%");
-    }
-
-    function test_HeatLevel_HIGH_TargetBetImpact() public {
-        uint256 marketId = createTestMarketWithHeatLevel(
-            marketCreator,
-            7 days,
-            PredictionMarket.HeatLevel.HIGH
-        );
-
-        // 0.5 BNB should cause ~15% price impact on HIGH (per documentation)
+        // 0.5 BNB should cause significant price impact on CRACK (10x scaled)
         uint256 buyAmount = 0.5 ether;
         uint256 initialPrice = market.getYesPrice(marketId);
 
@@ -651,12 +620,37 @@ contract PredictionMarketTest is TestHelper {
         uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
             initialPrice;
 
-        console.log("=== HIGH: 0.5 BNB (target bet) ===");
+        console.log("=== CRACK: 0.5 BNB (target bet for v3.5.0) ===");
         console.log("Price change %:", priceChangeBps / 100);
 
-        // HIGH with 0.5 BNB should have ~71% price change
-        assertGt(priceChangeBps, 6000, "HIGH 0.5 BNB should move price >60%");
-        assertLt(priceChangeBps, 8500, "HIGH 0.5 BNB should move price <85%");
+        // CRACK with 0.5 BNB should have ~40-60% price change
+        assertGt(priceChangeBps, 3500, "CRACK 0.5 BNB should move price >35%");
+        assertLt(priceChangeBps, 6500, "CRACK 0.5 BNB should move price <65%");
+    }
+
+    function test_HeatLevel_HIGH_TargetBetImpact() public {
+        uint256 marketId = createTestMarketWithHeatLevel(
+            marketCreator,
+            7 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
+
+        // 5 BNB should cause significant price impact on HIGH (10x scaled)
+        uint256 buyAmount = 5 ether;
+        uint256 initialPrice = market.getYesPrice(marketId);
+
+        buyYesFor(alice, marketId, buyAmount, 0);
+
+        uint256 newPrice = market.getYesPrice(marketId);
+        uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
+            initialPrice;
+
+        console.log("=== HIGH: 5 BNB (target bet for v3.5.0) ===");
+        console.log("Price change %:", priceChangeBps / 100);
+
+        // HIGH with 5 BNB should have ~40-75% price change
+        assertGt(priceChangeBps, 3500, "HIGH 5 BNB should move price >35%");
+        assertLt(priceChangeBps, 8000, "HIGH 5 BNB should move price <80%");
     }
 
     function test_HeatLevel_PRO_WhaleBetImpact() public {
@@ -666,8 +660,8 @@ contract PredictionMarketTest is TestHelper {
             PredictionMarket.HeatLevel.PRO
         );
 
-        // 2.0 BNB should cause ~15% price impact on PRO (per documentation)
-        uint256 buyAmount = 2 ether;
+        // 20 BNB should cause significant price impact on PRO (10x scaled)
+        uint256 buyAmount = 20 ether;
         uint256 initialPrice = market.getYesPrice(marketId);
 
         buyYesFor(alice, marketId, buyAmount, 0);
@@ -676,12 +670,12 @@ contract PredictionMarketTest is TestHelper {
         uint256 priceChangeBps = ((newPrice - initialPrice) * 10000) /
             initialPrice;
 
-        console.log("=== PRO: 2.0 BNB (whale bet) ===");
+        console.log("=== PRO: 20 BNB (whale bet for v3.5.0) ===");
         console.log("Price change %:", priceChangeBps / 100);
 
-        // PRO with 2 BNB should have ~79% price change
-        assertGt(priceChangeBps, 7000, "PRO 2 BNB should move price >70%");
-        assertLt(priceChangeBps, 9000, "PRO 2 BNB should move price <90%");
+        // PRO with 20 BNB should have ~40-85% price change
+        assertGt(priceChangeBps, 3500, "PRO 20 BNB should move price >35%");
+        assertLt(priceChangeBps, 8500, "PRO 20 BNB should move price <85%");
     }
 
     /**
@@ -689,7 +683,7 @@ contract PredictionMarketTest is TestHelper {
      * @dev Even if MultiSig changes global defaults, existing markets keep their original virtualLiquidity
      */
     function test_HeatLevel_ImmutablePerMarket() public {
-        // Create CRACK market with default 5e18
+        // Create CRACK market with default 50e18 (v3.5.0)
         uint256 crackMarket = createTestMarketWithHeatLevel(
             marketCreator,
             7 days,
@@ -699,22 +693,22 @@ contract PredictionMarketTest is TestHelper {
         // Get initial virtualLiquidity
         (, , , , , , , , , uint256 initialVLiq, , , , , , , , , , , , ) = market
             .markets(crackMarket);
-        assertEq(initialVLiq, 5e18, "Initial CRACK should be 5e18");
+        assertEq(initialVLiq, 50e18, "Initial CRACK should be 50e18");
 
-        // MultiSig changes CRACK default to 10e18
+        // MultiSig changes CRACK default to 100e18
         executeMultiSigAction(
             PredictionMarket.ActionType.SetHeatLevelCrack,
-            abi.encode(10e18)
+            abi.encode(100e18)
         );
 
         // Verify global default changed
         assertEq(
             market.heatLevelCrack(),
-            10e18,
-            "Global CRACK should be 10e18"
+            100e18,
+            "Global CRACK should be 100e18"
         );
 
-        // BUT the existing market should STILL have 5e18
+        // BUT the existing market should STILL have 50e18
         (
             ,
             ,
@@ -739,7 +733,11 @@ contract PredictionMarketTest is TestHelper {
             ,
 
         ) = market.markets(crackMarket);
-        assertEq(unchangedVLiq, 5e18, "Existing market should STILL have 5e18");
+        assertEq(
+            unchangedVLiq,
+            50e18,
+            "Existing market should STILL have 50e18"
+        );
 
         // New market gets the new value
         uint256 newMarket = createTestMarketWithHeatLevel(
@@ -749,7 +747,7 @@ contract PredictionMarketTest is TestHelper {
         );
         (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , ) = market
             .markets(newMarket);
-        assertEq(newVLiq, 10e18, "New market should have 10e18");
+        assertEq(newVLiq, 100e18, "New market should have 100e18");
     }
 
     /**
