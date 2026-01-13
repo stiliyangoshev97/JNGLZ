@@ -75,13 +75,19 @@ type ViewMode = 'positions' | 'my-markets';
 // Action types for positions
 type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'none';
 
+// Sub-filters for PENDING tab (resolution stages)
+type PendingSubFilter = 'all' | 'awaiting' | 'proposed' | 'disputed' | 'finalizing';
+
 export function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [actionFilter, setActionFilter] = useState<PositionAction | 'all'>('all');
+  const [pendingSubFilter, setPendingSubFilter] = useState<PendingSubFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('positions');
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [marketsDisplayCount, setMarketsDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadMoreMarketsRef = useRef<HTMLDivElement>(null);
 
   // Predator Polling v2: 120s interval (was 60s), stops when tab is inactive
   const pollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
@@ -196,6 +202,33 @@ export function PortfolioPage() {
       awaitingResolution: [] as PositionWithMarket[],
       resolved: [] as PositionWithMarket[],
       unresolved: [] as PositionWithMarket[],
+      // Pending sub-categories for resolution stages
+      pendingSub: {
+        awaiting: [] as PositionWithMarket[],   // Just expired, no proposal yet
+        proposed: [] as PositionWithMarket[],    // Has proposal, in 30min dispute window
+        disputed: [] as PositionWithMarket[],    // Under dispute, 1hr voting period
+        finalizing: [] as PositionWithMarket[],  // Window ended, ready to finalize
+      },
+    };
+
+    // Helper to sub-categorize pending positions
+    const subCategorizePending = (pos: PositionWithMarket, market: typeof pos.market) => {
+      const hasProposal = market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
+      const hasDispute = market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000';
+      const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
+      const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
+      const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
+      const votingWindowEnd = disputeMs + VOTING_WINDOW;
+
+      if (!hasProposal) {
+        categories.pendingSub.awaiting.push(pos);
+      } else if (hasDispute && now < votingWindowEnd) {
+        categories.pendingSub.disputed.push(pos);
+      } else if (!hasDispute && now < disputeWindowEnd) {
+        categories.pendingSub.proposed.push(pos);
+      } else {
+        categories.pendingSub.finalizing.push(pos);
+      }
     };
 
     positions.forEach((pos) => {
@@ -246,6 +279,7 @@ export function PortfolioPage() {
       if (hasDispute && !isResolved && hasShares && !pos.hasVoted && now < votingWindowEnd) {
         categories.needsAction.push({ ...pos, action: 'vote' });
         categories.awaitingResolution.push(pos);
+        subCategorizePending(pos, market);
         return;
       }
       
@@ -264,6 +298,7 @@ export function PortfolioPage() {
       if (canFinalize) {
         categories.needsAction.push({ ...pos, action: 'finalize' });
         categories.awaitingResolution.push(pos);
+        subCategorizePending(pos, market);
         return;
       }
       
@@ -283,6 +318,7 @@ export function PortfolioPage() {
       } else if (isExpired) {
         // Expired but resolution in progress
         categories.awaitingResolution.push(pos);
+        subCategorizePending(pos, market);
       } else {
         // Shouldn't happen, but fallback to active
         categories.active.push(pos);
@@ -303,6 +339,14 @@ export function PortfolioPage() {
     return counts;
   }, [categorizedPositions.needsAction]);
 
+  // Count pending sub-categories
+  const pendingSubCounts = useMemo(() => ({
+    awaiting: categorizedPositions.pendingSub.awaiting.length,
+    proposed: categorizedPositions.pendingSub.proposed.length,
+    disputed: categorizedPositions.pendingSub.disputed.length,
+    finalizing: categorizedPositions.pendingSub.finalizing.length,
+  }), [categorizedPositions]);
+
   // Filter positions based on selection
   const filteredPositions = useMemo(() => {
     let result: PositionWithMarket[];
@@ -318,6 +362,10 @@ export function PortfolioPage() {
         result = categorizedPositions.active;
         break;
       case 'awaiting-resolution':
+        // Apply pending sub-filter if selected
+        if (pendingSubFilter !== 'all') {
+          return categorizedPositions.pendingSub[pendingSubFilter];
+        }
         result = categorizedPositions.awaitingResolution;
         break;
       case 'resolved':
@@ -330,7 +378,7 @@ export function PortfolioPage() {
         result = positions;
     }
     return result;
-  }, [filterBy, actionFilter, positions, categorizedPositions]);
+  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions]);
 
   // Reset action filter when switching away from needs-action
   const handleFilterChange = (newFilter: FilterOption) => {
@@ -339,12 +387,21 @@ export function PortfolioPage() {
     if (newFilter !== 'needs-action') {
       setActionFilter('all');
     }
+    if (newFilter !== 'awaiting-resolution') {
+      setPendingSubFilter('all');
+    }
+  };
+
+  // Handle pending sub-filter change
+  const handlePendingSubFilterChange = (newSubFilter: PendingSubFilter) => {
+    setPendingSubFilter(newSubFilter);
+    setDisplayCount(ITEMS_PER_PAGE);
   };
 
   // Reset display count when action filter changes
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
-  }, [actionFilter]);
+  }, [actionFilter, pendingSubFilter]);
 
   // Paginated positions for display
   const paginatedPositions = useMemo(() => {
@@ -382,6 +439,47 @@ export function PortfolioPage() {
       }
     };
   }, [loadMore, hasMoreItems]);
+
+  // Markets list from query
+  const myMarkets = myMarketsData?.markets || [];
+  const hasMoreMarkets = marketsDisplayCount < myMarkets.length;
+
+  // Infinite scroll - load more markets when sentinel is visible
+  const loadMoreMarkets = useCallback(() => {
+    if (hasMoreMarkets) {
+      setMarketsDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, myMarkets.length));
+    }
+  }, [hasMoreMarkets, myMarkets.length]);
+
+  // Reset markets display count when view mode changes
+  useEffect(() => {
+    if (viewMode === 'my-markets') {
+      setMarketsDisplayCount(ITEMS_PER_PAGE);
+    }
+  }, [viewMode]);
+
+  // Intersection Observer for markets infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreMarkets) {
+          loadMoreMarkets();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreMarketsRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [loadMoreMarkets, hasMoreMarkets]);
 
   // Calculate portfolio stats
   const stats = calculatePortfolioStats(positions, categorizedPositions);
@@ -712,6 +810,76 @@ export function PortfolioPage() {
                 </div>
               )}
 
+              {/* Sub-filter buttons for PENDING (awaiting-resolution) */}
+              {filterBy === 'awaiting-resolution' && categorizedPositions.awaitingResolution.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-6 pl-2 border-l-2 border-cyber/30">
+                  <span className="text-xs text-text-muted mr-1">STAGE:</span>
+                  <button 
+                    onClick={() => handlePendingSubFilterChange('all')}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      pendingSubFilter === 'all' 
+                        ? "bg-cyber/20 text-cyber" 
+                        : "text-text-secondary hover:text-white hover:bg-dark-600"
+                    )}
+                  >
+                    ALL ({categorizedPositions.awaitingResolution.length})
+                  </button>
+                  {pendingSubCounts.awaiting > 0 && (
+                    <button 
+                      onClick={() => handlePendingSubFilterChange('awaiting')}
+                      className={cn(
+                        "text-xs font-mono px-2 py-1 rounded transition-colors",
+                        pendingSubFilter === 'awaiting' 
+                          ? "bg-warning/20 text-warning" 
+                          : "text-warning/70 hover:text-warning hover:bg-dark-600"
+                      )}
+                    >
+                      ⏳ AWAITING ({pendingSubCounts.awaiting})
+                    </button>
+                  )}
+                  {pendingSubCounts.proposed > 0 && (
+                    <button 
+                      onClick={() => handlePendingSubFilterChange('proposed')}
+                      className={cn(
+                        "text-xs font-mono px-2 py-1 rounded transition-colors",
+                        pendingSubFilter === 'proposed' 
+                          ? "bg-cyber/20 text-cyber" 
+                          : "text-cyber/70 hover:text-cyber hover:bg-dark-600"
+                      )}
+                    >
+                      📋 PROPOSED ({pendingSubCounts.proposed})
+                    </button>
+                  )}
+                  {pendingSubCounts.disputed > 0 && (
+                    <button 
+                      onClick={() => handlePendingSubFilterChange('disputed')}
+                      className={cn(
+                        "text-xs font-mono px-2 py-1 rounded transition-colors",
+                        pendingSubFilter === 'disputed' 
+                          ? "bg-orange-500/20 text-orange-400" 
+                          : "text-orange-400/70 hover:text-orange-400 hover:bg-dark-600"
+                      )}
+                    >
+                      ⚔️ DISPUTED ({pendingSubCounts.disputed})
+                    </button>
+                  )}
+                  {pendingSubCounts.finalizing > 0 && (
+                    <button 
+                      onClick={() => handlePendingSubFilterChange('finalizing')}
+                      className={cn(
+                        "text-xs font-mono px-2 py-1 rounded transition-colors",
+                        pendingSubFilter === 'finalizing' 
+                          ? "bg-yes/20 text-yes" 
+                          : "text-yes/70 hover:text-yes hover:bg-dark-600"
+                      )}
+                    >
+                      ✅ FINALIZING ({pendingSubCounts.finalizing})
+                    </button>
+                  )}
+                </div>
+              )}
+
           {isInitialLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -800,7 +968,7 @@ export function PortfolioPage() {
                     <PositionCardSkeleton key={i} />
                   ))}
                 </div>
-              ) : myMarketsData?.markets?.length === 0 ? (
+              ) : myMarkets.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-xl font-bold text-white mb-2">NO MARKETS CREATED</p>
                   <p className="text-text-secondary mb-6">
@@ -811,11 +979,43 @@ export function PortfolioPage() {
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {myMarketsData?.markets?.map((market) => (
-                    <MyMarketCard key={market.id} market={market} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myMarkets.slice(0, marketsDisplayCount).map((market) => (
+                      <MyMarketCard key={market.id} market={market} />
+                    ))}
+                  </div>
+                  
+                  {/* Infinite scroll sentinel + load more info */}
+                  {hasMoreMarkets && (
+                    <div 
+                      ref={loadMoreMarketsRef}
+                      className="flex flex-col items-center justify-center py-8 gap-2"
+                    >
+                      <div className="flex gap-2">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className="w-2 h-2 rounded-full bg-cyber animate-pulse"
+                            style={{ animationDelay: `${i * 150}ms` }}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-text-muted font-mono">
+                        Showing {Math.min(marketsDisplayCount, myMarkets.length)} of {myMarkets.length}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* End of list indicator */}
+                  {!hasMoreMarkets && myMarkets.length > ITEMS_PER_PAGE && (
+                    <div className="text-center py-6">
+                      <p className="text-xs text-text-muted font-mono">
+                        — END OF LIST ({myMarkets.length} markets) —
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -1055,7 +1255,7 @@ function MyMarketCard({ market }: MyMarketCardProps) {
 
   return (
     <Link to={`/market/${market.marketId || market.id}`}>
-      <Card className="hover:border-cyber transition-colors cursor-pointer h-full flex flex-col overflow-hidden">
+      <Card variant="hover" className="group h-full flex flex-col overflow-hidden">
         {/* Market Image */}
         {market.imageUrl && (
           <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">

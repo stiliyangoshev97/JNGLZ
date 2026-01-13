@@ -2,6 +2,78 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.5] - 2026-01-13
+
+### Added
+
+#### PENDING Tab Sub-Filters (Markets Page)
+- **Resolution stage sub-filters** for the PENDING tab
+- Sub-filters: ALL | ⏳ AWAITING | 📋 PROPOSED | ⚔️ DISPUTED | ✅ FINALIZING
+- **AWAITING**: Just expired, no proposal yet
+- **PROPOSED**: Has proposal, in 30min dispute window
+- **DISPUTED**: Under dispute, 1hr voting period (same as VOTING)
+- **FINALIZING**: Window ended, ready to finalize
+- Sub-filter counts update in real-time
+- Only shows sub-filters that have items
+
+#### PENDING Tab Sub-Filters (Portfolio Page - MY POSITIONS)
+- Same resolution stage sub-filters for consistency
+- Sub-filters: ALL | ⏳ AWAITING | 📋 PROPOSED | ⚔️ DISPUTED | ✅ FINALIZING
+- Helps users find their positions at specific resolution stages
+- Color-coded: yellow (awaiting), cyan (proposed), orange (disputed), green (finalizing)
+
+### Changed
+
+- Pagination resets when changing pending sub-filter
+- Sub-filter state resets when switching away from PENDING tab
+
+---
+
+## [0.7.4] - 2026-01-13
+
+### Added
+
+#### Markets Page Category Tabs
+- **New tabs**: ALL | ACTIVE | PENDING | RESOLVED | UNRESOLVED
+- Default tab: **ACTIVE** (what traders care about most)
+- UNRESOLVED tab only appears if there are markets 24h+ expired without resolution
+- Tab colors: ACTIVE (green), RESOLVED (green), PENDING (cyan), UNRESOLVED (red)
+- Accurate counts for all categories
+
+#### Markets Page Infinite Scroll
+- Loads 20 items initially, more on scroll
+- `IntersectionObserver` for smooth infinite loading
+- Shows "Showing X of Y" counter while loading more
+- "END OF LIST" indicator when all items loaded
+- Pagination resets when changing tab or sort
+
+#### MY MARKETS Hover Effect
+- Added `group` class to MyMarketCard for grayscale → color image transition
+- Now matches the hover behavior on Markets page and MY POSITIONS
+
+### Changed
+
+#### Markets Page Fetch Limit
+- Increased from `first: 100` to `first: 500` for accurate tab counts
+- Pagination is client-side (visual/UX) from pre-fetched data
+
+#### Sort Options Cleanup
+- Removed emojis from sort buttons: HOT, NEW, ENDING, LIQUID
+- Sort button highlight: cyan when active (was white)
+
+#### Tab Button Styling
+- `FilterTab` component with color variants (yes/no/cyber)
+- Inactive tabs with items show faded color hint
+- Consistent styling with Portfolio page tabs
+
+### Fixed
+
+#### MY MARKETS Card Hover
+- Added missing `group` class for image color transition on hover
+- Changed from custom `hover:border-cyber` to `Card variant="hover"` for consistency
+
+---
+
 ## [0.7.3] - 2026-01-13
 
 ### Added
@@ -31,6 +103,7 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 - `IntersectionObserver` for smooth infinite loading
 - Shows "Showing X of Y" counter while loading more
 - "END OF LIST" indicator when all items loaded
+- **Added**: MY MARKETS tab now has infinite scroll pagination (was missing)
 
 ### Changed
 

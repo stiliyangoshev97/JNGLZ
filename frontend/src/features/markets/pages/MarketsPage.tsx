@@ -2,7 +2,12 @@
  * ===== MARKETS PAGE =====
  *
  * The main "Jungle" - homepage showing all active markets.
- * Features a live ticker, market grid, and trending markets.
+ * Features a live ticker, market grid, and category tabs.
+ *
+ * v0.7.4: Category tabs (ALL, ACTIVE, PENDING, RESOLVED, UNRESOLVED)
+ * - Infinite scroll pagination (20 items per page)
+ * - Fetch 500 markets for accurate counts
+ * - Default tab: ACTIVE
  *
  * Predator Polling v2:
  * - Market list: 90 seconds (was 30s) - saves 67% queries
@@ -13,7 +18,7 @@
  * @module features/markets/pages/MarketsPage
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKETS, GET_RECENT_TRADES } from '@/shared/api';
 import type { GetMarketsResponse, GetRecentTradesResponse } from '@/shared/api';
@@ -23,19 +28,36 @@ import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 
+// Sort options
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
-type FilterOption = 'active' | 'pending' | 'resolved';
+
+// Category tabs
+type FilterOption = 'all' | 'active' | 'pending' | 'resolved' | 'unresolved';
+
+// Sub-filters for PENDING tab (resolution stages)
+type PendingSubFilter = 'all' | 'awaiting' | 'proposed' | 'disputed' | 'finalizing';
+
+// Time constants (match contract)
+const DISPUTE_WINDOW = 30 * 60 * 1000; // 30 minutes
+const VOTING_WINDOW = 60 * 60 * 1000; // 1 hour
+const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
+
+// Pagination
+const ITEMS_PER_PAGE = 20;
 
 export function MarketsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('volume');
-  const [filterBy, setFilterBy] = useState<FilterOption>('active');
+  const [filterBy, setFilterBy] = useState<FilterOption>('active'); // Default: ACTIVE
+  const [pendingSubFilter, setPendingSubFilter] = useState<PendingSubFilter>('all');
   const [marketIdSearch, setMarketIdSearch] = useState('');
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Predator v2: Fetch markets with focus-aware refetch
+  // Predator v2: Fetch up to 500 markets for accurate counts
   const { data, loading, error, refetch } = useQuery<GetMarketsResponse>(GET_MARKETS, {
-    variables: { first: 100 },
+    variables: { first: 500 },
     notifyOnNetworkStatusChange: false,
-    fetchPolicy: 'cache-and-network', // Always fetch fresh data on mount
+    fetchPolicy: 'cache-and-network',
   });
 
   // Setup focus refetch (triggers refetch when tab becomes visible)
@@ -64,40 +86,110 @@ export function MarketsPage() {
   const allMarkets = data?.markets || [];
   const recentTrades = tradesData?.trades || [];
 
-  // Filter markets based on selection
-  const filteredMarkets = useMemo(() => {
+  // Categorize all markets for accurate counts
+  const categorizedMarkets = useMemo(() => {
     const now = Date.now();
-    
-    // First, filter by market ID if search is active
-    let markets = allMarkets;
-    if (marketIdSearch.trim()) {
-      const searchId = marketIdSearch.trim().replace('#', '');
-      markets = allMarkets.filter((market) => 
-        market.marketId?.toString() === searchId || market.id === searchId
-      );
-      // If searching by ID, return all matches regardless of status
-      if (markets.length > 0) return markets;
-    }
-    
-    // Then filter by status
-    return markets.filter((market) => {
+    const categories = {
+      all: [] as Market[],
+      active: [] as Market[],
+      pending: [] as Market[],
+      resolved: [] as Market[],
+      unresolved: [] as Market[],
+      // Pending sub-categories for resolution stages
+      pendingSub: {
+        awaiting: [] as Market[],   // Just expired, no proposal yet
+        proposed: [] as Market[],    // Has proposal, in 30min dispute window
+        disputed: [] as Market[],    // Under dispute, 1hr voting period
+        finalizing: [] as Market[],  // Window ended, ready to finalize
+      },
+    };
+
+    allMarkets.forEach((market) => {
       const expiryMs = Number(market.expiryTimestamp) * 1000;
       const isExpired = now > expiryMs;
       const isResolved = market.resolved;
+      const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
+      const isUnresolved = isExpired && !isResolved && now > emergencyRefundTime;
 
-      switch (filterBy) {
-        case 'active':
-          return !isExpired && !isResolved;
-        case 'pending':
-          // Pending resolution: expired but not resolved (proposal/dispute/voting)
-          return isExpired && !isResolved;
-        case 'resolved':
-          return isResolved;
-        default:
-          return true;
+      // Add to ALL
+      categories.all.push(market);
+
+      // Categorize by state
+      if (isResolved) {
+        categories.resolved.push(market);
+      } else if (isUnresolved) {
+        categories.unresolved.push(market);
+      } else if (isExpired) {
+        // Expired but not 24h+ yet - in resolution process
+        categories.pending.push(market);
+        
+        // Sub-categorize pending markets by resolution stage
+        const hasProposal = market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
+        const hasDispute = market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000';
+        const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
+        const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
+        const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
+        const votingWindowEnd = disputeMs + VOTING_WINDOW;
+        
+        if (!hasProposal) {
+          // AWAITING: Just expired, no proposal yet
+          categories.pendingSub.awaiting.push(market);
+        } else if (hasDispute && now < votingWindowEnd) {
+          // DISPUTED: Under dispute, in voting window
+          categories.pendingSub.disputed.push(market);
+        } else if (!hasDispute && now < disputeWindowEnd) {
+          // PROPOSED: Has proposal, in dispute window
+          categories.pendingSub.proposed.push(market);
+        } else {
+          // FINALIZING: Windows ended, ready to finalize
+          categories.pendingSub.finalizing.push(market);
+        }
+      } else {
+        // Not expired - active for trading
+        categories.active.push(market);
       }
     });
-  }, [allMarkets, filterBy, marketIdSearch]);
+
+    return categories;
+  }, [allMarkets]);
+
+  // Get counts for tabs
+  const marketCounts = useMemo(() => ({
+    all: categorizedMarkets.all.length,
+    active: categorizedMarkets.active.length,
+    pending: categorizedMarkets.pending.length,
+    resolved: categorizedMarkets.resolved.length,
+    unresolved: categorizedMarkets.unresolved.length,
+  }), [categorizedMarkets]);
+
+  // Get counts for pending sub-filters
+  const pendingSubCounts = useMemo(() => ({
+    awaiting: categorizedMarkets.pendingSub.awaiting.length,
+    proposed: categorizedMarkets.pendingSub.proposed.length,
+    disputed: categorizedMarkets.pendingSub.disputed.length,
+    finalizing: categorizedMarkets.pendingSub.finalizing.length,
+  }), [categorizedMarkets]);
+
+  // Filter markets based on selection (with ID search)
+  const filteredMarkets = useMemo(() => {
+    // First, filter by market ID if search is active
+    if (marketIdSearch.trim()) {
+      const searchId = marketIdSearch.trim().replace('#', '');
+      const matches = allMarkets.filter((market) => 
+        market.marketId?.toString() === searchId || market.id === searchId
+      );
+      // If searching by ID, return all matches regardless of status
+      if (matches.length > 0) return matches;
+    }
+    
+    // For pending tab, apply sub-filter if selected
+    if (filterBy === 'pending' && pendingSubFilter !== 'all') {
+      return categorizedMarkets.pendingSub[pendingSubFilter];
+    }
+    
+    // Return markets for selected category
+    return categorizedMarkets[filterBy];
+  }, [allMarkets, categorizedMarkets, filterBy, pendingSubFilter, marketIdSearch]);
 
   // Sort markets
   const sortedMarkets = useMemo(() => {
@@ -117,18 +209,63 @@ export function MarketsPage() {
     });
   }, [filteredMarkets, sortBy]);
 
-  // Count markets by category
-  const marketCounts = useMemo(() => {
-    const now = Date.now();
-    let active = 0, pending = 0, resolved = 0;
-    allMarkets.forEach((market) => {
-      const expiryMs = Number(market.expiryTimestamp) * 1000;
-      if (market.resolved) resolved++;
-      else if (now > expiryMs) pending++;
-      else active++;
-    });
-    return { active, pending, resolved };
-  }, [allMarkets]);
+  // Paginated markets for display
+  const paginatedMarkets = useMemo(() => {
+    return sortedMarkets.slice(0, displayCount);
+  }, [sortedMarkets, displayCount]);
+
+  const hasMoreItems = displayCount < sortedMarkets.length;
+
+  // Reset pagination when filter or sort changes
+  const handleFilterChange = (newFilter: FilterOption) => {
+    setFilterBy(newFilter);
+    setDisplayCount(ITEMS_PER_PAGE);
+    // Reset pending sub-filter when switching away from pending
+    if (newFilter !== 'pending') {
+      setPendingSubFilter('all');
+    }
+  };
+
+  // Reset pagination when pending sub-filter changes
+  const handlePendingSubFilterChange = (newSubFilter: PendingSubFilter) => {
+    setPendingSubFilter(newSubFilter);
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort);
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
+  // Infinite scroll - load more when sentinel is visible
+  const loadMore = useCallback(() => {
+    if (hasMoreItems) {
+      setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, sortedMarkets.length));
+    }
+  }, [hasMoreItems, sortedMarkets.length]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreItems) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [loadMore, hasMoreItems]);
 
   return (
     <div className="min-h-screen">
@@ -193,29 +330,49 @@ export function MarketsPage() {
                 )}
               </div>
               
-              {/* Filter tabs */}
+              {/* Category tabs */}
               <div className="flex items-center gap-2">
-                <FilterButton
+                <FilterTab
+                  active={filterBy === 'all'}
+                  onClick={() => handleFilterChange('all')}
+                  count={marketCounts.all}
+                >
+                  ALL
+                </FilterTab>
+                <FilterTab
                   active={filterBy === 'active'}
-                  onClick={() => setFilterBy('active')}
+                  onClick={() => handleFilterChange('active')}
                   count={marketCounts.active}
+                  color="yes"
                 >
                   ACTIVE
-                </FilterButton>
-                <FilterButton
+                </FilterTab>
+                <FilterTab
                   active={filterBy === 'pending'}
-                  onClick={() => setFilterBy('pending')}
+                  onClick={() => handleFilterChange('pending')}
                   count={marketCounts.pending}
                 >
                   PENDING
-                </FilterButton>
-                <FilterButton
+                </FilterTab>
+                <FilterTab
                   active={filterBy === 'resolved'}
-                  onClick={() => setFilterBy('resolved')}
+                  onClick={() => handleFilterChange('resolved')}
                   count={marketCounts.resolved}
+                  color="yes"
                 >
                   RESOLVED
-                </FilterButton>
+                </FilterTab>
+                {/* Only show UNRESOLVED if there are any */}
+                {marketCounts.unresolved > 0 && (
+                  <FilterTab
+                    active={filterBy === 'unresolved'}
+                    onClick={() => handleFilterChange('unresolved')}
+                    count={marketCounts.unresolved}
+                    color="no"
+                  >
+                    UNRESOLVED
+                  </FilterTab>
+                )}
               </div>
             </div>
 
@@ -224,32 +381,90 @@ export function MarketsPage() {
               <span className="text-text-muted text-xs font-mono mr-2">SORT:</span>
               <SortButton
                 active={sortBy === 'volume'}
-                onClick={() => setSortBy('volume')}
+                onClick={() => handleSortChange('volume')}
               >
-                🔥 HOT
+                HOT
               </SortButton>
               <SortButton
                 active={sortBy === 'newest'}
-                onClick={() => setSortBy('newest')}
+                onClick={() => handleSortChange('newest')}
               >
-                🆕 NEW
+                NEW
               </SortButton>
               <SortButton
                 active={sortBy === 'ending'}
-                onClick={() => setSortBy('ending')}
+                onClick={() => handleSortChange('ending')}
               >
-                ⏰ ENDING
+                ENDING
               </SortButton>
               <SortButton
                 active={sortBy === 'liquidity'}
-                onClick={() => setSortBy('liquidity')}
+                onClick={() => handleSortChange('liquidity')}
               >
-                💧 LIQUID
+                LIQUID
               </SortButton>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Sub-filters for PENDING tab */}
+      {filterBy === 'pending' && marketCounts.pending > 0 && (
+        <section className="border-b border-dark-600 py-3 bg-dark-900/50">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-wrap items-center gap-2 pl-2 border-l-2 border-cyber/30">
+              <span className="text-xs text-text-muted mr-1">STAGE:</span>
+              <SubFilterButton
+                active={pendingSubFilter === 'all'}
+                onClick={() => handlePendingSubFilterChange('all')}
+                count={marketCounts.pending}
+              >
+                ALL
+              </SubFilterButton>
+              {pendingSubCounts.awaiting > 0 && (
+                <SubFilterButton
+                  active={pendingSubFilter === 'awaiting'}
+                  onClick={() => handlePendingSubFilterChange('awaiting')}
+                  count={pendingSubCounts.awaiting}
+                  color="yellow"
+                >
+                  ⏳ AWAITING
+                </SubFilterButton>
+              )}
+              {pendingSubCounts.proposed > 0 && (
+                <SubFilterButton
+                  active={pendingSubFilter === 'proposed'}
+                  onClick={() => handlePendingSubFilterChange('proposed')}
+                  count={pendingSubCounts.proposed}
+                  color="cyan"
+                >
+                  📋 PROPOSED
+                </SubFilterButton>
+              )}
+              {pendingSubCounts.disputed > 0 && (
+                <SubFilterButton
+                  active={pendingSubFilter === 'disputed'}
+                  onClick={() => handlePendingSubFilterChange('disputed')}
+                  count={pendingSubCounts.disputed}
+                  color="orange"
+                >
+                  ⚔️ DISPUTED
+                </SubFilterButton>
+              )}
+              {pendingSubCounts.finalizing > 0 && (
+                <SubFilterButton
+                  active={pendingSubFilter === 'finalizing'}
+                  onClick={() => handlePendingSubFilterChange('finalizing')}
+                  count={pendingSubCounts.finalizing}
+                  color="green"
+                >
+                  ✅ FINALIZING
+                </SubFilterButton>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Markets Grid */}
       <section className="py-6 md:py-8">
@@ -263,13 +478,45 @@ export function MarketsPage() {
           ) : error ? (
             <ErrorState message={error.message} />
           ) : sortedMarkets.length === 0 ? (
-            <EmptyState />
+            <EmptyState filterBy={filterBy} onReset={() => handleFilterChange('all')} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedMarkets.map((market) => (
-                <MarketCard key={market.id} market={market} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {paginatedMarkets.map((market) => (
+                  <MarketCard key={market.id} market={market} />
+                ))}
+              </div>
+
+              {/* Infinite scroll sentinel + load more info */}
+              {hasMoreItems && (
+                <div 
+                  ref={loadMoreRef}
+                  className="flex flex-col items-center justify-center py-8 gap-2"
+                >
+                  <div className="flex gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div 
+                        key={i} 
+                        className="w-2 h-2 rounded-full bg-cyber animate-pulse"
+                        style={{ animationDelay: `${i * 150}ms` }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-text-muted font-mono">
+                    Showing {paginatedMarkets.length} of {sortedMarkets.length}
+                  </p>
+                </div>
+              )}
+
+              {/* End of list indicator */}
+              {!hasMoreItems && sortedMarkets.length > ITEMS_PER_PAGE && (
+                <div className="text-center py-6">
+                  <p className="text-xs text-text-muted font-mono">
+                    — END OF LIST ({sortedMarkets.length} markets) —
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -277,33 +524,51 @@ export function MarketsPage() {
   );
 }
 
-// Helper components
-function FilterButton({
+// Category filter tab
+function FilterTab({
   active,
   onClick,
   children,
   count,
+  color,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   count?: number;
+  color?: 'yes' | 'no' | 'cyber';
 }) {
+  // Determine colors based on state and color prop
+  const getColors = () => {
+    if (active) {
+      if (color === 'yes') return 'bg-yes/20 text-yes border-yes';
+      if (color === 'no') return 'bg-no/20 text-no border-no';
+      return 'bg-cyber/20 text-cyber border-cyber';
+    }
+    // Inactive state
+    if (color === 'yes' && count && count > 0) return 'text-yes/70 border-dark-600 hover:border-yes/50';
+    if (color === 'no' && count && count > 0) return 'text-no/70 border-dark-600 hover:border-no/50';
+    return 'text-text-secondary border-dark-600 hover:border-dark-500';
+  };
+
   return (
     <button
       onClick={onClick}
       className={cn(
         'px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors',
-        active
-          ? 'bg-cyber/20 text-cyber border-cyber'
-          : 'bg-transparent text-text-secondary border-dark-600 hover:border-dark-500'
+        'bg-transparent',
+        getColors()
       )}
     >
       {children}
       {count !== undefined && (
         <span className={cn(
           'ml-1.5 px-1.5 py-0.5 text-[10px] rounded-sm',
-          active ? 'bg-cyber/30' : 'bg-dark-700'
+          active 
+            ? color === 'yes' ? 'bg-yes/30' 
+              : color === 'no' ? 'bg-no/30' 
+              : 'bg-cyber/30'
+            : 'bg-dark-700'
         )}>
           {count}
         </span>
@@ -325,8 +590,8 @@ function SortButton({
     <button
       onClick={onClick}
       className={cn(
-        'px-2 py-1 text-xs font-mono transition-colors',
-        active ? 'text-white' : 'text-text-muted hover:text-text-secondary'
+        'px-2 py-1 text-xs font-mono uppercase transition-colors',
+        active ? 'text-cyber' : 'text-text-muted hover:text-text-secondary'
       )}
     >
       {children}
@@ -334,33 +599,100 @@ function SortButton({
   );
 }
 
+// Sub-filter button for pending stages
+function SubFilterButton({
+  active,
+  onClick,
+  children,
+  count,
+  color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  count?: number;
+  color?: 'yellow' | 'cyan' | 'orange' | 'green';
+}) {
+  const getColors = () => {
+    if (active) {
+      switch (color) {
+        case 'yellow': return 'bg-warning/20 text-warning';
+        case 'cyan': return 'bg-cyber/20 text-cyber';
+        case 'orange': return 'bg-orange-500/20 text-orange-400';
+        case 'green': return 'bg-yes/20 text-yes';
+        default: return 'bg-cyber/20 text-cyber';
+      }
+    }
+    // Inactive state
+    switch (color) {
+      case 'yellow': return 'text-warning/70 hover:text-warning hover:bg-dark-600';
+      case 'cyan': return 'text-cyber/70 hover:text-cyber hover:bg-dark-600';
+      case 'orange': return 'text-orange-400/70 hover:text-orange-400 hover:bg-dark-600';
+      case 'green': return 'text-yes/70 hover:text-yes hover:bg-dark-600';
+      default: return 'text-text-secondary hover:text-white hover:bg-dark-600';
+    }
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'text-xs font-mono px-2 py-1 rounded transition-colors',
+        getColors()
+      )}
+    >
+      {children}
+      {count !== undefined && (
+        <span className="ml-1 opacity-70">({count})</span>
+      )}
+    </button>
+  );
+}
+
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="text-center py-16">
-      <p className="text-4xl mb-4">💀</p>
-      <p className="text-text-secondary font-mono">
-        FAILED TO LOAD MARKETS
-      </p>
+      <p className="text-4xl mb-4">⚠️</p>
+      <p className="text-text-secondary font-mono">SOMETHING BROKE</p>
       <p className="text-no text-sm font-mono mt-2">{message}</p>
     </div>
   );
 }
 
-function EmptyState() {
+function EmptyState({ 
+  filterBy, 
+  onReset 
+}: { 
+  filterBy: FilterOption;
+  onReset: () => void;
+}) {
+  const messages: Record<FilterOption, { title: string; desc: string }> = {
+    all: { title: 'NO MARKETS YET', desc: 'Be the first to create a prediction market!' },
+    active: { title: 'NO ACTIVE MARKETS', desc: 'All markets are either pending resolution or resolved.' },
+    pending: { title: 'NO PENDING MARKETS', desc: 'No markets are currently awaiting resolution.' },
+    resolved: { title: 'NO RESOLVED MARKETS', desc: 'No markets have been resolved yet.' },
+    unresolved: { title: 'NO UNRESOLVED MARKETS', desc: 'No markets are eligible for emergency refund.' },
+  };
+
+  const { title, desc } = messages[filterBy];
+
   return (
     <div className="text-center py-16">
-      <p className="text-text-secondary font-mono text-xl">
-        NO MARKETS YET
-      </p>
-      <p className="text-sm text-text-muted mt-2">
-        Be the first to create a prediction market!
-      </p>
+      <p className="text-text-secondary font-mono text-xl">{title}</p>
+      <p className="text-sm text-text-muted mt-2">{desc}</p>
+      {filterBy !== 'all' && (
+        <button 
+          onClick={onReset}
+          className="text-cyber hover:underline mt-4 text-sm"
+        >
+          View all markets →
+        </button>
+      )}
     </div>
   );
 }
 
 function calculateTotalVolume(markets: Market[]): string {
-  // totalVolume from subgraph is BigDecimal string (already in BNB, not wei)
   const total = markets.reduce(
     (sum, m) => sum + parseFloat(m.totalVolume || '0'),
     0
