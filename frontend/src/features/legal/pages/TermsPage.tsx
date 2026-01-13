@@ -308,7 +308,7 @@ export function TermsPage() {
         {/* Footer */}
         <div className="border-t border-dark-600 mt-12 pt-6 text-center space-y-4">
           <Link to="/how-to-play" className="text-cyber hover:underline block">
-            📖 How to Play Guide
+            How to Play Guide
           </Link>
           <Link to="/" className="text-text-secondary hover:text-white">
             Return to Markets

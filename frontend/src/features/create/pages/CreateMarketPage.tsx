@@ -72,7 +72,15 @@ const createMarketSchema = z.object({
   imageUrl: z
     .string()
     .min(1, 'Image URL is required')
-    .url('Must be a valid URL'),
+    .url('Must be a valid URL')
+    .refine((url) => {
+      // Only allow safe image formats (NO SVG - can contain XSS scripts!)
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      const urlLower = url.toLowerCase();
+      // Check if URL ends with allowed extension (before any query params)
+      const urlWithoutParams = urlLower.split('?')[0].split('#')[0];
+      return allowedExtensions.some(ext => urlWithoutParams.endsWith(ext));
+    }, 'Only JPG, JPEG, PNG, GIF, and WEBP images are allowed (no SVG)'),
   durationHours: z.number().min(1, 'Min 1 hour').max(8760, 'Max 365 days'),
   heatLevel: z.number().min(0).max(2), // 0=CRACK, 1=HIGH, 2=PRO
   // Optional first trade
@@ -274,7 +282,7 @@ export function CreateMarketPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <p className="text-6xl mb-6">⚠️</p>
+          <p className="text-6xl mb-6">🔗</p>
           <h1 className="text-2xl font-bold text-no mb-4">WRONG NETWORK</h1>
           <p className="text-text-secondary mb-6">
             Please switch to BNB Chain to create markets.
@@ -455,7 +463,7 @@ export function CreateMarketPage() {
                   <p className="text-no text-xs mt-1">{errors.resolutionRules.message}</p>
                 )}
                 <p className="text-text-muted text-xs mt-2">
-                  <span className="text-yellow-500">⚠️ Note:</span> These rules are guidelines for proposers and voters. 
+                  <span className="text-yellow-500">Note:</span> These rules are guidelines for proposers and voters. 
                   Final outcome is determined by Street Consensus (proposal → dispute → vote). 
                   The market may resolve differently if disputed.
                 </p>
@@ -472,7 +480,7 @@ export function CreateMarketPage() {
               {...register('imageUrl')}
               placeholder="https://example.com/image.jpg"
               error={errors.imageUrl?.message}
-              helperText="Direct link to an image (JPG, PNG, GIF)"
+              helperText="Direct link to an image (JPG, JPEG, PNG, GIF, or WEBP only)"
             />
             <div className="mt-3 p-3 bg-dark-800 border border-dark-600 rounded">
               <p className="text-xs text-text-secondary mb-1">
@@ -483,7 +491,7 @@ export function CreateMarketPage() {
               </p>
             </div>
             <p className="text-xs text-text-muted mt-2">
-              💡 Need to upload an image? Use{' '}
+              Need to upload an image? Use{' '}
               <a 
                 href="https://postimages.org/" 
                 target="_blank" 

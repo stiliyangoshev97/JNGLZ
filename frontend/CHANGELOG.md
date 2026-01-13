@@ -2,6 +2,33 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.6] - 2026-01-13
+
+### Security
+
+#### Image URL Validation (XSS Prevention)
+- **Blocked SVG image URLs** - SVG files can contain embedded JavaScript, posing XSS risk
+- **Allowed formats only**: JPG, JPEG, PNG, GIF, WEBP (all safe raster formats)
+- Validation applied in:
+  - `CreateMarketPage.tsx` - Form validation with Zod
+  - `market.schemas.ts` - Schema-level validation (defense in depth)
+- Error message: "Only JPG, JPEG, PNG, GIF, and WEBP images are allowed (no SVG)"
+- Updated helper text to show allowed formats
+
+### Changed
+
+#### UI Cleanup - Removed Emojis
+- **CreateMarketPage**: Removed ⚠️ from wrong network state (replaced with 🔗)
+- **CreateMarketPage**: Removed ⚠️ from resolution rules note
+- **CreateMarketPage**: Removed 💡 from image upload tip
+- **TermsPage**: Removed 📖 from "How to Play Guide" link
+
+#### Footer Navigation
+- Replaced "GITHUB" link with "HOW TO PLAY" in footer
+- Links to `/how-to-play` page for better user guidance
+
+---
+
 ## [0.7.5] - 2026-01-13
 
 ### Added

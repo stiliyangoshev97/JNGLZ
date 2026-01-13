@@ -394,4 +394,4 @@ src/
 
 ## 📈 Version
 
-**Current:** 0.7.5 (PENDING Tab Sub-Filters)
+**Current:** 0.7.6 (Image URL Security + UI Cleanup)

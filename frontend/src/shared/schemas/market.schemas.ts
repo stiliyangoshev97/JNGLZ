@@ -153,11 +153,27 @@ export type FullMarket = z.infer<typeof FullMarketSchema>;
  * NOTE: No "initial liquidity" - the contract uses virtual shares (100 YES + 100 NO)
  * Creator can optionally buy first via createMarketAndBuy()
  */
+
+// Allowed image extensions (NO SVG - can contain XSS scripts!)
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+const isAllowedImageUrl = (url: string) => {
+  if (!url) return true; // Empty is allowed (optional field)
+  const urlLower = url.toLowerCase();
+  const urlWithoutParams = urlLower.split('?')[0].split('#')[0];
+  return ALLOWED_IMAGE_EXTENSIONS.some(ext => urlWithoutParams.endsWith(ext));
+};
+
 export const CreateMarketInputSchema = z.object({
   question: z.string().min(10, 'Question must be at least 10 characters').max(500, 'Question too long'),
   evidenceUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   resolutionRules: z.string().max(2000, 'Rules too long').optional().or(z.literal('')),
-  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  imageUrl: z
+    .string()
+    .url('Must be a valid URL')
+    .refine(isAllowedImageUrl, 'Only JPG, JPEG, PNG, GIF, and WEBP images are allowed')
+    .optional()
+    .or(z.literal('')),
   expiryTimestamp: z.number().int().positive('Must be a future date'),
   // Optional first bet
   wantFirstBet: z.boolean().optional(),

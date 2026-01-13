@@ -62,14 +62,12 @@ function Footer() {
 
           {/* Links */}
           <div className="flex items-center gap-6 text-sm font-mono">
-            <a
-              href="https://github.com/jnglz"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/how-to-play"
               className="text-text-secondary hover:text-cyber transition-colors"
             >
-              GITHUB
-            </a>
+              HOW TO PLAY
+            </Link>
             <a
               href="https://twitter.com/jnglzfun"
               target="_blank"
