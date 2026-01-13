@@ -733,13 +733,21 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
             {(() => {
               const totalWinningShares = market.outcome ? marketYesSupply : marketNoSupply;
               if (totalWinningShares > 0n) {
-                const estimatedPayout = (winningShares * poolBalance) / totalWinningShares;
+                const grossPayout = (winningShares * poolBalance) / totalWinningShares;
+                // Apply 0.3% resolution fee (same as contract)
+                const resolutionFee = (grossPayout * 30n) / 10000n;
+                const netPayout = grossPayout - resolutionFee;
                 return (
-                  <div className="text-center text-sm">
-                    <span className="text-text-muted">Est. payout: </span>
-                    <span className="text-yes font-mono font-bold">
-                      {formatBNB(estimatedPayout)} BNB
-                    </span>
+                  <div className="text-center text-sm space-y-1">
+                    <div>
+                      <span className="text-text-muted">Est. payout: </span>
+                      <span className="text-yes font-mono font-bold">
+                        {formatBNB(netPayout)} BNB
+                      </span>
+                    </div>
+                    <p className="text-text-muted text-xs">
+                      (after 0.3% resolution fee)
+                    </p>
                   </div>
                 );
               }

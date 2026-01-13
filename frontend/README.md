@@ -394,4 +394,4 @@ src/
 
 ## 📈 Version
 
-**Current:** 0.7.6 (Image URL Security + UI Cleanup)
+**Current:** 0.7.8 (Fee Transparency + Resolution Economics)

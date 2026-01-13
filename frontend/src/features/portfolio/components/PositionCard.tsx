@@ -624,11 +624,15 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
             : BigInt(position.noShares || '0');
           const totalWinningShares = market.outcome ? marketYesSupply : marketNoSupply;
           if (totalWinningShares > 0n && winningSharesBigInt > 0n) {
-            const estimatedPayout = (winningSharesBigInt * poolBalance) / totalWinningShares;
+            const grossPayout = (winningSharesBigInt * poolBalance) / totalWinningShares;
+            // Apply 0.3% resolution fee (same as contract)
+            const resolutionFee = (grossPayout * 30n) / 10000n;
+            const netPayout = grossPayout - resolutionFee;
             return (
               <div className="text-center text-xs">
                 <span className="text-text-muted">Est. payout: </span>
-                <span className="text-yes font-mono font-bold">{formatBNB(estimatedPayout)} BNB</span>
+                <span className="text-yes font-mono font-bold">{formatBNB(netPayout)} BNB</span>
+                <span className="text-text-muted ml-1">(after 0.3% fee)</span>
               </div>
             );
           }

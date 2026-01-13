@@ -2,6 +2,50 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.8] - 2026-01-13
+
+### Changed
+
+#### Fee Documentation & Transparency
+- **HowToPlayPage**: Added clarification that 0.3% resolution fee is deducted from winning claims only
+- Added sub-text to fee boxes: "on trades" for trading fees, "on winning claims" for resolution fee
+- Added detailed explanation section clarifying when each fee is applied
+
+#### Claim Payout Estimations
+- **ResolutionPanel**: Claim section now shows NET payout (after 0.3% resolution fee deduction)
+- **PositionCard**: Claim estimation now shows NET payout with "(after 0.3% fee)" note
+- Users now see the exact amount they'll receive, not the gross amount
+
+---
+
+## [0.7.7] - 2026-01-13
+
+### Changed
+
+#### Real-time Form Validation
+- **CreateMarketPage**: Added `mode: 'onChange'` to react-hook-form
+- Image URL validation errors now appear immediately while typing
+- No more waiting until form submission to see "no SVG" error
+
+#### Resolution Economics (Detailed Breakdown)
+- **Proposer Section** now shows 3 scenarios with exact BNB amounts:
+  - ✓ If no one disputes (30 min): Bond back + 0.5% pool reward = Net profit
+  - ⚔️ If disputed & you win vote: Bond back + 50% disputer bond + reward = Net profit
+  - ✗ If disputed & you lose vote: Lose entire bond = Net loss
+- **Disputer Section** now shows 2 scenarios:
+  - ✓ If you win the vote (1hr voting): Bond back + 50% proposer bond = Net profit
+  - ✗ If you lose the vote: Lose entire bond = Net loss
+- Clear explanation of which outcome disputer is voting for (opposite of proposed)
+- Exact amounts calculated from actual pool and bond values
+
+#### Social Links Update
+- **TermsPage**: Updated contact section - Twitter→X, removed GitHub, added Telegram
+- **PrivacyPage**: Updated contact section - Twitter→X, removed GitHub, added Telegram
+- **ErrorBoundary**: Updated "report it to us" link to use env.X_URL
+- All social links now use environment variables for easy configuration
+
+---
+
 ## [0.7.6] - 2026-01-13
 
 ### Security

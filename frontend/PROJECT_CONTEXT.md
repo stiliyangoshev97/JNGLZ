@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 13, 2026  
-> **Version:** 0.7.5
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters)
+> **Version:** 0.7.8
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency)
 
 ---
 

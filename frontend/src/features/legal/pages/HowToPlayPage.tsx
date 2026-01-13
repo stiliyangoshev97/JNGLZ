@@ -400,14 +400,17 @@ export function HowToPlayPage() {
                 <div className="p-3 bg-dark-900">
                   <p className="text-text-muted text-xs mb-1">Platform Fee</p>
                   <p className="text-cyber text-xl">1.0%</p>
+                  <p className="text-text-muted text-[10px]">on trades</p>
                 </div>
                 <div className="p-3 bg-dark-900">
                   <p className="text-text-muted text-xs mb-1">Creator Fee</p>
                   <p className="text-cyber text-xl">0.5%</p>
+                  <p className="text-text-muted text-[10px]">on trades</p>
                 </div>
                 <div className="p-3 bg-dark-900">
                   <p className="text-text-muted text-xs mb-1">Resolution Fee</p>
                   <p className="text-cyber text-xl">0.3%</p>
+                  <p className="text-text-muted text-[10px]">on winning claims</p>
                 </div>
                 <div className="p-3 bg-dark-900">
                   <p className="text-text-muted text-xs mb-1">Market Creation</p>
@@ -418,7 +421,15 @@ export function HowToPlayPage() {
                   <p className="text-white text-xl">0.005 BNB</p>
                 </div>
               </div>
-              <p className="text-text-muted text-xs mt-4 text-center">
+              <div className="mt-4 p-3 bg-dark-900 border border-dark-600">
+                <p className="text-text-secondary text-xs">
+                  <span className="text-cyber font-bold">Trading fees (1.5% total):</span> Deducted when you buy or sell shares.
+                </p>
+                <p className="text-text-secondary text-xs mt-1">
+                  <span className="text-cyber font-bold">Resolution fee (0.3%):</span> Deducted from your payout when you claim winnings after a market resolves.
+                </p>
+              </div>
+              <p className="text-text-muted text-xs mt-3 text-center">
                 Fees are non-refundable and automatically deducted by the smart contract.
               </p>
             </div>
