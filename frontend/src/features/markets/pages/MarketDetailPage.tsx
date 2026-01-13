@@ -208,9 +208,9 @@ export function MarketDetailPage() {
   const trades = data.market.trades || [];
   const positions = data.market.positions || [];
 
-  // Calculate prices using bonding curve formula (with virtual liquidity)
-  const yesPercent = calculateYesPercent(market.yesShares, market.noShares);
-  const noPercent = calculateNoPercent(market.yesShares, market.noShares);
+  // Calculate prices using bonding curve formula (with market's virtual liquidity)
+  const yesPercent = calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
+  const noPercent = calculateNoPercent(market.yesShares, market.noShares, market.virtualLiquidity);
 
   // Time calculations
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
@@ -354,7 +354,13 @@ export function MarketDetailPage() {
                 </div>
                 <div className="p-4">
                   {/* Predator v2: Pass trades from parent to prevent duplicate queries */}
-                  <PriceChart marketId={market.id} trades={trades} />
+                  <PriceChart 
+                    marketId={market.id} 
+                    trades={trades}
+                    currentYesShares={market.yesShares}
+                    currentNoShares={market.noShares}
+                    virtualLiquidity={market.virtualLiquidity}
+                  />
                 </div>
               </div>
 

@@ -10,8 +10,9 @@
 import { formatUnits } from 'viem';
 
 // ============ Bonding Curve Constants ============
-// Must match contract constants exactly
-const VIRTUAL_LIQUIDITY = 100n * 10n ** 18n; // 100 shares with 18 decimals
+// Default virtual liquidity (CRACK level = 5 BNB)
+// Markets can have different levels: CRACK=5e18, HIGH=20e18, PRO=50e18
+const DEFAULT_VIRTUAL_LIQUIDITY = 5n * 10n ** 18n;
 
 /**
  * Calculate YES price percentage from share supplies
@@ -19,17 +20,23 @@ const VIRTUAL_LIQUIDITY = 100n * 10n ** 18n; // 100 shares with 18 decimals
  * 
  * @param yesShares - YES share supply (BigInt string from subgraph)
  * @param noShares - NO share supply (BigInt string from subgraph)
+ * @param virtualLiquidity - Virtual liquidity (BigInt string from market, defaults to 5e18)
  * @returns YES price as percentage (0-100)
  * 
  * @example calculateYesPercent("100000000000000000000", "100000000000000000000") => 50
  */
-export function calculateYesPercent(yesShares: string, noShares: string): number {
+export function calculateYesPercent(
+  yesShares: string, 
+  noShares: string,
+  virtualLiquidity?: string
+): number {
   const yes = BigInt(yesShares || '0');
   const no = BigInt(noShares || '0');
+  const vl = virtualLiquidity ? BigInt(virtualLiquidity) : DEFAULT_VIRTUAL_LIQUIDITY;
   
   // Add virtual liquidity to both sides (matches contract)
-  const virtualYes = yes + VIRTUAL_LIQUIDITY;
-  const virtualNo = no + VIRTUAL_LIQUIDITY;
+  const virtualYes = yes + vl;
+  const virtualNo = no + vl;
   const total = virtualYes + virtualNo;
   
   if (total === 0n) return 50;
@@ -44,10 +51,15 @@ export function calculateYesPercent(yesShares: string, noShares: string): number
  * 
  * @param yesShares - YES share supply (BigInt string from subgraph)
  * @param noShares - NO share supply (BigInt string from subgraph)
+ * @param virtualLiquidity - Virtual liquidity (BigInt string from market, defaults to 5e18)
  * @returns NO price as percentage (0-100)
  */
-export function calculateNoPercent(yesShares: string, noShares: string): number {
-  return 100 - calculateYesPercent(yesShares, noShares);
+export function calculateNoPercent(
+  yesShares: string, 
+  noShares: string,
+  virtualLiquidity?: string
+): number {
+  return 100 - calculateYesPercent(yesShares, noShares, virtualLiquidity);
 }
 
 /**

@@ -27,7 +27,6 @@ import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees } from '@/shared/hooks';
 import { formatEther } from 'viem';
-import { calculateWalletRealizedPnl } from '@/features/markets/components/TradeHistory';
 
 
 // Position with full market data
@@ -115,16 +114,91 @@ export function PortfolioPage() {
     notifyOnNetworkStatusChange: false,
   });
 
-  // Calculate trading P/L from sells
+  // Calculate trading P/L from sells - ONLY for closed positions (fully exited OR resolved markets)
+  // v0.7.12: Only sum P/L when position is closed to avoid misleading unrealized values
   const tradingPnl = useMemo(() => {
-    if (!tradesData?.trades || !address) {
+    if (!tradesData?.trades || !address || !data?.positions) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
     }
-    return calculateWalletRealizedPnl(tradesData.trades, address);
-  }, [tradesData?.trades, address]);
+    
+    const positions = data.positions;
+    const trades = tradesData.trades;
+    const walletAddress = address.toLowerCase();
+    
+    // Build a set of market IDs where user has closed positions
+    const closedMarketIds = new Set<string>();
+    positions.forEach((pos) => {
+      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
+      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
+      const isResolved = pos.market.resolved || pos.market.status === 'Resolved';
+      const fullyExited = yesShares === 0 && noShares === 0;
+      
+      if (isResolved || fullyExited) {
+        closedMarketIds.add(pos.market.id.toLowerCase());
+      }
+    });
+    
+    // Calculate trading P/L only for closed markets
+    const closedData = {
+      yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+      no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+    };
+    
+    trades.forEach(trade => {
+      const tradeAddress = trade.traderAddress?.toLowerCase() || '';
+      const tradeMarketId = trade.market?.id?.toLowerCase() || '';
+      
+      // Only include trades from closed positions
+      if (tradeAddress !== walletAddress || !closedMarketIds.has(tradeMarketId)) return;
+      
+      const bnbAmount = parseFloat(trade.bnbAmount || '0');
+      const shares = Number(BigInt(trade.shares || '0')) / 1e18;
+      const side = trade.isYes ? 'yes' : 'no';
+      
+      if (trade.isBuy) {
+        closedData[side].bought += bnbAmount;
+        closedData[side].sharesBought += shares;
+      } else {
+        closedData[side].sold += bnbAmount;
+        closedData[side].sharesSold += shares;
+      }
+    });
+    
+    const hasYesSells = closedData.yes.sharesSold > 0;
+    const hasNoSells = closedData.no.sharesSold > 0;
+    const hasSells = hasYesSells || hasNoSells;
+    
+    if (!hasSells) {
+      return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
+    }
+    
+    let realizedPnlBNB = 0;
+    let totalCostBasis = 0;
+    
+    if (hasYesSells && closedData.yes.sharesBought > 0) {
+      const avgCostPerShare = closedData.yes.bought / closedData.yes.sharesBought;
+      const costBasisOfSold = avgCostPerShare * closedData.yes.sharesSold;
+      realizedPnlBNB += closedData.yes.sold - costBasisOfSold;
+      totalCostBasis += costBasisOfSold;
+    }
+    
+    if (hasNoSells && closedData.no.sharesBought > 0) {
+      const avgCostPerShare = closedData.no.bought / closedData.no.sharesBought;
+      const costBasisOfSold = avgCostPerShare * closedData.no.sharesSold;
+      realizedPnlBNB += closedData.no.sold - costBasisOfSold;
+      totalCostBasis += costBasisOfSold;
+    }
+    
+    const realizedPnlPercent = totalCostBasis > 0 
+      ? (realizedPnlBNB / totalCostBasis) * 100 
+      : 0;
+    
+    return { realizedPnlBNB, realizedPnlPercent, hasSells };
+  }, [tradesData?.trades, address, data?.positions]);
 
   // Calculate Resolution P/L (NET: claims - invested for resolved positions only)
   // Also track refunds separately (capital recovery, not P/L)
+  // v0.7.12: Only count positions that are actually closed
   const resolutionStats = useMemo(() => {
     const positions = data?.positions || [];
     
@@ -133,8 +207,13 @@ export function PortfolioPage() {
     let resolvedCount = 0;
     
     positions.forEach((pos) => {
-      // Only count resolved markets OR positions that have been claimed/refunded
-      const isResolved = pos.market.resolved;
+      // Check if position is closed (resolved OR fully exited)
+      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
+      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
+      const isResolved = pos.market.resolved || pos.market.status === 'Resolved';
+      const fullyExited = yesShares === 0 && noShares === 0;
+      const positionClosed = isResolved || fullyExited;
+      
       const hasClaimed = parseFloat(pos.claimedAmount || '0') > 0;
       const hasRefunded = parseFloat(pos.refundedAmount || '0') > 0;
       
@@ -143,7 +222,8 @@ export function PortfolioPage() {
         totalRefunded += parseFloat(pos.refundedAmount || '0');
       }
       
-      if (isResolved || hasClaimed) {
+      // Only count resolution P/L for closed positions
+      if (positionClosed && (isResolved || hasClaimed)) {
         // Resolution P/L = what you got back - what you invested
         const claimed = parseFloat(pos.claimedAmount || '0');
         const invested = parseFloat(pos.totalInvested || '0');
@@ -169,18 +249,25 @@ export function PortfolioPage() {
 
   // Pull Pattern: Pending withdrawals (v3.4.0)
   const { pendingBonds, pendingCreatorFees, refetch: refetchPending } = usePendingWithdrawals(address);
-  const { withdrawBond, isPending: isWithdrawingBond, isSuccess: bondWithdrawn } = useWithdrawBond();
-  const { withdrawCreatorFees, isPending: isWithdrawingFees, isSuccess: feesWithdrawn } = useWithdrawCreatorFees();
+  const { withdrawBond, isPending: isWithdrawingBond, isSuccess: bondWithdrawn, reset: resetBondWithdraw } = useWithdrawBond();
+  const { withdrawCreatorFees, isPending: isWithdrawingFees, isSuccess: feesWithdrawn, reset: resetFeesWithdraw } = useWithdrawCreatorFees();
   const queryClient = useQueryClient();
 
   // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
+      // Refetch pending amounts to update the UI
       refetchPending();
       // Invalidate balance queries so Header updates
       queryClient.invalidateQueries({ queryKey: ['balance'] });
+      // Reset the mutation state after a short delay so the banner can disappear
+      const timer = setTimeout(() => {
+        if (bondWithdrawn) resetBondWithdraw();
+        if (feesWithdrawn) resetFeesWithdraw();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [bondWithdrawn, feesWithdrawn, refetchPending, queryClient]);
+  }, [bondWithdrawn, feesWithdrawn, refetchPending, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;

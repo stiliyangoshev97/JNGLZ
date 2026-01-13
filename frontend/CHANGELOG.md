@@ -2,6 +2,93 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.12] - 2026-01-14
+
+### Fixed
+
+#### Portfolio P/L Display - Only Show When Position Closed
+- **Problem**: P/L was showing for open positions, misleading users with incomplete/unrealized values
+- **Fix**: P/L now only displays for CLOSED positions (fully exited OR market resolved)
+
+#### PositionCard Changes
+- Open positions (has shares, market not resolved): Shows `"— (position open)"` placeholder
+- Shows `"Trading: — | Resolution: —"` breakdown placeholder
+- Closed positions: Normal P/L display with green/red colors and actual breakdown
+
+#### Portfolio Summary (Header Stats) Changes  
+- Total P/L now only sums from closed positions + resolved markets
+- Open positions are excluded from the portfolio-wide P/L calculation
+- Trading P/L only counts trades from markets where user has fully exited
+- Resolution P/L only counts claims from resolved markets
+
+#### Pending Withdrawals Banner Not Disappearing After Claim
+- **Problem**: "PENDING WITHDRAWALS" banner stayed visible after claiming fees/bonds until page refresh
+- **Fix**: Added `reset()` calls to mutation hooks after successful withdrawal + refetch
+- Banner now disappears automatically after successful claim
+
+#### P/L Container Height Mismatch
+- **Problem**: Open position P/L container was taller than closed position container
+- **Fix**: Removed extra sub-text line ("P/L available after exit...") so containers match
+
+### Changed
+
+#### Market Created Success Screen
+- Replaced party emoji (🎉) with the JNGLZ logo (`/logo.png`)
+- Logo displays at 96x96px centered above "MARKET CREATED!" text
+
+### Technical
+- Added `positionClosed` useMemo calculation in PositionCard
+- Rewrote `tradingPnl` calculation in PortfolioPage to filter by closed markets
+- Updated `resolutionStats` to check position closure status
+- Added `reset` function usage from `useWithdrawBond` and `useWithdrawCreatorFees` hooks
+
+---
+
+## [0.7.11] - 2026-01-13
+
+### Fixed
+
+#### Realized P/L Tab (Market Detail Page) - Only Show Fully Closed Positions
+- **Problem**: REALIZED P/L tab was showing traders who re-entered the market (still hold shares)
+- **Fix**: Only show traders who have FULLY EXITED the market (0 YES and 0 NO shares)
+- Re-entering a market removes your entry from the REALIZED P/L leaderboard until you fully exit again
+- **Note**: Portfolio page P/L display unchanged - shows cumulative P/L as before
+
+### Changed
+
+#### Price Chart Cleanup
+- Reduced line thickness from `strokeWidth="2"` to `strokeWidth="1.5"` for cleaner look
+- Reduced trade dot size from `r="2"` to `r="1.5"`
+- Removed glow filter, NO line (was redundant), animated circles, and scanner line
+- Chart now shows only: clean green step line + subtle area fill + small dots at trade points
+
+---
+
+## [0.7.10] - 2026-01-13
+
+### Fixed
+
+#### Price Chart & Probability Calculations - CRITICAL FIX
+- **ROOT CAUSE**: `calculateYesPercent()` was using hardcoded `VIRTUAL_LIQUIDITY = 100e18` instead of market's actual virtual liquidity
+- Markets have different heat levels: CRACK=5e18, HIGH=20e18, PRO=50e18
+- Using wrong virtual liquidity caused completely wrong percentage calculations (e.g., 83% instead of 54%)
+- **Fix**: Updated `calculateYesPercent()` and `calculateNoPercent()` to accept optional `virtualLiquidity` parameter
+- Updated all callers to pass market's actual `virtualLiquidity`:
+  - `MarketDetailPage.tsx`
+  - `MarketCard.tsx`
+  - `PositionCard.tsx`
+  - `PriceChart.tsx`
+- Added `virtualLiquidity` to `POSITION_FRAGMENT` in GraphQL queries
+
+### Changed
+
+#### TradePanel Cleanup
+- Removed P/L display from TradePanel (was showing incorrect values)
+- P/L is already shown in Portfolio page where it's calculated correctly from realized trades
+- Removed unused `userPositionData` variable
+
+---
+
 ## [0.7.8] - 2026-01-13
 
 ### Changed

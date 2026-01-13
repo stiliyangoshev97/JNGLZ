@@ -41,6 +41,7 @@ interface PositionWithMarket {
     disputer?: string;
     disputeTimestamp?: string;
     creatorAddress?: string;
+    virtualLiquidity?: string;
   };
   yesShares: string;
   noShares: string;
@@ -172,8 +173,8 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
   let yesPercent = 50;
   
   if (market) {
-    // Use proper bonding curve calculation with virtual liquidity
-    yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0');
+    // Use proper bonding curve calculation with market's virtual liquidity
+    yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0', market.virtualLiquidity);
   }
   
   // Calculate trading P/L for this market from trades (sells only)
@@ -205,6 +206,14 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
       isResolved,
     };
   }, [position.claimedAmount, position.refundedAmount, market.resolved, invested]);
+  
+  // Determine if position is "closed" for P/L purposes
+  // Position is closed if: market is resolved OR user has no shares left (fully exited)
+  const positionClosed = useMemo(() => {
+    const isMarketResolved = market.resolved || market.status === 'Resolved';
+    const hasNoShares = yesShares === 0 && noShares === 0;
+    return isMarketResolved || hasNoShares;
+  }, [market.resolved, market.status, yesShares, noShares]);
   
   // Total P/L for this position
   const totalPnl = useMemo(() => {
@@ -427,12 +436,30 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
         // Color based on P/L status
         resolutionStats.hasRefunded
           ? 'bg-yes/10 border-yes/30'  // Refunded = green
-          : totalPnl.hasActivity 
+          : (positionClosed && totalPnl.hasActivity)
             ? (totalPnl.combined >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30')
             : 'bg-dark-800 border-dark-600'
       )}>
-        {/* Case 1: Has P/L activity (trades or resolution) */}
-        {totalPnl.hasActivity && (
+        {/* Case 0: Position still open in active market - show placeholder */}
+        {!positionClosed && (hasYes || hasNo) && !resolutionStats.hasRefunded && (
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-mono text-text-muted">Total P/L</span>
+              <span className="font-mono text-sm text-text-muted">
+                — (position open)
+              </span>
+            </div>
+            {/* Breakdown placeholder - matches Case 1 structure */}
+            <div className="flex justify-end gap-2 mt-1 text-xs font-mono text-text-muted">
+              <span>Trading: —</span>
+              <span>|</span>
+              <span>Resolution: —</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Case 1: Has P/L activity AND position is closed (trades or resolution) */}
+        {positionClosed && totalPnl.hasActivity && (
           <div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-mono text-text-muted">Total P/L</span>
@@ -460,7 +487,7 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
         {resolutionStats.hasRefunded && (
           <div className={cn(
             "flex justify-between items-center",
-            totalPnl.hasActivity && "mt-2 pt-2 border-t border-dark-700"
+            (positionClosed && totalPnl.hasActivity) && "mt-2 pt-2 border-t border-dark-700"
           )}>
             <span className="text-xs font-mono text-yes">↩ Refunded</span>
             <div className="text-right">
@@ -472,18 +499,10 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
           </div>
         )}
         
-        {/* Case 3: No activity yet (has shares but no sells/resolution) */}
-        {!totalPnl.hasActivity && !resolutionStats.hasRefunded && (hasYes || hasNo) && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-mono text-text-muted">P/L</span>
-            <span className="text-sm font-mono text-text-muted">—</span>
-          </div>
-        )}
-        
-        {/* Case 4: Position fully exited (no shares but was invested) */}
-        {!totalPnl.hasActivity && !resolutionStats.hasRefunded && !hasYes && !hasNo && invested > 0 && (
+        {/* Case 3: Position fully exited but no actual P/L calculated (edge case) */}
+        {positionClosed && !totalPnl.hasActivity && !resolutionStats.hasRefunded && invested > 0 && (
           <p className="text-xs text-text-muted text-center">
-            Position closed - all shares sold
+            Position closed
           </p>
         )}
       </div>

@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 13, 2026  
-> **Version:** 0.7.8
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency)
+> **Last Updated:** January 14, 2026  
+> **Version:** 0.7.12
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only)
 
 ---
 
@@ -281,23 +281,29 @@ import { ApolloProvider } from '@apollo/client/react';
 
 ---
 
-## 🆕 Recent Changes (v0.4.0)
+## 🆕 Recent Changes (v0.7.10 - v0.7.12)
 
-### Markets Page Filters
-- Changed from Active/All to **Active/Expired/Resolved** tabs
-- Each tab shows count badge
-- Uses `GET_MARKETS` (all markets) with client-side filtering
+### v0.7.12 - Portfolio P/L & UI Fixes
+- **P/L Display**: Only shows for CLOSED positions (fully exited OR market resolved)
+  - Open positions show `"— (position open)"` placeholder
+  - Portfolio summary only sums P/L from closed positions
+- **Pending Withdrawals**: Banner disappears immediately after claiming (reset mutation state)
+- **Market Created**: Success screen uses logo.png instead of party emoji
+- **P/L Container**: Fixed height mismatch between open/closed position cards
 
-### Portfolio Page Filters  
-- Categories: **All, Active, Needs Action, Claimable**
-- "Needs Action" (⚡) shows when user can vote on disputed markets
-- "Claimable" (💰) shows resolved markets with winning shares
-- Dynamic visibility based on counts
+### v0.7.11 - Chart Cleanup & Realized P/L Tab
+- **Price Chart**: Thinner lines (1.5px), smaller dots (1.5r), removed glow/animations
+- **Realized P/L Tab**: Only shows traders who fully exited (0 YES and 0 NO shares)
 
-### Resolution Panel Improvements
-- Clear voting UI showing Proposer vs Disputer outcomes
-- "No bond required! Only pay gas" message for voting
-- Proper bond calculations with fee buffer
+### v0.7.10 - CRITICAL: Probability Calculations Fix
+- **Root Cause**: `calculateYesPercent()` used hardcoded `VIRTUAL_LIQUIDITY = 100e18`
+- **Problem**: Markets have different heat levels: CRACK=5e18, HIGH=20e18, PRO=50e18
+- **Fix**: Now passes market's actual `virtualLiquidity` to all calculations
+- **Updated Files**: MarketCard, PositionCard, MarketDetailPage, PriceChart
+
+### v0.7.8 - Fee Transparency
+- 0.3% resolution fee clearly marked as "on winning claims only"
+- Claim payout estimates show NET amount after fee
 
 ---
 

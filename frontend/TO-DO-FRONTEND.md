@@ -1,12 +1,12 @@
 # JNGLZ.FUN Frontend - TODO
 
-> **Last Updated:** January 13, 2026  
-> **Status:** Phase 2+ Complete (v0.7.5)
+> **Last Updated:** January 14, 2026  
+> **Status:** Phase 2+ Complete (v0.7.12)
 > **Design:** "High-Energy Brutalism" - Trading Terminal × Street Market
 
 ---
 
-## ✅ COMPLETED FEATURES (v0.7.5)
+## ✅ COMPLETED FEATURES (v0.7.12)
 
 ### Core Infrastructure
 - [x] Vite + React 19 + TypeScript setup
@@ -24,7 +24,7 @@
 ### Pages
 - [x] Markets Page (homepage) - Category tabs, infinite scroll, sort options
 - [x] Market Detail Page - Price chart, trade panel, resolution panel
-- [x] Create Market Page - With Heat Levels
+- [x] Create Market Page - With Heat Levels, logo on success screen
 - [x] Portfolio Page - MY POSITIONS + MY MARKETS tabs
 - [x] Terms & Privacy Pages
 
@@ -42,11 +42,14 @@
 - [x] Trade-triggered hot mode (2 min burst after trades)
 
 ### UX Features
-- [x] Total P/L tracking (Trading + Resolution)
+- [x] Total P/L tracking (Trading + Resolution) - closed positions only
 - [x] Badge consistency across pages
 - [x] Infinite scroll pagination (20 items per page)
 - [x] Category tabs: ALL | ACTIVE | PENDING | RESOLVED | UNRESOLVED
 - [x] **PENDING sub-filters**: AWAITING | PROPOSED | DISPUTED | FINALIZING
+- [x] **Price chart fix**: Uses market's actual virtualLiquidity (v0.7.10)
+- [x] **P/L display**: Only shows for closed positions (v0.7.12)
+- [x] **Pending withdrawals**: Banner disappears after claim (v0.7.12)
 
 ---
 

@@ -298,7 +298,11 @@ export function CreateMarketPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <p className="text-6xl mb-6">🎉</p>
+          <img 
+            src="/logo.png" 
+            alt="JNGLZ" 
+            className="w-24 h-24 mx-auto mb-6 object-contain"
+          />
           <h1 className="text-2xl font-bold text-yes mb-4">MARKET CREATED!</h1>
           <p className="text-text-secondary mb-4">
             Your market is now live.

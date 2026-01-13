@@ -57,19 +57,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   // User's BNB balance
   const { data: balanceData, refetch: refetchBalance } = useBalance({ address });
   
-  // Find user's position from market data (for PNL display)
-  const userPositionData = useMemo(() => {
-    if (!address || !market.positions) return null;
-    const pos = market.positions.find(
-      (p: { user?: { address?: string } }) => 
-        p.user?.address?.toLowerCase() === address.toLowerCase()
-    );
-    if (!pos) return null;
-    return {
-      totalInvested: parseFloat(pos.totalInvested || '0'),
-    };
-  }, [address, market.positions]);
-  
   // User's position in this market
   const marketId = BigInt(market.marketId);
   const { position, refetch: refetchPosition } = usePosition(marketId, address);
@@ -338,35 +325,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                 )}
               </span>
             </div>
-            
-            {/* PNL Display */}
-            {userPositionData && userPositionData.totalInvested > 0 && (() => {
-              // Calculate current value using UNIT_PRICE
-              const UNIT_PRICE = 0.01; // BNB
-              const yesPrice = UNIT_PRICE * yesPercent / 100;
-              const noPrice = UNIT_PRICE * noPercent / 100;
-              const yesSharesNum = Number(userYesShares) / 1e18;
-              const noSharesNum = Number(userNoShares) / 1e18;
-              const currentValue = (yesSharesNum * yesPrice) + (noSharesNum * noPrice);
-              const invested = userPositionData.totalInvested;
-              const pnl = currentValue - invested;
-              const pnlPercent = invested > 0 ? (pnl / invested) * 100 : 0;
-              
-              return (
-                <div className={cn(
-                  'flex justify-between pt-2 border-t border-dark-600',
-                  pnl >= 0 ? 'text-yes' : 'text-no'
-                )}>
-                  <span className="text-text-muted">P/L:</span>
-                  <span className="font-mono font-bold">
-                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} BNB
-                    <span className="text-xs ml-1 opacity-70">
-                      ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
-                    </span>
-                  </span>
-                </div>
-              );
-            })()}
             
             {/* Pool Liquidity Warning */}
             {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (

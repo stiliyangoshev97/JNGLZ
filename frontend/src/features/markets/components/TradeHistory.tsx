@@ -169,7 +169,7 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
       }
     });
 
-    // Calculate realized P/L for wallets that have sold
+    // Calculate realized P/L for wallets that have FULLY EXITED (sold all shares)
     const pnls: WalletPnl[] = [];
 
     walletMap.forEach((data, address) => {
@@ -178,6 +178,16 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
 
       // Skip if no sells
       if (!hasYesSells && !hasNoSells) return;
+
+      // Check if position is fully closed (no remaining shares)
+      // Use small epsilon for floating point comparison
+      const EPSILON = 0.0001;
+      const yesSharesRemaining = data.yes.sharesBought - data.yes.sharesSold;
+      const noSharesRemaining = data.no.sharesBought - data.no.sharesSold;
+      const positionFullyClosed = Math.abs(yesSharesRemaining) < EPSILON && Math.abs(noSharesRemaining) < EPSILON;
+
+      // Only show P/L for fully closed positions
+      if (!positionFullyClosed) return;
 
       // Calculate realized P/L using average cost basis
       let realizedPnlBNB = 0;
