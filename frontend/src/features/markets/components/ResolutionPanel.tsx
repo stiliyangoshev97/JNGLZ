@@ -360,20 +360,78 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
             
             {/* Proposer Reward Info Box */}
             <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
-              <p className="text-cyber font-bold">RESOLUTION ECONOMICS</p>
+              <p className="text-cyber font-bold">💰 PROPOSER ECONOMICS</p>
+              
+              {/* Bond & Reward Summary */}
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-text-muted">Your bond:</span>
                   <span className="text-white font-mono">{formatBNB(bondAmount)} BNB</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Potential reward:</span>
+                  <span className="text-text-muted">Pool reward (0.5%):</span>
                   <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
                 </div>
               </div>
-              <div className="border-t border-dark-600 pt-2 text-xs">
-                <p className="text-yes mb-1">✓ <span className="font-bold">If undisputed or you win vote:</span> Bond back + reward</p>
-                <p className="text-no">✗ <span className="font-bold">If disputed & you lose vote:</span> Bond goes to disputer</p>
+              
+              {/* Outcome Scenarios */}
+              <div className="border-t border-dark-600 pt-2 space-y-2">
+                {/* Scenario 1: Undisputed */}
+                <div className="p-2 bg-yes/10 border border-yes/30 rounded">
+                  <p className="text-yes text-xs font-bold mb-1">✓ IF NO ONE DISPUTES (30 min):</p>
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">You get back:</span>
+                      <span className="text-white font-mono">{formatBNB(bondAmount)} BNB (bond)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">Plus reward:</span>
+                      <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
+                    </div>
+                    <div className="flex justify-between border-t border-yes/20 pt-1 mt-1">
+                      <span className="text-white font-bold">Net profit:</span>
+                      <span className="text-yes font-mono font-bold">+{formatBNB(estimatedReward)} BNB</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Scenario 2: Disputed & You Win */}
+                <div className="p-2 bg-cyber/10 border border-cyber/30 rounded">
+                  <p className="text-cyber text-xs font-bold mb-1">⚔️ IF DISPUTED & YOU WIN VOTE:</p>
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">You get back:</span>
+                      <span className="text-white font-mono">{formatBNB(bondAmount)} BNB (bond)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">From disputer:</span>
+                      <span className="text-yes font-mono">+{formatBNB(bondAmount)} BNB (50%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">Pool reward:</span>
+                      <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
+                    </div>
+                    <div className="flex justify-between border-t border-cyber/20 pt-1 mt-1">
+                      <span className="text-white font-bold">Net profit:</span>
+                      <span className="text-yes font-mono font-bold">+{formatBNB(bondAmount + estimatedReward)} BNB</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Scenario 3: Disputed & You Lose */}
+                <div className="p-2 bg-no/10 border border-no/30 rounded">
+                  <p className="text-no text-xs font-bold mb-1">✗ IF DISPUTED & YOU LOSE VOTE:</p>
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">Your bond goes to:</span>
+                      <span className="text-no font-mono">Disputer & voters</span>
+                    </div>
+                    <div className="flex justify-between border-t border-no/20 pt-1 mt-1">
+                      <span className="text-white font-bold">Net loss:</span>
+                      <span className="text-no font-mono font-bold">-{formatBNB(bondAmount)} BNB</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -402,17 +460,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               </button>
             </div>
 
-            <div className="text-xs text-text-muted space-y-1">
-              <div>
-                Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>
-                <span className="text-text-muted"> (includes 0.3% fee)</span>
-              </div>
-              <div className="text-yes">
-                ✓ If correct: Bond returned + {formatBNB(estimatedReward)} BNB reward
-              </div>
-              <div className="text-no">
-                ✗ If disputed & you lose: Bond goes to winner
-              </div>
+            <div className="text-xs text-text-muted">
+              Required bond: <span className="text-cyber font-mono">{formatBNB(bondAmount)} BNB</span>
+              <span className="text-text-muted"> (includes 0.3% fee buffer)</span>
             </div>
 
             <Button
@@ -438,25 +488,69 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="space-y-3 border-t border-dark-600 pt-4">
             {/* Dispute Economics Box */}
             <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
-              <p className="text-no font-bold">⚔️ DISPUTE ECONOMICS</p>
+              <p className="text-no font-bold">⚔️ DISPUTER ECONOMICS</p>
+              <p className="text-text-muted text-xs mb-2">
+                You believe the outcome should be <span className={market.proposedOutcome ? 'text-no font-bold' : 'text-yes font-bold'}>{market.proposedOutcome ? 'NO' : 'YES'}</span> instead of <span className={market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold'}>{market.proposedOutcome ? 'YES' : 'NO'}</span>
+              </p>
+              
+              {/* Bond Info */}
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Your bond:</span>
+                  <span className="text-text-muted">Your bond (2× proposer):</span>
                   <span className="text-white font-mono">{formatBNB(disputeBond)} BNB</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-muted">If you win vote:</span>
-                  <span className="text-yes font-mono">+{formatBNB(proposerBondFromMarket)} BNB (proposer's bond)</span>
+                  <span className="text-text-muted">Proposer's bond at stake:</span>
+                  <span className="text-white font-mono">{formatBNB(proposerBondFromMarket)} BNB</span>
                 </div>
               </div>
-              <div className="border-t border-dark-600 pt-2 text-xs">
-                <p className="text-yes mb-1">✓ <span className="font-bold">If you win:</span> Your bond back + proposer's bond</p>
-                <p className="text-no">✗ <span className="font-bold">If you lose:</span> Your bond goes to proposer</p>
+              
+              {/* Outcome Scenarios */}
+              <div className="border-t border-dark-600 pt-2 space-y-2">
+                {/* Scenario 1: You Win the Vote */}
+                <div className="p-2 bg-yes/10 border border-yes/30 rounded">
+                  <p className="text-yes text-xs font-bold mb-1">✓ IF YOU WIN THE VOTE (1hr voting):</p>
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">You get back:</span>
+                      <span className="text-white font-mono">{formatBNB(disputeBond)} BNB (bond)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">From proposer:</span>
+                      <span className="text-yes font-mono">+{formatBNB(proposerBondFromMarket / 2n)} BNB (50%)</span>
+                    </div>
+                    <div className="flex justify-between border-t border-yes/20 pt-1 mt-1">
+                      <span className="text-white font-bold">Net profit:</span>
+                      <span className="text-yes font-mono font-bold">+{formatBNB(proposerBondFromMarket / 2n)} BNB</span>
+                    </div>
+                  </div>
+                  <p className="text-text-muted text-[10px] mt-1">
+                    * Other 50% of proposer's bond goes to voters who supported you
+                  </p>
+                </div>
+                
+                {/* Scenario 2: You Lose the Vote */}
+                <div className="p-2 bg-no/10 border border-no/30 rounded">
+                  <p className="text-no text-xs font-bold mb-1">✗ IF YOU LOSE THE VOTE:</p>
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">Your bond goes to:</span>
+                      <span className="text-no font-mono">Proposer & voters</span>
+                    </div>
+                    <div className="flex justify-between border-t border-no/20 pt-1 mt-1">
+                      <span className="text-white font-bold">Net loss:</span>
+                      <span className="text-no font-mono font-bold">-{formatBNB(disputeBond)} BNB</span>
+                    </div>
+                  </div>
+                  <p className="text-text-muted text-[10px] mt-1">
+                    * Proposer gets 50% + pool reward, voters share other 50%
+                  </p>
+                </div>
               </div>
             </div>
             
             <div className="text-xs text-text-muted">
-              Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(disputeWindowEnd)}</span>
+              Time remaining to dispute: <span className="text-cyber font-mono">{formatTimeLeft(disputeWindowEnd)}</span>
             </div>
 
             <Button

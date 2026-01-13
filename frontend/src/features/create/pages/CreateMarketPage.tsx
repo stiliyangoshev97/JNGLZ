@@ -180,6 +180,7 @@ export function CreateMarketPage() {
     formState: { errors },
   } = useForm<CreateMarketForm>({
     resolver: zodResolver(createMarketSchema),
+    mode: 'onChange', // Validate on every change for real-time feedback
     defaultValues: {
       question: '',
       evidenceUrl: '',
