@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 12, 2026  
-> **Version:** 0.7.2
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L)
+> **Last Updated:** January 13, 2026  
+> **Version:** 0.7.3
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency)
 
 ---
 
@@ -16,7 +16,8 @@
 - Resolve markets via Street Consensus (bettors vote)
 - Claim winnings after resolution
 - Withdraw pending bonds/fees (Pull Pattern)
-- Track realized P/L per wallet
+- Track Total P/L (Trading + Resolution) per wallet
+- Emergency refund for unresolved markets (24h+)
 
 ---
 

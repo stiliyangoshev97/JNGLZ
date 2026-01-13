@@ -7,6 +7,7 @@
  * @module features/portfolio/components/PositionCard
  */
 
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { Card } from '@/shared/components/ui/Card';
@@ -14,9 +15,10 @@ import { Badge, YesHolderBadge, NoHolderBadge } from '@/shared/components/ui/Bad
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
-import { useFinalizeMarket, useClaim } from '@/shared/hooks';
+import { useFinalizeMarket, useClaim, useEmergencyRefund } from '@/shared/hooks';
 import { cn } from '@/shared/utils/cn';
-import { calculateYesPercent } from '@/shared/utils/format';
+import { calculateYesPercent, formatBNB } from '@/shared/utils/format';
+import type { Trade } from '@/shared/schemas';
 
 interface PositionWithMarket {
   id: string;
@@ -28,10 +30,12 @@ interface PositionWithMarket {
     status: string;
     resolved: boolean;
     outcome?: boolean | null;
+    proposedOutcome?: boolean | null;
     expiryTimestamp: string;
     imageUrl?: string;
     yesShares?: string;
     noShares?: string;
+    poolBalance?: string;
     proposer?: string;
     proposalTimestamp?: string;
     disputer?: string;
@@ -42,18 +46,93 @@ interface PositionWithMarket {
   noShares: string;
   totalInvested: string;
   claimed: boolean;
+  claimedAmount?: string;
+  emergencyRefunded?: boolean;
+  refundedAmount?: string;
 }
 
 // Time constants (from contract)
 const CREATOR_PRIORITY_WINDOW = 10 * 60 * 1000; // 10 minutes
 const DISPUTE_WINDOW = 30 * 60 * 1000; // 30 minutes
 const VOTING_WINDOW = 60 * 60 * 1000; // 1 hour
+const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 
 interface PositionCardProps {
   position: PositionWithMarket;
+  trades?: Trade[]; // All user's trades - we'll filter by market
 }
 
-export function PositionCard({ position }: PositionCardProps) {
+/**
+ * Calculate realized P/L for a specific market from trades
+ */
+function calculateMarketRealizedPnl(
+  trades: Trade[],
+  marketId: string,
+  walletAddress: string
+): { realizedPnlBNB: number; realizedPnlPercent: number; hasSells: boolean } {
+  const address = walletAddress.toLowerCase();
+  const marketIdLower = marketId.toLowerCase();
+  
+  // Track buys and sells per side for this market only
+  const data = {
+    yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+    no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+  };
+
+  // Filter trades for this wallet and this market
+  trades.forEach(trade => {
+    const tradeAddress = trade.traderAddress?.toLowerCase() || '';
+    const tradeMarketId = trade.market?.id?.toLowerCase() || '';
+    
+    if (tradeAddress !== address || tradeMarketId !== marketIdLower) return;
+
+    const bnbAmount = parseFloat(trade.bnbAmount || '0');
+    const shares = Number(BigInt(trade.shares || '0')) / 1e18;
+    const side = trade.isYes ? 'yes' : 'no';
+
+    if (trade.isBuy) {
+      data[side].bought += bnbAmount;
+      data[side].sharesBought += shares;
+    } else {
+      data[side].sold += bnbAmount;
+      data[side].sharesSold += shares;
+    }
+  });
+
+  const hasYesSells = data.yes.sharesSold > 0;
+  const hasNoSells = data.no.sharesSold > 0;
+  const hasSells = hasYesSells || hasNoSells;
+
+  if (!hasSells) {
+    return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
+  }
+
+  // Calculate realized P/L using average cost basis
+  let realizedPnlBNB = 0;
+  let totalCostBasis = 0;
+
+  if (hasYesSells && data.yes.sharesBought > 0) {
+    const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
+    const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
+    realizedPnlBNB += data.yes.sold - costBasisOfSold;
+    totalCostBasis += costBasisOfSold;
+  }
+
+  if (hasNoSells && data.no.sharesBought > 0) {
+    const avgCostPerShare = data.no.bought / data.no.sharesBought;
+    const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
+    realizedPnlBNB += data.no.sold - costBasisOfSold;
+    totalCostBasis += costBasisOfSold;
+  }
+
+  const realizedPnlPercent = totalCostBasis > 0 
+    ? (realizedPnlBNB / totalCostBasis) * 100 
+    : 0;
+
+  return { realizedPnlBNB, realizedPnlPercent, hasSells };
+}
+
+export function PositionCard({ position, trades = [] }: PositionCardProps) {
   const { address } = useAccount();
   const market = position.market;
   
@@ -72,6 +151,13 @@ export function PositionCard({ position }: PositionCardProps) {
     isSuccess: isClaimSuccess 
   } = useClaim();
   
+  const {
+    emergencyRefund,
+    isPending: isRefundPending,
+    isConfirming: isRefundConfirming,
+    isSuccess: isRefundSuccess
+  } = useEmergencyRefund();
+  
   // Parse share amounts - subgraph returns BigInt strings for shares
   const yesShares = Number(BigInt(position.yesShares || '0')) / 1e18;
   const noShares = Number(BigInt(position.noShares || '0')) / 1e18;
@@ -84,22 +170,50 @@ export function PositionCard({ position }: PositionCardProps) {
   
   // Calculate current prices from market using bonding curve
   let yesPercent = 50;
-  let currentValue = 0;
   
   if (market) {
     // Use proper bonding curve calculation with virtual liquidity
     yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0');
-    // Price is a fraction of UNIT_PRICE (0.01 BNB), not 1 BNB
-    // YES price = 0.01 * yesPercent / 100, NO price = 0.01 * (100 - yesPercent) / 100
-    const UNIT_PRICE = 0.01; // BNB
-    const yesPrice = UNIT_PRICE * yesPercent / 100;
-    const noPrice = UNIT_PRICE * (100 - yesPercent) / 100;
-    
-    currentValue = (yesShares * yesPrice) + (noShares * noPrice);
   }
   
-  const pnl = currentValue - invested;
-  const pnlPercent = invested > 0 ? (pnl / invested) * 100 : 0;
+  // Calculate trading P/L for this market from trades (sells only)
+  const tradingPnl = useMemo(() => {
+    if (!trades.length || !address) {
+      return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
+    }
+    return calculateMarketRealizedPnl(trades, market.id, address);
+  }, [trades, market.id, address]);
+  
+  // Resolution P/L = claimedAmount - totalInvested (for resolved markets)
+  // Refunds are separate (capital recovery, not P/L)
+  const resolutionStats = useMemo(() => {
+    const claimedAmount = parseFloat(position.claimedAmount || '0');
+    const refundedAmount = parseFloat(position.refundedAmount || '0');
+    const isResolved = market.resolved;
+    
+    // Only calculate resolution P/L for resolved markets
+    let resolutionPnl = 0;
+    if (isResolved || claimedAmount > 0) {
+      resolutionPnl = claimedAmount - invested;
+    }
+    
+    return {
+      resolutionPnl,
+      refundedAmount,
+      hasClaimed: claimedAmount > 0,
+      hasRefunded: refundedAmount > 0,
+      isResolved,
+    };
+  }, [position.claimedAmount, position.refundedAmount, market.resolved, invested]);
+  
+  // Total P/L for this position
+  const totalPnl = useMemo(() => {
+    // If resolved, include resolution P/L
+    // If has sells, include trading P/L
+    const combined = tradingPnl.realizedPnlBNB + (resolutionStats.isResolved ? resolutionStats.resolutionPnl : 0);
+    const hasActivity = tradingPnl.hasSells || resolutionStats.isResolved;
+    return { combined, hasActivity };
+  }, [tradingPnl, resolutionStats]);
   
   // Time and status checks
   const now = Date.now();
@@ -111,6 +225,13 @@ export function PositionCard({ position }: PositionCardProps) {
   const isResolved = isResolvedFromData || isFinalizeSuccess;
   
   const alreadyClaimed = position.claimed || isClaimSuccess;
+  
+  // Emergency refund status
+  const alreadyRefunded = position.emergencyRefunded || isRefundSuccess;
+  const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
+  const totalShares = yesShares + noShares;
+  // Can claim emergency refund if: expired, not resolved, 24h passed, has shares, not already refunded
+  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0 && !alreadyRefunded;
   
   // Proposal and dispute status
   const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
@@ -126,10 +247,27 @@ export function PositionCard({ position }: PositionCardProps) {
   // Check if user is creator
   const isCreator = address?.toLowerCase() === market.creatorAddress?.toLowerCase();
   
-  // Can finalize when: has proposal, not resolved (from data), and either:
+  // Get market supply to check if proposed winning side has shareholders
+  const marketYesSupply = BigInt(market.yesShares || '0');
+  const marketNoSupply = BigInt(market.noShares || '0');
+  const marketTotalSupply = marketYesSupply + marketNoSupply;
+  const poolBalance = BigInt(market.poolBalance || '0');
+  
+  // Calculate refund value: (userShares * poolBalance) / totalSupply
+  const userSharesBigInt = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
+  const estimatedRefund = marketTotalSupply > 0n 
+    ? (userSharesBigInt * poolBalance) / marketTotalSupply 
+    : 0n;
+  
+  // Check if proposed winning side has shareholders (if not, finalize will fail)
+  const proposedWinningSideHasShares = hasProposal && market.proposedOutcome !== undefined && market.proposedOutcome !== null && (
+    market.proposedOutcome ? marketYesSupply > 0n : marketNoSupply > 0n
+  );
+  
+  // Can finalize when: has proposal, not resolved (from data), proposed side has shares, and either:
   // - No dispute AND dispute window ended
   // - Has dispute AND voting window ended  
-  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && (
+  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && proposedWinningSideHasShares && (
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
@@ -147,14 +285,31 @@ export function PositionCard({ position }: PositionCardProps) {
     action?: string;
     actionColor?: string;
   } => {
-    // Already claimed
-    if (alreadyClaimed) {
-      return { status: 'CLAIMED', badge: market.outcome ? 'yes' : 'no' };
+    // Resolved markets - show outcome clearly (takes priority)
+    if (isResolved) {
+      const outcomeText = market.outcome ? 'YES WINS' : 'NO WINS';
+      // If user has winning shares they can still claim
+      const hasWinningShares = market.outcome ? yesShares > 0 : noShares > 0;
+      if (hasWinningShares && !alreadyClaimed) {
+        return { status: `RESOLVED (${outcomeText})`, badge: 'yes', action: 'CLAIM' };
+      }
+      // User lost, claimed, or has no shares - just show resolved status (always green)
+      return { status: `RESOLVED (${outcomeText})`, badge: 'yes' };
     }
     
-    // Resolved (from data or local finalize)
-    if (isResolved) {
-      return { status: 'RESOLVED', badge: market.outcome ? 'yes' : 'no' };
+    // Market is 24h+ expired without resolution - show UNRESOLVED (even if refunded)
+    const isUnresolvedMarket = isExpired && !isResolved && now > emergencyRefundTime;
+    if (isUnresolvedMarket) {
+      // Already refunded - show UNRESOLVED badge still, but no action
+      if (alreadyRefunded) {
+        return { status: 'UNRESOLVED', badge: 'no' };
+      }
+      // Can claim emergency refund
+      if (totalShares > 0) {
+        return { status: 'UNRESOLVED', badge: 'no', action: 'CLAIM REFUND' };
+      }
+      // No shares to refund
+      return { status: 'UNRESOLVED', badge: 'no' };
     }
     
     // Not expired yet - active trading
@@ -204,6 +359,12 @@ export function PositionCard({ position }: PositionCardProps) {
   const handleClaim = () => {
     const marketId = BigInt(market.marketId || market.id);
     claim(marketId);
+  };
+
+  // Handle emergency refund action
+  const handleEmergencyRefund = () => {
+    const marketId = BigInt(market.marketId || market.id);
+    emergencyRefund(marketId);
   };
 
   return (
@@ -260,43 +421,75 @@ export function PositionCard({ position }: PositionCardProps) {
         </div>
       </div>
 
-      {/* P/L Display - only show if user has shares */}
-      {(hasYes || hasNo) && (
-        <div className={cn(
-          'p-3 mb-4 border',
-          pnl >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30'
-        )}>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-mono text-text-muted">Unrealized P/L</span>
-            <div className="text-right">
+      {/* P/L Display - ALWAYS show this section for consistent layout */}
+      <div className={cn(
+        'p-3 mb-4 border',
+        // Color based on P/L status
+        resolutionStats.hasRefunded
+          ? 'bg-yes/10 border-yes/30'  // Refunded = green
+          : totalPnl.hasActivity 
+            ? (totalPnl.combined >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30')
+            : 'bg-dark-800 border-dark-600'
+      )}>
+        {/* Case 1: Has P/L activity (trades or resolution) */}
+        {totalPnl.hasActivity && (
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-mono text-text-muted">Total P/L</span>
               <span className={cn(
-                'font-mono font-bold',
-                pnl >= 0 ? 'text-yes' : 'text-no'
+                'font-mono text-sm font-bold',
+                totalPnl.combined >= 0 ? 'text-yes' : 'text-no'
               )}>
-                {pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} BNB
+                {totalPnl.combined >= 0 ? '+' : ''}{totalPnl.combined.toFixed(4)} BNB
               </span>
-              <span className={cn(
-                'text-xs ml-2 font-mono',
-                pnl >= 0 ? 'text-yes/70' : 'text-no/70'
-              )}>
-                ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+            </div>
+            {/* Breakdown - always visible */}
+            <div className="flex justify-end gap-2 mt-1 text-xs font-mono">
+              <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                Trading: {tradingPnl.realizedPnlBNB >= 0 ? '+' : ''}{tradingPnl.realizedPnlBNB.toFixed(4)}
+              </span>
+              <span className="text-text-muted">|</span>
+              <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                Resolution: {resolutionStats.resolutionPnl >= 0 ? '+' : ''}{resolutionStats.resolutionPnl.toFixed(4)}
               </span>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Fully exited position notice */}
-      {!hasYes && !hasNo && invested > 0 && (
-        <div className="p-3 mb-4 border bg-dark-800 border-dark-600">
+        )}
+        
+        {/* Case 2: Has refund (separate from P/L) */}
+        {resolutionStats.hasRefunded && (
+          <div className={cn(
+            "flex justify-between items-center",
+            totalPnl.hasActivity && "mt-2 pt-2 border-t border-dark-700"
+          )}>
+            <span className="text-xs font-mono text-yes">↩ Refunded</span>
+            <div className="text-right">
+              <span className="font-mono text-sm text-yes font-bold">
+                {resolutionStats.refundedAmount.toFixed(4)} BNB
+              </span>
+              <p className="text-xs text-yes/70">Capital recovered</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Case 3: No activity yet (has shares but no sells/resolution) */}
+        {!totalPnl.hasActivity && !resolutionStats.hasRefunded && (hasYes || hasNo) && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-mono text-text-muted">P/L</span>
+            <span className="text-sm font-mono text-text-muted">—</span>
+          </div>
+        )}
+        
+        {/* Case 4: Position fully exited (no shares but was invested) */}
+        {!totalPnl.hasActivity && !resolutionStats.hasRefunded && !hasYes && !hasNo && invested > 0 && (
           <p className="text-xs text-text-muted text-center">
             Position closed - all shares sold
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Current market chance */}
-      {!isResolved && (
+      {/* Current market chance - ALWAYS show for unresolved markets */}
+      {!isResolved ? (
         <div className="flex items-center justify-between text-sm mb-4">
           <span className="text-text-muted">CHANCE</span>
           <div className="text-right">
@@ -304,81 +497,143 @@ export function PositionCard({ position }: PositionCardProps) {
             <span className="text-xs text-text-muted ml-1">({Math.round(yesPercent)}¢)</span>
           </div>
         </div>
+      ) : (
+        /* Spacer for resolved markets to maintain consistent height */
+        <div className="h-6 mb-4" />
       )}
 
       {/* Actions */}
-      <div className="mt-auto flex gap-2">
-        {/* Already claimed */}
-        {alreadyClaimed ? (
-          <Button 
-            variant="yes" 
-            size="sm" 
-            className="flex-1"
-            disabled
-          >
-            ✓ CLAIMED
-          </Button>
-        ) : canClaim || canClaimAfterFinalize ? (
-          /* Can claim - market is resolved */
-          <Button 
-            variant="yes" 
-            size="sm" 
-            className="flex-1"
-            onClick={handleClaim}
-            disabled={isClaimPending || isClaimConfirming}
-          >
-            {isClaimPending ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner size="sm" variant="yes" />
-                CONFIRM...
-              </span>
-            ) : isClaimConfirming ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner size="sm" variant="yes" />
-                CLAIMING...
-              </span>
-            ) : (
-              'CLAIM'
-            )}
-          </Button>
-        ) : canFinalize && (hasYes || hasNo) ? (
-          /* Can finalize - market needs finalization first */
-          <Button 
-            variant="cyber" 
-            size="sm" 
-            className="flex-1 !bg-yellow-500/20 !border-yellow-500 !text-yellow-500 hover:!bg-yellow-500 hover:!text-black"
-            onClick={handleFinalize}
-            disabled={isFinalizePending || isFinalizeConfirming}
-          >
-            {isFinalizePending ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner size="sm" />
-                CONFIRM...
-              </span>
-            ) : isFinalizeConfirming ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner size="sm" />
-                FINALIZING...
-              </span>
-            ) : (
-              'FINALIZE'
-            )}
-          </Button>
-        ) : (
-          /* Default - view market */
-          <Link to={`/market/${market.id}`} className="flex-1">
+      <div className="mt-auto space-y-2">
+        <div className="flex gap-2">
+          {/* Already claimed */}
+          {alreadyClaimed ? (
             <Button 
-              variant={phase.actionColor === 'yellow' ? 'cyber' : 'cyber'} 
+              variant="yes" 
               size="sm" 
-              className={cn(
-                "w-full",
-                phase.actionColor === 'yellow' && "!bg-yellow-500/20 !border-yellow-500 !text-yellow-500 hover:!bg-yellow-500 hover:!text-black"
-              )}
+              className="flex-1"
+              disabled
             >
-              {phase.action || 'VIEW MARKET'}
+              ✓ CLAIMED
             </Button>
-          </Link>
+          ) : alreadyRefunded ? (
+            /* Already got emergency refund */
+            <Button 
+              variant="yes" 
+              size="sm" 
+              className="flex-1"
+              disabled
+            >
+              ✓ REFUNDED
+            </Button>
+          ) : canEmergencyRefund ? (
+            /* Can claim emergency refund - 24h passed, no resolution */
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="flex-1 !border-cyber !text-cyber hover:!bg-cyber hover:!text-black"
+              onClick={handleEmergencyRefund}
+              disabled={isRefundPending || isRefundConfirming}
+            >
+              {isRefundPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  CONFIRM...
+                </span>
+              ) : isRefundConfirming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  REFUNDING...
+                </span>
+              ) : (
+                'CLAIM REFUND'
+              )}
+            </Button>
+          ) : canClaim || canClaimAfterFinalize ? (
+            /* Can claim - market is resolved */
+            <Button 
+              variant="yes" 
+              size="sm" 
+              className="flex-1"
+              onClick={handleClaim}
+              disabled={isClaimPending || isClaimConfirming}
+            >
+              {isClaimPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" variant="yes" />
+                  CONFIRM...
+                </span>
+              ) : isClaimConfirming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" variant="yes" />
+                  CLAIMING...
+                </span>
+              ) : (
+                'CLAIM'
+              )}
+            </Button>
+          ) : canFinalize && (hasYes || hasNo) ? (
+            /* Can finalize - market needs finalization first */
+            <Button 
+              variant="cyber" 
+              size="sm" 
+              className="flex-1 !bg-yellow-500/20 !border-yellow-500 !text-yellow-500 hover:!bg-yellow-500 hover:!text-black"
+              onClick={handleFinalize}
+              disabled={isFinalizePending || isFinalizeConfirming}
+            >
+              {isFinalizePending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  CONFIRM...
+                </span>
+              ) : isFinalizeConfirming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  FINALIZING...
+                </span>
+              ) : (
+                'FINALIZE'
+              )}
+            </Button>
+          ) : (
+            /* Default - view market */
+            <Link to={`/market/${market.id}`} className="flex-1">
+              <Button 
+                variant={phase.actionColor === 'yellow' ? 'cyber' : 'cyber'} 
+                size="sm" 
+                className={cn(
+                  "w-full",
+                  phase.actionColor === 'yellow' && "!bg-yellow-500/20 !border-yellow-500 !text-yellow-500 hover:!bg-yellow-500 hover:!text-black"
+                )}
+              >
+                {phase.action || 'VIEW MARKET'}
+              </Button>
+            </Link>
+          )}
+        </div>
+        {/* Show refund value when emergency refund is available */}
+        {canEmergencyRefund && estimatedRefund > 0n && (
+          <div className="text-center text-xs">
+            <span className="text-text-muted">Refund: </span>
+            <span className="text-cyber font-mono font-bold">{formatBNB(estimatedRefund)} BNB</span>
+          </div>
         )}
+        {/* Show payout estimate when can claim */}
+        {(canClaim || canClaimAfterFinalize) && !alreadyClaimed && (() => {
+          const winningSharesBigInt = market.outcome 
+            ? BigInt(position.yesShares || '0') 
+            : BigInt(position.noShares || '0');
+          const totalWinningShares = market.outcome ? marketYesSupply : marketNoSupply;
+          if (totalWinningShares > 0n && winningSharesBigInt > 0n) {
+            const estimatedPayout = (winningSharesBigInt * poolBalance) / totalWinningShares;
+            return (
+              <div className="text-center text-xs">
+                <span className="text-text-muted">Est. payout: </span>
+                <span className="text-yes font-mono font-bold">{formatBNB(estimatedPayout)} BNB</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
     </Card>
   );

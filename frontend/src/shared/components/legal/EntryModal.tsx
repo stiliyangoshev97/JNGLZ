@@ -268,6 +268,13 @@ export function EntryModal() {
               <a href="/privacy" target="_blank" className="text-cyber hover:underline">Privacy Policy</a>.
             </span>
           </label>
+          
+          {/* Game Rules Link */}
+          <div className="pt-2 text-center">
+            <a href="/how-to-play" target="_blank" className="text-cyber hover:underline text-sm font-bold">
+              📖 Read the full Game Rules & Strategies →
+            </a>
+          </div>
         </div>
 
         {/* Confirm Button */}

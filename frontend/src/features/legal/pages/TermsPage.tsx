@@ -3,6 +3,7 @@
  *
  * Legal terms for using JNGLZ.FUN platform.
  * Clean, professional, readable.
+ * Only legal/protective content - game rules moved to HowToPlayPage.
  *
  * @module features/legal/pages/TermsPage
  */
@@ -22,12 +23,13 @@ export function TermsPage() {
             TERMS OF <span className="text-cyber">SERVICE</span>
           </h1>
           <p className="text-text-muted text-sm mt-2 font-mono">
-            Last Updated: January 11, 2026
+            Last Updated: January 16, 2026
           </p>
         </div>
 
         {/* Content */}
         <div className="prose prose-invert max-w-none space-y-8">
+          
           {/* Introduction */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
@@ -44,6 +46,10 @@ export function TermsPage() {
                 on the BNB Chain blockchain. We do not control, manage, or have custody over 
                 any user funds. All interactions occur directly with smart contracts.
               </p>
+              <p className="text-sm">
+                For game mechanics, strategies, and how to play, see our{' '}
+                <Link to="/how-to-play" className="text-cyber hover:underline">How to Play Guide</Link>.
+              </p>
             </div>
           </section>
 
@@ -57,13 +63,13 @@ export function TermsPage() {
               <ul className="list-disc list-inside space-y-2">
                 <li>You are at least 18 years old (or 21 in jurisdictions where required)</li>
                 <li>You have full legal capacity to enter into these Terms</li>
-                <li>You are not located in a Prohibited Jurisdiction (see Section 5)</li>
+                <li>You are not located in a Prohibited Jurisdiction (see Section 4)</li>
                 <li>You are using the Protocol in compliance with all applicable laws</li>
               </ul>
             </div>
           </section>
 
-          {/* How It Works */}
+          {/* Protocol Description */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
               3. PROTOCOL DESCRIPTION
@@ -84,187 +90,10 @@ export function TermsPage() {
             </div>
           </section>
 
-          {/* Fees */}
-          <section>
-            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              4. FEE STRUCTURE
-            </h2>
-            <div className="text-text-secondary pl-4">
-              <p className="mb-4">The following fees apply to all transactions:</p>
-              <div className="bg-dark-800 border border-dark-600 p-4 font-mono text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <span>Platform Fee (Trading):</span>
-                  <span className="text-cyber">1.0%</span>
-                  <span>Creator Fee (Trading):</span>
-                  <span className="text-cyber">0.5%</span>
-                  <span>Resolution Fee:</span>
-                  <span className="text-cyber">0.3%</span>
-                  <span>Market Creation:</span>
-                  <span className="text-yes">FREE</span>
-                  <span>Minimum Trade:</span>
-                  <span className="text-white">0.005 BNB</span>
-                </div>
-              </div>
-              <p className="mt-4 text-xs text-text-muted">
-                Fees are non-refundable and are automatically deducted by the smart contract.
-              </p>
-            </div>
-          </section>
-
-          {/* Market Rules */}
-          <section>
-            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              5. MARKET RULES
-            </h2>
-            <div className="text-text-secondary space-y-6 pl-4">
-              {/* Bonding Curve */}
-              <div>
-                <h3 className="text-white font-bold mb-2">💹 Bonding Curve Pricing</h3>
-                <p className="mb-2">All trades execute on an automated bonding curve:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>YES + NO price always equals <strong className="text-white">0.01 BNB</strong></li>
-                  <li>Buying pushes price UP; Selling pushes price DOWN</li>
-                  <li>Initial price: YES = 0.005 BNB (50%), NO = 0.005 BNB (50%)</li>
-                  <li><strong className="text-no">No arbitrage possible</strong>: Instant buy→sell = guaranteed loss due to price impact + fees</li>
-                </ul>
-              </div>
-
-              {/* Heat Levels */}
-              <div>
-                <h3 className="text-white font-bold mb-2">Heat Levels</h3>
-                <p className="mb-2">Markets have different volatility settings:</p>
-                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs">
-                  <div className="grid grid-cols-3 gap-2">
-                    <span className="text-no">DEGEN FLASH</span>
-                    <span>~25% per 0.1 BNB</span>
-                    <span className="text-text-muted">Meme markets</span>
-                    <span className="text-yellow-500">STREET FIGHT</span>
-                    <span>~7% per 0.1 BNB</span>
-                    <span className="text-text-muted">Standard markets</span>
-                    <span className="text-cyber">WHALE POND</span>
-                    <span>~3% per 0.1 BNB</span>
-                    <span className="text-text-muted">Whale markets</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Resolution Timeline */}
-              <div>
-                <h3 className="text-white font-bold mb-2">⏱️ Resolution Timeline</h3>
-                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs space-y-2">
-                  <div className="flex justify-between">
-                    <span>Market Expires</span>
-                    <span className="text-white">Trading stops</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>First 10 minutes</span>
-                    <span className="text-cyber">Only creator can propose</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>After 10 minutes</span>
-                    <span className="text-white">Anyone can propose (if creator didn't)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>After proposal</span>
-                    <span className="text-cyber">30 min dispute window</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>If disputed</span>
-                    <span className="text-cyber">1 hour shareholder voting</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>If no proposal for 24h</span>
-                    <span className="text-no">Emergency refund available</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bond Amounts */}
-              <div>
-                <h3 className="text-white font-bold mb-2">💎 Bond Requirements</h3>
-                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-sm mb-3">
-                  <div className="space-y-1">
-                    <div>Proposer Bond = <strong className="text-cyber">max(0.005 BNB, 1% of pool)</strong></div>
-                    <div>Disputer Bond = <strong className="text-cyber">2× Proposer Bond</strong></div>
-                  </div>
-                </div>
-                <p className="text-sm text-text-muted mb-3">
-                  Example: If pool has 2 BNB → Proposer needs 0.02 BNB, Disputer needs 0.04 BNB
-                </p>
-                
-                <h4 className="text-white font-bold mb-2 text-sm">✓ If NOT Disputed (Proposal Accepted):</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm mb-3">
-                  <li>Proposer gets <strong className="text-white">bond back</strong> + <strong className="text-yes">0.5% of pool</strong> as reward</li>
-                </ul>
-                
-                <h4 className="text-white font-bold mb-2 text-sm">⚔️ If Disputed (Voting Decides):</h4>
-                
-                <div className="bg-dark-900 border border-yes/20 p-3 mb-3">
-                  <p className="text-yes font-bold text-xs mb-2">If ORIGINAL PROPOSER wins the vote:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li><strong className="text-white">Proposer</strong>: Bond back + 50% of disputer's bond + <strong className="text-yes">0.5% pool reward</strong></li>
-                    <li><strong className="text-white">Disputer</strong>: <strong className="text-no">Loses entire bond</strong></li>
-                    <li><strong className="text-white">Voters on proposer's side</strong>: Share remaining 50% of disputer's bond</li>
-                  </ul>
-                </div>
-                
-                <div className="bg-dark-900 border border-cyber/20 p-3 mb-3">
-                  <p className="text-cyber font-bold text-xs mb-2">If DISPUTER wins the vote:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li><strong className="text-white">Disputer</strong>: Bond back + 50% of proposer's bond (no pool reward)</li>
-                    <li><strong className="text-white">Proposer</strong>: <strong className="text-no">Loses entire bond</strong></li>
-                    <li><strong className="text-white">Voters on disputer's side</strong>: Share remaining 50% of proposer's bond</li>
-                  </ul>
-                </div>
-                
-                <h4 className="text-white font-bold mb-2 text-sm">💰 Winner Payouts (After Resolution):</h4>
-                <p className="text-sm">
-                  <strong className="text-white">Winning shareholders</strong> (YES or NO) claim the <strong className="text-yes">entire pool</strong> proportionally. 
-                  Losing shareholders get <strong className="text-no">nothing</strong>. This is separate from bond/voter rewards above.
-                </p>
-              </div>
-
-              {/* Voting */}
-              <div>
-                <h3 className="text-white font-bold mb-2">🗳️ Shareholder Voting</h3>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Vote weight = total shares held (YES + NO combined)</li>
-                  <li>Majority wins; outcome is finalized</li>
-                  <li>Correct voters share 50% of losing bonder's bond</li>
-                  <li><strong className="text-white">Exact 50/50 tie:</strong> Both bonds returned, emergency refund available</li>
-                </ul>
-              </div>
-
-              {/* Emergency Refund */}
-              <div>
-                <h3 className="text-white font-bold mb-2">🆘 Emergency Refund</h3>
-                <p className="text-sm">
-                  If a market cannot be resolved (no proposal for 24h or exact tie), 
-                  all traders can claim a proportional refund based on their total shares.
-                </p>
-              </div>
-
-              {/* Empty Winning Side */}
-              <div>
-                <h3 className="text-white font-bold mb-2">⚠️ Empty Winning Side (Edge Case)</h3>
-                <p className="text-sm mb-2">
-                  If a market resolves to an outcome with <strong className="text-white">zero shareholders</strong> (e.g., resolves YES but nobody holds YES shares):
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li><strong className="text-white">Resolution is blocked</strong> - market stays unresolved</li>
-                  <li><strong className="text-yes">Proposer gets bond back</strong> (no penalty)</li>
-                  <li><strong className="text-yes">Disputer gets bond back</strong> (if disputed, no penalty)</li>
-                  <li><strong className="text-cyber">Shareholders keep their funds</strong> - can claim emergency refund after 24h</li>
-                  <li className="text-text-muted">This prevents funds from being locked forever in edge cases</li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
           {/* Prohibited Jurisdictions */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-no pl-4 mb-4">
-              6. PROHIBITED JURISDICTIONS
+              4. PROHIBITED JURISDICTIONS
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -292,7 +121,7 @@ export function TermsPage() {
           {/* Information Protocol Disclaimer */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-warning pl-4 mb-4">
-              7. INFORMATION & PREDICTION PROTOCOL
+              5. INFORMATION & PREDICTION PROTOCOL
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -313,7 +142,7 @@ export function TermsPage() {
           {/* No Guarantee */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              8. NO GUARANTEE OF OUTCOME
+              6. NO GUARANTEE OF OUTCOME
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -332,7 +161,7 @@ export function TermsPage() {
           {/* Risks */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-no pl-4 mb-4">
-              9. RISK ACKNOWLEDGMENT
+              7. RISK ACKNOWLEDGMENT
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>By using JNGLZ.FUN, you acknowledge and accept:</p>
@@ -353,7 +182,7 @@ export function TermsPage() {
           {/* Prohibited Activities */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              10. PROHIBITED ACTIVITIES
+              8. PROHIBITED ACTIVITIES
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>You agree NOT to:</p>
@@ -371,7 +200,7 @@ export function TermsPage() {
           {/* Limitation of Liability */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              11. LIMITATION OF LIABILITY
+              9. LIMITATION OF LIABILITY
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
@@ -385,123 +214,47 @@ export function TermsPage() {
             </div>
           </section>
 
-          {/* Changes to Terms */}
+          {/* Technical Truth - AMM Math */}
           <section>
             <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              12. CHANGES TO TERMS
+              10. TECHNICAL SPECIFICATION
             </h2>
             <div className="text-text-secondary space-y-4 pl-4">
               <p>
-                We may update these Terms at any time. Continued use of the Protocol after 
-                changes constitutes acceptance of the new Terms. Material changes will be 
-                announced via our official channels.
+                The Protocol operates on a <strong className="text-white">Constant Sum Market Maker</strong> formula:
               </p>
-            </div>
-          </section>
-
-          {/* Contact */}
-          <section>
-            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              13. CONTACT
-            </h2>
-            <div className="text-text-secondary pl-4">
-              <p>
-                For questions about these Terms, contact us via:
-              </p>
-              <ul className="list-disc list-inside mt-2">
-                <li>Twitter: <a href="https://twitter.com/jnglzfun" className="text-cyber hover:underline">@jnglzfun</a></li>
-                <li>GitHub: <a href="https://github.com/jnglzfun" className="text-cyber hover:underline">github.com/jnglzfun</a></li>
-              </ul>
-            </div>
-          </section>
-
-          {/* Technology & AMM Model */}
-          <section>
-            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
-              14. TECHNOLOGY & AMM MODEL
-            </h2>
-            <div className="text-text-secondary space-y-6 pl-4">
-              {/* The Innovation */}
-              <div>
-                <h3 className="text-white font-bold mb-2">🚀 The Innovation</h3>
-                <p className="mb-3">
-                  JNGLZ.FUN combines <strong className="text-white">pump.fun-style price speculation</strong> with 
-                  <strong className="text-white"> prediction market fundamentals</strong>. Unlike traditional prediction 
-                  markets where you can only profit when the market resolves, our AMM lets you:
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li><strong className="text-yes">Trade on sentiment</strong> — Buy low, sell high before resolution</li>
-                  <li><strong className="text-yes">Exit early</strong> — Take profits (or cut losses) anytime before expiry</li>
-                  <li><strong className="text-yes">Play both sides</strong> — Trade YES and NO based on market momentum</li>
-                  <li><strong className="text-yes">Hold to resolution</strong> — Classic prediction market strategy still works</li>
-                </ul>
-              </div>
-
-              {/* The Math */}
-              <div>
-                <h3 className="text-white font-bold mb-2">📐 Constant Sum Bonding Curve</h3>
-                <p className="mb-3">
-                  Our AMM uses a <strong className="text-white">Constant Sum Market Maker</strong> formula, 
-                  which differs from Uniswap's constant product (x × y = k).
-                </p>
-                <div className="bg-dark-800 border border-dark-600 p-4 font-mono text-xs space-y-3 mb-3">
-                  <div>
-                    <span className="text-text-muted">Price Calculation:</span>
-                    <div className="text-cyber mt-1">
-                      P(YES) = 0.01 × virtualYes / (virtualYes + virtualNo)
-                    </div>
-                    <div className="text-no mt-1">
-                      P(NO) = 0.01 × virtualNo / (virtualYes + virtualNo)
-                    </div>
-                    <div className="text-text-muted mt-1">
-                      P(YES) + P(NO) = 0.01 BNB (always)
-                    </div>
+              <div className="bg-dark-800 border border-dark-600 p-4 font-mono text-xs space-y-3 mb-3">
+                <div>
+                  <span className="text-text-muted">Price Calculation:</span>
+                  <div className="text-cyber mt-1">
+                    P(YES) = 0.01 × virtualYes / (virtualYes + virtualNo)
                   </div>
-                  <div>
-                    <span className="text-text-muted">Buy Shares:</span>
-                    <div className="text-white mt-1">
-                      shares = (bnbAmount × totalVirtual × 10¹⁸) / (UNIT_PRICE × virtualSide)
-                    </div>
+                  <div className="text-no mt-1">
+                    P(NO) = 0.01 × virtualNo / (virtualYes + virtualNo)
                   </div>
-                  <div>
-                    <span className="text-text-muted">Sell Shares (uses POST-SELL state):</span>
-                    <div className="text-white mt-1">
-                      bnbOut = (shares × UNIT_PRICE × virtualSideAfter) / (totalVirtualAfter × 10¹⁸)
-                    </div>
+                  <div className="text-text-muted mt-1">
+                    P(YES) + P(NO) = 0.01 BNB (always)
                   </div>
                 </div>
-                <p className="text-xs text-text-muted">
-                  Key insight: Selling uses post-sale virtual balances, creating natural slippage that prevents risk-free arbitrage.
-                </p>
-              </div>
-
-              {/* Why Price Trading Works */}
-              <div>
-                <h3 className="text-white font-bold mb-2">💡 Why Price-Based Trading Works</h3>
-                <div className="space-y-3">
-                  <div className="bg-dark-800 border border-dark-600 p-3">
-                    <p className="text-cyber font-bold text-sm mb-1">Traditional Prediction Markets:</p>
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                      <li>Buy shares at current probability</li>
-                      <li>Wait for event to occur</li>
-                      <li>Winners get $1/share, losers get $0</li>
-                      <li className="text-no">No way to exit early at profit</li>
-                    </ul>
+                <div>
+                  <span className="text-text-muted">Buy Shares:</span>
+                  <div className="text-white mt-1">
+                    shares = (bnbAmount × totalVirtual × 10¹⁸) / (UNIT_PRICE × virtualSide)
                   </div>
-                  <div className="bg-dark-800 border border-cyber/30 p-3">
-                    <p className="text-cyber font-bold text-sm mb-1">JNGLZ.FUN Model:</p>
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                      <li>Buy shares at current price</li>
-                      <li>Price moves based on market demand</li>
-                      <li>Sell anytime for instant BNB</li>
-                      <li className="text-yes">Profit from price movements + resolution</li>
-                    </ul>
+                </div>
+                <div>
+                  <span className="text-text-muted">Sell Shares (uses POST-SELL state):</span>
+                  <div className="text-white mt-1">
+                    bnbOut = (shares × UNIT_PRICE × virtualSideAfter) / (totalVirtualAfter × 10¹⁸)
                   </div>
                 </div>
               </div>
-
+              <p className="text-xs text-text-muted">
+                Selling uses post-sale virtual balances, creating natural slippage that prevents risk-free arbitrage.
+              </p>
+              
               {/* Pool Solvency */}
-              <div>
+              <div className="mt-4">
                 <h3 className="text-white font-bold mb-2">🔐 Guaranteed Pool Solvency</h3>
                 <p className="mb-3">
                   The pool can <strong className="text-white">ALWAYS</strong> pay all winning shareholders because:
@@ -517,108 +270,47 @@ export function TermsPage() {
                   <span className="text-white ml-2">poolBalance ≥ sum(all possible payouts)</span>
                 </div>
               </div>
-
-              {/* Virtual Liquidity */}
-              <div>
-                <h3 className="text-white font-bold mb-2">🌊 Virtual Liquidity (Heat Levels)</h3>
-                <p className="mb-3">
-                  Virtual liquidity controls price volatility without locking real funds:
-                </p>
-                <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs mb-3">
-                  <div className="grid grid-cols-4 gap-2 mb-2 text-text-muted">
-                    <span>Heat Level</span>
-                    <span>Virtual Units</span>
-                    <span>Impact @ 0.1 BNB</span>
-                    <span>Best For</span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-no">
-                    <span>DEGEN FLASH</span>
-                    <span>5</span>
-                    <span>~25%</span>
-                    <span className="text-text-muted">Meme markets</span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-yellow-500">
-                    <span>STREET FIGHT</span>
-                    <span>20</span>
-                    <span>~7%</span>
-                    <span className="text-text-muted">Standard</span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-cyber">
-                    <span>WHALE POND</span>
-                    <span>50</span>
-                    <span>~3%</span>
-                    <span className="text-text-muted">Large pools</span>
-                  </div>
-                </div>
-                <p className="text-xs text-text-muted">
-                  Higher virtual liquidity = smaller price swings per trade = more stable markets.
-                </p>
-              </div>
-
-              {/* Comparison */}
-              <div>
-                <h3 className="text-white font-bold mb-2">📊 How We Compare</h3>
-                <div className="overflow-x-auto">
-                  <div className="bg-dark-800 border border-dark-600 p-3 font-mono text-xs min-w-[500px]">
-                    <div className="grid grid-cols-5 gap-2 mb-2 text-text-muted border-b border-dark-600 pb-2">
-                      <span>Feature</span>
-                      <span className="text-cyber">JNGLZ.FUN</span>
-                      <span>Polymarket</span>
-                      <span>Augur</span>
-                      <span>PredictIt</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 mb-1">
-                      <span className="text-text-muted">Exit Early</span>
-                      <span className="text-yes">✓</span>
-                      <span className="text-yes">✓</span>
-                      <span className="text-yes">✓</span>
-                      <span className="text-yes">✓</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 mb-1">
-                      <span className="text-text-muted">Price Trading</span>
-                      <span className="text-yes">✓ Native</span>
-                      <span className="text-yellow-500">Order Book</span>
-                      <span className="text-yellow-500">Order Book</span>
-                      <span className="text-yellow-500">Order Book</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 mb-1">
-                      <span className="text-text-muted">Create Markets</span>
-                      <span className="text-yes">✓ Anyone</span>
-                      <span className="text-no">✗ Curated</span>
-                      <span className="text-yes">✓ Anyone</span>
-                      <span className="text-no">✗ Curated</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 mb-1">
-                      <span className="text-text-muted">Decentralized</span>
-                      <span className="text-yes">✓ Full</span>
-                      <span className="text-yellow-500">~ Partial</span>
-                      <span className="text-yes">✓ Full</span>
-                      <span className="text-no">✗ No</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 mb-1">
-                      <span className="text-text-muted">Oracle</span>
-                      <span className="text-cyber">Community</span>
-                      <span>UMA</span>
-                      <span>REP</span>
-                      <span>Central</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      <span className="text-text-muted">Chain</span>
-                      <span className="text-cyber">BNB</span>
-                      <span>Polygon</span>
-                      <span>ETH</span>
-                      <span>N/A</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </section>
+
+          {/* Changes to Terms */}
+          <section>
+            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
+              11. CHANGES TO TERMS
+            </h2>
+            <div className="text-text-secondary space-y-4 pl-4">
+              <p>
+                We may update these Terms at any time. Continued use of the Protocol after 
+                changes constitutes acceptance of the new Terms. Material changes will be 
+                announced via our official channels.
+              </p>
+            </div>
+          </section>
+
+          {/* Contact */}
+          <section>
+            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
+              12. CONTACT
+            </h2>
+            <div className="text-text-secondary pl-4">
+              <p>
+                For questions about these Terms, contact us via:
+              </p>
+              <ul className="list-disc list-inside mt-2">
+                <li>Twitter: <a href="https://twitter.com/jnglzfun" className="text-cyber hover:underline">@jnglzfun</a></li>
+                <li>GitHub: <a href="https://github.com/jnglzfun" className="text-cyber hover:underline">github.com/jnglzfun</a></li>
+              </ul>
+            </div>
+          </section>
+
         </div>
 
         {/* Footer */}
-        <div className="border-t border-dark-600 mt-12 pt-6 text-center">
-          <Link to="/" className="text-cyber hover:underline">
+        <div className="border-t border-dark-600 mt-12 pt-6 text-center space-y-4">
+          <Link to="/how-to-play" className="text-cyber hover:underline block">
+            📖 How to Play Guide
+          </Link>
+          <Link to="/" className="text-text-secondary hover:text-white">
             Return to Markets
           </Link>
         </div>

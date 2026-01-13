@@ -474,6 +474,14 @@ export function CreateMarketPage() {
               error={errors.imageUrl?.message}
               helperText="Direct link to an image (JPG, PNG, GIF)"
             />
+            <div className="mt-3 p-3 bg-dark-800 border border-dark-600 rounded">
+              <p className="text-xs text-text-secondary mb-1">
+                <span className="text-cyber font-semibold">RECOMMENDED:</span> 1200×630px (1.91:1 ratio)
+              </p>
+              <p className="text-xs text-text-muted">
+                This size works best for cards and social sharing. Square images (1:1) also work well.
+              </p>
+            </div>
             <p className="text-xs text-text-muted mt-2">
               💡 Need to upload an image? Use{' '}
               <a 

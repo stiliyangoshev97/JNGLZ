@@ -394,4 +394,4 @@ src/
 
 ## 📈 Version
 
-**Current:** 0.7.2 (Realized P/L + Finalize/Claim Flow)
+**Current:** 0.7.3 (Portfolio Refactor + Badge Consistency + How to Play)

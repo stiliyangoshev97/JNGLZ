@@ -280,4 +280,75 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
   );
 }
 
+/**
+ * Calculate realized P/L for a specific wallet address from trades
+ * Returns { realizedPnlBNB, realizedPnlPercent, hasSells }
+ */
+export function calculateWalletRealizedPnl(
+  trades: Trade[],
+  walletAddress: string
+): { realizedPnlBNB: number; realizedPnlPercent: number; hasSells: boolean } {
+  const address = walletAddress.toLowerCase();
+  
+  // Track buys and sells per side
+  const data = {
+    yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+    no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+  };
+
+  // Process trades for this wallet only
+  trades.forEach(trade => {
+    const tradeAddress = trade.traderAddress?.toLowerCase() || '';
+    if (tradeAddress !== address) return;
+
+    const bnbAmount = parseFloat(trade.bnbAmount || '0');
+    const shares = Number(BigInt(trade.shares || '0')) / 1e18;
+    const side = trade.isYes ? 'yes' : 'no';
+
+    if (trade.isBuy) {
+      data[side].bought += bnbAmount;
+      data[side].sharesBought += shares;
+    } else {
+      data[side].sold += bnbAmount;
+      data[side].sharesSold += shares;
+    }
+  });
+
+  const hasYesSells = data.yes.sharesSold > 0;
+  const hasNoSells = data.no.sharesSold > 0;
+  const hasSells = hasYesSells || hasNoSells;
+
+  // If no sells, no realized P/L
+  if (!hasSells) {
+    return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
+  }
+
+  // Calculate realized P/L using average cost basis
+  let realizedPnlBNB = 0;
+  let totalCostBasis = 0;
+
+  // YES side realized P/L
+  if (hasYesSells && data.yes.sharesBought > 0) {
+    const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
+    const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
+    realizedPnlBNB += data.yes.sold - costBasisOfSold;
+    totalCostBasis += costBasisOfSold;
+  }
+
+  // NO side realized P/L
+  if (hasNoSells && data.no.sharesBought > 0) {
+    const avgCostPerShare = data.no.bought / data.no.sharesBought;
+    const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
+    realizedPnlBNB += data.no.sold - costBasisOfSold;
+    totalCostBasis += costBasisOfSold;
+  }
+
+  // Calculate percentage
+  const realizedPnlPercent = totalCostBasis > 0 
+    ? (realizedPnlBNB / totalCostBasis) * 100 
+    : 0;
+
+  return { realizedPnlBNB, realizedPnlPercent, hasSells };
+}
+
 export default TradeHistory;

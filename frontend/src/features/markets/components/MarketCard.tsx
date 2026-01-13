@@ -32,8 +32,15 @@ export function MarketCard({ market, className }: MarketCardProps) {
 
   // Calculate time remaining
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
-  const isExpired = expirationTimestamp * 1000 < Date.now();
+  const now = Date.now();
+  const expiryMs = expirationTimestamp * 1000;
+  const isExpired = expiryMs < now;
   const timeRemaining = formatTimeRemaining(expirationTimestamp);
+
+  // Emergency refund eligibility (24h after expiry, not resolved)
+  const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
+  const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
+  const isUnresolved = isExpired && !market.resolved && now > emergencyRefundTime;
 
   // Calculate liquidity for heat bar (0-100 scale)
   // poolBalance from subgraph is BigInt in wei, need to convert to BNB
@@ -46,8 +53,9 @@ export function MarketCard({ market, className }: MarketCardProps) {
 
   // Status badge
   const getStatusBadge = () => {
-    if (market.status === 'Resolved') return <Badge variant="active">RESOLVED</Badge>;
+    if (market.status === 'Resolved') return <Badge variant="yes">RESOLVED</Badge>;
     if (market.status === 'Disputed') return <Badge variant="disputed">⚠ DISPUTED</Badge>;
+    if (isUnresolved) return <Badge variant="no">UNRESOLVED</Badge>;
     if (isExpired) return <Badge variant="expired">EXPIRED</Badge>;
     return null;
   };

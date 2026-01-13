@@ -26,10 +26,12 @@ export const POSITION_FRAGMENT = gql`
       status
       resolved
       outcome
+      proposedOutcome
       expiryTimestamp
       imageUrl
       yesShares
       noShares
+      poolBalance
       proposer
       proposalTimestamp
       disputer

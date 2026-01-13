@@ -141,6 +141,8 @@ export function usePosition(marketId: bigint | undefined, userAddress: `0x${stri
         : undefined,
     query: {
       enabled: marketId !== undefined && !!userAddress,
+      // Refetch more frequently to catch updates
+      refetchInterval: 10000,
     },
   });
 

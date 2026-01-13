@@ -2,7 +2,7 @@
  * ===== BADGE COMPONENT =====
  *
  * Status badges for indicating user roles, positions, and status.
- * Used for: [YES HOLDER], [NO HOLDER], [WHALE], [ADMIN], etc.
+ * Used for: YES HOLDER, NO HOLDER, WHALE, ADMIN, etc.
  *
  * @module shared/components/ui/Badge
  */
@@ -52,19 +52,19 @@ export function Badge({ variant = 'neutral', className, children, ...props }: Ba
 // ===== PRE-DEFINED BADGES =====
 
 export function YesHolderBadge() {
-  return <Badge variant="yes">[YES HOLDER]</Badge>;
+  return <Badge variant="yes">YES HOLDER</Badge>;
 }
 
 export function NoHolderBadge() {
-  return <Badge variant="no">[NO HOLDER]</Badge>;
+  return <Badge variant="no">NO HOLDER</Badge>;
 }
 
 export function WhaleBadge() {
-  return <Badge variant="whale">[WHALE]</Badge>;
+  return <Badge variant="whale">WHALE</Badge>;
 }
 
 export function AdminBadge() {
-  return <Badge variant="admin">[ADMIN]</Badge>;
+  return <Badge variant="admin">ADMIN</Badge>;
 }
 
 export function ActiveBadge() {

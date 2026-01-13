@@ -2,6 +2,100 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.3] - 2026-01-13
+
+### Added
+
+#### New "How to Play" Page
+- Created comprehensive `/how-to-play` guide with game mechanics and strategies
+- Added Heat Levels table showing vLiq settings and target users (CRACK, HIGH, PRO, APEX, CORE)
+- Documented trading strategies: The Hunter, The Squeeze, The Defender
+- Explained resolution roles: Proposer, Disputer, Jury
+- Added bonding curve basics, fee structure, and resolution timeline
+- Linked from Terms of Service and Entry Modal
+
+#### Total P/L Calculation with Breakdown
+- **Trading P/L**: Profit/loss from selling shares (average cost basis calculation)
+- **Resolution P/L**: Profit/loss from market resolutions (claims - invested)
+- **Total P/L**: Combined Trading + Resolution P/L
+- Shows breakdown on Portfolio page header: "Trading: +X | Resolution: +Y"
+- Refunds tracked separately as "Capital Recovery" (not P/L)
+
+#### Position Card P/L Display
+- Always shows P/L section for consistent card height
+- Cases: Has activity, Has refund, No activity yet, Position closed
+- Market-specific P/L from trades using `calculateMarketRealizedPnl()`
+
+#### Portfolio Page Infinite Scroll
+- Loads 20 items initially, more on scroll
+- `IntersectionObserver` for smooth infinite loading
+- Shows "Showing X of Y" counter while loading more
+- "END OF LIST" indicator when all items loaded
+
+### Changed
+
+#### Portfolio Page Tab Refactoring
+- **Renamed**: "AWAITING" → "PENDING" (clearer naming)
+- **New tabs**: ALL | NEEDS ACTION | ACTIVE | PENDING | RESOLVED | UNRESOLVED
+- **RESOLVED tab**: Now green (was grey) - matches positive completion state
+- **NEEDS ACTION tab**: Cyan when empty, yellow when has items (was always yellow)
+- Sub-filters for NEEDS ACTION: CLAIM, VOTE, FINALIZE, REFUND
+
+#### Badge Consistency Across MY POSITIONS and MY MARKETS
+- **RESOLVED badges**: Always green (`variant="yes"`) regardless of YES/NO outcome
+- **UNRESOLVED badges**: Always red (`variant="no"`)
+- Badge text format: `RESOLVED (YES WINS)` / `RESOLVED (NO WINS)`
+- Added badge system to `MyMarketCard` matching `PositionCard`
+
+| State | Badge Text | Color |
+|-------|------------|-------|
+| RESOLVED | `RESOLVED (YES WINS)` / `RESOLVED (NO WINS)` | 🟢 Green |
+| UNRESOLVED | `UNRESOLVED` | 🔴 Red |
+| DISPUTED | `DISPUTED` | 🟡 Yellow |
+| PROPOSED | `PROPOSED` | 🔵 Cyan |
+| READY TO FINALIZE | `READY TO FINALIZE` | 🔵 Cyan |
+| EXPIRED | `EXPIRED` | 🟠 Orange |
+| ACTIVE | `ACTIVE` | 🟢 Green |
+
+#### Holder Badge Text Cleanup
+- Removed brackets from pre-defined badges:
+  - `[YES HOLDER]` → `YES HOLDER`
+  - `[NO HOLDER]` → `NO HOLDER`
+  - `[WHALE]` → `WHALE`
+  - `[ADMIN]` → `ADMIN`
+
+#### Error State UI
+- Changed skull emoji `💀` → warning emoji `⚠️`
+- Changed "FAILED TO LOAD POSITIONS" → "SOMETHING BROKE"
+
+#### Terms of Service Refactoring
+- Moved game rules to separate How to Play page
+- Removed fee structure, market rules, and technical details
+- Streamlined to core legal/protective content only
+- Added link to How to Play guide
+
+#### Resolution Panel Improvements
+- Live countdown timers (updates every second)
+- Voting UI shows potential jury fee earnings
+- Current vote tally display during disputes
+- Payout estimates before claiming
+- Better "Resolution Blocked" and "Waiting for Refund" states
+
+### Fixed
+
+#### Position Card Emergency Refund
+- Shows UNRESOLVED badge even after refund (was disappearing)
+- Proper refund value display with estimated BNB
+- Separated refund tracking from P/L (capital recovery vs profit)
+
+#### Market Detail Page Resilience
+- Added `hasLoadedOnce` tracking for reconnection handling
+- Auto-recovery polling every 10s if data lost
+- "RECONNECTING" state when previously loaded data disappears
+- Better error state with "TRY AGAIN" button
+
+---
+
 ## [0.7.2] - 2026-01-12
 
 ### Added

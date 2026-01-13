@@ -55,6 +55,7 @@ interface HolderPosition {
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
   // Initial query without polling to get market data first
@@ -62,7 +63,16 @@ export function MarketDetailPage() {
     variables: { id: marketId },
     skip: !marketId,
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
+    fetchPolicy: 'cache-and-network', // Return cached data while fetching fresh
+    errorPolicy: 'all', // Return partial data even on errors
   });
+
+  // Track if market loaded successfully at least once
+  useEffect(() => {
+    if (data?.market && !hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [data?.market, hasLoadedOnce]);
 
   // Get last trade timestamp from market data
   const lastTradeTimestamp = useMemo(() => {
@@ -119,15 +129,30 @@ export function MarketDetailPage() {
   const isInitialLoading = loading && !data?.market;
 
   // Retry fetching if market not found and we came from create page
+  // Also auto-retry on transient errors if market was previously loaded
   useEffect(() => {
-    if (!loading && !data?.market && retryCount < maxRetries) {
+    const shouldRetry = !loading && !data?.market && retryCount < maxRetries;
+    const shouldAutoRetryOnError = error && hasLoadedOnce && !data?.market;
+    
+    if (shouldRetry || shouldAutoRetryOnError) {
       const timer = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         refetch();
       }, 3000); // Retry every 3 seconds
       return () => clearTimeout(timer);
     }
-  }, [loading, data?.market, retryCount, refetch]);
+  }, [loading, data?.market, retryCount, refetch, error, hasLoadedOnce]);
+
+  // Keep polling even after errors to recover from transient issues
+  useEffect(() => {
+    // If we had data before but lost it, keep trying to recover
+    if (hasLoadedOnce && !data?.market && !loading) {
+      const recoveryInterval = setInterval(() => {
+        refetch();
+      }, 10000); // Try every 10 seconds
+      return () => clearInterval(recoveryInterval);
+    }
+  }, [hasLoadedOnce, data?.market, loading, refetch]);
 
   // Still loading or retrying - only on INITIAL load, not polls
   if (isInitialLoading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {
@@ -139,18 +164,41 @@ export function MarketDetailPage() {
     );
   }
 
+  // Show reconnecting state if we had data before but lost it
+  if (hasLoadedOnce && !data?.market) {
+    return (
+      <LoadingOverlay 
+        message="RECONNECTING" 
+        subMessage="Lost connection to subgraph, retrying..."
+      />
+    );
+  }
+
   if (error || !data?.market) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-6xl mb-4">💀</p>
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 border-2 border-dark-500 rounded-lg flex items-center justify-center">
+            <span className="text-2xl text-text-muted">?</span>
+          </div>
           <p className="text-xl font-bold text-white mb-2">MARKET NOT FOUND</p>
-          <p className="text-text-secondary font-mono mb-6">
-            {error?.message || 'This market does not exist or is still being indexed'}
+          <p className="text-text-secondary text-sm mb-6">
+            {error?.message || 'This market does not exist or failed to load.'}
           </p>
-          <Link to="/">
-            <Button variant="cyber">BACK TO JUNGLE</Button>
-          </Link>
+          <div className="flex flex-col gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setRetryCount(0);
+                refetch();
+              }}
+            >
+              TRY AGAIN
+            </Button>
+            <Link to="/">
+              <Button variant="cyber" className="w-full">BACK TO JUNGLE</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -484,11 +532,11 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
   // Get status badge based on shares
   const getStatusBadge = (totalShares: number) => {
     if (totalShares > 1000) {
-      return { label: 'Apex', emoji: '👑', color: 'text-yellow-400' };
+      return { label: 'APEX', color: 'text-yellow-400' };
     } else if (totalShares >= 500) {
-      return { label: 'Predator', emoji: '🐆', color: 'text-purple-400' };
+      return { label: 'PREDATOR', color: 'text-purple-400' };
     }
-    return { label: 'Monke', emoji: '🐒', color: 'text-text-muted' };
+    return { label: 'MONKE', color: 'text-text-muted' };
   };
 
   if (sortedHolders.length === 0) {
@@ -549,7 +597,7 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
             
             {/* Status Badge */}
             <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
-              {status.emoji} {status.label}
+              {status.label}
             </div>
           </div>
         );

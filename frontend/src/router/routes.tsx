@@ -21,6 +21,7 @@ const PortfolioPage = lazy(() => import('@/features/portfolio/pages/PortfolioPag
 const CreateMarketPage = lazy(() => import('@/features/create/pages/CreateMarketPage'));
 const TermsPage = lazy(() => import('@/features/legal/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/features/legal/pages/PrivacyPage'));
+const HowToPlayPage = lazy(() => import('@/features/legal/pages/HowToPlayPage'));
 
 /**
  * Suspense wrapper for lazy-loaded pages
@@ -87,6 +88,14 @@ export const router = createBrowserRouter([
         element: (
           <PageLoader>
             <PrivacyPage />
+          </PageLoader>
+        ),
+      },
+      {
+        path: 'how-to-play',
+        element: (
+          <PageLoader>
+            <HowToPlayPage />
           </PageLoader>
         ),
       },
