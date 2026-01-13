@@ -108,6 +108,11 @@ export function MarketCard({ market, className }: MarketCardProps) {
           {market.question}
         </h3>
 
+        {/* Market ID */}
+        <div className="text-[10px] font-mono text-text-muted mb-2">
+          ID: #{market.marketId}
+        </div>
+
         {/* Chance Display + Prices */}
         <div className="flex items-center justify-between mb-3">
           <div>
