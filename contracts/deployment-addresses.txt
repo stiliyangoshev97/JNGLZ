@@ -1,14 +1,12 @@
 ========================================
-JNGLZ.FUN Deployment v3.4.1
+JunkieFun Deployment
 ========================================
 
 Network: BNB Testnet (Chain ID: 97)
-Deployed at block: 83514593
-Timestamp: January 10, 2026
+Deployed at block: 84281810
+Timestamp: 1768347911
 
-PredictionMarket: 0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-BscScan: https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-Verified: ✅ Yes
+PredictionMarket: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
 
 MultiSig Signers:
   Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
@@ -17,9 +15,4 @@ MultiSig Signers:
 Treasury: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
 
 Resolution: Street Consensus
-Features: Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
-========================================
-
-Previous Deployment (v3.3.0 - DEPRECATED):
-PredictionMarket: 0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7
 ========================================

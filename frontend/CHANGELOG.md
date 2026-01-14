@@ -2,6 +2,45 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.14] - 2026-01-14
+
+### Added
+
+#### ScrollToTop Component
+- New `ScrollToTop` component automatically scrolls to top when navigating between pages
+- Uses smooth scroll animation for better UX
+- Fixes issue where users landed mid-page when clicking links
+- Added to `RootLayout` - works globally for all route changes
+
+### Changed
+
+#### Legal Updates - User-Generated Markets Disclaimer
+- **Terms of Service**: Added Section 3A "USER-GENERATED MARKETS & CREATOR LIABILITY"
+  - Clear statement that JNGLZ.FUN is a neutral, permissionless protocol
+  - Market creators are independent third-party users (NOT Protocol affiliates)
+  - Protocol operates as non-custodial "Hosting Layer"
+  - Creators accept FULL LEGAL RESPONSIBILITY for market content/legality
+  - Protocol carries NO LIABILITY for markets violating laws/regulations
+  - Updated version to v3.0
+
+- **EntryModal v3.0** (Forces Re-acceptance for all users)
+  - Added prominent "USER-GENERATED MARKETS" disclaimer section with warning icon
+  - Added "MARKET CREATOR RESPONSIBILITY" box explaining creator liability
+  - Fixed JNGLZ.FUN logo coloring: `JNGLZ` is white, `.FUN` is cyan (text-cyber)
+  - Updated Risk Disclaimer to emphasize user-generated nature
+  - Version bumped from `2.0` to `3.0`
+
+#### Environment Updates
+- Updated `VITE_CONTRACT_ADDRESS` to v3.5.0: `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
+- Updated `VITE_SUBGRAPH_URL` to v3.4.2: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2`
+
+### Technical
+- Added `ScrollToTop.tsx` component
+- Updated barrel export in `shared/components/index.ts`
+- Entry modal version constant: `ENTRY_ACCEPTED_VERSION = '3.0'`
+
+---
+
 ## [0.7.13] - 2026-01-14
 
 ### Changed

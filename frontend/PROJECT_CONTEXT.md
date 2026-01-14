@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 14, 2026  
-> **Version:** 0.7.13
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance)
+> **Version:** 0.7.14
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop)
 
 ---
 
@@ -26,22 +26,22 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.4.1) | `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` |
+| PredictionMarket (v3.5.0) | `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464 |
+| BscScan | https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8 |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Production URL | `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn` |
-| Studio URL | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1` |
+| Studio URL (Active) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2` |
+| Version | v3.4.2 (P/L tracking for leaderboard) |
 | Rate Limit | 100,000 queries/month (production) |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet (v3.4.1)
-VITE_CONTRACT_ADDRESS=0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+# BNB Testnet (v3.5.0)
+VITE_CONTRACT_ADDRESS=0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
@@ -58,7 +58,7 @@ VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5
 | Base UI Components | ✅ 100% | Button, Card, Modal, Input, Badge, HeatBar, ChanceDisplay |
 | Web3 Integration | ✅ 100% | Wagmi + RainbowKit (brutalist theme) |
 | Providers Setup | ✅ 100% | Query, Web3, GraphQL |
-| Router Setup | ✅ 100% | React Router with lazy loading |
+| Router Setup | ✅ 100% | React Router with lazy loading + ScrollToTop |
 | Chain Validation | ✅ 100% | WrongNetworkModal, prevents Phantom stuck issue |
 | Schemas (Zod) | ✅ 100% | Market, Trade, Position, User |
 | GraphQL Queries | ✅ 100% | All queries match subgraph schema |

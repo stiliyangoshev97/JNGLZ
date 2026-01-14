@@ -2,6 +2,44 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.4.2] - 2026-01-14
+
+### Added - P/L Tracking for Leaderboard
+- **User Entity P/L Fields** - Comprehensive profit/loss tracking for public leaderboard
+  - Trading P/L: `totalBought`, `totalSold`, `tradingPnL` (realized from sells)
+  - Resolution P/L: `totalInvestedInResolved`, `totalClaimedFromResolved`, `resolutionPnL`
+  - Combined: `totalPnL` (tradingPnL + resolutionPnL)
+  - Leaderboard Stats: `winCount`, `lossCount`, `winRate` (percentage)
+  - Earnings: `totalCreatorFeesEarned`, `totalProposerRewardsEarned`, `totalJuryFeesEarned`
+  - Withdrawal Tracking: `pendingWithdrawals`, `pendingCreatorFees`, `totalWithdrawn`
+
+- **Position Entity P/L Fields**
+  - `totalReturned` - BNB returned from sell transactions
+  - `netCostBasis` - totalInvested - totalReturned (what's "at risk")
+  - `realizedPnL` - Calculated on market resolution (claimedAmount - netCostBasis)
+
+### Changed
+- **Contract Address**: `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8` (v3.5.0)
+- **Start Block**: `84281825` (v3.5.0 deployment block)
+- **Heat Level Comments**: Updated to reflect 5 tiers (CRACK, HIGH, PRO, APEX, CORE)
+
+### Updated Event Handlers
+- `handleTrade` - Now tracks `totalBought`, `totalSold`, `tradingPnL`, `totalReturned`, `netCostBasis`
+- `handleClaimed` - Now calculates `realizedPnL`, updates `resolutionPnL`, `winCount`, `lossCount`, `winRate`
+- `handleJuryFeeDistributed` - Now tracks `totalJuryFeesEarned`
+- `handleProposerRewardPaid` - Now tracks `totalProposerRewardsEarned`
+- `handleWithdrawalCredited` - Now tracks `pendingWithdrawals`
+- `handleWithdrawalClaimed` - Now updates `pendingWithdrawals`, `totalWithdrawn`
+- `handleCreatorFeesCredited` - Now tracks `pendingCreatorFees`
+- `handleCreatorFeesClaimed` - Now updates `pendingCreatorFees`, `totalCreatorFeesEarned`
+
+### Deployed
+- **Version**: `3.4.2`
+- **Studio URL**: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2`
+- **Queries Endpoint**: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2`
+
+---
+
 ## [3.4.1] - 2026-01-10
 
 ### Added

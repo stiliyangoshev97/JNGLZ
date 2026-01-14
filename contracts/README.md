@@ -3,7 +3,7 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-164%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-165%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
@@ -21,8 +21,8 @@
 | v3.2.0 | ✅ FIXED | Bonding curve corrected |
 | v3.3.0 | ✅ STABLE | Added proposer rewards |
 | v3.4.0 | ✅ STABLE | Pull Pattern, griefing protection |
-| v3.4.1 | ✅ DEPLOYED | ReplaceSigner (2-of-3), sweep protection |
-| v3.5.0 | ⏳ READY | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
+| v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), sweep protection |
+| v3.5.0 | ✅ DEPLOYED | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
 
 ---
 
@@ -30,16 +30,16 @@
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.5.0** | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⏳ READY |
-| v3.4.1 | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ✅ DEPLOYED |
+| **v3.5.0** | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ✅ DEPLOYED |
+| v3.4.1 | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ⚠️ DEPRECATED |
 
-### Previous Deployment (v3.4.1 - BNB Testnet)
-- **Address:** [`0x4e20Df1772D972f10E9604e7e9C775B1ae897464`](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464)
+### Current Deployment (v3.5.0 - BNB Testnet)
+- **Address:** [`0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`](https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8)
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 83514593
+- **Block:** 84281825
 - **Verified:** ✅ Yes
 
-> **v3.5.0 Features:** 5 Heat Level tiers (CRACK, HIGH, PRO, APEX, CORE), 10x virtual liquidity increase for better price stability, Pull Pattern, ReplaceSigner (2-of-3), Sweep protection, Proposer Rewards (0.5%), 164 tests passing
+> **v3.5.0 Features:** 5 Heat Level tiers (CRACK, HIGH, PRO, APEX, CORE), 10x virtual liquidity increase for better price stability, Pull Pattern, ReplaceSigner (2-of-3), Sweep protection, Proposer Rewards (0.5%), 165 tests passing
 
 ---
 

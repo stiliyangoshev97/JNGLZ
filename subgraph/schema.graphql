@@ -1,8 +1,9 @@
 # ============================================
-# JunkieFun Subgraph - Entity Schema (v3.3.0)
+# JunkieFun Subgraph - Entity Schema (v3.5.0)
 # ============================================
 # Indexes PredictionMarket contract events on BNB Chain
 # Provides GraphQL API for frontend queries
+# v3.5.0: Added P/L tracking for leaderboard
 
 # ============================================
 # Market Entity - Core prediction market data
@@ -17,9 +18,9 @@ type Market @entity(immutable: false) {
   imageUrl: String! # Market thumbnail image URL
   creator: User! # Creator (relation)
   creatorAddress: Bytes! # Creator address (for filtering)
-  # Heat Level (v3.1.0)
-  heatLevel: Int! # 0=CRACK, 1=HIGH, 2=PRO
-  virtualLiquidity: BigInt! # Virtual liquidity (5e18, 20e18, or 50e18)
+  # Heat Level (v3.1.0 - updated v3.5.0: 5 tiers)
+  heatLevel: Int! # 0=CRACK, 1=HIGH, 2=PRO, 3=APEX, 4=CORE
+  virtualLiquidity: BigInt! # Virtual liquidity (50e18, 200e18, 500e18, 2000e18, 10000e18)
   # Timestamps
   expiryTimestamp: BigInt! # When trading stops
   createdAt: BigInt! # Block timestamp
@@ -78,7 +79,7 @@ type Trade @entity(immutable: true) {
 }
 
 # ============================================
-# User Entity - Trader profiles
+# User Entity - Trader profiles with P/L for Leaderboard
 # ============================================
 type User @entity(immutable: false) {
   id: ID! # User address as string
@@ -87,9 +88,34 @@ type User @entity(immutable: false) {
   totalTrades: BigInt! # Total number of trades
   totalVolume: BigDecimal! # Total BNB volume
   marketsCreated: BigInt! # Markets created by user
-  # P&L Tracking
+  # P&L Tracking (Basic)
   totalClaimed: BigDecimal! # Total winnings claimed
   totalRefunded: BigDecimal! # Total emergency refunds
+  # ============================================
+  # P/L TRACKING FOR LEADERBOARD (v3.5.0)
+  # ============================================
+  # Trading P/L (buy/sell)
+  totalBought: BigDecimal! # Total BNB spent buying shares
+  totalSold: BigDecimal! # Total BNB received from selling
+  tradingPnL: BigDecimal! # totalSold - totalBought (realized trading P/L)
+  # Resolution P/L (claims from resolved markets)
+  totalInvestedInResolved: BigDecimal! # BNB invested in markets that resolved
+  totalClaimedFromResolved: BigDecimal! # BNB claimed from resolved markets (wins)
+  resolutionPnL: BigDecimal! # totalClaimedFromResolved - totalInvestedInResolved
+  # Combined P/L
+  totalPnL: BigDecimal! # tradingPnL + resolutionPnL (ALL-TIME P/L)
+  # Leaderboard Stats
+  winCount: BigInt! # Number of winning positions (claimed > 0)
+  lossCount: BigInt! # Number of losing positions (resolved with 0 claim)
+  winRate: BigDecimal! # winCount / (winCount + lossCount) * 100
+  # Creator Earnings (separate from P/L)
+  totalCreatorFeesEarned: BigDecimal! # Total fees earned as market creator
+  totalProposerRewardsEarned: BigDecimal! # Total proposer rewards earned
+  totalJuryFeesEarned: BigDecimal! # Total jury fees earned from voting
+  # Withdrawal Tracking (Pull Pattern)
+  pendingWithdrawals: BigDecimal! # Unclaimed bonds/jury fees
+  pendingCreatorFees: BigDecimal! # Unclaimed creator fees
+  totalWithdrawn: BigDecimal! # Total amount withdrawn via Pull Pattern
   # Relations
   positions: [Position!]! @derivedFrom(field: "user")
   trades: [Trade!]! @derivedFrom(field: "trader")
@@ -98,7 +124,7 @@ type User @entity(immutable: false) {
 }
 
 # ============================================
-# Position Entity - User positions per market
+# Position Entity - User positions per market (v3.5.0 - P/L tracking)
 # ============================================
 type Position @entity(immutable: false) {
   id: ID! # marketId-userAddress
@@ -107,15 +133,20 @@ type Position @entity(immutable: false) {
   # Share Holdings
   yesShares: BigInt! # YES shares held
   noShares: BigInt! # NO shares held
-  # Investment Tracking
-  totalInvested: BigDecimal! # Total BNB invested
+  # Investment Tracking (for P/L calculation)
+  totalInvested: BigDecimal! # Total BNB invested (cost basis)
+  totalReturned: BigDecimal! # Total BNB returned from sells
   averageYesPrice: BigDecimal! # Avg price paid for YES
   averageNoPrice: BigDecimal! # Avg price paid for NO
+  # Net cost basis (for resolution P/L)
+  netCostBasis: BigDecimal! # totalInvested - totalReturned (what's "at risk")
   # Claim Status
   claimed: Boolean! # Has user claimed?
   claimedAmount: BigDecimal # Amount claimed (if claimed)
   emergencyRefunded: Boolean! # Has user emergency refunded?
   refundedAmount: BigDecimal # Amount refunded (if refunded)
+  # P/L for this position (calculated on resolution)
+  realizedPnL: BigDecimal # claimedAmount - netCostBasis (null if not resolved)
   # Voting
   hasVoted: Boolean! # Has user voted?
   votedForProposer: Boolean # null if not voted

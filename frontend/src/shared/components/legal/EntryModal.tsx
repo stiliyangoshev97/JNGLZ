@@ -14,7 +14,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 
 const ENTRY_ACCEPTED_KEY = 'junkie_entry_accepted';
-const ENTRY_ACCEPTED_VERSION = '2.0'; // v2.0 = Added EEA/MiCA restrictions, removed emojis
+const ENTRY_ACCEPTED_VERSION = '3.0'; // v3.0 = Added UGP/Creator Liability disclaimer, fixed JNGLZ.FUN coloring
 
 interface Step {
   number: string;
@@ -83,7 +83,9 @@ export function EntryModal() {
           <div className="flex items-center gap-3">
             <img src="/jnglz-logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
             <div>
-              <h1 className="text-2xl font-black text-cyber">JNGLZ.FUN</h1>
+              <h1 className="text-2xl font-black">
+                <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span>
+              </h1>
               <p className="text-xs text-text-secondary font-mono">DECENTRALIZED PREDICTION PROTOCOL ON BNB CHAIN</p>
             </div>
           </div>
@@ -139,6 +141,33 @@ export function EntryModal() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* USER-GENERATED MARKETS DISCLAIMER */}
+        <div className="px-6 py-4 border-b border-warning bg-warning/5">
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-warning/20 border border-warning rounded flex items-center justify-center text-warning font-bold text-lg flex-shrink-0">
+              ⚠
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-warning mb-2">USER-GENERATED MARKETS</h3>
+              <p className="text-xs text-text-secondary leading-relaxed mb-2">
+                <span className="text-white font-bold">ALL MARKETS ARE CREATED BY INDEPENDENT USERS.</span>{' '}
+                <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span> is a 
+                <strong className="text-white"> neutral, permissionless protocol</strong>. We do NOT create, 
+                curate, endorse, verify, or control any markets.
+              </p>
+              <div className="bg-dark-800/50 border border-warning/30 p-2 mt-2">
+                <p className="text-xs text-warning font-bold mb-1">MARKET CREATOR RESPONSIBILITY:</p>
+                <p className="text-xs text-text-secondary">
+                  By creating a market, the creator accepts <strong className="text-white">full legal responsibility</strong> for 
+                  the content, legality, and clarity of the prediction question. The Protocol carries 
+                  <strong className="text-no"> NO LIABILITY</strong> for markets that violate laws, regulations, 
+                  or third-party rights.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -283,10 +312,13 @@ export function EntryModal() {
             <div>
               <h3 className="text-sm font-bold text-no mb-1">RISK DISCLAIMER</h3>
               <p className="text-xs text-text-secondary leading-relaxed">
-                JNGLZ.FUN is a <strong className="text-white">decentralized, non-custodial protocol</strong>. 
-                All markets are user-created and user-resolved. You are interacting directly with 
-                immutable smart contracts at your own risk. Protocol contributors DO NOT control 
-                market outcomes. Never invest more than you can afford to lose.
+                <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span> is a{' '}
+                <strong className="text-white">decentralized, non-custodial protocol</strong>. 
+                All markets are <strong className="text-white">user-generated</strong> and{' '}
+                <strong className="text-white">user-resolved</strong> via autonomous smart contracts. 
+                Protocol contributors DO NOT control market creation, content, or outcomes. 
+                You interact directly with immutable smart contracts at your own risk.{' '}
+                <strong className="text-no">Never invest more than you can afford to lose.</strong>
               </p>
             </div>
           </div>

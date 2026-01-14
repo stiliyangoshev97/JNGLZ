@@ -62,6 +62,7 @@ function toBigDecimal(value: BigInt): BigDecimal {
 
 /**
  * Get or create User entity
+ * v3.5.0: Added P/L tracking fields for leaderboard
  */
 function getOrCreateUser(address: Address): User {
   let id = address.toHexString();
@@ -75,6 +76,29 @@ function getOrCreateUser(address: Address): User {
     user.marketsCreated = ZERO_BI;
     user.totalClaimed = ZERO_BD;
     user.totalRefunded = ZERO_BD;
+    
+    // P/L Tracking (v3.5.0)
+    user.totalBought = ZERO_BD;
+    user.totalSold = ZERO_BD;
+    user.tradingPnL = ZERO_BD;
+    user.totalInvestedInResolved = ZERO_BD;
+    user.totalClaimedFromResolved = ZERO_BD;
+    user.resolutionPnL = ZERO_BD;
+    user.totalPnL = ZERO_BD;
+    user.winCount = ZERO_BI;
+    user.lossCount = ZERO_BI;
+    user.winRate = ZERO_BD;
+    
+    // Creator/Resolution earnings
+    user.totalCreatorFeesEarned = ZERO_BD;
+    user.totalProposerRewardsEarned = ZERO_BD;
+    user.totalJuryFeesEarned = ZERO_BD;
+    
+    // Withdrawal tracking
+    user.pendingWithdrawals = ZERO_BD;
+    user.pendingCreatorFees = ZERO_BD;
+    user.totalWithdrawn = ZERO_BD;
+    
     user.save();
 
     // Update global stats
@@ -88,6 +112,7 @@ function getOrCreateUser(address: Address): User {
 
 /**
  * Get or create Position entity
+ * v3.5.0: Added P/L tracking fields
  */
 function getOrCreatePosition(marketId: string, userAddress: Address): Position {
   let id = marketId + "-" + userAddress.toHexString();
@@ -100,12 +125,14 @@ function getOrCreatePosition(marketId: string, userAddress: Address): Position {
     position.yesShares = ZERO_BI;
     position.noShares = ZERO_BI;
     position.totalInvested = ZERO_BD;
+    position.totalReturned = ZERO_BD;
     position.averageYesPrice = ZERO_BD;
     position.averageNoPrice = ZERO_BD;
+    position.netCostBasis = ZERO_BD;
     position.claimed = false;
     position.emergencyRefunded = false;
     position.hasVoted = false;
-    // votedForProposer left unset (null) until they vote
+    // votedForProposer, claimedAmount, refundedAmount, realizedPnL left unset (null) until set
     position.save();
   }
 
@@ -287,6 +314,18 @@ export function handleTrade(event: TradeEvent): void {
   // Update user stats
   user.totalTrades = user.totalTrades.plus(ONE_BI);
   user.totalVolume = user.totalVolume.plus(trade.bnbAmount);
+  
+  // P/L Tracking (v3.5.0)
+  if (event.params.isBuy) {
+    user.totalBought = user.totalBought.plus(trade.bnbAmount);
+  } else {
+    user.totalSold = user.totalSold.plus(trade.bnbAmount);
+  }
+  // Update trading P/L (realized from sells)
+  user.tradingPnL = user.totalSold.minus(user.totalBought);
+  // Update total P/L
+  user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+  
   user.save();
 
   // Update position
@@ -320,14 +359,18 @@ export function handleTrade(event: TradeEvent): void {
     }
     position.totalInvested = position.totalInvested.plus(trade.bnbAmount);
   } else {
-    // Sell - reduce shares
+    // Sell - reduce shares and track returns
     if (event.params.isYes) {
       position.yesShares = position.yesShares.minus(event.params.shares);
     } else {
       position.noShares = position.noShares.minus(event.params.shares);
     }
-    // Note: We don't reduce totalInvested on sells (tracks cost basis)
+    // Track total returned from sells (v3.5.0)
+    position.totalReturned = position.totalReturned.plus(trade.bnbAmount);
   }
+  
+  // Update net cost basis (what's still "at risk")
+  position.netCostBasis = position.totalInvested.minus(position.totalReturned);
 
   position.save();
 
@@ -465,6 +508,7 @@ export function handleMarketResolved(event: MarketResolved): void {
 /**
  * Handle Claimed event
  * Creates Claim entity and updates User/Position
+ * v3.5.0: Added P/L tracking for leaderboard
  */
 export function handleClaimed(event: Claimed): void {
   let marketId = event.params.marketId.toString();
@@ -488,13 +532,40 @@ export function handleClaimed(event: Claimed): void {
 
   // Update user stats
   user.totalClaimed = user.totalClaimed.plus(claimAmount);
-  user.save();
-
-  // Update position
+  
+  // P/L Tracking (v3.5.0)
+  // Update position first to get netCostBasis
   let position = getOrCreatePosition(marketId, event.params.user);
   position.claimed = true;
   position.claimedAmount = claimAmount;
+  
+  // Calculate realized P/L for this position: claimed - netCostBasis
+  let realizedPnL = claimAmount.minus(position.netCostBasis);
+  position.realizedPnL = realizedPnL;
   position.save();
+  
+  // Update user resolution P/L
+  user.totalInvestedInResolved = user.totalInvestedInResolved.plus(position.netCostBasis);
+  user.totalClaimedFromResolved = user.totalClaimedFromResolved.plus(claimAmount);
+  user.resolutionPnL = user.totalClaimedFromResolved.minus(user.totalInvestedInResolved);
+  
+  // Update win/loss count
+  if (realizedPnL.gt(ZERO_BD)) {
+    user.winCount = user.winCount.plus(ONE_BI);
+  } else if (realizedPnL.lt(ZERO_BD)) {
+    user.lossCount = user.lossCount.plus(ONE_BI);
+  }
+  
+  // Update win rate
+  let totalResolved = user.winCount.plus(user.lossCount);
+  if (totalResolved.gt(ZERO_BI)) {
+    user.winRate = user.winCount.toBigDecimal().div(totalResolved.toBigDecimal()).times(BigDecimal.fromString("100"));
+  }
+  
+  // Update total P/L (trading + resolution)
+  user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+  
+  user.save();
 
   // Update global stats
   let stats = getOrCreateGlobalStats();
@@ -553,13 +624,18 @@ export function handleBondDistributed(event: BondDistributed): void {
 }
 
 /**
- * Handle JuryFeeDistributed event (optional - for analytics)
- * Tracks individual voter rewards
+ * Handle JuryFeeDistributed event (v3.5.0 - P/L tracking)
+ * Tracks individual voter rewards for leaderboard
  */
 export function handleJuryFeeDistributed(event: JuryFeeDistributed): void {
-  // This event tracks individual voter rewards
-  // Could add a JuryReward entity if detailed tracking needed
-  // For now, the Vote entity captures participation
+  let feeAmount = toBigDecimal(event.params.amount);
+  
+  // Get or create user (the voter who received the fee)
+  let user = getOrCreateUser(event.params.voter);
+  
+  // Update jury fee earnings
+  user.totalJuryFeesEarned = user.totalJuryFeesEarned.plus(feeAmount);
+  user.save();
 }
 
 /**
@@ -589,6 +665,7 @@ export function handleFundsSwept(event: FundsSwept): void {
 /**
  * Handle ProposerRewardPaid event (v3.3.0)
  * Creates ProposerReward entity to track proposer incentive payments
+ * v3.5.0: Added P/L tracking for leaderboard
  */
 export function handleProposerRewardPaid(event: ProposerRewardPaid): void {
   let rewardId =
@@ -609,6 +686,10 @@ export function handleProposerRewardPaid(event: ProposerRewardPaid): void {
   reward.txHash = event.transaction.hash;
   reward.blockNumber = event.block.number;
   reward.save();
+  
+  // Update user proposer reward earnings (v3.5.0)
+  user.totalProposerRewardsEarned = user.totalProposerRewardsEarned.plus(rewardAmount);
+  user.save();
 }
 
 // ============================================
@@ -618,6 +699,7 @@ export function handleProposerRewardPaid(event: ProposerRewardPaid): void {
 /**
  * Handle WithdrawalCredited event (v3.4.1)
  * Creates WithdrawalCredit entity when funds are credited for withdrawal
+ * v3.5.0: Added pending withdrawal tracking
  */
 export function handleWithdrawalCredited(event: WithdrawalCredited): void {
   let creditId =
@@ -637,11 +719,16 @@ export function handleWithdrawalCredited(event: WithdrawalCredited): void {
   credit.txHash = event.transaction.hash;
   credit.blockNumber = event.block.number;
   credit.save();
+  
+  // Track pending withdrawals (v3.5.0)
+  user.pendingWithdrawals = user.pendingWithdrawals.plus(creditAmount);
+  user.save();
 }
 
 /**
  * Handle WithdrawalClaimed event (v3.4.1)
  * Creates WithdrawalClaim entity when user claims their pending withdrawal
+ * v3.5.0: Added withdrawal tracking
  */
 export function handleWithdrawalClaimed(event: WithdrawalClaimed): void {
   let claimId =
@@ -660,11 +747,17 @@ export function handleWithdrawalClaimed(event: WithdrawalClaimed): void {
   claim.txHash = event.transaction.hash;
   claim.blockNumber = event.block.number;
   claim.save();
+  
+  // Update withdrawal tracking (v3.5.0)
+  user.pendingWithdrawals = user.pendingWithdrawals.minus(claimAmount);
+  user.totalWithdrawn = user.totalWithdrawn.plus(claimAmount);
+  user.save();
 }
 
 /**
  * Handle CreatorFeesCredited event (v3.4.1)
  * Creates CreatorFeeCredit entity when creator fees are credited
+ * v3.5.0: Added pending creator fees tracking
  */
 export function handleCreatorFeesCredited(event: CreatorFeesCredited): void {
   let creditId =
@@ -685,11 +778,16 @@ export function handleCreatorFeesCredited(event: CreatorFeesCredited): void {
   credit.txHash = event.transaction.hash;
   credit.blockNumber = event.block.number;
   credit.save();
+  
+  // Track pending creator fees (v3.5.0)
+  user.pendingCreatorFees = user.pendingCreatorFees.plus(creditAmount);
+  user.save();
 }
 
 /**
  * Handle CreatorFeesClaimed event (v3.4.1)
  * Creates CreatorFeeClaim entity when creator claims their accumulated fees
+ * v3.5.0: Added creator fee earnings tracking
  */
 export function handleCreatorFeesClaimed(event: CreatorFeesClaimed): void {
   let claimId =
@@ -708,4 +806,9 @@ export function handleCreatorFeesClaimed(event: CreatorFeesClaimed): void {
   claim.txHash = event.transaction.hash;
   claim.blockNumber = event.block.number;
   claim.save();
+  
+  // Update creator fee tracking (v3.5.0)
+  user.pendingCreatorFees = user.pendingCreatorFees.minus(claimAmount);
+  user.totalCreatorFeesEarned = user.totalCreatorFeesEarned.plus(claimAmount);
+  user.save();
 }

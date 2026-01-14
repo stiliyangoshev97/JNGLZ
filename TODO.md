@@ -1,94 +1,107 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 14, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 Ready | Subgraph ✅ v3.4.1 | Frontend ✅ v0.7.12  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.14  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚨 NEXT PRIORITY: Contract v3.5.0 - Heat Level Rebalance
+## ✅ v3.5.0 DEPLOYMENT COMPLETE (Jan 14, 2026)
 
-### Problem
-- Current virtual liquidity values are **WAY TOO SMALL**
+### Contract v3.5.0 - Heat Level Rebalance ✅
+- **Contract Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
+- **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+- **Block:** 84281825
+- **Verified:** ✅ Yes
+
+### Subgraph v3.4.2 - P/L Tracking ✅
+- **Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2`
+- New P/L fields: `totalPnL`, `tradingPnL`, `resolutionPnL`, `winRate`, etc.
+- User entity now tracks all earnings for leaderboard
+
+### Frontend v0.7.14 ✅
+- Updated contract address and subgraph URL in `.env`
+- Added ScrollToTop component (fixes mid-page navigation)
+- Entry Modal v3.0 with User-Generated Markets disclaimer
+- Terms of Service Section 3A - Creator Liability
+
+---
+
+## ✅ COMPLETED: Contract v3.5.0 - Heat Level Rebalance
+
+### Problem (SOLVED)
+- Current virtual liquidity values were **WAY TOO SMALL**
 - 0.7 BNB buy in PRO/WHALE POND moved price 50% → 75% (25pp move!)
-- Markets become "dead" after one big trade - price gets pushed to extreme
-- Contract only has 3 tiers, frontend HOW TO PLAY shows 5
+- Markets became "dead" after one big trade
 
-### Current State
-| Component | Tiers |
-|-----------|-------|
-| Contract | 3 (CRACK=5e18, HIGH=20e18, PRO=50e18) |
-| Frontend HOW TO PLAY | 5 (CRACK, HIGH, PRO, APEX, CORE) |
-| Frontend HeatSelector | 3 (only wired to contract) |
+### Solution: 5 Tiers with 10x Virtual Liquidity
 
-### Proposed Changes (5 Tiers) - 10x INCREASE
+| Tier | Name | Virtual Liquidity | Status |
+|------|------|-------------------|--------|
+| 0 | CRACK | 50 BNB | ✅ DEPLOYED |
+| 1 | HIGH | 200 BNB | ✅ DEPLOYED |
+| 2 | PRO | 500 BNB | ✅ DEPLOYED |
+| 3 | APEX | 2,000 BNB | ✅ DEPLOYED |
+| 4 | CORE | 10,000 BNB | ✅ DEPLOYED |
 
-**BNB Price Reference: $900 USD**
+### All Tasks Completed
+- [x] Update `PredictionMarket.sol` with 5 tiers
+- [x] Run full test suite - 164 tests passing
+- [x] Deploy new contract v3.5.0
+- [x] Update subgraph with new contract address
+- [x] Add P/L tracking to subgraph schema
+- [x] Deploy subgraph v3.4.2
+- [x] Update frontend `.env` with new addresses
+- [x] Update frontend legal pages (creator liability)
+- [x] Add ScrollToTop component
 
-| Tier | Name | Display Name | Current VL | **NEW VL** | Target Trade | Expected Move |
-|------|------|--------------|------------|------------|--------------|---------------|
-| 0 | CRACK | DEGEN FLASH | 5e18 | **50e18** | 0.005-0.1 BNB | ~5-10% |
-| 1 | HIGH | STREET FIGHT | 20e18 | **200e18** | 0.1-1.0 BNB | ~3-5% |
-| 2 | PRO | WHALE POND | 50e18 | **500e18** | 1.0-5.0 BNB | ~2-3% |
-| 3 | APEX | INSTITUTION | N/A | **2000e18** | 5.0-20.0 BNB | ~2% |
-| 4 | CORE | DEEP SPACE | N/A | **10000e18** | 20.0-100+ BNB | ~1% |
+---
 
-### Why These Values?
+## 🚀 REMAINING TODO: Frontend HeatSelector Update
 
-**Rule:** Virtual liquidity should be ~50-100x the "typical max trade" for ~2-5% price impact.
+### Still Needed (Low Priority)
+- [ ] Update `HeatSelector` component for 5 tiers (currently shows 3)
+- [ ] Update `CreateMarketPage.tsx` to wire 5 tiers
+- [ ] Update `format.ts` - DEFAULT_VIRTUAL_LIQUIDITY constant
+- [ ] Add APEX and CORE icons/styling
 
-**Verification with your trade:**
-- OLD PRO (50e18): 0.7 BNB trade → 25% price move ❌ BROKEN
-- NEW PRO (500e18): 0.7 BNB trade → ~2-3% price move ✅ PLAYABLE
+### Why Low Priority?
+Contract supports all 5 tiers. Frontend currently limits to 3, which is fine for MVP.
+Users can still create APEX/CORE markets via direct contract interaction.
 
-**Example math for PRO (500e18 = 500 BNB virtual liquidity):**
-- At 50/50: virtualYes=500, virtualNo=500
-- 5 BNB trade = 5/500 = 1% of virtual supply
-- Price impact ≈ 2-3% ✅ Reasonable for "serious stakes"
+---
 
-**Example math for CORE (10000e18 = 10,000 BNB virtual liquidity):**
-- 100 BNB trade = 100/10000 = 1% of virtual supply
-- Price impact ≈ 1-2% ✅ True whale territory
+## 🚨 NEXT PRIORITIES
 
-### Contract Changes Required
-```solidity
-// OLD (3 tiers)
-enum HeatLevel { CRACK, HIGH, PRO }
-uint256 public heatLevelCrack = 5 * 1e18;
-uint256 public heatLevelHigh = 20 * 1e18;
-uint256 public heatLevelPro = 50 * 1e18;
+### 1. Public Leaderboard Page ⬜
+- [ ] Create `/leaderboard` page
+- [ ] Query users sorted by `totalPnL`, `winRate`, `totalVolume`
+- [ ] Display P/L stats, win rate, total trades
+- [ ] Pagination with "Load More"
+- [ ] Filter by timeframe (7d, 30d, all-time)
 
-// NEW (5 tiers) - 10x increase!
-enum HeatLevel { CRACK, HIGH, PRO, APEX, CORE }
-uint256 public heatLevelCrack = 50 * 1e18;    // 10x
-uint256 public heatLevelHigh = 200 * 1e18;    // 10x
-uint256 public heatLevelPro = 500 * 1e18;     // 10x
-uint256 public heatLevelApex = 2000 * 1e18;   // NEW
-uint256 public heatLevelCore = 10000 * 1e18;  // NEW
-```
+### 2. Social Features (Comments) ⬜
+- [ ] Setup Supabase project
+- [ ] SIWE authentication
+- [ ] Comment threads with holder badges
+- [ ] Real-time updates
+- [ ] Admin moderation
 
-### Tasks
-- [x] Update `PredictionMarket.sol`:
-  - [x] Add APEX and CORE to HeatLevel enum
-  - [x] Add heatLevelApex and heatLevelCore state variables
-  - [x] Update _createMarket() for 5 levels
-  - [x] Increase existing values (CRACK 5→50, HIGH 20→200, PRO 50→500)
-  - [x] Add SetHeatLevelApex and SetHeatLevelCore to ActionType enum
-  - [x] Add MultiSig action handlers for APEX and CORE
-  - [x] Update MAX_HEAT_LEVEL constant (200 → 15000)
-- [x] Run full test suite (update test values) - 164 tests passing ✅
-- [ ] Deploy new contract v3.5.0
-- [ ] Update subgraph:
-  - [ ] New contract address
-  - [ ] Heat level mapping (5 tiers)
-  - [ ] Redeploy subgraph
-- [ ] Update frontend:
-  - [ ] `HeatSelector` component (5 options)
-  - [ ] `CreateMarketPage.tsx` (wire 5 tiers)
-  - [x] `HowToPlayPage.tsx` - update vLiq numbers to match (done in v0.7.12)
-  - [ ] `format.ts` - update DEFAULT_VIRTUAL_LIQUIDITY
-  - [ ] Contract address in `.env`
-  - [ ] All components using virtualLiquidity
+### 3. Production Deployment ⬜
+- [ ] Vercel setup for frontend
+- [ ] Production subgraph deployment
+- [ ] Domain configuration
+- [ ] Performance testing
+
+---
+
+## 📊 Current Status by Component
+
+| Component | Version | Status |
+|-----------|---------|--------|
+| Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
+| Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
+| Frontend | v0.7.14 | ✅ Updated with creator liability |
 
 ---
 

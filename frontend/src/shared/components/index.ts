@@ -11,6 +11,7 @@ export * from './ui';
 export { WrongNetworkModal, WrongNetworkBanner } from './WrongNetworkModal';
 export { ErrorBoundary } from './ErrorBoundary';
 export { SlippageSettings, useSlippage, applySlippage, getSavedSlippage, DEFAULT_SLIPPAGE_BPS } from './SlippageSettings';
+export { ScrollToTop } from './ScrollToTop';
 
 // Legal components
 export * from './legal';

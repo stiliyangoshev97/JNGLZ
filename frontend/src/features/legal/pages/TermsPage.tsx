@@ -24,7 +24,7 @@ export function TermsPage() {
             TERMS OF <span className="text-cyber">SERVICE</span>
           </h1>
           <p className="text-text-muted text-sm mt-2 font-mono">
-            Last Updated: January 14, 2026
+            Last Updated: January 14, 2026 (v3.0 - Added UGP/Creator Liability)
           </p>
         </div>
 
@@ -100,6 +100,65 @@ export function TermsPage() {
                 decentralized oracle where shareholders vote on outcomes. The Protocol operates autonomously; 
                 Protocol contributors <strong className="text-no">DO NOT</strong> and <strong className="text-no">CANNOT</strong> intervene 
                 in or control any market outcome.
+              </p>
+            </div>
+          </section>
+
+          {/* USER-GENERATED MARKETS & CREATOR LIABILITY - NEW SECTION */}
+          <section>
+            <h2 className="text-xl font-bold text-white border-l-4 border-warning pl-4 mb-4">
+              3A. USER-GENERATED MARKETS & CREATOR LIABILITY
+            </h2>
+            <div className="text-text-secondary space-y-4 pl-4">
+              <div className="bg-warning/10 border border-warning p-4 my-4">
+                <p className="text-warning font-bold mb-2">ALL MARKETS ARE USER-GENERATED PREDICTIONS (UGP)</p>
+                <p className="text-sm">
+                  JNGLZ.FUN is a <strong className="text-white">neutral, permissionless protocol</strong>. 
+                  The Protocol does not create, curate, endorse, verify, or monitor any markets.
+                </p>
+              </div>
+              
+              <h3 className="text-white font-bold mt-4">Independent Actors</h3>
+              <p>
+                Market Creators are <strong className="text-white">independent third-party users</strong>. 
+                They are NOT employees, agents, or affiliates of the Protocol. The Protocol does not curate, 
+                endorse, verify, or monitor the accuracy, legality, or appropriateness of any user-generated market.
+              </p>
+
+              <h3 className="text-white font-bold mt-4">The Hosting Layer</h3>
+              <p>
+                JNGLZ.FUN operates as a <strong className="text-white">non-custodial software interface</strong> (a "Hosting Layer"). 
+                The act of market creation is an autonomous interaction between the User and the BNB Chain smart contracts. 
+                The Protocol merely provides a frontend interface to interact with the underlying immutable smart contracts, 
+                which can also be accessed directly or through any compatible interface.
+              </p>
+
+              <h3 className="text-white font-bold mt-4">Creator Responsibility</h3>
+              <div className="bg-no/10 border border-no p-4 my-4">
+                <p className="text-no font-bold mb-2">MARKET CREATORS BEAR FULL RESPONSIBILITY</p>
+                <p className="text-sm">
+                  By creating a market, the User accepts <strong className="text-white">full legal responsibility</strong> for:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+                  <li>The content and subject matter of the prediction question</li>
+                  <li>The legality of the market in all jurisdictions where it may be accessed</li>
+                  <li>The clarity and unambiguity of the resolution criteria</li>
+                  <li>Compliance with all applicable laws and regulations</li>
+                </ul>
+              </div>
+              <p>
+                The Protocol carries <strong className="text-no">NO LIABILITY</strong> for markets that:
+              </p>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Violate local, national, or international laws or regulations</li>
+                <li>Contain defamatory, misleading, or harmful content</li>
+                <li>Infringe on intellectual property or other third-party rights</li>
+                <li>Relate to illegal activities or prohibited subject matter</li>
+                <li>Are poorly worded or have ambiguous resolution criteria</li>
+              </ul>
+              <p className="mt-4 text-xs text-text-muted">
+                Market Creators may be subject to legal liability in their jurisdiction for the markets they create. 
+                Users should consult with legal counsel before creating markets if they have any concerns about legality.
               </p>
             </div>
           </section>

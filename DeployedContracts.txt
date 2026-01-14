@@ -1,20 +1,32 @@
 # ============================================
 # JNGLZ.FUN - Deployed Contracts
 # ============================================
-# Last Updated: January 11, 2026
+# Last Updated: January 14, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v3.4.1 - Pull Pattern + ReplaceSigner) ✅ LIVE
+### PredictionMarket Contract (v3.5.0 - Heat Level Rebalance) ✅ LIVE
+- **Address**: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+- **BscScan**: https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+- **Verified**: ✅ Yes
+- **Deployed**: January 14, 2026
+- **Block**: 84281825
+- **Features**: 
+  - 5 Heat Levels (CRACK, HIGH, PRO, APEX, CORE)
+  - 10x Virtual Liquidity Increase for better price stability
+  - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
+  - Proposer Rewards (0.5%), Street Consensus Resolution
+- **Tests**: 165 passing (164 + 1 skipped)
+
+### PredictionMarket Contract (v3.4.1 - Pull Pattern + ReplaceSigner) ⚠️ DEPRECATED
 - **Address**: 0x4e20Df1772D972f10E9604e7e9C775B1ae897464
 - **BscScan**: https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
 - **Verified**: ✅ Yes
 - **Deployed**: January 10, 2026
 - **Block**: 83514593
-- **Features**: Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection, Proposer Rewards (0.5%), Heat Levels
-- **Tests**: 164 passing (163 + 1 skipped)
+- **Status**: ⚠️ DEPRECATED - Replaced by v3.5.0
 
 ### PredictionMarket Contract (v3.3.0 - Proposer Rewards) ⚠️ DEPRECATED
 - **Address**: 0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7

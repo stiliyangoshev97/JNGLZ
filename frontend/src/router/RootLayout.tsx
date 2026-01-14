@@ -9,7 +9,7 @@
 
 import { Outlet, Link } from 'react-router-dom';
 import { Header } from './Header';
-import { WrongNetworkModal, WrongNetworkBanner } from '@/shared/components/WrongNetworkModal';
+import { WrongNetworkModal, WrongNetworkBanner, ScrollToTop } from '@/shared/components';
 import { EntryModal, CookieBanner } from '@/shared/components/legal';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
 import { env } from '@/shared/config/env';
@@ -19,6 +19,9 @@ export function RootLayout() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col overflow-x-hidden">
+      {/* Scroll to top on route change */}
+      <ScrollToTop />
+
       {/* Entry Modal (first-time visitors) */}
       <EntryModal />
 

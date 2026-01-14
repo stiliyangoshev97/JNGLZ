@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 14, 2026  
-> **Status:** ✅ Smart Contracts v3.5.0 Ready (164 tests)
+> **Status:** ✅ Smart Contracts v3.5.0 DEPLOYED (165 tests)
 
 ---
 
@@ -10,14 +10,14 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| v3.5.0 | ⏳ READY | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
-| v3.4.1 | ✅ DEPLOYED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
+| v3.5.0 | ✅ DEPLOYED | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
+| v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Previous Deployment (v3.4.1)
-- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+### Current Deployment (v3.5.0)
+- **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 83514593
-- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+- **Block:** 84281825
+- **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
 - **Verified:** ✅ Yes
 
 ---

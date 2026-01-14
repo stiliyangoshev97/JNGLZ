@@ -5,13 +5,16 @@
 **Audit Date:** January 14, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
-**Status:** ⏳ Ready for Deployment (Not yet deployed)
+**Status:** ✅ DEPLOYED
 
-### Previous Deployment (v3.4.1)
-- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae89### 1. Heat Levels Are Immutable Per Market
-**Decision:** virtualLiquidity set at creation, cannot change  
-**Mitigation:** Five options available at creation time (CRACK, HIGH, PRO, APEX, CORE)4`
-- **Network:** BNB Testnet (### Parameters Configured
+### Current Deployment (v3.5.0)
+- **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 84281825
+- **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+- **Verified:** ✅ Yes
+
+### Parameters Configured
 - `platformFeeBps`: 100 (1%)
 - `creatorFeeBps`: 50 (0.5%)
 - `resolutionFeeBps`: 30 (0.3%)
@@ -26,9 +29,6 @@
 - `heatLevelPro`: 500 * 1e18 (10x increase in v3.5.0)
 - `heatLevelApex`: 2000 * 1e18 (NEW in v3.5.0)
 - `heatLevelCore`: 10000 * 1e18 (NEW in v3.5.0)
-- **Block:** 83514593
-- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-- **Verified:** ✅ Yes
 
 ---
 
