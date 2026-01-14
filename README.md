@@ -40,12 +40,44 @@ Markets can have different volatility levels:
 - **WHALE POND** - Stable prices for serious predictions (1.0-5.0+ BNB trades)
 
 ### Fee Structure
-| Fee | Amount | Recipient |
-|-----|--------|-----------|
-| Platform Fee | 1% | Treasury |
-| Creator Fee | 0.5% | Market Creator |
-| Resolution Fee | 0.3% | Treasury |
-| Market Creation | FREE | - |
+| Fee | Amount | When | Recipient |
+|-----|--------|------|-----------|
+| Platform Fee | 1% | On every trade | Treasury |
+| Creator Fee | 0.5% | On every trade | Market Creator |
+| Resolution Fee | 0.3% | When claiming winnings | Treasury |
+| Market Creation | FREE | - | - |
+
+### Jury Fee Distribution (Disputes Only)
+When a dispute occurs, the losing bonder forfeits their bond:
+- **50%** → Winning bonder (proposer or disputer)
+- **50%** → Split among winning voters (proportional to vote weight)
+
+> ⚠️ **Note**: Resolution Fee (0.3%) and Jury Fees are **completely separate**:
+> - **Resolution Fee**: Deducted from claim payouts → Treasury
+> - **Jury Fees**: Come from loser's forfeited bond → Winners only
+
+### Fee Example (With Dispute)
+```
+Market Pool: 10 BNB
+Proposer Bond: 0.1 BNB (1% of pool)
+Disputer Bond: 0.2 BNB (2× proposer)
+
+If Disputer LOSES the vote:
+├── 0.1 BNB (50% of 0.2) → Proposer (bond winner)
+└── 0.1 BNB (50% of 0.2) → Voter Pool
+
+Voter A: 1000 shares voted for Proposer
+Voter B: 3000 shares voted for Proposer
+Total winning votes: 4000 shares
+
+Voter A gets: 0.1 × (1000/4000) = 0.025 BNB
+Voter B gets: 0.1 × (3000/4000) = 0.075 BNB
+
+SEPARATELY, when winners claim their pool share:
+If you won 5 BNB from the pool:
+└── 0.3% Resolution Fee: 0.015 BNB → Treasury
+└── You receive: 4.985 BNB
+```
 
 ---
 
@@ -73,8 +105,8 @@ JunkieDotFun/
 
 | Component | Address/URL | Status |
 |-----------|-------------|--------|
-| **Contract (v3.4.1)** | [`0x4e20Df1772D972f10E9604e7e9C775B1ae897464`](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464) | ✅ Live |
-| **Subgraph (v3.4.1)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ✅ Live |
+| **Contract (v3.5.0)** | [`0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`](https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8) | ✅ Live |
+| **Subgraph (v3.4.2)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ✅ Live |
 
 ---
 

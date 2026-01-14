@@ -2,6 +2,25 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.15] - 2026-01-14
+
+### Changed
+
+#### Subgraph URL - Published Gateway
+- Switched from Studio URL to **Published Gateway URL** for higher rate limits
+- New URL: `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn`
+- Updated `.env`, `.env.example`, and `PROJECT_CONTEXT.md`
+
+#### Documentation Updates
+- **HowToPlayPage**: Added clarification to Slippage & Impact Reference section
+  - Now states values assume fresh market at 50/50
+  - Impact will differ if others have already traded
+- **HowToPlayPage**: Added explicit Jury Fee Distribution example with concrete numbers (0.02 BNB bond split)
+- **EntryModal**: Made Resolution Fee description more explicit ("goes directly to Protocol Treasury")
+- **README.md**: Updated contract address to v3.5.0, added Jury Fee Distribution section with clear explanation
+
+---
+
 ## [0.7.14] - 2026-01-14
 
 ### Added

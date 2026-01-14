@@ -207,9 +207,17 @@ export function EntryModal() {
               </div>
             </div>
           </div>
-          <p className="text-[10px] text-text-muted mt-2">
-            Trading fees (1.5% total) are deducted on buy/sell. Resolution fee (0.3%) is deducted when claiming winnings.
-          </p>
+          <div className="mt-3 p-2 bg-dark-900 border border-dark-500 rounded text-[10px]">
+            <p className="text-text-muted mb-1">
+              <strong className="text-white">Trading fees (1.5% total)</strong> are deducted on every buy/sell.
+            </p>
+            <p className="text-text-muted mb-1">
+              <strong className="text-white">Resolution fee (0.3%)</strong> is deducted from your payout when claiming winnings → goes to <strong className="text-cyber">Protocol Treasury</strong>.
+            </p>
+            <p className="text-text-muted">
+              <strong className="text-warning">Jury fees</strong> (from disputes) are <strong className="text-white">SEPARATE</strong> → come from the loser's forfeited bond, NOT from the 0.3% resolution fee.
+            </p>
+          </div>
         </div>
 
         {/* Market Rules Section */}

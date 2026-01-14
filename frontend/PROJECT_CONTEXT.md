@@ -33,15 +33,17 @@
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Studio URL (Active) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2` |
+| Gateway URL (Published) | `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn` |
+| Studio URL (Dev) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2` |
 | Version | v3.4.2 (P/L tracking for leaderboard) |
-| Rate Limit | 100,000 queries/month (production) |
+| Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)
 ```env
 # BNB Testnet (v3.5.0)
 VITE_CONTRACT_ADDRESS=0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2
+VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1

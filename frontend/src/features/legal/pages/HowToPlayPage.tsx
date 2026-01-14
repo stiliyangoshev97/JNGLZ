@@ -124,8 +124,12 @@ export function HowToPlayPage() {
             {/* Slippage Reference */}
             <div className="bg-dark-800 border border-dark-600 p-4">
               <h4 className="text-white font-bold mb-3">SLIPPAGE & IMPACT REFERENCE</h4>
-              <p className="text-text-secondary text-sm mb-3">
+              <p className="text-text-secondary text-sm mb-2">
                 How much a <strong className="text-white">1.0 BNB trade (~$600)</strong> shifts the market price at each level:
+              </p>
+              <p className="text-yellow-500 text-xs mb-3 font-bold">
+                These values assume a fresh market starting at 50/50. If others have already traded, 
+                the actual impact will differ based on the current price position.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-sm">
                 <div className="flex justify-between p-2 bg-dark-900">
@@ -353,6 +357,38 @@ export function HowToPlayPage() {
                     <li><strong className="text-white">50%</strong> → Split among voters who voted for the winning side (proportional to vote weight)</li>
                     <li className="text-no">Voters on the losing side receive <strong>ZERO</strong> jury fees</li>
                   </ul>
+                  
+                  {/* Explicit Numeric Example - DETAILED */}
+                  <div className="mt-4 p-3 bg-dark-900/70 border border-dark-600">
+                    <p className="text-white font-bold text-sm mb-3">EXAMPLE: Complete Bond & Jury Fee Split</p>
+                    <div className="text-xs text-text-secondary space-y-2">
+                      <p className="text-text-muted">Scenario: Disputer loses the vote with a <span className="text-no font-bold">0.02 BNB</span> bond</p>
+                      
+                      <div className="mt-3 space-y-2">
+                        <p className="font-bold text-white">Step 1: Bond Split (Loser's 0.02 BNB)</p>
+                        <ul className="ml-4 space-y-1">
+                          <li>• <span className="text-yes">0.01 BNB (50%)</span> → Winner (proposer)</li>
+                          <li>• <span className="text-cyber">0.01 BNB (50%)</span> → Voter Pool (split among winning voters)</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="mt-3 space-y-2">
+                        <p className="font-bold text-white">Step 2: Voter Pool Distribution</p>
+                        <p className="text-text-muted">If Voter A has 1000 shares and Voter B has 3000 shares (both voted for proposer):</p>
+                        <ul className="ml-4 space-y-1">
+                          <li>• Total winning votes = <span className="text-white">4000 shares</span></li>
+                          <li>• <span className="text-cyber">Voter A</span> gets: 0.01 × (1000/4000) = <span className="text-yes font-bold">0.0025 BNB</span></li>
+                          <li>• <span className="text-cyber">Voter B</span> gets: 0.01 × (3000/4000) = <span className="text-yes font-bold">0.0075 BNB</span></li>
+                        </ul>
+                      </div>
+                      
+                      <div className="mt-3 pt-2 border-t border-dark-600">
+                        <p className="text-warning text-xs"><strong>NOTE:</strong> This is SEPARATE from the 0.3% resolution fee. 
+                        The 0.3% is a protocol fee on claim payouts that goes to Treasury. 
+                        Jury fees come from the loser's bond, NOT from any percentage fee.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-dark-900/50 p-4 border border-dark-600">
@@ -471,6 +507,16 @@ export function HowToPlayPage() {
                     </div>
                   </div>
                   <p className="text-text-muted text-xs mt-2 text-center">Deducted from your payout when you claim winnings</p>
+                  
+                  {/* Important clarification */}
+                  <div className="mt-3 p-3 bg-warning/10 border border-warning/30">
+                    <p className="text-warning text-xs font-bold mb-1">IMPORTANT: Resolution Fee ≠ Jury Fees</p>
+                    <p className="text-text-secondary text-xs">
+                      The <strong className="text-white">0.3% resolution fee</strong> is a protocol fee on claim payouts that goes to the <strong className="text-cyber">Treasury</strong>. 
+                      This is <strong className="text-no">completely separate</strong> from jury fees earned by voters during disputed resolution.
+                      Voters earn their share of the <strong className="text-white">50% loser's bond</strong>, NOT the 0.3% fee.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Other Info */}
