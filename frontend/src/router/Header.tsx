@@ -104,11 +104,11 @@ export function Header() {
 
                       return (
                         <div className="flex items-center gap-2">
-                          {/* Chain button */}
+                          {/* Chain button - visible on all screen sizes */}
                           <button
                             onClick={openChainModal}
                             className={cn(
-                              'hidden sm:flex items-center gap-2 px-3 py-2 border text-sm font-mono transition-colors',
+                              'flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 border text-xs sm:text-sm font-mono transition-colors',
                               chain.unsupported
                                 ? 'border-no text-no bg-no/10'
                                 : 'border-dark-600 text-text-secondary hover:border-dark-500'
@@ -121,13 +121,19 @@ export function Header() {
                                 className="w-4 h-4"
                               />
                             )}
-                            {chain.unsupported ? 'WRONG' : chain.name}
+                            <span className="hidden sm:inline">
+                              {chain.unsupported ? 'WRONG' : chain.name}
+                            </span>
+                            {/* Mobile: show abbreviated or icon only if wrong */}
+                            <span className="sm:hidden">
+                              {chain.unsupported ? '!' : ''}
+                            </span>
                           </button>
 
                           {/* Account button */}
                           <button
                             onClick={openAccountModal}
-                            className="flex items-center gap-2 px-3 py-2 border border-dark-600 text-sm font-mono hover:border-cyber transition-colors"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 border border-dark-600 text-xs sm:text-sm font-mono hover:border-cyber transition-colors"
                           >
                             <span className="text-white">
                               {account.displayName}
