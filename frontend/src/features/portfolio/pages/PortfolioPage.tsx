@@ -22,6 +22,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Skeleton } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { Badge } from '@/shared/components/ui/Badge';
+import { HeatLevelBadge } from '@/shared/components/ui/HeatLevelBadge';
 import { cn } from '@/shared/utils/cn';
 import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
@@ -48,6 +49,7 @@ interface PositionWithMarket {
     proposalTimestamp?: string;
     disputer?: string;
     disputeTimestamp?: string;
+    heatLevel?: number;
   };
   yesShares: string;
   noShares: string;
@@ -1279,6 +1281,7 @@ interface MyMarketCardProps {
     proposalTimestamp?: string | null;
     disputer?: string | null;
     disputeTimestamp?: string | null;
+    heatLevel?: number;
   };
 }
 
@@ -1353,10 +1356,25 @@ function MyMarketCard({ market }: MyMarketCardProps) {
             />
             {/* Overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
-            {/* Status badge overlay */}
+            
+            {/* Heat level badge (top left) */}
+            {market.heatLevel !== undefined && (
+              <div className="absolute top-2 left-2">
+                <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+              </div>
+            )}
+            
+            {/* Status badge overlay (top right) */}
             <div className="absolute top-2 right-2">
               <Badge variant={badgeInfo.variant}>{badgeInfo.text}</Badge>
             </div>
+          </div>
+        )}
+        
+        {/* Heat level badge (if no image, show above question) */}
+        {!market.imageUrl && market.heatLevel !== undefined && (
+          <div className="flex items-center gap-2 mb-2">
+            <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
           </div>
         )}
         

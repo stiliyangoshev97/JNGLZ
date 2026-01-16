@@ -82,7 +82,7 @@ const createMarketSchema = z.object({
       return allowedExtensions.some(ext => urlWithoutParams.endsWith(ext));
     }, 'Only JPG, JPEG, PNG, GIF, and WEBP images are allowed (no SVG)'),
   durationHours: z.number().min(1, 'Min 1 hour').max(8760, 'Max 365 days'),
-  heatLevel: z.number().min(0).max(2), // 0=CRACK, 1=HIGH, 2=PRO
+  heatLevel: z.number().min(0).max(4), // 0=DEGEN FLASH, 1=STREET FIGHT, 2=WHALE POND, 3=INSTITUTION, 4=DEEP SPACE
   // Optional first trade
   wantFirstTrade: z.boolean(),
   firstTradeSide: z.enum(['yes', 'no']),
@@ -392,7 +392,7 @@ export function CreateMarketPage() {
               <span className="text-cyber">03</span> HEAT LEVEL
             </h2>
             <p className="text-sm text-text-secondary mb-4">
-              Choose the volatility level for your market. Higher heat = bigger price swings.
+              Choose the volatility level for your market. Higher heat = bigger price swings from trades.
             </p>
             <div className="space-y-3">
               {HEAT_LEVELS.map((level) => {
@@ -410,18 +410,12 @@ export function CreateMarketPage() {
                   >
                     {/* Header row */}
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <div className={`font-black text-lg ${level.textColor}`}>{level.name}</div>
-                          <div className="text-xs text-text-muted">
-                            <span className="text-white font-semibold">{level.targetUser}</span>
-                            {' · '}{level.userDescription}
-                          </div>
+                      <div>
+                        <div className={`font-black text-lg ${level.textColor}`}>{level.name}</div>
+                        <div className="text-xs text-text-muted">
+                          <span className="text-white font-semibold">{level.targetUser}</span>
+                          {' · '}{level.userDescription}
                         </div>
-                      </div>
-                      <div className={`text-right ${isSelected ? 'opacity-100' : 'opacity-60'}`}>
-                        <div className="text-xs text-text-muted uppercase">Trade Range</div>
-                        <div className={`font-mono font-bold ${level.textColor}`}>{level.tradeRange}</div>
                       </div>
                     </div>
                     
@@ -432,12 +426,22 @@ export function CreateMarketPage() {
                           <span className={`font-black ${level.textColor}`}>"{level.vibe}"</span>
                           <span className="text-sm text-text-secondary">{level.vibeDescription}</span>
                         </div>
+                        <div className="mt-2 text-xs text-text-muted">
+                          Suggested trade range: <span className="text-white font-mono">{level.tradeRange}</span>
+                        </div>
+                        <div className="mt-2 text-xs text-text-muted">
+                          1 BNB first buy moves price: <span className="text-white font-mono">50¢ → {level.priceImpact}</span>
+                        </div>
                       </div>
                     )}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-text-muted mt-3">
+              <span className="text-yellow-500">Note:</span> Trade ranges are just recommendations based on slippage. 
+              Traders can trade any amount they want — there are no enforced limits.
+            </p>
           </Card>
 
           {/* Evidence & Rules - Optional */}

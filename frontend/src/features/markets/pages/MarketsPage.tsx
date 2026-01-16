@@ -27,6 +27,7 @@ import { MarketCardSkeleton } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 
 // Sort options
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
@@ -45,10 +46,14 @@ const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 // Pagination
 const ITEMS_PER_PAGE = 20;
 
+// Heat level filter (-1 = all)
+type HeatLevelFilter = -1 | 0 | 1 | 2 | 3 | 4;
+
 export function MarketsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('volume');
   const [filterBy, setFilterBy] = useState<FilterOption>('active'); // Default: ACTIVE
   const [pendingSubFilter, setPendingSubFilter] = useState<PendingSubFilter>('all');
+  const [heatLevelFilter, setHeatLevelFilter] = useState<HeatLevelFilter>(-1); // -1 = all heat levels
   const [marketIdSearch, setMarketIdSearch] = useState('');
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -170,8 +175,10 @@ export function MarketsPage() {
     finalizing: categorizedMarkets.pendingSub.finalizing.length,
   }), [categorizedMarkets]);
 
-  // Filter markets based on selection (with ID search)
+  // Filter markets based on selection (with ID search and heat level)
   const filteredMarkets = useMemo(() => {
+    let markets: Market[];
+    
     // First, filter by market ID if search is active
     if (marketIdSearch.trim()) {
       const searchId = marketIdSearch.trim().replace('#', '');
@@ -179,17 +186,29 @@ export function MarketsPage() {
         market.marketId?.toString() === searchId || market.id === searchId
       );
       // If searching by ID, return all matches regardless of status
-      if (matches.length > 0) return matches;
+      if (matches.length > 0) {
+        markets = matches;
+      } else {
+        markets = [];
+      }
+    } else if (filterBy === 'pending' && pendingSubFilter !== 'all') {
+      // For pending tab, apply sub-filter if selected
+      markets = categorizedMarkets.pendingSub[pendingSubFilter];
+    } else {
+      // Return markets for selected category
+      markets = categorizedMarkets[filterBy];
     }
     
-    // For pending tab, apply sub-filter if selected
-    if (filterBy === 'pending' && pendingSubFilter !== 'all') {
-      return categorizedMarkets.pendingSub[pendingSubFilter];
+    // Apply heat level filter if not "all" (-1)
+    if (heatLevelFilter !== -1) {
+      markets = markets.filter((market) => {
+        const marketHeat = Number(market.heatLevel ?? 1); // Default to 1 (STREET FIGHT) if undefined
+        return marketHeat === heatLevelFilter;
+      });
     }
     
-    // Return markets for selected category
-    return categorizedMarkets[filterBy];
-  }, [allMarkets, categorizedMarkets, filterBy, pendingSubFilter, marketIdSearch]);
+    return markets;
+  }, [allMarkets, categorizedMarkets, filterBy, pendingSubFilter, marketIdSearch, heatLevelFilter]);
 
   // Sort markets
   const sortedMarkets = useMemo(() => {
@@ -234,6 +253,12 @@ export function MarketsPage() {
 
   const handleSortChange = (newSort: SortOption) => {
     setSortBy(newSort);
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
+  // Reset pagination when heat level filter changes
+  const handleHeatLevelChange = (newHeatLevel: HeatLevelFilter) => {
+    setHeatLevelFilter(newHeatLevel);
     setDisplayCount(ITEMS_PER_PAGE);
   };
 
@@ -403,6 +428,42 @@ export function MarketsPage() {
               >
                 LIQUID
               </SortButton>
+              
+              {/* Heat Level Filter - Dropdown */}
+              <div className="h-4 w-px bg-dark-600 mx-2" />
+              <span className="text-text-muted text-xs font-mono">HEAT:</span>
+              <select
+                value={heatLevelFilter}
+                onChange={(e) => handleHeatLevelChange(Number(e.target.value) as HeatLevelFilter)}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer appearance-none pr-8',
+                  'bg-dark-800 focus:outline-none',
+                  heatLevelFilter === -1 
+                    ? 'border-cyber text-cyber bg-cyber/10'
+                    : heatLevelFilter === 0 
+                      ? 'border-no text-no bg-no/10'
+                      : heatLevelFilter === 1
+                        ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10'
+                        : heatLevelFilter === 2
+                          ? 'border-cyber text-cyber bg-cyber/10'
+                          : heatLevelFilter === 3
+                            ? 'border-blue-400 text-blue-400 bg-blue-400/10'
+                            : 'border-purple-400 text-purple-400 bg-purple-400/10'
+                )}
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2300F5D4'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1rem',
+                }}
+              >
+                <option value={-1}>ALL HEAT</option>
+                {HEAT_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.shortName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -428,7 +489,7 @@ export function MarketsPage() {
                   count={pendingSubCounts.awaiting}
                   color="yellow"
                 >
-                  ⏳ AWAITING
+                  AWAITING
                 </SubFilterButton>
               )}
               {pendingSubCounts.proposed > 0 && (

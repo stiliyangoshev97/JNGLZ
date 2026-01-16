@@ -2,6 +2,105 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.17] - 2026-01-16
+
+### Added
+
+#### MarketCard Volume Display
+- Added permanent volume display in MarketCard footer (`VOL: X.XX BNB`)
+- Replaces conditional "🔥 HOT" indicator that only showed for high volume markets
+- All markets now show their trading volume for better transparency
+
+### Changed
+
+#### LeaderboardPage - Styling Cleanup
+- Removed colored borders from top 3 positions (was gold/silver/bronze)
+- All leaderboard cards now have consistent `border-dark-600` styling
+- Rank badges still retain colored backgrounds (1ST=gold, 2ND=silver, 3RD=bronze)
+- Added `hover:border-cyber/50` for interactive feedback
+
+#### LeaderboardPage - Predator Polling v2 Compliance
+- Removed `pollInterval: 60000` (no continuous polling)
+- Added `useFocusRefetch(refetch)` for tab focus refresh
+- Added `notifyOnNetworkStatusChange: false` to prevent UI flicker
+
+#### MarketsPage - Emoji Removal
+- Removed clock emoji (⏳) from "AWAITING" sub-filter button
+
+#### CreateMarketPage - Price Impact Display
+- Moved 1 BNB price impact info from top-right of heat level buttons
+- Now shows in expanded section below "Suggested trade range"
+- Format: `1 BNB first buy moves price: 50¢ → 83¢`
+- Cleaner unselected state, relevant info shown when selected
+
+#### HeatLevelBadge - Fixed Display Info
+- `HeatLevelInfo` now shows "Trade Range" instead of "Virtual Liquidity: X BNB"
+- `HeatLevelTooltip` now shows "Trade Range" instead of "vLiq: X BNB"
+- Removed incorrect "1 BNB Price Impact" from market details page (only relevant for fresh markets)
+- Virtual liquidity is in shares, not BNB - fixed misleading display
+
+#### heatLevel.ts - Comment Corrections
+- Fixed comment: `virtualLiquidity` is in **shares**, not BNB
+- Updated `priceImpact` values to show resulting price (83¢) instead of delta (~33¢)
+
+#### HowToPlayPage - Removed Theoretical Table
+- Removed "SAME TRADE, DIFFERENT HEAT LEVELS" section with 500 shares example
+- Was theoretical/mathematical, not based on actual testing
+- Replaced with key takeaway pointing to tested 1 BNB impact table
+- Now only shows verified, tested price impact data
+
+### Fixed
+
+#### ResolutionPanel - Empty Markets After 24h
+- Empty markets (no participants) now correctly show "UNRESOLVED" badge after 24h
+- Previously showed "NO ACTIVITY" indefinitely
+- Logic already correct: `now > emergencyRefundTime` check comes before `isEmptyMarket`
+
+---
+
+## [0.7.16] - 2026-01-15
+
+### Added
+
+#### Price Impact Documentation (Tested Results)
+- Added `priceImpact` field to `HeatLevelConfig` interface in `heatLevel.ts`
+- Values based on actual testnet testing (1 BNB first buy on fresh market):
+  - DEGEN FLASH: ~33¢ (50¢ → 83¢)
+  - STREET FIGHT: ~16¢ (50¢ → 66¢)
+  - WHALE POND: ~8¢ (50¢ → 58¢)
+  - INSTITUTION: ~2¢ (50¢ → 52¢)
+  - DEEP SPACE: <1¢ (50¢ → ~50¢)
+
+#### Portfolio Heat Badges
+- Added `HeatLevelBadge` to `PositionCard` for individual positions
+- Added `HeatLevelBadge` to `MyMarketCard` for user-created markets
+- Heat badges now visible throughout portfolio for quick risk assessment
+
+### Changed
+
+#### HowToPlayPage - Heat Level Table
+- Changed "TRADE RANGE" column to "1 BNB IMPACT"
+- Now shows exact price movements (e.g., "50¢ → 83¢") instead of vague ranges
+- Updated "SLIPPAGE & IMPACT REFERENCE" section with real tested values
+
+#### CreateMarketPage - Heat Level Selector
+- Changed right-side display from "Trade Range" to "1 BNB moves price"
+- Now prominently shows price impact (e.g., "~33¢")
+- Moved Virtual Liquidity and Trade Range to expanded details section
+
+#### HeatLevelBadge Component
+- `HeatLevelInfo` now shows price impact and virtual liquidity
+- `HeatLevelTooltip` now displays "1 BNB moves:" line with price impact value
+- More informative tooltips help users understand market dynamics
+
+#### Leaderboard Page (v0.7.15 continuation)
+- Fixed GraphQL query structure for `getLeaderboard` response
+- Fixed TypeScript types for `LeaderboardEntry` and `GetLeaderboardResponse`
+- Predator Polling v2 compliance (uses `useSmartQuery`)
+- Removed emoji from empty state message
+
+---
+
 ## [0.7.15] - 2026-01-14
 
 ### Changed

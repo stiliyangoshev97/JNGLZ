@@ -31,7 +31,7 @@ const STEPS: Step[] = [
   {
     number: '2',
     title: 'TRADE ON THE CURVE',
-    description: 'Buy YES or NO shares using BNB. Prices move on a bonding curve - early believers profit when others join.',
+    description: 'Buy YES or NO shares using BNB. Prices move on a linear bonding curve - price reflects probability directly.',
   },
   {
     number: '3',
@@ -227,8 +227,8 @@ export function EntryModal() {
             
             {/* Bonding Curve */}
             <div>
-              <span className="text-cyber font-bold">Bonding Curve Pricing:</span>
-              <p className="mt-1">YES + NO price always equals 0.01 BNB. Buying pushes price up, selling pushes it down. <strong className="text-no">No arbitrage</strong> - instant buy/sell = guaranteed loss due to price impact + fees.</p>
+              <span className="text-cyber font-bold">Linear Bonding Curve:</span>
+              <p className="mt-1">We use a <strong className="text-white">Linear Constant Sum AMM</strong> (not exponential like pump.fun). YES + NO price always equals 0.01 BNB. Price reflects market probability directly. Buying pushes price up, selling pushes it down. <strong className="text-no">No arbitrage</strong> - instant buy/sell = guaranteed loss due to price impact + fees.</p>
             </div>
 
             {/* Resolution Timeline */}

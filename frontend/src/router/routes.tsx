@@ -19,6 +19,7 @@ const MarketsPage = lazy(() => import('@/features/markets/pages/MarketsPage'));
 const MarketDetailPage = lazy(() => import('@/features/markets/pages/MarketDetailPage'));
 const PortfolioPage = lazy(() => import('@/features/portfolio/pages/PortfolioPage'));
 const CreateMarketPage = lazy(() => import('@/features/create/pages/CreateMarketPage'));
+const LeaderboardPage = lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
 const TermsPage = lazy(() => import('@/features/legal/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/features/legal/pages/PrivacyPage'));
 const HowToPlayPage = lazy(() => import('@/features/legal/pages/HowToPlayPage'));
@@ -72,6 +73,14 @@ export const router = createBrowserRouter([
         element: (
           <PageLoader>
             <CreateMarketPage />
+          </PageLoader>
+        ),
+      },
+      {
+        path: 'leaderboard',
+        element: (
+          <PageLoader>
+            <LeaderboardPage />
           </PageLoader>
         ),
       },

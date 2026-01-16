@@ -1,7 +1,7 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 14, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.14  
+> **Last Updated:** January 15, 2026  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.16  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -19,11 +19,11 @@
 - New P/L fields: `totalPnL`, `tradingPnL`, `resolutionPnL`, `winRate`, etc.
 - User entity now tracks all earnings for leaderboard
 
-### Frontend v0.7.14 ✅
-- Updated contract address and subgraph URL in `.env`
-- Added ScrollToTop component (fixes mid-page navigation)
-- Entry Modal v3.0 with User-Generated Markets disclaimer
-- Terms of Service Section 3A - Creator Liability
+### Frontend v0.7.16 ✅
+- Price Impact documentation with tested values
+- Heat badges on Portfolio page (positions + created markets)
+- Leaderboard query/types fixes + Predator v2 compliance
+- Updated HowToPlayPage, CreateMarketPage, HeatLevelBadge with price impact info
 
 ---
 
@@ -101,7 +101,7 @@ Users can still create APEX/CORE markets via direct contract interaction.
 |-----------|---------|--------|
 | Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.14 | ✅ Updated with creator liability |
+| Frontend | v0.7.16 | ✅ Price Impact + Heat Badges + Leaderboard |
 
 ---
 

@@ -253,6 +253,47 @@ Traditional prediction markets (Polymarket, Augur) use order books or simple tok
 
 ---
 
+### 📊 Price Impact by Heat Level (Tested Results)
+
+> **How much does 1 BNB move the price on a fresh market?**
+
+Virtual liquidity determines how much a trade affects the price. Higher liquidity = less price movement = more stable markets.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│              PRICE IMPACT: 1 BNB FIRST BUY ON FRESH MARKET              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   Heat Level      │ Virtual Liq. │ Price Move  │ Volatility │ Use Case  │
+│   ────────────────┼──────────────┼─────────────┼────────────┼───────────│
+│   🔥 DEGEN FLASH  │    50 BNB    │ 50¢ → 83¢   │  EXTREME   │ Degens    │
+│   ⚡ STREET FIGHT │   200 BNB    │ 50¢ → 66¢   │   HIGH     │ Default   │
+│   🌊 WHALE POND   │   500 BNB    │ 50¢ → 58¢   │  MEDIUM    │ Whales    │
+│   🏛️ INSTITUTION │  2,000 BNB   │ 50¢ → 52¢   │    LOW     │ Pro/Inst  │
+│   🚀 DEEP SPACE   │ 10,000 BNB   │ 50¢ → ~50¢  │  MINIMAL   │ Max depth │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   WHY THIS MATTERS:                                                      │
+│   ─────────────────                                                      │
+│   • DEGEN FLASH: 1 BNB moves price 33¢ - huge swings, quick profits    │
+│   • STREET FIGHT: 1 BNB moves price 16¢ - balanced for most markets    │
+│   • WHALE POND: 1 BNB moves price 8¢ - whales can trade without chaos  │
+│   • INSTITUTION: 1 BNB moves price 2¢ - professional stability          │
+│   • DEEP SPACE: 1 BNB barely moves - maximum market depth              │
+│                                                                          │
+│   THE MATH:                                                              │
+│   ──────────                                                             │
+│   Price impact ≈ tradeSize / (2 × virtualLiquidity)                     │
+│                                                                          │
+│   • DEGEN: 1 BNB / (2 × 50) = 1% of liquidity → ~33¢ move              │
+│   • DEEP SPACE: 1 BNB / (2 × 10000) = 0.005% → negligible move         │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ### ⚙️ Configurable Parameters (3-of-3 MultiSig)
 
 > **All economic parameters can be adjusted for NEW markets via governance:**

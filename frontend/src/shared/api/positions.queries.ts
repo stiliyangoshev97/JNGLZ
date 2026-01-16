@@ -33,6 +33,7 @@ export const POSITION_FRAGMENT = gql`
       noShares
       poolBalance
       virtualLiquidity
+      heatLevel
       proposer
       proposalTimestamp
       disputer

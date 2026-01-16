@@ -86,12 +86,17 @@ export interface GetUserStatsResponse {
 
 export interface LeaderboardEntry {
   id: string;
-  user: string;
+  address: string;
   totalPnL: string;
+  tradingPnL: string;
+  resolutionPnL: string;
   totalVolume: string;
   totalTrades: string;
+  winCount: string;
+  lossCount: string;
+  winRate: string;
 }
 
 export interface GetLeaderboardResponse {
-  userStats: LeaderboardEntry[];
+  users: LeaderboardEntry[];
 }

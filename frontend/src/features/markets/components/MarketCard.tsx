@@ -155,10 +155,10 @@ export function MarketCard({ market, className }: MarketCardProps) {
             {isExpired ? 'EXPIRED' : timeRemaining}
           </span>
 
-          {/* Activity indicator */}
-          {volumeBNB > 5 && (
-            <span className="text-yes animate-pulse">🔥 HOT</span>
-          )}
+          {/* Volume */}
+          <span className="text-text-muted">
+            VOL: {volumeBNB.toFixed(2)} BNB
+          </span>
         </div>
       </Card>
     </Link>

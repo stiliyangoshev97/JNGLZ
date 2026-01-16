@@ -72,7 +72,6 @@ export function ErrorBoundary() {
         <div className="max-w-md w-full border-2 border-cyber bg-dark-900 p-8 text-center">
           {/* Glitch effect title */}
           <div className="mb-6">
-            <p className="text-6xl mb-4">🔄</p>
             <h1 className="text-3xl font-black uppercase text-cyber glitch-text">
               UPDATE AVAILABLE
             </h1>
@@ -99,7 +98,7 @@ export function ErrorBoundary() {
 
           {/* Subtle note */}
           <p className="mt-6 text-xs text-text-muted font-mono uppercase">
-            This happens after we ship new features 🚀
+            This happens after we ship new features
           </p>
         </div>
       </div>

@@ -444,6 +444,10 @@ function MarketInfoCompact({ market }: { market: Market }) {
               </span>
             </div>
           )}
+          {/* Street Consensus Disclaimer */}
+          <p className="text-yellow-500/80 mt-2 pt-2 border-t border-dark-700">
+            Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
+          </p>
         </div>
       )}
     </div>

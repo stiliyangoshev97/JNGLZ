@@ -45,7 +45,7 @@ export function HowToPlayPage() {
                 the market. Your objective is to <strong className="text-cyber">capitalize on market mispricing</strong>.
               </p>
               <p className="text-text-secondary leading-relaxed">
-                Whether you are sniping a <strong className="text-yes">700% flip</strong> in <span className="text-no">CRACK</span> or 
+                Whether you are sniping a <strong className="text-yes">700% flip</strong> in <span className="text-no">DEGEN FLASH</span> or 
                 building a massive position in <span className="text-purple-400">DEEP SPACE</span>, the mission is the same: 
                 <strong className="text-cyber"> Be right about the truth before the market finds its equilibrium.</strong>
               </p>
@@ -68,89 +68,83 @@ export function HowToPlayPage() {
               <table className="w-full text-sm border border-dark-600">
                 <thead>
                   <tr className="bg-dark-800">
-                    <th className="text-left p-3 border-b border-dark-600 text-text-muted">LEVEL</th>
-                    <th className="text-left p-3 border-b border-dark-600 text-text-muted">NAME</th>
+                    <th className="text-left p-3 border-b border-dark-600 text-text-muted">HEAT LEVEL</th>
                     <th className="text-left p-3 border-b border-dark-600 text-text-muted">vLiq</th>
+                    <th className="text-left p-3 border-b border-dark-600 text-text-muted">1 BNB IMPACT</th>
                     <th className="text-left p-3 border-b border-dark-600 text-text-muted">TARGET USER</th>
-                    <th className="text-left p-3 border-b border-dark-600 text-text-muted">TRADE RANGE</th>
                     <th className="text-left p-3 border-b border-dark-600 text-text-muted">THE "VIBE"</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-no">CRACK</td>
                     <td className="p-3 text-no">DEGEN FLASH</td>
                     <td className="p-3 text-white">50</td>
+                    <td className="p-3 text-no font-bold">50¢ → 83¢</td>
                     <td className="p-3 text-text-secondary">Moon-Bagger</td>
-                    <td className="p-3 text-text-secondary">0.005 – 0.1 BNB</td>
-                    <td className="p-3 text-text-muted text-xs">Total Chaos. Small trades move the needle. High volatility playground.</td>
+                    <td className="p-3 text-text-muted text-xs">Total Chaos. Small trades move the needle. Extreme volatility.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-yellow-500">HIGH</td>
                     <td className="p-3 text-yellow-500">STREET FIGHT</td>
                     <td className="p-3 text-white">200</td>
+                    <td className="p-3 text-yellow-500 font-bold">50¢ → 66¢</td>
                     <td className="p-3 text-text-secondary">The Trader</td>
-                    <td className="p-3 text-text-secondary">0.1 – 1.0 BNB</td>
-                    <td className="p-3 text-text-muted text-xs">The Standard. Strategic tug-of-war. Perfect for active day-trading.</td>
+                    <td className="p-3 text-text-muted text-xs">The Standard. Strategic tug-of-war. High ROI potential.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-cyber">PRO</td>
                     <td className="p-3 text-cyber">WHALE POND</td>
                     <td className="p-3 text-white">500</td>
+                    <td className="p-3 text-cyber font-bold">50¢ → 58¢</td>
                     <td className="p-3 text-text-secondary">The Shark</td>
-                    <td className="p-3 text-text-secondary">1.0 – 5.0 BNB</td>
                     <td className="p-3 text-text-muted text-xs">Serious Stakes. Balanced slippage for high-conviction players.</td>
                   </tr>
                   <tr className="border-b border-dark-700">
-                    <td className="p-3 text-blue-400">APEX</td>
                     <td className="p-3 text-blue-400">INSTITUTION</td>
                     <td className="p-3 text-white">2000</td>
+                    <td className="p-3 text-blue-400 font-bold">50¢ → 52¢</td>
                     <td className="p-3 text-text-secondary">The Whale</td>
-                    <td className="p-3 text-text-secondary">5.0 – 20.0 BNB</td>
-                    <td className="p-3 text-text-muted text-xs">The Professional. Deep liquidity. Price moves are slow and measured.</td>
+                    <td className="p-3 text-text-muted text-xs">The Professional. Deep liquidity. Price moves slowly.</td>
                   </tr>
                   <tr>
-                    <td className="p-3 text-purple-400">CORE</td>
                     <td className="p-3 text-purple-400">DEEP SPACE</td>
                     <td className="p-3 text-white">10000</td>
+                    <td className="p-3 text-purple-400 font-bold">50¢ → ~50¢</td>
                     <td className="p-3 text-text-secondary">The Titan</td>
-                    <td className="p-3 text-text-secondary">20.0 – 100+ BNB</td>
-                    <td className="p-3 text-text-muted text-xs">Infinite Depth. Built for massive capital. The final source of truth.</td>
+                    <td className="p-3 text-text-muted text-xs">Infinite Depth. Near-zero slippage. The final source of truth.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            {/* Slippage Reference */}
+            {/* Price Impact Reference */}
             <div className="bg-dark-800 border border-dark-600 p-4">
-              <h4 className="text-white font-bold mb-3">SLIPPAGE & IMPACT REFERENCE</h4>
+              <h4 className="text-white font-bold mb-3">PRICE IMPACT REFERENCE (TESTED)</h4>
               <p className="text-text-secondary text-sm mb-2">
-                How much a <strong className="text-white">1.0 BNB trade (~$600)</strong> shifts the market price at each level:
+                How much a <strong className="text-white">1 BNB first buy</strong> moves the price on a fresh market (starting at 50¢):
               </p>
               <p className="text-yellow-500 text-xs mb-3 font-bold">
-                These values assume a fresh market starting at 50/50. If others have already traded, 
-                the actual impact will differ based on the current price position.
+                These are real tested values. If others have already traded, 
+                the actual impact will differ based on the current market state.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-sm">
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-no">CRACK (50)</span>
-                  <span className="text-white">~25.0%</span>
+                  <span className="text-no">DEGEN FLASH</span>
+                  <span className="text-white">+33¢ move</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-yellow-500">HIGH (200)</span>
-                  <span className="text-white">~7.0%</span>
+                  <span className="text-yellow-500">STREET FIGHT</span>
+                  <span className="text-white">+16¢ move</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-cyber">PRO (500)</span>
-                  <span className="text-white">~3.0%</span>
+                  <span className="text-cyber">WHALE POND</span>
+                  <span className="text-white">+8¢ move</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-blue-400">APEX (2000)</span>
-                  <span className="text-white">~0.75%</span>
+                  <span className="text-blue-400">INSTITUTION</span>
+                  <span className="text-white">+2¢ move</span>
                 </div>
                 <div className="flex justify-between p-2 bg-dark-900">
-                  <span className="text-purple-400">CORE (10000)</span>
-                  <span className="text-white">~0.15%</span>
+                  <span className="text-purple-400">DEEP SPACE</span>
+                  <span className="text-white">&lt;1¢ move</span>
                 </div>
               </div>
             </div>
@@ -453,6 +447,221 @@ export function HowToPlayPage() {
                   There is no risk-free arbitrage in the Jungle.
                 </p>
               </div>
+            </div>
+          </section>
+
+          {/* ===== THE MATH BEHIND THE CURVE ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-purple-500 pl-4 mb-6">
+              THE MATH BEHIND THE CURVE
+            </h2>
+            
+            <p className="text-text-secondary mb-6">
+              JNGLZ.FUN uses a <strong className="text-cyber">Linear Constant Sum AMM</strong> — a bonding curve model 
+              specifically designed for prediction markets. Here's how it works and why we chose it.
+            </p>
+
+            {/* Linear vs Exponential */}
+            <div className="bg-dark-800 border border-purple-500/30 p-6 mb-6">
+              <h4 className="text-purple-400 font-black text-lg mb-4">LINEAR vs EXPONENTIAL CURVES</h4>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Exponential (what we DON'T use) */}
+                <div className="border border-dark-600 p-4">
+                  <h5 className="text-text-muted font-bold mb-3 flex items-center gap-2">
+                    <span className="text-no">✗</span> Exponential (Pump.fun style)
+                  </h5>
+                  <div className="space-y-2 text-sm text-text-secondary">
+                    <p>Price = k × Supply²</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Price increases <strong className="text-white">exponentially</strong> with supply</li>
+                      <li>Early buyers get extreme advantages</li>
+                      <li>Late buyers face massive slippage</li>
+                      <li>Great for tokens, <span className="text-no">bad for predictions</span></li>
+                    </ul>
+                    <p className="text-text-muted text-xs mt-3">
+                      Problem: A 90% YES price doesn't mean 90% probability — it means lots of people bought early.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Linear (what we use) */}
+                <div className="border border-cyber p-4 bg-cyber/5">
+                  <h5 className="text-cyber font-bold mb-3 flex items-center gap-2">
+                    <span className="text-yes">✓</span> Linear Constant Sum (JNGLZ)
+                  </h5>
+                  <div className="space-y-2 text-sm text-text-secondary">
+                    <p>P(YES) = <span className="text-cyber">0.01</span> × virtualYes / totalVirtual</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Price changes <strong className="text-white">proportionally</strong> to demand</li>
+                      <li>P(YES) + P(NO) = 0.01 BNB <strong className="text-cyber">always</strong></li>
+                      <li>Price directly reflects market probability</li>
+                      <li><span className="text-yes">Perfect for prediction markets</span></li>
+                    </ul>
+                    <p className="text-text-muted text-xs mt-3">
+                      Benefit: A 70% YES price means the market believes there's a 70% chance of YES winning.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* The Formula */}
+            <div className="bg-dark-800 border border-dark-600 p-6 mb-6">
+              <h4 className="text-white font-black text-lg mb-4">THE PRICE FORMULA</h4>
+              
+              <div className="bg-dark-900 p-4 font-mono text-sm mb-4 overflow-x-auto">
+                <div className="space-y-2">
+                  <p><span className="text-text-muted">// Virtual shares (includes liquidity buffer)</span></p>
+                  <p><span className="text-cyan-400">virtualYes</span> = yesSupply + <span className="text-purple-400">virtualLiquidity</span></p>
+                  <p><span className="text-cyan-400">virtualNo</span> = noSupply + <span className="text-purple-400">virtualLiquidity</span></p>
+                  <p><span className="text-cyan-400">totalVirtual</span> = virtualYes + virtualNo</p>
+                  <p className="mt-3"><span className="text-text-muted">// Price calculation</span></p>
+                  <p><span className="text-yes">P(YES)</span> = <span className="text-cyber">0.01 BNB</span> × virtualYes / totalVirtual</p>
+                  <p><span className="text-no">P(NO)</span> = <span className="text-cyber">0.01 BNB</span> × virtualNo / totalVirtual</p>
+                </div>
+              </div>
+              
+              <div className="bg-cyber/10 border border-cyber p-3">
+                <p className="text-sm text-text-secondary">
+                  <strong className="text-cyber">Key Insight:</strong> The prices are just the <strong className="text-white">ratio</strong> of 
+                  virtual shares on each side. More YES shares → higher YES price, lower NO price. The total always equals 0.01 BNB.
+                </p>
+              </div>
+            </div>
+
+            {/* Worked Example */}
+            <div className="bg-dark-800 border border-dark-600 p-6 mb-6">
+              <h4 className="text-white font-black text-lg mb-4">WORKED EXAMPLE</h4>
+              
+              <div className="space-y-4 text-sm">
+                <div className="p-4 bg-dark-900 border border-dark-700">
+                  <p className="text-yellow-500 font-bold mb-2">Scenario: STREET FIGHT market (vLiq = 200)</p>
+                  <p className="text-text-secondary">Market just created. No trades yet.</p>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="p-3 bg-dark-900 text-center">
+                    <p className="text-text-muted text-xs">YES Supply</p>
+                    <p className="text-white font-mono text-lg">0</p>
+                  </div>
+                  <div className="p-3 bg-dark-900 text-center">
+                    <p className="text-text-muted text-xs">NO Supply</p>
+                    <p className="text-white font-mono text-lg">0</p>
+                  </div>
+                  <div className="p-3 bg-dark-900 text-center">
+                    <p className="text-text-muted text-xs">Virtual Liquidity</p>
+                    <p className="text-purple-400 font-mono text-lg">200</p>
+                  </div>
+                </div>
+
+                <div className="bg-dark-900 p-4 font-mono text-xs">
+                  <p className="text-text-muted mb-2">Calculate initial prices:</p>
+                  <p>virtualYes = 0 + 200 = <span className="text-cyan-400">200</span></p>
+                  <p>virtualNo = 0 + 200 = <span className="text-cyan-400">200</span></p>
+                  <p>totalVirtual = 200 + 200 = <span className="text-cyan-400">400</span></p>
+                  <p className="mt-2">P(YES) = 0.01 × (200/400) = <span className="text-yes">0.005 BNB (50%)</span></p>
+                  <p>P(NO) = 0.01 × (200/400) = <span className="text-no">0.005 BNB (50%)</span></p>
+                </div>
+
+                <div className="p-4 bg-yes/10 border border-yes/30">
+                  <p className="text-yes font-bold mb-2">Now someone buys 100 YES shares:</p>
+                  <div className="bg-dark-900 p-3 font-mono text-xs mt-2">
+                    <p>virtualYes = 100 + 200 = <span className="text-cyan-400">300</span></p>
+                    <p>virtualNo = 0 + 200 = <span className="text-cyan-400">200</span></p>
+                    <p>totalVirtual = 300 + 200 = <span className="text-cyan-400">500</span></p>
+                    <p className="mt-2">P(YES) = 0.01 × (300/500) = <span className="text-yes">0.006 BNB (60%)</span></p>
+                    <p>P(NO) = 0.01 × (500-300)/500 = <span className="text-no">0.004 BNB (40%)</span></p>
+                  </div>
+                  <p className="text-text-secondary text-xs mt-3">
+                    Result: YES price moved from 50% → 60%. The 100 share purchase shifted the market by 10 percentage points.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== VIRTUAL LIQUIDITY DEEP DIVE ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-purple-500 pl-4 mb-6">
+              VIRTUAL LIQUIDITY EXPLAINED
+            </h2>
+            
+            <p className="text-text-secondary mb-6">
+              <strong className="text-purple-400">Virtual Liquidity</strong> is the secret sauce that makes JNGLZ markets work. 
+              It's "phantom" shares that exist only in the pricing formula — they're never actually minted or owned by anyone.
+            </p>
+
+            {/* The Problem */}
+            <div className="bg-dark-800 border border-no/30 p-6 mb-6">
+              <h4 className="text-no font-black mb-3">THE PROBLEM IT SOLVES</h4>
+              <p className="text-text-secondary text-sm mb-4">
+                Imagine a brand new market with <strong className="text-white">0 shares</strong> on each side. 
+                How do you calculate the price? You can't divide by zero!
+              </p>
+              <div className="bg-dark-900 p-3 font-mono text-sm text-no">
+                P(YES) = 0.01 × (0 / 0) = ❌ UNDEFINED
+              </div>
+              <p className="text-text-secondary text-sm mt-4">
+                Without virtual liquidity, new markets would have no starting price, and the first trade would be impossible.
+              </p>
+            </div>
+
+            {/* The Solution */}
+            <div className="bg-dark-800 border border-yes/30 p-6 mb-6">
+              <h4 className="text-yes font-black mb-3">THE SOLUTION</h4>
+              <p className="text-text-secondary text-sm mb-4">
+                We add <strong className="text-purple-400">virtual shares</strong> to both sides. These phantom shares:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-sm text-text-secondary mb-4">
+                <li>Provide a <strong className="text-white">starting price</strong> (50/50) for new markets</li>
+                <li>Act as a <strong className="text-white">"weight"</strong> that dampens price movements</li>
+                <li>Control <strong className="text-white">volatility</strong> — more vLiq = smaller price swings</li>
+                <li>Are <strong className="text-white">never owned</strong> by anyone — they're just math</li>
+              </ul>
+              <div className="bg-dark-900 p-3 font-mono text-sm text-yes">
+                P(YES) = 0.01 × (0 + 200) / (0 + 200 + 0 + 200) = 0.005 ✓
+              </div>
+            </div>
+
+            {/* vLiq as Weight */}
+            <div className="bg-dark-800 border border-dark-600 p-6 mb-6">
+              <h4 className="text-white font-black mb-4">VIRTUAL LIQUIDITY AS "MARKET WEIGHT"</h4>
+              
+              <p className="text-text-secondary text-sm mb-4">
+                Think of virtual liquidity as <strong className="text-cyber">ballast on a ship</strong>. 
+                More ballast = more stability = harder to tip.
+              </p>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 bg-no/10 border border-no/30">
+                  <p className="text-no font-bold mb-2">Low vLiq (DEGEN FLASH = 50)</p>
+                  <p className="text-text-secondary text-xs mb-2">Like a small rowboat — tips easily</p>
+                  <ul className="text-xs text-text-secondary space-y-1">
+                    <li>• Small trades = BIG price swings</li>
+                    <li>• 0.1 BNB can move price 10%+</li>
+                    <li>• High volatility, degen playground</li>
+                  </ul>
+                </div>
+                <div className="p-4 bg-purple-500/10 border border-purple-500/30">
+                  <p className="text-purple-400 font-bold mb-2">High vLiq (DEEP SPACE = 10,000)</p>
+                  <p className="text-text-secondary text-xs mb-2">Like an aircraft carrier — almost immovable</p>
+                  <ul className="text-xs text-text-secondary space-y-1">
+                    <li>• Massive trades = small price swings</li>
+                    <li>• 10 BNB might move price 0.5%</li>
+                    <li>• Ultra stable, institutional grade</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Insight */}
+            <div className="bg-dark-800 border border-cyber/30 p-6">
+              <h4 className="text-cyber font-black mb-3">KEY TAKEAWAY</h4>
+              <p className="text-text-secondary text-sm">
+                Virtual Liquidity controls how "heavy" the market feels. More vLiq = more capital needed to move the price.
+                Check the <strong className="text-white">Heat Levels table above</strong> for tested 1 BNB price impacts on fresh markets.
+              </p>
             </div>
           </section>
 

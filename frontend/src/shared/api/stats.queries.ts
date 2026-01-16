@@ -86,17 +86,21 @@ export const GET_MARKET_HOURLY_STATS = gql`
 `;
 
 /**
- * Get leaderboard - top traders by volume
+ * Get leaderboard - top traders by total P/L
  */
 export const GET_LEADERBOARD = gql`
-  query GetLeaderboard($first: Int = 50) {
-    users(first: $first, orderBy: totalVolume, orderDirection: desc) {
+  query GetLeaderboard($first: Int = 10, $orderBy: String = "totalPnL", $orderDirection: String = "desc") {
+    users(first: $first, orderBy: totalPnL, orderDirection: desc, where: { totalTrades_gt: "0" }) {
       id
       address
       totalTrades
       totalVolume
-      marketsCreated
-      totalClaimed
+      totalPnL
+      tradingPnL
+      resolutionPnL
+      winCount
+      lossCount
+      winRate
     }
   }
 `;

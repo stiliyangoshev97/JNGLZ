@@ -86,12 +86,12 @@ export function HeatLevelInfo({ heatLevel, className }: HeatLevelInfoProps) {
       {/* Details */}
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-text-muted">Target:</span>
-          <span className="text-white font-medium">{config.targetUser}</span>
+          <span className="text-text-muted">Trade Range:</span>
+          <span className="text-white font-mono">{config.tradeRange}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-text-muted">Typical Trade:</span>
-          <span className="text-white font-mono">{config.tradeRange}</span>
+          <span className="text-text-muted">Target:</span>
+          <span className="text-white font-medium">{config.targetUser}</span>
         </div>
       </div>
       
@@ -118,11 +118,7 @@ function HeatLevelTooltip({ config }: { config: HeatLevelConfig }) {
       
       <div className="text-xs space-y-1">
         <div className="flex justify-between gap-4">
-          <span className="text-text-muted">For:</span>
-          <span className="text-white">{config.targetUser}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-text-muted">Trades:</span>
+          <span className="text-text-muted">Trade Range:</span>
           <span className="font-mono text-white">{config.tradeRange}</span>
         </div>
       </div>

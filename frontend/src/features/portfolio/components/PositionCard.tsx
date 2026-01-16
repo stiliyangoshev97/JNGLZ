@@ -15,6 +15,7 @@ import { Badge, YesHolderBadge, NoHolderBadge } from '@/shared/components/ui/Bad
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
+import { HeatLevelBadge } from '@/shared/components/ui/HeatLevelBadge';
 import { useFinalizeMarket, useClaim, useEmergencyRefund } from '@/shared/hooks';
 import { cn } from '@/shared/utils/cn';
 import { calculateYesPercent, formatBNB } from '@/shared/utils/format';
@@ -42,6 +43,7 @@ interface PositionWithMarket {
     disputeTimestamp?: string;
     creatorAddress?: string;
     virtualLiquidity?: string;
+    heatLevel?: number;
   };
   yesShares: string;
   noShares: string;
@@ -388,6 +390,20 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
           />
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
+          
+          {/* Heat level badge (top left) */}
+          {market.heatLevel !== undefined && (
+            <div className="absolute top-2 left-2">
+              <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Heat level badge (if no image, show above question) */}
+      {!market.imageUrl && market.heatLevel !== undefined && (
+        <div className="flex items-center gap-2 mb-2">
+          <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
         </div>
       )}
 

@@ -17,6 +17,7 @@ const navLinks = [
   { to: '/', label: 'MARKETS' },
   { to: '/portfolio', label: 'PORTFOLIO' },
   { to: '/create', label: 'CREATE' },
+  { to: '/leaderboard', label: 'LEADERBOARD' },
 ];
 
 export function Header() {
