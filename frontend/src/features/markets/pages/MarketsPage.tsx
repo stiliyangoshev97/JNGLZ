@@ -50,13 +50,15 @@ const ITEMS_PER_PAGE = 20;
 type HeatLevelFilter = -1 | 0 | 1 | 2 | 3 | 4;
 
 export function MarketsPage() {
-  const [sortBy, setSortBy] = useState<SortOption>('volume');
+  const [sortBy, setSortBy] = useState<SortOption>('newest'); // Default: NEW (helps new markets get visibility)
   const [filterBy, setFilterBy] = useState<FilterOption>('active'); // Default: ACTIVE
   const [pendingSubFilter, setPendingSubFilter] = useState<PendingSubFilter>('all');
   const [heatLevelFilter, setHeatLevelFilter] = useState<HeatLevelFilter>(-1); // -1 = all heat levels
+  const [heatDropdownOpen, setHeatDropdownOpen] = useState(false); // Custom dropdown state
   const [marketIdSearch, setMarketIdSearch] = useState('');
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const heatDropdownRef = useRef<HTMLDivElement>(null);
 
   // Predator v2: Fetch up to 500 markets for accurate counts
   const { data, loading, error, refetch } = useQuery<GetMarketsResponse>(GET_MARKETS, {
@@ -67,6 +69,17 @@ export function MarketsPage() {
 
   // Setup focus refetch (triggers refetch when tab becomes visible)
   const { isVisible } = useFocusRefetch(refetch);
+
+  // Close heat dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (heatDropdownRef.current && !heatDropdownRef.current.contains(event.target as Node)) {
+        setHeatDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Manual polling at 90s interval (Predator v2) - only when visible
   useEffect(() => {
@@ -343,7 +356,7 @@ export function MarketsPage() {
                   placeholder="ID #"
                   value={marketIdSearch}
                   onChange={(e) => setMarketIdSearch(e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-dark-800 border border-dark-600 text-white font-mono text-sm placeholder-dark-400 focus:outline-none focus:border-cyber"
+                  className="w-20 px-2 py-1.5 bg-dark-900 border border-dark-500 text-white font-mono text-sm placeholder-text-muted focus:outline-none focus:border-cyber hover:border-dark-400 transition-colors"
                 />
                 {marketIdSearch && (
                   <button
@@ -404,12 +417,18 @@ export function MarketsPage() {
             {/* Sort options */}
             <div className="flex items-center gap-2">
               <span className="text-text-muted text-xs font-mono mr-2">SORT:</span>
-              <SortButton
-                active={sortBy === 'volume'}
+              <button
                 onClick={() => handleSortChange('volume')}
+                className={cn(
+                  'px-2 py-1 text-xs font-mono uppercase font-bold animate-pulse',
+                  'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 bg-clip-text text-transparent',
+                  sortBy === 'volume' 
+                    ? 'scale-110' 
+                    : 'hover:scale-105'
+                )}
               >
                 HOT
-              </SortButton>
+              </button>
               <SortButton
                 active={sortBy === 'newest'}
                 onClick={() => handleSortChange('newest')}
@@ -429,41 +448,89 @@ export function MarketsPage() {
                 LIQUID
               </SortButton>
               
-              {/* Heat Level Filter - Dropdown */}
+              {/* Heat Level Filter - Custom Dropdown */}
               <div className="h-4 w-px bg-dark-600 mx-2" />
               <span className="text-text-muted text-xs font-mono">HEAT:</span>
-              <select
-                value={heatLevelFilter}
-                onChange={(e) => handleHeatLevelChange(Number(e.target.value) as HeatLevelFilter)}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer appearance-none pr-8',
-                  'bg-dark-800 focus:outline-none',
-                  heatLevelFilter === -1 
-                    ? 'border-cyber text-cyber bg-cyber/10'
-                    : heatLevelFilter === 0 
-                      ? 'border-no text-no bg-no/10'
-                      : heatLevelFilter === 1
-                        ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10'
-                        : heatLevelFilter === 2
-                          ? 'border-cyber text-cyber bg-cyber/10'
-                          : heatLevelFilter === 3
-                            ? 'border-blue-400 text-blue-400 bg-blue-400/10'
-                            : 'border-purple-400 text-purple-400 bg-purple-400/10'
+              <div className="relative" ref={heatDropdownRef}>
+                <button
+                  onClick={() => setHeatDropdownOpen(!heatDropdownOpen)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer flex items-center gap-2',
+                    'bg-dark-800 focus:outline-none',
+                    heatLevelFilter === -1 
+                      ? 'border-cyber text-cyber bg-cyber/10'
+                      : heatLevelFilter === 0 
+                        ? 'border-no text-no bg-no/10'
+                        : heatLevelFilter === 1
+                          ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10'
+                          : heatLevelFilter === 2
+                            ? 'border-cyber text-cyber bg-cyber/10'
+                            : heatLevelFilter === 3
+                              ? 'border-blue-400 text-blue-400 bg-blue-400/10'
+                              : 'border-purple-400 text-purple-400 bg-purple-400/10'
+                  )}
+                >
+                  <span>{heatLevelFilter === -1 ? 'ALL HEAT' : HEAT_LEVELS[heatLevelFilter]?.shortName}</span>
+                  <svg 
+                    className={cn('w-3 h-3 transition-transform', heatDropdownOpen && 'rotate-180')} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Dropdown Menu */}
+                {heatDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 z-50 min-w-[140px] bg-dark-900 border border-dark-500 shadow-xl">
+                    {/* ALL HEAT option */}
+                    <button
+                      onClick={() => {
+                        handleHeatLevelChange(-1);
+                        setHeatDropdownOpen(false);
+                      }}
+                      className={cn(
+                        'w-full px-3 py-2 text-left text-xs font-bold uppercase transition-colors',
+                        heatLevelFilter === -1
+                          ? 'bg-cyber/20 text-cyber'
+                          : 'text-text-secondary hover:bg-dark-800 hover:text-white'
+                      )}
+                    >
+                      ALL HEAT
+                    </button>
+                    
+                    {/* Heat level options */}
+                    {HEAT_LEVELS.map((level) => {
+                      // Explicit hover colors since Tailwind JIT can't detect dynamic classes
+                      const hoverTextColor = 
+                        level.value === 0 ? 'hover:text-no' :
+                        level.value === 1 ? 'hover:text-yellow-500' :
+                        level.value === 2 ? 'hover:text-cyber' :
+                        level.value === 3 ? 'hover:text-blue-400' :
+                        'hover:text-purple-400';
+                      
+                      return (
+                        <button
+                          key={level.value}
+                          onClick={() => {
+                            handleHeatLevelChange(level.value as HeatLevelFilter);
+                            setHeatDropdownOpen(false);
+                          }}
+                          className={cn(
+                            'w-full px-3 py-2 text-left text-xs font-bold uppercase transition-colors border-t border-dark-700',
+                            heatLevelFilter === level.value
+                              ? `${level.bgColor} ${level.textColor}`
+                              : `text-text-secondary hover:bg-dark-800 ${hoverTextColor}`
+                          )}
+                        >
+                          {level.shortName}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2300F5D4'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1rem',
-                }}
-              >
-                <option value={-1}>ALL HEAT</option>
-                {HEAT_LEVELS.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    {level.shortName}
-                  </option>
-                ))}
-              </select>
+              </div>
             </div>
           </div>
         </div>

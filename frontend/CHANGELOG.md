@@ -2,6 +2,43 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.18] - 2026-01-16
+
+### Changed
+
+#### MarketsPage - Default Sort Changed to NEW
+- Changed default sort from "HOT" (volume) to "NEW" (newest)
+- Better for platform growth phase - new markets get immediate visibility
+- Encourages market creation by featuring new markets first
+
+#### MarketsPage - HOT Button Fire Effect
+- HOT button now has continuous pulsing fire gradient (orange → red → yellow)
+- Pulses equally whether selected or not (was inconsistent before)
+- When selected: slightly larger (scale-110)
+- Always eye-catching to draw attention to trending markets
+
+#### MarketsPage - ID Input Field Improved
+- Changed background from `bg-dark-800` → `bg-dark-900` (better contrast)
+- Changed border from `border-dark-600` → `border-dark-500` (more visible)
+- Added `hover:border-dark-400` for interactive feedback
+- Placeholder color now `text-text-muted` (more readable)
+
+#### MarketsPage - Custom Heat Dropdown
+- Replaced native `<select>` with custom styled dropdown
+- OS-native dropdown menu was ugly (macOS default styling)
+- Now fully styled with dark theme matching the rest of the UI
+- Click outside to close functionality added
+- Heat level options show proper colors on hover (fixed Tailwind JIT issue)
+
+### Fixed
+
+#### Heat Dropdown Hover Colors
+- Fixed STREET and INSTITUTION not changing colors on hover
+- Tailwind JIT can't detect dynamic classes like `hover:${level.textColor}`
+- Now uses explicit hover classes for each heat level
+
+---
+
 ## [0.7.17] - 2026-01-16
 
 ### Added
