@@ -13,23 +13,23 @@ import { env } from '@/shared/config/env';
 
 export function TermsPage() {
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-8 md:py-12">
       <div className="max-w-3xl mx-auto px-4">
         {/* Header */}
-        <div className="border-b border-dark-600 pb-6 mb-8">
-          <Link to="/" className="text-cyber hover:underline text-sm mb-4 inline-block">
+        <div className="border-b border-dark-600 pb-4 md:pb-6 mb-6 md:mb-8">
+          <Link to="/" className="text-cyber hover:underline text-sm mb-3 md:mb-4 inline-block">
             ← Back to Markets
           </Link>
-          <h1 className="text-3xl font-black uppercase">
+          <h1 className="text-2xl md:text-3xl font-black uppercase">
             TERMS OF <span className="text-cyber">SERVICE</span>
           </h1>
-          <p className="text-text-muted text-sm mt-2 font-mono">
+          <p className="text-text-muted text-xs md:text-sm mt-2 font-mono">
             Last Updated: January 14, 2026 (v3.0 - Added UGP/Creator Liability)
           </p>
         </div>
 
         {/* Content */}
-        <div className="prose prose-invert max-w-none space-y-8">
+        <div className="prose prose-invert max-w-none space-y-6 md:space-y-8">
           
           {/* Introduction */}
           <section>

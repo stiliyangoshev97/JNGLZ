@@ -72,14 +72,14 @@ export function LeaderboardPage() {
   const leaderboard = data?.users || [];
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-6 md:py-8">
       <div className="max-w-3xl mx-auto px-4">
         {/* Header */}
-        <div className="border-b border-dark-600 pb-6 mb-8">
-          <Link to="/" className="text-cyber hover:underline text-sm mb-4 inline-block">
+        <div className="border-b border-dark-600 pb-4 md:pb-6 mb-6 md:mb-8">
+          <Link to="/" className="text-cyber hover:underline text-sm mb-3 md:mb-4 inline-block">
             ← Back to Markets
           </Link>
-          <h1 className="text-3xl font-black uppercase tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
             <span className="text-cyber">JUNGLE</span> LEADERBOARD
           </h1>
           <p className="text-text-muted text-sm mt-2">
@@ -93,20 +93,20 @@ export function LeaderboardPage() {
             <Spinner size="lg" />
           </div>
         ) : error ? (
-          <Card className="p-8 text-center">
+          <Card className="p-6 md:p-8 text-center">
             <p className="text-4xl mb-4">💀</p>
             <p className="text-text-secondary font-mono">FAILED TO LOAD LEADERBOARD</p>
             <p className="text-no text-sm font-mono mt-2">{error.message}</p>
           </Card>
         ) : leaderboard.length === 0 ? (
-          <Card className="p-8 text-center">
+          <Card className="p-6 md:p-8 text-center">
             <p className="text-text-secondary font-mono">NO TRADERS YET</p>
             <p className="text-text-muted text-sm mt-2">Be the first to make a trade!</p>
           </Card>
         ) : (
           <div className="space-y-2">
-            {/* Table Header */}
-            <div className="flex items-center px-4 py-2 text-xs text-text-muted font-mono uppercase">
+            {/* Table Header - Hidden on mobile */}
+            <div className="hidden md:flex items-center px-4 py-2 text-xs text-text-muted font-mono uppercase">
               <div className="w-16">RANK</div>
               <div className="flex-1">WALLET</div>
               <div className="text-right w-36">TOTAL PNL</div>
@@ -121,10 +121,38 @@ export function LeaderboardPage() {
                 <Card 
                   key={entry.id} 
                   className={cn(
-                    'p-4 border border-dark-600 transition-all hover:scale-[1.005] hover:border-cyber/50'
+                    'p-3 md:p-4 border border-dark-600 transition-all hover:scale-[1.005] hover:border-cyber/50'
                   )}
                 >
-                  <div className="flex items-center">
+                  {/* Mobile layout: Stack vertically */}
+                  <div className="flex flex-col gap-2 md:hidden">
+                    <div className="flex items-center justify-between">
+                      <div className={cn(
+                        'w-14 h-8 flex items-center justify-center font-black text-xs rounded',
+                        rankStyle.bg,
+                        rankStyle.text
+                      )}>
+                        {rankStyle.label}
+                      </div>
+                      <div className={cn(
+                        'text-lg font-black font-mono',
+                        pnl.isZero ? 'text-text-muted' : pnl.isPositive ? 'text-yes' : 'text-no'
+                      )}>
+                        {pnl.text} <span className="text-xs font-normal text-text-muted">BNB</span>
+                      </div>
+                    </div>
+                    <a
+                      href={`https://bscscan.com/address/${entry.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-white hover:text-cyber transition-colors text-xs"
+                    >
+                      {formatAddress(entry.address)}
+                    </a>
+                  </div>
+
+                  {/* Desktop layout: Horizontal */}
+                  <div className="hidden md:flex items-center">
                     {/* Rank */}
                     <div className={cn(
                       'w-16 h-10 flex items-center justify-center font-black text-sm rounded mr-4',
@@ -161,7 +189,7 @@ export function LeaderboardPage() {
         )}
 
         {/* Info */}
-        <div className="mt-8 p-4 bg-dark-800 border border-dark-600 text-xs text-text-muted text-center">
+        <div className="mt-6 md:mt-8 p-3 md:p-4 bg-dark-800 border border-dark-600 text-xs text-text-muted text-center">
           <p>
             Total PNL = Trading Profits + Resolution Winnings
           </p>

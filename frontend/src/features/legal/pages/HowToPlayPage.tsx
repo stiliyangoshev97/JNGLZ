@@ -11,14 +11,14 @@ import { Link } from 'react-router-dom';
 
 export function HowToPlayPage() {
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-8 md:py-12">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="border-b border-dark-600 pb-6 mb-8">
-          <Link to="/" className="text-cyber hover:underline text-sm mb-4 inline-block">
+        <div className="border-b border-dark-600 pb-4 md:pb-6 mb-6 md:mb-8">
+          <Link to="/" className="text-cyber hover:underline text-sm mb-3 md:mb-4 inline-block">
             ← Back to Markets
           </Link>
-          <h1 className="text-3xl font-black uppercase">
+          <h1 className="text-2xl md:text-3xl font-black uppercase">
             HOW TO <span className="text-cyber">PLAY</span>
           </h1>
           <p className="text-text-muted text-sm mt-2">
@@ -27,14 +27,14 @@ export function HowToPlayPage() {
         </div>
 
         {/* Content */}
-        <div className="space-y-12">
+        <div className="space-y-8 md:space-y-12">
           
           {/* ===== THE GOAL OF JNGLZ ===== */}
           <section>
-            <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
+            <h2 className="text-xl md:text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-4 md:mb-6">
               THE GOAL OF JNGLZ
             </h2>
-            <div className="bg-dark-800 border border-cyber/30 p-6">
+            <div className="bg-dark-800 border border-cyber/30 p-4 md:p-6">
               <p className="text-text-secondary text-lg leading-relaxed mb-4">
                 <strong className="text-cyber">JNGLZ</strong> is a high-velocity <strong className="text-white">Information Exchange</strong>. 
                 Our goal is to provide a decentralized venue where <strong className="text-white">sentiment and truth</strong> are 
@@ -54,18 +54,18 @@ export function HowToPlayPage() {
 
           {/* ===== HEAT LEVELS ===== */}
           <section>
-            <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
+            <h2 className="text-xl md:text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-4 md:mb-6">
               THE JNGLZ HEAT LEVELS
             </h2>
-            <p className="text-text-secondary mb-6">
+            <p className="text-text-secondary mb-4 md:mb-6 text-sm md:text-base">
               Each jungle uses a specific <strong className="text-white">Virtual Liquidity (vLiq)</strong> setting. 
               This determines the "weight" of the market and how much capital is required to move the price. 
               <strong className="text-cyber"> Higher vLiq = More Stability.</strong>
             </p>
             
-            {/* Heat Level Table */}
-            <div className="overflow-x-auto mb-6">
-              <table className="w-full text-sm border border-dark-600">
+            {/* Heat Level Table - Scrollable on mobile */}
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 mb-6">
+              <table className="w-full text-xs md:text-sm border border-dark-600 min-w-[600px]">
                 <thead>
                   <tr className="bg-dark-800">
                     <th className="text-left p-3 border-b border-dark-600 text-text-muted">HEAT LEVEL</th>
@@ -152,10 +152,10 @@ export function HowToPlayPage() {
 
           {/* ===== STRATEGIES ===== */}
           <section>
-            <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
+            <h2 className="text-xl md:text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-4 md:mb-6">
               THE JUNGLE STRATEGIES
             </h2>
-            <p className="text-text-secondary mb-6">
+            <p className="text-text-secondary mb-4 md:mb-6 text-sm md:text-base">
               <strong className="text-cyber">JNGLZ.FUN</strong> is more than a prediction market—it's a tactical battlefield 
               where <strong className="text-white">truth and greed collide</strong>. Whether you are a high-speed trader or a 
               seeker of truth, there is a path for you to dominate.
@@ -223,10 +223,10 @@ export function HowToPlayPage() {
 
           {/* ===== RESOLUTION ROLES ===== */}
           <section>
-            <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
+            <h2 className="text-xl md:text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-4 md:mb-6">
               RESOLUTION ROLES
             </h2>
-            <p className="text-text-secondary mb-6">
+            <p className="text-text-secondary mb-4 md:mb-6 text-sm md:text-base">
               After a market expires, <strong className="text-white">resolution</strong> determines which side wins the pool. 
               These roles let you earn rewards for participating in the resolution process.
             </p>

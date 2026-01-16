@@ -597,11 +597,13 @@ export function PortfolioPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <section className="border-b border-dark-600 py-8">
+      <section className="border-b border-dark-600 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Mobile: Stack everything vertically / Desktop: Side by side */}
+          <div className="flex flex-col gap-4 md:gap-6">
+            {/* Title and Address */}
             <div>
-              <h1 className="text-3xl font-black uppercase tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
                 PORT<span className="text-cyber">FOLIO</span>
               </h1>
               <div className="mt-2">
@@ -609,8 +611,8 @@ export function PortfolioPage() {
               </div>
             </div>
 
-            {/* Quick stats */}
-            <div className="flex items-center gap-4 flex-wrap">
+            {/* Stats Grid - 2x2 on mobile, row on desktop */}
+            <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4">
               <StatBox label="POSITIONS" value={stats.totalPositions.toString()} />
               <StatBox 
                 label="INVESTED" 
@@ -625,15 +627,15 @@ export function PortfolioPage() {
                 color={totalPnl.hasActivity ? (totalPnl.combined >= 0 ? 'yes' : 'no') : undefined}
                 subtextElement={totalPnl.hasActivity 
                   ? (
-                    <>
+                    <span className="text-[10px] md:text-xs">
                       <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes' : 'text-no'}>
-                        Trading: {tradingPnl.realizedPnlBNB >= 0 ? '+' : ''}{tradingPnl.realizedPnlBNB.toFixed(4)}
+                        T: {tradingPnl.realizedPnlBNB >= 0 ? '+' : ''}{tradingPnl.realizedPnlBNB.toFixed(4)}
                       </span>
                       <span className="text-text-muted"> | </span>
                       <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes' : 'text-no'}>
-                        Resolution: {resolutionStats.resolutionPnl >= 0 ? '+' : ''}{resolutionStats.resolutionPnl.toFixed(4)}
+                        R: {resolutionStats.resolutionPnl >= 0 ? '+' : ''}{resolutionStats.resolutionPnl.toFixed(4)}
                       </span>
-                    </>
+                    </span>
                   )
                   : undefined
                 }
@@ -729,17 +731,18 @@ export function PortfolioPage() {
       </section>
 
       {/* Positions Grid */}
-      <section className="py-8">
+      <section className="py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
           {viewMode === 'positions' ? (
             <>
-              {/* Action-based filter tabs */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
+              {/* Action-based filter tabs - scrollable on mobile */}
+              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-4">
+                <div className="flex items-center gap-2 md:gap-3 w-max md:w-auto md:flex-wrap">
                 {/* ALL - Default, shown first */}
                 <button 
                   onClick={() => handleFilterChange('all')}
                   className={cn(
-                    "text-sm font-bold pb-1 transition-colors",
+                    "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                     filterBy === 'all' 
                       ? "text-cyber border-b-2 border-cyber" 
                       : "text-text-secondary hover:text-white"
@@ -754,27 +757,27 @@ export function PortfolioPage() {
                 <button 
                   onClick={() => handleFilterChange('needs-action')}
                   className={cn(
-                    "text-sm font-bold pb-1 transition-colors flex items-center gap-1",
+                    "text-sm font-bold pb-1 transition-colors flex items-center gap-1 whitespace-nowrap",
                     filterBy === 'needs-action' 
                       ? categorizedPositions.needsAction.length > 0
-                        ? "text-warning border-b-2 border-warning"  // Selected + has items = yellow
-                        : "text-cyber border-b-2 border-cyber"      // Selected + empty = cyan
+                        ? "text-warning border-b-2 border-warning"
+                        : "text-cyber border-b-2 border-cyber"
                       : categorizedPositions.needsAction.length > 0
-                        ? "text-warning/80 hover:text-warning animate-pulse"  // Unselected + has items = pulsing yellow
-                        : "text-text-secondary hover:text-white"              // Unselected + empty = grey
+                        ? "text-warning/80 hover:text-warning animate-pulse"
+                        : "text-text-secondary hover:text-white"
                   )}
                 >
                   {categorizedPositions.needsAction.length > 0 && (
                     <span className="text-warning">⚡</span>
                   )}
-                  NEEDS ACTION ({categorizedPositions.needsAction.length})
+                  ACTION ({categorizedPositions.needsAction.length})
                 </button>
                 
                 {/* ACTIVE - Positions in live markets */}
                 <button 
                   onClick={() => handleFilterChange('active')}
                   className={cn(
-                    "text-sm font-bold pb-1 transition-colors",
+                    "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                     filterBy === 'active' 
                       ? "text-yes border-b-2 border-yes" 
                       : categorizedPositions.active.length > 0
@@ -789,7 +792,7 @@ export function PortfolioPage() {
                 <button 
                   onClick={() => handleFilterChange('awaiting-resolution')}
                   className={cn(
-                    "text-sm font-bold pb-1 transition-colors",
+                    "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                     filterBy === 'awaiting-resolution' 
                       ? "text-cyber border-b-2 border-cyber" 
                       : "text-text-secondary hover:text-white"
@@ -802,7 +805,7 @@ export function PortfolioPage() {
                 <button 
                   onClick={() => handleFilterChange('resolved')}
                   className={cn(
-                    "text-sm font-bold pb-1 transition-colors",
+                    "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                     filterBy === 'resolved' 
                       ? "text-yes border-b-2 border-yes" 
                       : categorizedPositions.resolved.length > 0
@@ -818,7 +821,7 @@ export function PortfolioPage() {
                   <button 
                     onClick={() => handleFilterChange('unresolved')}
                     className={cn(
-                      "text-sm font-bold pb-1 transition-colors",
+                      "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                       filterBy === 'unresolved' 
                         ? "text-no border-b-2 border-no" 
                         : "text-no/70 hover:text-no"
@@ -827,12 +830,14 @@ export function PortfolioPage() {
                     UNRESOLVED ({categorizedPositions.unresolved.length})
                   </button>
                 )}
+                </div>
               </div>
 
               {/* Sub-filter buttons for NEEDS ACTION */}
               {filterBy === 'needs-action' && categorizedPositions.needsAction.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mb-6 pl-2 border-l-2 border-warning/30">
-                  <span className="text-xs text-text-muted mr-1">FILTER BY:</span>
+                <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
+                  <div className="flex items-center gap-2 w-max pl-2 border-l-2 border-warning/30">
+                    <span className="text-xs text-text-muted mr-1 whitespace-nowrap">FILTER:</span>
                   <button 
                     onClick={() => setActionFilter('all')}
                     className={cn(
@@ -896,13 +901,15 @@ export function PortfolioPage() {
                       🔄 REFUND ({actionCounts.refund})
                     </button>
                   )}
+                  </div>
                 </div>
               )}
 
               {/* Sub-filter buttons for PENDING (awaiting-resolution) */}
               {filterBy === 'awaiting-resolution' && categorizedPositions.awaitingResolution.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mb-6 pl-2 border-l-2 border-cyber/30">
-                  <span className="text-xs text-text-muted mr-1">STAGE:</span>
+                <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
+                  <div className="flex items-center gap-2 w-max pl-2 border-l-2 border-cyber/30">
+                    <span className="text-xs text-text-muted mr-1 whitespace-nowrap">STAGE:</span>
                   <button 
                     onClick={() => handlePendingSubFilterChange('all')}
                     className={cn(
@@ -966,6 +973,7 @@ export function PortfolioPage() {
                       ✅ FINALIZING ({pendingSubCounts.finalizing})
                     </button>
                   )}
+                  </div>
                 </div>
               )}
 

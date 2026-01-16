@@ -237,11 +237,11 @@ export function MarketDetailPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="border-b border-dark-600 py-8">
+      <section className="border-b border-dark-600 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
           {/* Market Image - Full width if exists */}
           {market.imageUrl && (
-            <div className="group relative -mx-4 mb-6 h-48 md:h-64 overflow-hidden">
+            <div className="group relative -mx-4 mb-4 md:mb-6 h-40 md:h-48 lg:h-64 overflow-hidden">
               <img
                 src={market.imageUrl}
                 alt=""
@@ -251,11 +251,11 @@ export function MarketDetailPage() {
             </div>
           )}
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             {/* Left: Question & Info */}
             <div className="lg:col-span-2">
               {/* Status badges */}
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <div className="flex items-center gap-2 mb-3 md:mb-4 flex-wrap">
                 <HeatLevelBadge heatLevel={market.heatLevel} size="md" />
                 {isActive && <ActiveBadge />}
                 {isExpired && !isResolved && <ExpiredBadge />}
@@ -264,27 +264,29 @@ export function MarketDetailPage() {
               </div>
 
               {/* Question */}
-              <h1 className="text-2xl md:text-4xl font-black text-white mb-4">
+              <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-white mb-3 md:mb-4">
                 {market.question}
               </h1>
 
-              {/* Creator & Time */}
-              <div className="flex flex-wrap items-center gap-4 text-sm font-mono">
-                <div className="flex items-center gap-2">
-                  <span className="text-text-muted">ID</span>
-                  <span className="text-cyber font-bold">#{market.marketId}</span>
-                </div>
-                <div className="h-4 w-px bg-dark-600" />
-                <div className="flex items-center gap-2">
-                  <span className="text-text-muted">CREATED BY</span>
-                  <AddressDisplay address={market.creatorAddress} iconSize={20} />
-                </div>
-                <div className="h-4 w-px bg-dark-600" />
-                <div>
-                  <span className="text-text-muted">ENDS </span>
-                  <span className={cn(isExpired ? 'text-no' : 'text-white')}>
-                    {isExpired ? 'EXPIRED' : timeRemaining}
-                  </span>
+              {/* Creator & Time - Scrollable on mobile */}
+              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="flex items-center gap-3 md:gap-4 text-xs md:text-sm font-mono w-max md:w-auto md:flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-muted">ID</span>
+                    <span className="text-cyber font-bold">#{market.marketId}</span>
+                  </div>
+                  <div className="h-4 w-px bg-dark-600" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-muted">BY</span>
+                    <AddressDisplay address={market.creatorAddress} iconSize={18} />
+                  </div>
+                  <div className="h-4 w-px bg-dark-600" />
+                  <div>
+                    <span className="text-text-muted">ENDS </span>
+                    <span className={cn(isExpired ? 'text-no' : 'text-white')}>
+                      {isExpired ? 'EXPIRED' : timeRemaining}
+                    </span>
+                  </div>
                 </div>
               </div>
 

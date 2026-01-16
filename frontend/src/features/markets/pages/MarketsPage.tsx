@@ -346,17 +346,19 @@ export function MarketsPage() {
       {/* Filters & Sort */}
       <section className="border-b border-dark-600 py-4">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Left: Filter tabs + ID search */}
-            <div className="flex items-center gap-4">
+          {/* Mobile: Stack in two rows / Desktop: Single row */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            
+            {/* Row 1 on mobile: ID search + Category tabs */}
+            <div className="flex items-center gap-3 min-w-0">
               {/* Market ID Search */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <input
                   type="text"
                   placeholder="ID #"
                   value={marketIdSearch}
                   onChange={(e) => setMarketIdSearch(e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-dark-900 border border-dark-500 text-white font-mono text-sm placeholder-text-muted focus:outline-none focus:border-cyber hover:border-dark-400 transition-colors"
+                  className="w-16 sm:w-20 px-2 py-1.5 bg-dark-900 border border-dark-500 text-white font-mono text-sm placeholder-text-muted focus:outline-none focus:border-cyber hover:border-dark-400 transition-colors"
                 />
                 {marketIdSearch && (
                   <button
@@ -368,94 +370,98 @@ export function MarketsPage() {
                 )}
               </div>
               
-              {/* Category tabs */}
-              <div className="flex items-center gap-2">
-                <FilterTab
-                  active={filterBy === 'all'}
-                  onClick={() => handleFilterChange('all')}
-                  count={marketCounts.all}
-                >
-                  ALL
-                </FilterTab>
-                <FilterTab
-                  active={filterBy === 'active'}
-                  onClick={() => handleFilterChange('active')}
-                  count={marketCounts.active}
-                  color="yes"
-                >
-                  ACTIVE
-                </FilterTab>
-                <FilterTab
-                  active={filterBy === 'pending'}
-                  onClick={() => handleFilterChange('pending')}
-                  count={marketCounts.pending}
-                >
-                  PENDING
-                </FilterTab>
-                <FilterTab
-                  active={filterBy === 'resolved'}
-                  onClick={() => handleFilterChange('resolved')}
-                  count={marketCounts.resolved}
-                  color="yes"
-                >
-                  RESOLVED
-                </FilterTab>
-                {/* Only show UNRESOLVED if there are any */}
-                {marketCounts.unresolved > 0 && (
+              {/* Category tabs - horizontally scrollable on mobile */}
+              <div className="flex-1 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                <div className="flex items-center gap-1 sm:gap-2 w-max">
                   <FilterTab
-                    active={filterBy === 'unresolved'}
-                    onClick={() => handleFilterChange('unresolved')}
-                    count={marketCounts.unresolved}
-                    color="no"
+                    active={filterBy === 'all'}
+                    onClick={() => handleFilterChange('all')}
+                    count={marketCounts.all}
                   >
-                    UNRESOLVED
+                    ALL
                   </FilterTab>
-                )}
+                  <FilterTab
+                    active={filterBy === 'active'}
+                    onClick={() => handleFilterChange('active')}
+                    count={marketCounts.active}
+                    color="yes"
+                  >
+                    ACTIVE
+                  </FilterTab>
+                  <FilterTab
+                    active={filterBy === 'pending'}
+                    onClick={() => handleFilterChange('pending')}
+                    count={marketCounts.pending}
+                  >
+                    PENDING
+                  </FilterTab>
+                  <FilterTab
+                    active={filterBy === 'resolved'}
+                    onClick={() => handleFilterChange('resolved')}
+                    count={marketCounts.resolved}
+                    color="yes"
+                  >
+                    RESOLVED
+                  </FilterTab>
+                  {/* Only show UNRESOLVED if there are any */}
+                  {marketCounts.unresolved > 0 && (
+                    <FilterTab
+                      active={filterBy === 'unresolved'}
+                      onClick={() => handleFilterChange('unresolved')}
+                      count={marketCounts.unresolved}
+                      color="no"
+                    >
+                      UNRESOLVED
+                    </FilterTab>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Sort options */}
-            <div className="flex items-center gap-2">
-              <span className="text-text-muted text-xs font-mono mr-2">SORT:</span>
-              <button
-                onClick={() => handleSortChange('volume')}
-                className={cn(
-                  'px-2 py-1 text-xs font-mono uppercase font-bold animate-pulse',
-                  'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 bg-clip-text text-transparent',
-                  sortBy === 'volume' 
-                    ? 'scale-110' 
-                    : 'hover:scale-105'
-                )}
-              >
-                HOT
-              </button>
-              <SortButton
-                active={sortBy === 'newest'}
-                onClick={() => handleSortChange('newest')}
-              >
-                NEW
-              </SortButton>
-              <SortButton
-                active={sortBy === 'ending'}
-                onClick={() => handleSortChange('ending')}
-              >
-                ENDING
-              </SortButton>
-              <SortButton
-                active={sortBy === 'liquidity'}
-                onClick={() => handleSortChange('liquidity')}
-              >
-                LIQUID
-              </SortButton>
+            {/* Row 2 on mobile: Sort options + Heat dropdown */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 lg:mx-0 lg:px-0 lg:overflow-visible">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-text-muted text-xs font-mono">SORT:</span>
+                <button
+                  onClick={() => handleSortChange('volume')}
+                  className={cn(
+                    'px-2 py-1 text-xs font-mono uppercase font-bold animate-pulse',
+                    'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 bg-clip-text text-transparent',
+                    sortBy === 'volume' 
+                      ? 'scale-110' 
+                      : 'hover:scale-105'
+                  )}
+                >
+                  HOT
+                </button>
+                <SortButton
+                  active={sortBy === 'newest'}
+                  onClick={() => handleSortChange('newest')}
+                >
+                  NEW
+                </SortButton>
+                <SortButton
+                  active={sortBy === 'ending'}
+                  onClick={() => handleSortChange('ending')}
+                >
+                  ENDING
+                </SortButton>
+                <SortButton
+                  active={sortBy === 'liquidity'}
+                  onClick={() => handleSortChange('liquidity')}
+                >
+                  LIQUID
+                </SortButton>
+              </div>
               
               {/* Heat Level Filter - Custom Dropdown */}
-              <div className="h-4 w-px bg-dark-600 mx-2" />
-              <span className="text-text-muted text-xs font-mono">HEAT:</span>
-              <div className="relative" ref={heatDropdownRef}>
+              <div className="h-4 w-px bg-dark-600 mx-1 sm:mx-2 flex-shrink-0" />
+              <span className="text-text-muted text-xs font-mono flex-shrink-0">HEAT:</span>
+              <div className="relative flex-shrink-0" ref={heatDropdownRef}>
                 <button
                   onClick={() => setHeatDropdownOpen(!heatDropdownOpen)}
                   className={cn(
-                    'px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer flex items-center gap-2',
+                    'px-2 sm:px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer flex items-center gap-1 sm:gap-2',
                     'bg-dark-800 focus:outline-none',
                     heatLevelFilter === -1 
                       ? 'border-cyber text-cyber bg-cyber/10'
@@ -470,9 +476,9 @@ export function MarketsPage() {
                               : 'border-purple-400 text-purple-400 bg-purple-400/10'
                   )}
                 >
-                  <span>{heatLevelFilter === -1 ? 'ALL HEAT' : HEAT_LEVELS[heatLevelFilter]?.shortName}</span>
+                  <span className="whitespace-nowrap">{heatLevelFilter === -1 ? 'ALL' : HEAT_LEVELS[heatLevelFilter]?.shortName}</span>
                   <svg 
-                    className={cn('w-3 h-3 transition-transform', heatDropdownOpen && 'rotate-180')} 
+                    className={cn('w-3 h-3 transition-transform flex-shrink-0', heatDropdownOpen && 'rotate-180')} 
                     fill="none" 
                     viewBox="0 0 24 24" 
                     stroke="currentColor"
@@ -483,7 +489,7 @@ export function MarketsPage() {
                 
                 {/* Dropdown Menu */}
                 {heatDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 z-50 min-w-[140px] bg-dark-900 border border-dark-500 shadow-xl">
+                  <div className="absolute top-full right-0 lg:left-0 lg:right-auto mt-1 z-50 min-w-[140px] bg-dark-900 border border-dark-500 shadow-xl">
                     {/* ALL HEAT option */}
                     <button
                       onClick={() => {
@@ -540,15 +546,16 @@ export function MarketsPage() {
       {filterBy === 'pending' && marketCounts.pending > 0 && (
         <section className="border-b border-dark-600 py-3 bg-dark-900/50">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-wrap items-center gap-2 pl-2 border-l-2 border-cyber/30">
-              <span className="text-xs text-text-muted mr-1">STAGE:</span>
-              <SubFilterButton
-                active={pendingSubFilter === 'all'}
-                onClick={() => handlePendingSubFilterChange('all')}
-                count={marketCounts.pending}
-              >
-                ALL
-              </SubFilterButton>
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <div className="flex items-center gap-2 pl-2 border-l-2 border-cyber/30 w-max min-w-full">
+                <span className="text-xs text-text-muted mr-1 flex-shrink-0">STAGE:</span>
+                <SubFilterButton
+                  active={pendingSubFilter === 'all'}
+                  onClick={() => handlePendingSubFilterChange('all')}
+                  count={marketCounts.pending}
+                >
+                  ALL
+                </SubFilterButton>
               {pendingSubCounts.awaiting > 0 && (
                 <SubFilterButton
                   active={pendingSubFilter === 'awaiting'}
@@ -589,6 +596,7 @@ export function MarketsPage() {
                   ✅ FINALIZING
                 </SubFilterButton>
               )}
+              </div>
             </div>
           </div>
         </section>
@@ -742,16 +750,11 @@ function SubFilterButton({
   color?: 'yellow' | 'cyan' | 'orange' | 'green';
 }) {
   const getColors = () => {
+    // Active state: Always use cyan for consistency
     if (active) {
-      switch (color) {
-        case 'yellow': return 'bg-warning/20 text-warning';
-        case 'cyan': return 'bg-cyber/20 text-cyber';
-        case 'orange': return 'bg-orange-500/20 text-orange-400';
-        case 'green': return 'bg-yes/20 text-yes';
-        default: return 'bg-cyber/20 text-cyber';
-      }
+      return 'bg-cyber/20 text-cyber';
     }
-    // Inactive state
+    // Inactive state: Use color-coded hints
     switch (color) {
       case 'yellow': return 'text-warning/70 hover:text-warning hover:bg-dark-600';
       case 'cyan': return 'text-cyber/70 hover:text-cyber hover:bg-dark-600';

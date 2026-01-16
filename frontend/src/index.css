@@ -234,6 +234,15 @@
 
 /* ===== UTILITY LAYER ===== */
 @layer utilities {
+  /* Hide scrollbar but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
+
   /* Force no border radius anywhere */
   .no-radius {
     border-radius: 0 !important;

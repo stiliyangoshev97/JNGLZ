@@ -324,23 +324,23 @@ export function CreateMarketPage() {
   }
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-6 md:py-8">
       <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-tight">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
             CREATE <span className="text-cyber">MARKET</span>
           </h1>
-          <p className="text-text-secondary mt-2">
+          <p className="text-text-secondary mt-2 text-sm md:text-base">
             Create a prediction market. {creationFee === 0n ? <span className="text-yes drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]">It's FREE!</span> : `Fee: ${formatBNB(creationFee)} BNB`}
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
           {/* Question */}
-          <Card className="p-6">
-            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+          <Card className="p-4 md:p-6">
+            <h2 className="font-bold uppercase mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <span className="text-cyber">01</span> QUESTION
             </h2>
             <Input
@@ -355,11 +355,11 @@ export function CreateMarketPage() {
           </Card>
 
           {/* Expiration - FIXED with working presets */}
-          <Card className="p-6">
-            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+          <Card className="p-4 md:p-6">
+            <h2 className="font-bold uppercase mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <span className="text-cyber">02</span> EXPIRATION
             </h2>
-            <div className="grid grid-cols-6 gap-2 mb-4">
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
               {DURATION_PRESETS.map((preset) => (
                 <button
                   key={preset.label}
@@ -387,12 +387,12 @@ export function CreateMarketPage() {
           </Card>
 
           {/* Heat Level */}
-          <Card className="p-6">
-            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+          <Card className="p-4 md:p-6">
+            <h2 className="font-bold uppercase mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <span className="text-cyber">03</span> HEAT LEVEL
             </h2>
             <p className="text-sm text-text-secondary mb-4">
-              Choose the volatility level for your market. Higher heat = bigger price swings from trades.
+              Choose the volatility level. Higher heat = bigger price swings.
             </p>
             <div className="space-y-3">
               {HEAT_LEVELS.map((level) => {
@@ -445,8 +445,8 @@ export function CreateMarketPage() {
           </Card>
 
           {/* Evidence & Rules - Optional */}
-          <Card className="p-6">
-            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+          <Card className="p-4 md:p-6">
+            <h2 className="font-bold uppercase mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <span className="text-cyber">04</span> EVIDENCE & RULES
               <span className="text-text-muted text-xs font-normal">(optional)</span>
             </h2>
@@ -481,8 +481,8 @@ export function CreateMarketPage() {
           </Card>
 
           {/* Image */}
-          <Card className="p-6">
-            <h2 className="font-bold uppercase mb-4 flex items-center gap-2">
+          <Card className="p-4 md:p-6">
+            <h2 className="font-bold uppercase mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <span className="text-cyber">05</span> IMAGE
             </h2>
             <Input

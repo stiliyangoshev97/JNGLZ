@@ -2,6 +2,92 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.20] - 2026-01-16
+
+### Added
+
+#### Mobile Navigation - MORE Menu
+- Added expandable "MORE" menu to mobile bottom navigation
+- Tapping MORE reveals a slide-up panel with:
+  - 📖 HOW TO PLAY - Links to game guide
+  - 𝕏 TWITTER - External link to X/Twitter
+  - 💬 TELEGRAM - External link to Telegram
+  - 📜 TERMS - Links to Terms of Service
+  - 🔒 PRIVACY - Links to Privacy Policy
+  - BNB CHAIN indicator with pulse animation
+- Menu closes when tapping outside or on any link
+- Renamed "LEADERBOARD" to "LEADERS" in mobile nav for space efficiency
+
+### Fixed
+
+#### MarketsPage - AWAITING Button Color
+- **Problem**: When clicking AWAITING sub-filter in PENDING tab, it remained white instead of turning cyan
+- **Solution**: Changed SubFilterButton active state to always use cyan (`bg-cyber/20 text-cyber`) for consistency
+- All sub-filter buttons now turn cyan when selected (matching ALL button behavior)
+
+### Changed
+
+#### Comprehensive Mobile Optimization
+All pages now fully optimized for mobile, small, medium, and large screens:
+
+**PortfolioPage:**
+- Stats grid: 2x2 on mobile, horizontal row on desktop
+- Filter tabs now horizontally scrollable with `scrollbar-hide`
+- Sub-filters (NEEDS ACTION, PENDING stages) also scrollable
+- Shortened "NEEDS ACTION" to "ACTION" on mobile
+- Added `whitespace-nowrap` to all filter buttons
+
+**LeaderboardPage:**
+- Separate mobile and desktop layouts for leaderboard entries
+- Mobile: Rank + PNL on top row, wallet address below
+- Desktop: Horizontal layout with rank, address, PNL
+- Smaller padding and font sizes on mobile
+
+**CreateMarketPage:**
+- Duration presets: 3 columns on mobile, 6 on desktop
+- Reduced padding on all cards (p-4 mobile, p-6 desktop)
+- Smaller section headers on mobile
+
+**MarketDetailPage:**
+- Market image height reduced on mobile (h-40 vs h-64 on desktop)
+- Creator info horizontally scrollable on mobile
+- Question text size responsive (text-xl mobile, text-4xl desktop)
+- Abbreviated "CREATED BY" to "BY" on mobile
+
+**HowToPlayPage:**
+- Heat levels table scrollable on mobile with min-width
+- Section headers smaller on mobile (text-xl vs text-2xl)
+- Reduced padding throughout
+
+---
+
+## [0.7.19] - 2026-01-16
+
+### Fixed
+
+#### MarketsPage - Mobile Filter Layout
+- **Problem**: On mobile, category filter tabs (ALL, ACTIVE, PENDING, RESOLVED) and sort buttons overflowed off-screen
+- **Solution**: Redesigned filter section with mobile-first approach
+  - Row 1: ID search + horizontally scrollable category tabs
+  - Row 2: Sort buttons + Heat dropdown (also scrollable)
+  - Desktop: Single row with flex justify-between (unchanged)
+- Added `scrollbar-hide` utility class for smooth touch scrolling without visible scrollbar
+- Heat dropdown now opens to the right on mobile (prevents off-screen overflow)
+- Reduced padding/gaps on mobile for better space efficiency
+
+#### Sub-Filters for PENDING Tab - Mobile Scrollable
+- STAGE sub-filters (AWAITING, PROPOSED, DISPUTED, FINALIZING) now horizontally scrollable on mobile
+- Prevents overflow when all sub-filters are visible
+
+### Added
+
+#### Global CSS - scrollbar-hide Utility
+- New `.scrollbar-hide` class in `index.css` utilities layer
+- Hides scrollbar while preserving scroll functionality
+- Cross-browser support: Chrome/Safari, Firefox, IE/Edge
+
+---
+
 ## [0.7.18] - 2026-01-16
 
 ### Changed

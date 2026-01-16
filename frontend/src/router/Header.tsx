@@ -7,17 +7,19 @@
  * @module router/Header
  */
 
+import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { cn } from '@/shared/utils/cn';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import { env } from '@/shared/config/env';
 
 const navLinks = [
   { to: '/', label: 'MARKETS' },
   { to: '/portfolio', label: 'PORTFOLIO' },
   { to: '/create', label: 'CREATE' },
-  { to: '/leaderboard', label: 'LEADERBOARD' },
+  { to: '/leaderboard', label: 'LEADERS' },
 ];
 
 export function Header() {
@@ -162,29 +164,104 @@ export function Header() {
 }
 
 /**
- * Mobile bottom navigation
+ * Mobile bottom navigation with expandable MORE menu
  */
 function MobileNav() {
+  const [showMore, setShowMore] = useState(false);
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black border-t border-dark-600">
-      <div className="flex items-center justify-around h-14">
-        {navLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) =>
-              cn(
-                'flex-1 flex flex-col items-center justify-center h-full',
-                'text-xs font-semibold uppercase tracking-wider transition-colors',
-                isActive ? 'text-cyber' : 'text-text-secondary'
-              )
-            }
+    <>
+      {/* More Menu Overlay */}
+      {showMore && (
+        <div 
+          className="md:hidden fixed inset-0 z-30 bg-black/80"
+          onClick={() => setShowMore(false)}
+        />
+      )}
+      
+      {/* More Menu Panel */}
+      {showMore && (
+        <div className="md:hidden fixed bottom-14 left-0 right-0 z-40 bg-dark-900 border-t border-dark-600 animate-in slide-in-from-bottom duration-200">
+          <div className="p-4 grid grid-cols-3 gap-3">
+            <Link
+              to="/how-to-play"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center justify-center p-3 bg-dark-800 border border-dark-600 hover:border-cyber transition-colors"
+            >
+              <span className="text-xs font-mono text-text-secondary">HOW TO PLAY</span>
+            </Link>
+            <a
+              href={env.X_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center justify-center p-3 bg-dark-800 border border-dark-600 hover:border-cyber transition-colors"
+            >
+              <span className="text-xs font-mono text-text-secondary">TWITTER</span>
+            </a>
+            <a
+              href={env.TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center justify-center p-3 bg-dark-800 border border-dark-600 hover:border-cyber transition-colors"
+            >
+              <span className="text-xs font-mono text-text-secondary">TELEGRAM</span>
+            </a>
+            <Link
+              to="/terms"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center justify-center p-3 bg-dark-800 border border-dark-600 hover:border-cyber transition-colors"
+            >
+              <span className="text-xs font-mono text-text-secondary">TERMS</span>
+            </Link>
+            <Link
+              to="/privacy"
+              onClick={() => setShowMore(false)}
+              className="flex flex-col items-center justify-center p-3 bg-dark-800 border border-dark-600 hover:border-cyber transition-colors"
+            >
+              <span className="text-xs font-mono text-text-secondary">PRIVACY</span>
+            </Link>
+            <div className="flex flex-col items-center justify-center gap-1 p-3 bg-dark-800 border border-dark-600">
+              <span className="w-2 h-2 bg-yes animate-pulse rounded-full" />
+              <span className="text-xs font-mono text-text-muted">BNB CHAIN</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black border-t border-dark-600">
+        <div className="flex items-center h-14">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                cn(
+                  'flex-1 flex flex-col items-center justify-center h-full',
+                  'text-xs font-bold uppercase tracking-wide transition-colors',
+                  isActive ? 'text-cyber' : 'text-text-secondary'
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          {/* MORE button */}
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center h-full',
+              'text-xs font-bold uppercase tracking-wide transition-colors',
+              showMore ? 'text-cyber' : 'text-text-secondary'
+            )}
           >
-            {link.label}
-          </NavLink>
-        ))}
-      </div>
-    </nav>
+            {showMore ? '✕' : 'MORE'}
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }
 
