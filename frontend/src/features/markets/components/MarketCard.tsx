@@ -7,10 +7,12 @@
  * - Big glowing chance percentage
  * - Heat bar for liquidity
  * - Hype flash animation on trade
+ * - React.memo for performance optimization in lists
  *
  * @module features/markets/components/MarketCard
  */
 
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/shared/components/ui/Card';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
@@ -26,7 +28,7 @@ interface MarketCardProps {
   className?: string;
 }
 
-export function MarketCard({ market, className }: MarketCardProps) {
+function MarketCardComponent({ market, className }: MarketCardProps) {
   // Calculate YES price percentage using bonding curve formula (with market's virtual liquidity)
   const yesPercent = calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
 
@@ -76,6 +78,8 @@ export function MarketCard({ market, className }: MarketCardProps) {
             <img
               src={market.imageUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover market-image"
             />
             {/* Overlay gradient */}
@@ -164,5 +168,8 @@ export function MarketCard({ market, className }: MarketCardProps) {
     </Link>
   );
 }
+
+// Memoize to prevent unnecessary re-renders in lists
+export const MarketCard = memo(MarketCardComponent);
 
 export default MarketCard;

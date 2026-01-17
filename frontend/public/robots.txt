@@ -1,0 +1,9 @@
+# JNGLZ.FUN robots.txt
+# https://jnglz.fun/robots.txt
+
+# Allow all crawlers to index public pages
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://jnglz.fun/sitemap.xml

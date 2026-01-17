@@ -2,6 +2,69 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.21] - 2026-01-17
+
+### Added
+
+#### Task 1: Testnet/Mainnet Toggle
+- Added `VITE_ENABLE_TESTNET` environment variable toggle
+  - `true` = Testnet visible (BNB Testnet, Chain ID: 97)
+  - `false` = Mainnet only (BNB Chain, Chain ID: 56)
+- Added helper functions in `env.ts`:
+  - `getBscScanUrl()` - Returns correct BscScan base URL
+  - `getBscScanTxUrl(hash)` - Returns transaction URL
+  - `getBscScanAddressUrl(address)` - Returns address URL
+  - `getNetworkName()` - Returns "BNB Testnet" or "BNB Chain"
+- Fixed hardcoded BscScan URLs in CreateMarketPage and LeaderboardPage
+
+#### Task 2: Full SEO Optimization
+- Updated `index.html` with comprehensive meta tags:
+  - Primary meta tags (title, description, keywords, author, robots)
+  - Open Graph tags for Facebook/LinkedIn sharing
+  - Twitter Card tags for Twitter sharing
+  - Proper favicon links (ico, png, apple-touch-icon)
+  - Web manifest link
+  - Theme color (#00f0ff - cyber)
+  - Canonical URL (https://jnglz.fun/)
+- Created `public/robots.txt` allowing all crawlers
+- Created `public/sitemap.xml` with all main pages
+- Created `public/site.webmanifest` for PWA support
+- Copied favicon files from assets to public folder
+- Created `og-image.png` for social sharing
+
+#### Task 3: Frontend Performance Optimization
+- Added Vite build optimizations in `vite.config.ts`:
+  - Manual chunk splitting (vendor-react, vendor-web3, vendor-apollo, vendor-utils)
+  - ES2020 target for modern browsers
+  - Optimized dependency pre-bundling
+- Added `React.memo` to `MarketCard` component for list rendering optimization
+- Added `loading="lazy"` and `decoding="async"` to market images
+- Build chunks now properly split for better caching
+
+#### Task 4 & 5: Security Hardening & Vercel Deployment
+- Created `vercel.json` with:
+  - SPA rewrites (all routes → index.html)
+  - Security headers:
+    - `X-Content-Type-Options: nosniff`
+    - `X-Frame-Options: DENY`
+    - `X-XSS-Protection: 1; mode=block`
+    - `Referrer-Policy: strict-origin-when-cross-origin`
+    - `Permissions-Policy` (camera, microphone, geolocation disabled)
+    - `Content-Security-Policy` (restricts resource loading)
+  - Cache-Control headers for static assets (1 year, immutable)
+
+### Security Audit
+- ✅ No `dangerouslySetInnerHTML` usage
+- ✅ All external links have `rel="noopener noreferrer"`
+- ✅ SVG images blocked in upload validation (XSS prevention)
+- ✅ Image URLs validated with Zod schema
+
+### Verified
+- Predator Polling Engine v2 intact and working across all pages
+- Build successful with optimized chunks
+
+---
+
 ## [0.7.20] - 2026-01-16
 
 ### Added

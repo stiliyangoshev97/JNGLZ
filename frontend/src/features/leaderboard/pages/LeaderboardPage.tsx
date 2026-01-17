@@ -19,6 +19,7 @@ import { Card } from '@/shared/components/ui/Card';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import { useFocusRefetch } from '@/shared/hooks/useSmartPolling';
+import { getBscScanAddressUrl } from '@/shared/config/env';
 
 // Rank badge styling
 function getRankStyle(rank: number) {
@@ -142,7 +143,7 @@ export function LeaderboardPage() {
                       </div>
                     </div>
                     <a
-                      href={`https://bscscan.com/address/${entry.address}`}
+                      href={getBscScanAddressUrl(entry.address)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-mono text-white hover:text-cyber transition-colors text-xs"
@@ -165,7 +166,7 @@ export function LeaderboardPage() {
                     {/* Address */}
                     <div className="flex-1 min-w-0">
                       <a
-                        href={`https://bscscan.com/address/${entry.address}`}
+                        href={getBscScanAddressUrl(entry.address)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-mono text-white hover:text-cyber transition-colors text-sm"

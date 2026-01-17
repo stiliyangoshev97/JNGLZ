@@ -39,6 +39,7 @@ import {
 import { formatBNB, formatError } from '@/shared/utils/format';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { PREDICTION_MARKET_ABI } from '@/shared/config/contracts';
+import { getBscScanTxUrl } from '@/shared/config/env';
 
 // Quick duration presets
 const DURATION_PRESETS = [
@@ -309,7 +310,7 @@ export function CreateMarketPage() {
           </p>
           {hash && (
             <a
-              href={`https://testnet.bscscan.com/tx/${hash}`}
+              href={getBscScanTxUrl(hash)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-cyber underline text-sm"

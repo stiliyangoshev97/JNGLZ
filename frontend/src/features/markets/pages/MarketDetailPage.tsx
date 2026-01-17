@@ -245,6 +245,8 @@ export function MarketDetailPage() {
               <img
                 src={market.imageUrl}
                 alt=""
+                loading="eager"
+                decoding="async"
                 className="w-full h-full object-cover market-image"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/50 to-transparent" />
