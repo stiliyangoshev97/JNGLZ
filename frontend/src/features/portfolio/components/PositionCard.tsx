@@ -439,7 +439,7 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         to={`/market/${market.id}`}
         className="block mb-3 min-h-[48px]"
       >
-        <h3 className="font-semibold text-white line-clamp-2 group-hover:text-cyber transition-colors">
+        <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors">
           {market.question || `Market #${market.id}`}
         </h3>
       </Link>

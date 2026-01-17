@@ -266,7 +266,7 @@ export function MarketDetailPage() {
               </div>
 
               {/* Question */}
-              <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-white mb-3 md:mb-4">
+              <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-white mb-3 md:mb-4 break-words">
                 {market.question}
               </h1>
 
@@ -441,7 +441,7 @@ function MarketInfoCompact({ market }: { market: Market }) {
           {market.resolutionRules && (
             <div>
               <span className="text-text-muted font-mono">RULES: </span>
-              <span className="text-text-secondary">
+              <span className="text-text-secondary break-all">
                 {market.resolutionRules.length > 150 
                   ? market.resolutionRules.slice(0, 150) + '...' 
                   : market.resolutionRules}

@@ -29,6 +29,7 @@ import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees } from '@/shared/hooks';
 import { formatEther } from 'viem';
+import { formatBNB } from '@/shared/utils/format';
 
 
 // Position with full market data
@@ -1637,7 +1638,7 @@ function MyMarketCard({ market }: MyMarketCardProps) {
         
         <div className="flex-1 flex flex-col">
           {/* Question */}
-          <p className="font-bold text-white line-clamp-2 text-sm min-h-[40px]">
+          <p className="font-bold text-white line-clamp-2 text-sm min-h-[40px] break-all">
             {market.question}
           </p>
           
@@ -1661,7 +1662,11 @@ function MyMarketCard({ market }: MyMarketCardProps) {
           )}
           
           {/* Stats */}
-          <div className="border-t border-dark-600 pt-3 mt-auto grid grid-cols-2 gap-2">
+          <div className="border-t border-dark-600 pt-3 mt-auto grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-xs text-text-muted">POOL SIZE</p>
+              <p className="text-sm font-mono text-cyber">{formatBNB(BigInt(market.poolBalance || '0'))} BNB</p>
+            </div>
             <div>
               <p className="text-xs text-text-muted">VOLUME</p>
               <p className="text-sm font-mono text-white">{totalVolume.toFixed(3)} BNB</p>
