@@ -105,13 +105,16 @@ export function PortfolioPage() {
   const loadMoreMarketsRef = useRef<HTMLDivElement>(null);
   const heatDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Predator Polling v2: 120s interval (was 60s), stops when tab is inactive
-  const pollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
+  // Predator Polling v2: 120s interval, stops when tab is inactive
+  // OPTIMIZATION: Only poll the ACTIVE view to reduce queries by 66%
+  const basePollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
+  const positionsPollInterval = viewMode === 'positions' ? basePollInterval : 0;
+  const myMarketsPollInterval = viewMode === 'my-markets' ? basePollInterval : 0;
 
   const { data, loading, error, refetch: refetchPositions } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
-    pollInterval, // Dynamic: 120s when visible, 0 when hidden
+    pollInterval: positionsPollInterval, // Only poll when positions tab is active
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
@@ -127,7 +130,7 @@ export function PortfolioPage() {
   const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
     variables: { creator: address?.toLowerCase(), first: 50 },
     skip: !address || viewMode !== 'my-markets',
-    pollInterval, // Dynamic: 120s when visible, 0 when hidden
+    pollInterval: myMarketsPollInterval, // Only poll when my-markets tab is active
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
@@ -143,10 +146,11 @@ export function PortfolioPage() {
   }, []);
 
   // Fetch user's trade history for realized P/L calculation
+  // Predator v2: NO POLLING - trades are historical data, fetch ONCE on load
   const { data: tradesData } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
     variables: { trader: address?.toLowerCase(), first: 500 },
     skip: !address,
-    pollInterval, // Dynamic: 120s when visible, 0 when hidden
+    // NO pollInterval - trades history doesn't need real-time updates
     notifyOnNetworkStatusChange: false,
   });
 
