@@ -20,6 +20,11 @@
  * NETWORK TOGGLE:
  * - VITE_ENABLE_TESTNET=true  → Shows testnet (BNB Testnet, Chain ID: 97)
  * - VITE_ENABLE_TESTNET=false → Shows mainnet only (BNB Chain, Chain ID: 56)
+ * 
+ * MAINTENANCE MODE:
+ * - VITE_MAINTENANCE_MODE=true     → Blocks entire site with maintenance page
+ * - VITE_MAINTENANCE_MESSAGE       → Custom message to display
+ * - VITE_MAINTENANCE_END_TIME      → Expected end time (e.g., "January 20, 2026 at 10:00 UTC")
  */
 
 export const env = {
@@ -50,6 +55,11 @@ export const env = {
   // Social Links
   X_URL: import.meta.env.VITE_X_URL || 'https://x.com/jnglzdotfun',
   TELEGRAM_URL: import.meta.env.VITE_TELEGRAM_URL || 'https://t.me/jnglzdotfun',
+  
+  // Maintenance Mode
+  MAINTENANCE_MODE: import.meta.env.VITE_MAINTENANCE_MODE?.toLowerCase() === 'true',
+  MAINTENANCE_MESSAGE: import.meta.env.VITE_MAINTENANCE_MESSAGE || '',
+  MAINTENANCE_END_TIME: import.meta.env.VITE_MAINTENANCE_END_TIME || '',
   
   // Environment
   IS_DEV: import.meta.env.DEV,
