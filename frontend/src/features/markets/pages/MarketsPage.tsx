@@ -556,46 +556,42 @@ export function MarketsPage() {
                 >
                   ALL
                 </SubFilterButton>
-              {pendingSubCounts.awaiting > 0 && (
-                <SubFilterButton
-                  active={pendingSubFilter === 'awaiting'}
-                  onClick={() => handlePendingSubFilterChange('awaiting')}
-                  count={pendingSubCounts.awaiting}
-                  color="yellow"
-                >
-                  AWAITING
-                </SubFilterButton>
-              )}
-              {pendingSubCounts.proposed > 0 && (
-                <SubFilterButton
-                  active={pendingSubFilter === 'proposed'}
-                  onClick={() => handlePendingSubFilterChange('proposed')}
-                  count={pendingSubCounts.proposed}
-                  color="cyan"
-                >
-                  📋 PROPOSED
-                </SubFilterButton>
-              )}
-              {pendingSubCounts.disputed > 0 && (
-                <SubFilterButton
-                  active={pendingSubFilter === 'disputed'}
-                  onClick={() => handlePendingSubFilterChange('disputed')}
-                  count={pendingSubCounts.disputed}
-                  color="orange"
-                >
-                  ⚔️ DISPUTED
-                </SubFilterButton>
-              )}
-              {pendingSubCounts.finalizing > 0 && (
-                <SubFilterButton
-                  active={pendingSubFilter === 'finalizing'}
-                  onClick={() => handlePendingSubFilterChange('finalizing')}
-                  count={pendingSubCounts.finalizing}
-                  color="green"
-                >
-                  ✅ FINALIZING
-                </SubFilterButton>
-              )}
+              <SubFilterButton
+                active={pendingSubFilter === 'awaiting'}
+                onClick={() => handlePendingSubFilterChange('awaiting')}
+                count={pendingSubCounts.awaiting}
+                color="yellow"
+                disabled={pendingSubCounts.awaiting === 0}
+              >
+                AWAITING
+              </SubFilterButton>
+              <SubFilterButton
+                active={pendingSubFilter === 'proposed'}
+                onClick={() => handlePendingSubFilterChange('proposed')}
+                count={pendingSubCounts.proposed}
+                color="green"
+                disabled={pendingSubCounts.proposed === 0}
+              >
+                PROPOSED
+              </SubFilterButton>
+              <SubFilterButton
+                active={pendingSubFilter === 'disputed'}
+                onClick={() => handlePendingSubFilterChange('disputed')}
+                count={pendingSubCounts.disputed}
+                color="orange"
+                disabled={pendingSubCounts.disputed === 0}
+              >
+                DISPUTED
+              </SubFilterButton>
+              <SubFilterButton
+                active={pendingSubFilter === 'finalizing'}
+                onClick={() => handlePendingSubFilterChange('finalizing')}
+                count={pendingSubCounts.finalizing}
+                color="green"
+                disabled={pendingSubCounts.finalizing === 0}
+              >
+                FINALIZING
+              </SubFilterButton>
               </div>
             </div>
           </div>
@@ -742,14 +738,20 @@ function SubFilterButton({
   children,
   count,
   color,
+  disabled,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   count?: number;
   color?: 'yellow' | 'cyan' | 'orange' | 'green';
+  disabled?: boolean;
 }) {
   const getColors = () => {
+    // Disabled state: Muted appearance
+    if (disabled) {
+      return 'text-text-muted/50 cursor-not-allowed';
+    }
     // Active state: Always use cyan for consistency
     if (active) {
       return 'bg-cyber/20 text-cyber';
@@ -766,7 +768,8 @@ function SubFilterButton({
 
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       className={cn(
         'text-xs font-mono px-2 py-1 rounded transition-colors',
         getColors()

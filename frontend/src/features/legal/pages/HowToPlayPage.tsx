@@ -396,6 +396,24 @@ export function HowToPlayPage() {
                     <li>Pool winnings are earned based on <strong className="text-cyber">which shares you hold</strong></li>
                   </ul>
                 </div>
+
+                {/* TIE SCENARIO */}
+                <div className="bg-yellow-500/10 p-4 border border-yellow-500">
+                  <p className="text-yellow-500 font-bold mb-2">⚖️ WHAT IF THE VOTE IS A TIE?</p>
+                  <p className="text-text-secondary text-sm mb-3">
+                    If the dispute vote ends in an <strong className="text-white">exact 50/50 tie</strong> (equal votes on both sides), 
+                    the community couldn't reach consensus. In this case:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm">
+                    <li><span className="text-yes">✓</span> <strong className="text-white">Proposer's bond is returned</strong> (no penalty)</li>
+                    <li><span className="text-yes">✓</span> <strong className="text-white">Disputer's bond is returned</strong> (no penalty)</li>
+                    <li><span className="text-cyber">⏳</span> <strong className="text-white">Emergency refund activates</strong> for all traders</li>
+                  </ul>
+                  <p className="text-text-muted text-xs mt-3">
+                    When the crowd can't decide, nobody gets punished. All traders can claim emergency refunds 
+                    after the 24-hour window from market expiry passes.
+                  </p>
+                </div>
               </div>
             </div>
           </section>

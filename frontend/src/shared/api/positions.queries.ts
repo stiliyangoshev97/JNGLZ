@@ -34,6 +34,8 @@ export const POSITION_FRAGMENT = gql`
       poolBalance
       virtualLiquidity
       heatLevel
+      totalVolume
+      createdAt
       proposer
       proposalTimestamp
       disputer
