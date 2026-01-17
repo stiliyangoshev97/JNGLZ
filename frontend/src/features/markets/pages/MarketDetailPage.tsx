@@ -330,38 +330,15 @@ export function MarketDetailPage() {
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Trade Panel - Shows first on mobile, right column on desktop */}
-            <div className="lg:col-span-1 lg:order-2">
-              <div className="sticky top-24 space-y-4">
-                <TradePanel
-                  market={market}
-                  yesPercent={yesPercent}
-                  noPercent={noPercent}
-                  isActive={isActive}
-                  onTradeSuccess={refreshMarket}
-                />
-                <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
-                
-                {/* Heat Level Info - Hidden on mobile, visible on desktop */}
-                <div className="hidden lg:block border border-dark-600 bg-dark-900">
-                  <div className="border-b border-dark-600 px-4 py-3">
-                    <h3 className="font-bold uppercase">MARKET TIER</h3>
-                  </div>
-                  <div className="p-4">
-                    <HeatLevelInfo heatLevel={market.heatLevel} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Left Column: Chart & History - Shows second on mobile */}
-            <div className="lg:col-span-2 lg:order-1 space-y-6">
-              {/* Price Chart */}
-              <div className="border border-dark-600 bg-dark-900">
+      {/* Main Content - DexScreener-style split pane layout */}
+      <section className="hidden lg:block">
+        {/* Desktop: Fixed viewport height with independent scrolling columns */}
+        <div className="h-[calc(100vh-64px)] max-w-7xl mx-auto px-4 py-4">
+          <div className="grid grid-cols-3 gap-6 h-full">
+            {/* Left Column: Chart & Trades - Fixed height, internal scroll */}
+            <div className="col-span-2 flex flex-col gap-4 h-full overflow-hidden">
+              {/* Price Chart - Fixed height */}
+              <div className="border border-dark-600 bg-dark-900 flex-shrink-0">
                 <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
                   <h2 className="font-bold uppercase">PRICE CHART</h2>
                   <PriceDisplay
@@ -371,7 +348,6 @@ export function MarketDetailPage() {
                   />
                 </div>
                 <div className="p-4">
-                  {/* Predator v2: Pass trades from parent to prevent duplicate queries */}
                   <PriceChart 
                     marketId={market.id} 
                     trades={trades}
@@ -382,16 +358,28 @@ export function MarketDetailPage() {
                 </div>
               </div>
 
-              {/* Trade History & Holders Tabs */}
-              <div className="border border-dark-600 bg-dark-900">
+              {/* Trade History & Holders Tabs - Fills remaining height with scroll */}
+              <div className="border border-dark-600 bg-dark-900 flex-1 min-h-0 flex flex-col">
                 <TradesAndHoldersTabs
                   trades={trades}
                   positions={positions}
                 />
               </div>
+            </div>
+
+            {/* Right Column: Trade Panel & Info - Scrolls independently */}
+            <div className="col-span-1 overflow-y-auto h-full space-y-4 pr-1">
+              <TradePanel
+                market={market}
+                yesPercent={yesPercent}
+                noPercent={noPercent}
+                isActive={isActive}
+                onTradeSuccess={refreshMarket}
+              />
+              <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
               
-              {/* Heat Level Info - Mobile only, at bottom */}
-              <div className="lg:hidden border border-dark-600 bg-dark-900">
+              {/* Heat Level Info */}
+              <div className="border border-dark-600 bg-dark-900">
                 <div className="border-b border-dark-600 px-4 py-3">
                   <h3 className="font-bold uppercase">MARKET TIER</h3>
                 </div>
@@ -399,6 +387,60 @@ export function MarketDetailPage() {
                   <HeatLevelInfo heatLevel={market.heatLevel} />
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile Layout - Traditional scrolling */}
+      <section className="lg:hidden py-8">
+        <div className="max-w-7xl mx-auto px-4 space-y-6">
+          {/* Trade Panel first on mobile */}
+          <TradePanel
+            market={market}
+            yesPercent={yesPercent}
+            noPercent={noPercent}
+            isActive={isActive}
+            onTradeSuccess={refreshMarket}
+          />
+          <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
+          
+          {/* Price Chart */}
+          <div className="border border-dark-600 bg-dark-900">
+            <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
+              <h2 className="font-bold uppercase">PRICE CHART</h2>
+              <PriceDisplay
+                yesPrice={yesPercent / 100}
+                noPrice={noPercent / 100}
+                size="sm"
+              />
+            </div>
+            <div className="p-4">
+              <PriceChart 
+                marketId={market.id} 
+                trades={trades}
+                currentYesShares={market.yesShares}
+                currentNoShares={market.noShares}
+                virtualLiquidity={market.virtualLiquidity}
+              />
+            </div>
+          </div>
+
+          {/* Trade History & Holders Tabs */}
+          <div className="border border-dark-600 bg-dark-900">
+            <TradesAndHoldersTabs
+              trades={trades}
+              positions={positions}
+            />
+          </div>
+          
+          {/* Heat Level Info */}
+          <div className="border border-dark-600 bg-dark-900">
+            <div className="border-b border-dark-600 px-4 py-3">
+              <h3 className="font-bold uppercase">MARKET TIER</h3>
+            </div>
+            <div className="p-4">
+              <HeatLevelInfo heatLevel={market.heatLevel} />
             </div>
           </div>
         </div>
@@ -502,6 +544,8 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
 
 /**
  * Tabbed interface for Trades, Realized P/L, and Holders
+ * Fills parent container height with internal scrolling (desktop)
+ * or uses fixed height (mobile)
  */
 function TradesAndHoldersTabs({ 
   trades, 
@@ -514,8 +558,8 @@ function TradesAndHoldersTabs({
 
   return (
     <>
-      {/* Tab Headers */}
-      <div className="border-b border-dark-600 flex">
+      {/* Tab Headers - Fixed, don't scroll */}
+      <div className="border-b border-dark-600 flex flex-shrink-0">
         <button
           onClick={() => setActiveTab('trades')}
           className={cn(
@@ -551,14 +595,16 @@ function TradesAndHoldersTabs({
         </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'trades' ? (
-        <TradeHistory trades={trades} />
-      ) : activeTab === 'realized' ? (
-        <RealizedPnl trades={trades} />
-      ) : (
-        <HoldersTable positions={positions} />
-      )}
+      {/* Tab Content - Fills remaining height (desktop) or max-height (mobile) */}
+      <div className="flex-1 min-h-0 overflow-y-auto lg:max-h-none max-h-[400px]">
+        {activeTab === 'trades' ? (
+          <TradeHistory trades={trades} />
+        ) : activeTab === 'realized' ? (
+          <RealizedPnl trades={trades} />
+        ) : (
+          <HoldersTable positions={positions} />
+        )}
+      </div>
     </>
   );
 }
@@ -597,8 +643,10 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
 
   if (sortedHolders.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-text-muted font-mono">NO HOLDERS</p>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-text-muted font-mono">NO HOLDERS</p>
+        </div>
       </div>
     );
   }

@@ -27,9 +27,11 @@ export function TradeHistory({
 
   if (displayTrades.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-text-muted font-mono">NO TRADES YET</p>
-        <p className="text-text-muted text-xs mt-1">Be the first to trade!</p>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-text-muted font-mono">NO TRADES YET</p>
+          <p className="text-text-muted text-xs mt-1">Be the first to trade!</p>
+        </div>
       </div>
     );
   }
@@ -237,9 +239,11 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
 
   if (walletPnls.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-text-muted font-mono">NO REALIZED P/L YET</p>
-        <p className="text-text-muted text-xs mt-1">Appears when traders sell their shares</p>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-text-muted font-mono">NO REALIZED P/L YET</p>
+          <p className="text-text-muted text-xs mt-1">Appears when traders sell their shares</p>
+        </div>
       </div>
     );
   }
