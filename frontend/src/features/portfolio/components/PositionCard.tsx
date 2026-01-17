@@ -485,12 +485,10 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
       {/* P/L Display - ALWAYS show this section for consistent layout */}
       <div className={cn(
         'p-3 mb-4 border',
-        // Color based on P/L status
-        resolutionStats.hasRefunded
-          ? 'bg-yes/10 border-yes/30'  // Refunded = green
-          : (positionClosed && totalPnl.hasActivity)
-            ? (totalPnl.combined >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30')
-            : 'bg-dark-800 border-dark-600'
+        // Color based on P/L status only (not refund)
+        (positionClosed && totalPnl.hasActivity)
+          ? (totalPnl.combined >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30')
+          : 'bg-dark-800 border-dark-600'
       )}>
         {/* Case 0: Position still open in active market - show placeholder */}
         {!positionClosed && (hasYes || hasNo) && !resolutionStats.hasRefunded && (
@@ -535,27 +533,55 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
           </div>
         )}
         
-        {/* Case 2: Has refund (separate from P/L) */}
-        {resolutionStats.hasRefunded && (
-          <div className={cn(
-            "flex justify-between items-center",
-            (positionClosed && totalPnl.hasActivity) && "mt-2 pt-2 border-t border-dark-700"
-          )}>
-            <span className="text-xs font-mono text-yes">↩ Refunded</span>
-            <div className="text-right">
-              <span className="font-mono text-sm text-yes font-bold">
-                {resolutionStats.refundedAmount.toFixed(4)} BNB
+        {/* Case 2: Refund section removed - now shown in separate box below */}
+        
+        {/* Case 3: Position closed/refunded but no P/L activity - show placeholder */}
+        {(positionClosed || resolutionStats.hasRefunded) && !totalPnl.hasActivity && (
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-mono text-text-muted">Total P/L</span>
+              <span className="font-mono text-sm text-text-muted">
+                +0.0000 BNB
               </span>
-              <p className="text-xs text-yes/70">Capital recovered</p>
+            </div>
+            <div className="flex justify-end gap-2 mt-1 text-xs font-mono text-text-muted">
+              <span>Trading: +0.0000</span>
+              <span>|</span>
+              <span>Resolution: +0.0000</span>
             </div>
           </div>
         )}
-        
-        {/* Case 3: Position fully exited but no actual P/L calculated (edge case) */}
-        {positionClosed && !totalPnl.hasActivity && !resolutionStats.hasRefunded && invested > 0 && (
-          <p className="text-xs text-text-muted text-center">
-            Position closed
-          </p>
+      </div>
+
+      {/* Refund Box - Separate from P/L, always visible with consistent height */}
+      <div className={cn(
+        'p-3 mb-4 border',
+        resolutionStats.hasRefunded
+          ? 'bg-yes/10 border-yes/30'
+          : 'bg-dark-800 border-dark-600'
+      )}>
+        {resolutionStats.hasRefunded ? (
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-mono text-yes">↩ Refund</span>
+              <span className="font-mono text-sm text-yes font-bold">
+                {resolutionStats.refundedAmount.toFixed(4)} BNB
+              </span>
+            </div>
+            <div className="flex justify-end mt-1 text-xs font-mono text-yes/70">
+              <span>Capital recovered</span>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-mono text-text-muted">Refund</span>
+              <span className="font-mono text-sm text-text-muted">—</span>
+            </div>
+            <div className="flex justify-end mt-1 text-xs font-mono text-text-muted">
+              <span>No refund</span>
+            </div>
+          </div>
         )}
       </div>
 
@@ -626,16 +652,6 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
               disabled
             >
               ✓ CLAIMED
-            </Button>
-          ) : alreadyRefunded ? (
-            /* Already got emergency refund */
-            <Button 
-              variant="yes" 
-              size="sm" 
-              className="flex-1"
-              disabled
-            >
-              ✓ REFUNDED
             </Button>
           ) : canEmergencyRefund ? (
             /* Can claim emergency refund - 24h passed, no resolution */
