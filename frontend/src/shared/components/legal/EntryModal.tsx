@@ -84,7 +84,7 @@ export function EntryModal() {
             <h1 className="text-2xl font-black">
               <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span>
             </h1>
-            <p className="text-xs text-text-secondary font-mono">DECENTRALIZED PREDICTION PROTOCOL ON BNB CHAIN</p>
+            <p className="text-xs text-text-secondary font-mono">PREDICTION MARKET LAUNCHPAD PROTOCOL ON BNB CHAIN</p>
           </div>
         </div>
 
