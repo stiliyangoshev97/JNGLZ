@@ -1,8 +1,18 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 17, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.24  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.25  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## ✅ v0.7.25 FRONTEND RELEASE (Jan 17, 2026)
+
+### MarketDetailPage Layout Fix
+- [x] Simplified two-column desktop layout (chart+tabs left, panels right)
+- [x] Fixed trades/holders/P/L container with consistent `max-h-[400px]`
+- [x] Centered empty state messages ("NO TRADES YET", "NO REALIZED P/L YET", "NO HOLDERS")
+- [x] Replaced skull emoji (💀) with warning emoji (⚠️) in ErrorBoundary
 
 ---
 
@@ -184,8 +194,7 @@
 |-----------|---------|--------|
 | Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.24 | ✅ Leaderboard + 5 Heat Tiers |
-| Frontend | v0.7.5 | ✅ Full Integration |
+| Frontend | v0.7.25 | ✅ MarketDetailPage Layout Fix |
 
 ---
 

@@ -2,6 +2,36 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.25] - 2026-01-17
+
+### Fixed
+
+#### MarketDetailPage Layout Improvements
+- Simplified two-column desktop layout for better content organization
+- Chart and Trades/Holders tabs now in left column (2/3 width)
+- Trade Panel, Resolution Panel, and Market Tier info in right column (1/3 width)
+- Fixed trades/holders container with consistent `max-h-[400px]` scrollable area
+- Removed complex flex-based height matching in favor of simpler grid layout
+
+#### Empty State Centering
+- Centered "NO TRADES YET" message in TradeHistory component
+- Centered "NO REALIZED P/L YET" message in RealizedPnl component
+- Centered "NO HOLDERS" message in HoldersTable component
+- Empty states now properly centered within their scrollable containers
+
+#### ErrorBoundary Styling
+- Replaced skull emoji (💀) with warning emoji (⚠️) for friendlier error display
+- Updated comment from "Skull icon" to "Error header"
+
+### Changed
+
+#### TradesAndHoldersTabs Component
+- Simplified to use fixed `max-h-[400px]` for content area
+- Removed complex flex-1 min-h-0 overflow logic
+- Mobile and desktop now use same consistent max-height approach
+
+---
+
 ## [0.7.24] - 2026-01-17
 
 ### Fixed

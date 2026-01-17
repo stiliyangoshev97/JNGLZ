@@ -330,15 +330,14 @@ export function MarketDetailPage() {
         </div>
       </section>
 
-      {/* Main Content - DexScreener-style split pane layout */}
-      <section className="hidden lg:block">
-        {/* Desktop: Fixed viewport height with independent scrolling columns */}
-        <div className="h-[calc(100vh-64px)] max-w-7xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-3 gap-6 h-full">
-            {/* Left Column: Chart & Trades - Fixed height, internal scroll */}
-            <div className="col-span-2 flex flex-col gap-4 h-full overflow-hidden">
-              {/* Price Chart - Fixed height */}
-              <div className="border border-dark-600 bg-dark-900 flex-shrink-0">
+      {/* Main Content - Two-column layout with matching heights */}
+      <section className="hidden lg:block py-6">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-3 gap-6">
+            {/* Left Column: Chart & Trades */}
+            <div className="col-span-2 flex flex-col gap-4">
+              {/* Price Chart */}
+              <div className="border border-dark-600 bg-dark-900">
                 <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
                   <h2 className="font-bold uppercase">PRICE CHART</h2>
                   <PriceDisplay
@@ -358,8 +357,8 @@ export function MarketDetailPage() {
                 </div>
               </div>
 
-              {/* Trade History & Holders Tabs - Fills remaining height with scroll */}
-              <div className="border border-dark-600 bg-dark-900 flex-1 min-h-0 flex flex-col">
+              {/* Trade History & Holders Tabs */}
+              <div className="border border-dark-600 bg-dark-900">
                 <TradesAndHoldersTabs
                   trades={trades}
                   positions={positions}
@@ -367,8 +366,8 @@ export function MarketDetailPage() {
               </div>
             </div>
 
-            {/* Right Column: Trade Panel & Info - Scrolls independently */}
-            <div className="col-span-1 overflow-y-auto h-full space-y-4 pr-1">
+            {/* Right Column: Trade Panel & Info */}
+            <div className="col-span-1 space-y-4">
               <TradePanel
                 market={market}
                 yesPercent={yesPercent}
@@ -544,8 +543,7 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
 
 /**
  * Tabbed interface for Trades, Realized P/L, and Holders
- * Fills parent container height with internal scrolling (desktop)
- * or uses fixed height (mobile)
+ * Uses fixed max-height with internal scrolling
  */
 function TradesAndHoldersTabs({ 
   trades, 
@@ -558,8 +556,8 @@ function TradesAndHoldersTabs({
 
   return (
     <>
-      {/* Tab Headers - Fixed, don't scroll */}
-      <div className="border-b border-dark-600 flex flex-shrink-0">
+      {/* Tab Headers */}
+      <div className="border-b border-dark-600 flex">
         <button
           onClick={() => setActiveTab('trades')}
           className={cn(
@@ -595,8 +593,8 @@ function TradesAndHoldersTabs({
         </button>
       </div>
 
-      {/* Tab Content - Fills remaining height (desktop) or max-height (mobile) */}
-      <div className="flex-1 min-h-0 overflow-y-auto lg:max-h-none max-h-[400px]">
+      {/* Tab Content - Fixed max-height with scroll */}
+      <div className="max-h-[400px] overflow-y-auto">
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
