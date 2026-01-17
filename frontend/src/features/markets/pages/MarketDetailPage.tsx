@@ -32,6 +32,7 @@ import { SplitHeatBar } from '@/shared/components/ui/HeatBar';
 import { Badge, ActiveBadge, ExpiredBadge, DisputedBadge } from '@/shared/components/ui/Badge';
 import { HeatLevelBadge, HeatLevelInfo } from '@/shared/components/ui/HeatLevelBadge';
 import { Button } from '@/shared/components/ui/Button';
+import { Modal } from '@/shared/components/ui/Modal';
 import { LoadingOverlay } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { TradePanel } from '../components';
@@ -56,6 +57,8 @@ export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
   // Initial query without polling to get market data first
@@ -265,10 +268,20 @@ export function MarketDetailPage() {
                 {isDisputed && <DisputedBadge />}
               </div>
 
-              {/* Question */}
-              <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-white mb-3 md:mb-4 break-words">
-                {market.question}
-              </h1>
+              {/* Question - line-clamp for long text, clickable to expand */}
+              <div className="mb-3 md:mb-4">
+                <h1 
+                  className={cn(
+                    "text-xl md:text-2xl lg:text-4xl font-black text-white break-all",
+                    "line-clamp-2",
+                    market.question.length > 80 && "cursor-pointer hover:text-cyber/90 transition-colors"
+                  )}
+                  onClick={() => market.question.length > 80 && setShowQuestionModal(true)}
+                  title={market.question.length > 80 ? "Click to view full question" : undefined}
+                >
+                  {market.question}
+                </h1>
+              </div>
 
               {/* Creator & Time - Scrollable on mobile */}
               <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
@@ -294,7 +307,7 @@ export function MarketDetailPage() {
 
               {/* Market Info - Inline below header */}
               <div className="mt-4 pt-4 border-t border-dark-700">
-                <MarketInfoCompact market={market} />
+                <MarketInfoCompact market={market} onShowRules={() => setShowRulesModal(true)} />
               </div>
             </div>
 
@@ -389,6 +402,29 @@ export function MarketDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Question Modal */}
+      <Modal
+        isOpen={showQuestionModal}
+        onClose={() => setShowQuestionModal(false)}
+        title="Full Question"
+        size="lg"
+      >
+        <p className="text-white break-all whitespace-pre-wrap">{market.question}</p>
+      </Modal>
+
+      {/* Rules Modal */}
+      <Modal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+        title="Resolution Rules"
+        size="lg"
+      >
+        <p className="text-text-secondary break-all whitespace-pre-wrap">{market.resolutionRules}</p>
+        <p className="text-yellow-500/80 mt-4 pt-4 border-t border-dark-700 text-sm">
+          Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
+        </p>
+      </Modal>
     </div>
   );
 }
@@ -396,7 +432,7 @@ export function MarketDetailPage() {
 /**
  * Compact market info displayed inline in the header area
  */
-function MarketInfoCompact({ market }: { market: Market }) {
+function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRules: () => void }) {
   // totalVolume is BigDecimal (already in BNB), poolBalance is BigInt (wei)
   const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
   const poolBalanceWei = BigInt(market.poolBalance || '0');
@@ -441,10 +477,15 @@ function MarketInfoCompact({ market }: { market: Market }) {
           {market.resolutionRules && (
             <div>
               <span className="text-text-muted font-mono">RULES: </span>
-              <span className="text-text-secondary break-all">
-                {market.resolutionRules.length > 150 
-                  ? market.resolutionRules.slice(0, 150) + '...' 
-                  : market.resolutionRules}
+              <span 
+                className={cn(
+                  "text-text-secondary break-all line-clamp-2",
+                  market.resolutionRules.length > 80 && "cursor-pointer hover:text-white transition-colors"
+                )}
+                onClick={() => market.resolutionRules && market.resolutionRules.length > 80 && onShowRules()}
+                title={market.resolutionRules.length > 80 ? "Click to view full rules" : undefined}
+              >
+                {market.resolutionRules}
               </span>
             </div>
           )}
