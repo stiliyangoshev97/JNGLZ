@@ -53,6 +53,16 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
     - `Content-Security-Policy` (restricts resource loading)
   - Cache-Control headers for static assets (1 year, immutable)
 
+#### Task 7: Logo Update
+- Replaced `jnglz-logo.png` with new `JNGLZFUN-zoomed-removebg.png` logo
+- Logo now used in Jazzicon fallback and header
+
+#### Task 8: Market Creation Success Image
+- Added `THEJUNGLE-zoomed-removebg.png` as `/thejungle-logo.png` for market creation screens
+- Updated CreateMarketPage to show The Jungle logo during:
+  - Market creation loading state
+  - Market creation success state
+
 ### Security Audit
 - ✅ No `dangerouslySetInnerHTML` usage
 - ✅ All external links have `rel="noopener noreferrer"`

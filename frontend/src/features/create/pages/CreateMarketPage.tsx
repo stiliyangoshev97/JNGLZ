@@ -294,14 +294,38 @@ export function CreateMarketPage() {
     );
   }
 
+  // Loading/Confirming state - show THEJUNGLE image
+  if (isPending || isConfirming) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <img 
+            src="/thejungle-logo.png" 
+            alt="The Jungle - Creating Market" 
+            className="w-40 h-40 mx-auto mb-6 object-contain animate-pulse"
+          />
+          <h1 className="text-2xl font-bold text-cyber mb-4">
+            {isPending ? 'CONFIRM IN WALLET' : 'CREATING MARKET...'}
+          </h1>
+          <p className="text-text-secondary mb-4">
+            {isPending 
+              ? 'Please confirm the transaction in your wallet.' 
+              : 'Your market is being created on-chain...'}
+          </p>
+          <Spinner size="lg" variant="cyber" className="mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
   // Success state
   if (isSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
           <img 
-            src="/market-created.png" 
-            alt="Market Created" 
+            src="/thejungle-logo.png" 
+            alt="The Jungle - Market Created" 
             className="w-32 h-32 mx-auto mb-6 object-contain"
           />
           <h1 className="text-2xl font-bold text-yes mb-4">MARKET CREATED!</h1>

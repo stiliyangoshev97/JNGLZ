@@ -80,14 +80,11 @@ export function EntryModal() {
       <div className="relative bg-dark-900 border-2 border-cyber w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="border-b border-cyber px-6 py-4 bg-cyber/10">
-          <div className="flex items-center gap-3">
-            <img src="/jnglz-logo.png" alt="JNGLZ.FUN" className="h-10 w-10" />
-            <div>
-              <h1 className="text-2xl font-black">
-                <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span>
-              </h1>
-              <p className="text-xs text-text-secondary font-mono">DECENTRALIZED PREDICTION PROTOCOL ON BNB CHAIN</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-black">
+              <span className="text-white">JNGLZ</span><span className="text-cyber">.FUN</span>
+            </h1>
+            <p className="text-xs text-text-secondary font-mono">DECENTRALIZED PREDICTION PROTOCOL ON BNB CHAIN</p>
           </div>
         </div>
 
