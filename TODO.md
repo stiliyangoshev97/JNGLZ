@@ -1,8 +1,99 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 17, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.25  
+> **Last Updated:** January 18, 2026  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🚨 CRITICAL BUG - Emergency Refund Double-Spend (v3.5.0)
+
+**Discovered:** January 18, 2026  
+**Severity:** CRITICAL - Potential fund drain  
+**Status:** UNPATCHED - Requires contract upgrade (v3.6.0)
+
+### Description
+A user can potentially receive DOUBLE payment by exploiting the emergency refund + claim flow:
+
+1. Market expires at T=0
+2. At T=24h, emergency refund becomes available (no proposal or proposal still pending)
+3. User calls `emergencyRefund()` → Gets proportional refund based on ALL their shares
+4. Someone calls `finalizeMarket()` → Market gets resolved
+5. User calls `claim()` → Gets payout for their WINNING shares again!
+
+### Root Cause
+Two issues in `PredictionMarket.sol`:
+
+1. **`emergencyRefund()` does NOT reduce `market.poolBalance`**
+   - User gets refund but pool balance stays the same
+   - Later claims calculate payout from the unreduced pool
+
+2. **`claim()` does NOT check `position.emergencyRefunded`**
+   - User can claim even after taking emergency refund
+   - No protection against double-payment
+
+### Impact
+- User could receive: Emergency Refund + Claim Payout = ~2x their entitled amount
+- This drains the pool, leaving other winners unable to claim full amounts
+- Contract could become insolvent
+
+### Proposed Fix (v3.6.0)
+**Option A (Recommended):** Add check in `claim()`:
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ... existing checks ...
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ADD THIS
+    // ... rest of function ...
+}
+```
+
+**Option B:** Reduce pool balance in `emergencyRefund()`:
+```solidity
+function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
+    // ... calculate refund ...
+    market.poolBalance -= refund; // ADD THIS
+    position.emergencyRefunded = true;
+    // ... transfer ...
+}
+```
+
+### Frontend Mitigation (v0.7.26) ✅
+- [x] Block proposals AND disputes in UI when <2 hours remain before emergency refund
+- [x] Show "RESOLUTION WINDOW CLOSED" with emergency refund countdown
+- [x] Contextual messaging for no-proposal vs has-proposal scenarios
+- [x] Show "PROPOSAL WINDOW CLOSED" with emergency refund countdown
+- [ ] Show warning when emergency refund available but resolution in progress (edge case)
+
+---
+
+## ✅ v0.7.26 FRONTEND RELEASE (Jan 18, 2026)
+
+### Maintenance Mode
+- [x] Added `MaintenancePage` component (full-page block)
+- [x] Environment controlled: `VITE_MAINTENANCE_MODE=true`
+- [x] Optional custom message and end time
+
+### Price Chart Timeframe Selector
+- [x] Added timeframe filter: 1H, 6H, 24H, 7D, ALL
+- [x] Default timeframe is 24H
+
+### Branding Updates
+- [x] Updated tagline to "PREDICTION MARKET LAUNCHPAD PROTOCOL"
+- [x] Removed logo from footer and EntryModal header
+- [x] Updated favicon/logo assets
+
+### Predator Polling v2.1
+- [x] PortfolioPage: Only poll active tab
+- [x] Removed duplicate recovery intervals
+
+### CI/CD Pipeline
+- [x] Added subgraph build job
+- [x] CI requires both frontend AND subgraph to pass
+
+### Bug Fixes
+- [x] Fixed "No one proposed yet" showing when proposal exists (ResolutionPanel)
+- [x] Fixed empty bordered div appearing for proposer in dispute window
+- [x] Removed jungle image from "MARKET CREATED" success state
 
 ---
 
@@ -148,7 +239,7 @@
 |-----------|---------|--------|
 | Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.16 | ✅ Price Impact + Heat Badges + Leaderboard |
+| Frontend | v0.7.26 | ✅ Maintenance Mode + Bug Fixes |
 
 ---
 
@@ -194,7 +285,7 @@
 |-----------|---------|--------|
 | Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.25 | ✅ MarketDetailPage Layout Fix |
+| Frontend | v0.7.26 | ✅ Maintenance Mode + Bug Fixes |
 
 ---
 
