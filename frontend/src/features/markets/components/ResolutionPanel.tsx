@@ -43,6 +43,10 @@ const DISPUTE_WINDOW = 30 * 60 * 1000; // 30 minutes
 const VOTING_WINDOW = 60 * 60 * 1000; // 1 hour
 const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 
+// Frontend safety buffer: Block proposals when <2h remain before emergency refund
+// This prevents race conditions between resolution and emergency refund
+const PROPOSAL_CUTOFF_BUFFER = 2 * 60 * 60 * 1000; // 2 hours
+
 export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProps) {
   const { address } = useAccount();
   const { canTrade } = useChainValidation();
@@ -152,13 +156,18 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Emergency refund time (24h after expiry)
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   
+  // Resolution cutoff time (2h before emergency refund) - blocks proposals AND disputes to prevent double-spend race condition
+  const resolutionCutoffTime = emergencyRefundTime - PROPOSAL_CUTOFF_BUFFER;
+  const isInResolutionCutoff = isExpired && !isResolved && now >= resolutionCutoffTime && now < emergencyRefundTime;
+  
   // Can only propose if market has participants on BOTH sides (one-sided = futile, contract safety check will block finalization anyway)
-  // Also: don't show propose if emergency refund is already available (24h passed)
-  const canPropose = isExpired && !hasProposal && !isEmptyMarket && !isOneSidedMarket && (inCreatorPriority ? isCreator : true) && now <= emergencyRefundTime;
+  // Also: don't show propose if emergency refund is already available (24h passed) OR within 2h cutoff period
+  const canPropose = isExpired && !hasProposal && !isEmptyMarket && !isOneSidedMarket && (inCreatorPriority ? isCreator : true) && now < resolutionCutoffTime;
   
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
   // Proposer cannot dispute their own proposal
-  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd && !isProposer;
+  // Also block disputes within 2h of emergency refund (resolution cutoff)
+  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd && !isProposer && now < resolutionCutoffTime;
   
   const votingWindowEnd = disputeMs + VOTING_WINDOW;
   const canVote = hasDispute && now < votingWindowEnd && totalShares > 0n && !hasVoted;
@@ -841,8 +850,28 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Waiting for Emergency Refund */}
-        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && !isOneSidedMarket && (
+        {/* Resolution Cutoff Period - Less than 2h before emergency refund, proposals AND disputes blocked */}
+        {isInResolutionCutoff && !isOneSidedMarket && totalShares > 0n && !hasEmergencyRefunded && (
+          <div className="p-3 bg-dark-800 border border-orange-500/30 text-center">
+            <p className="text-orange-400 font-bold text-sm mb-2">RESOLUTION WINDOW CLOSED</p>
+            <p className="text-text-secondary text-xs mb-3">
+              {hasProposal 
+                ? "Less than 2 hours remain before emergency refund. New disputes are blocked."
+                : "No resolution was proposed in time. Emergency refund will be available soon."
+              }
+            </p>
+            <div className="bg-dark-900 border border-dark-600 p-3">
+              <p className="text-text-muted text-xs">Emergency refund unlocks in:</p>
+              <p className="text-cyber font-mono text-2xl mt-1">{formatTimeLeft(emergencyRefundTime)}</p>
+            </div>
+            <p className="text-text-muted text-xs mt-3">
+              You'll be able to claim a proportional refund based on your {formatShares(totalShares)} shares
+            </p>
+          </div>
+        )}
+
+        {/* Waiting for Emergency Refund - Show when resolution is stuck (but NOT in cutoff period which has its own section) */}
+        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && !isOneSidedMarket && !isInResolutionCutoff && (resolutionMayHaveFailed || isTie || !hasProposal) && (
           <div className="p-3 bg-dark-800 border border-cyber/30 text-center">
             {resolutionMayHaveFailed ? (
               <>
@@ -863,7 +892,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               <>
                 <p className="text-cyber font-bold text-sm mb-2">WAITING FOR RESOLUTION</p>
                 <p className="text-text-secondary text-xs mb-3">
-                  No one proposed an outcome yet. Emergency refund will be available soon.
+                  No one has proposed an outcome yet. Emergency refund will be available soon.
                 </p>
               </>
             )}

@@ -2,6 +2,70 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.26] - 2026-01-18
+
+### Added
+
+#### Maintenance Mode
+- New `MaintenancePage` component that blocks entire site when enabled
+- Environment variable controlled: `VITE_MAINTENANCE_MODE=true`
+- Optional custom message via `VITE_MAINTENANCE_MESSAGE`
+- Optional end time via `VITE_MAINTENANCE_END_TIME`
+- Shows logo, title, description, and social links (X, Telegram)
+
+#### Price Chart Timeframe Selector
+- Added timeframe filter buttons: 1H, 6H, 24H, 7D, ALL
+- Default timeframe is 24H
+- Chart data filtered based on selected timeframe
+- Consistent styling with existing UI components
+
+#### Emergency Refund Double-Spend Mitigation
+- Block proposals AND disputes when <2 hours remain before emergency refund
+- New "RESOLUTION WINDOW CLOSED" UI state when in cutoff period
+- Shows contextual message (no proposal vs proposal exists but disputes blocked)
+- Shows emergency refund countdown when resolution actions are blocked
+- Prevents race condition between resolution and emergency refund (contract bug mitigation)
+- Updated How To Play page with 2-hour safety cutoff information
+
+### Changed
+
+#### Branding Updates
+- Updated tagline to "PREDICTION MARKET LAUNCHPAD PROTOCOL ON BNB CHAIN"
+- Removed logo from footer (text only now)
+- Removed logo from EntryModal header (text only)
+- Updated all logo references to use `/logo.svg`
+
+#### Favicon & Logo Assets
+- Added new high-quality JZ favicons (16x16, 32x32, 192x192, 512x512)
+- Added `logo.svg` vector file
+- Added `JNGLZFUN-zoomed-removebg.png` for various uses
+- Updated `site.webmanifest` with new icons
+
+#### Predator Polling v2.1
+- PortfolioPage: Only poll active tab (positions OR my-markets)
+- PortfolioPage: Removed polling from GET_USER_TRADES query
+- MarketDetailPage: Removed duplicate recovery interval
+
+#### CI/CD Pipeline
+- Added subgraph build job (codegen + build)
+- CI now requires both frontend AND subgraph builds to pass
+- Updated chain ID to mainnet (56) for CI builds
+
+### Fixed
+
+#### PositionCard Total P/L
+- Fixed missing P/L placeholder display
+- Simplified P/L display logic
+
+#### CreateMarketPage Success State
+- Removed "THE JUNGLE" image from "MARKET CREATED" success screen
+- Cleaner success state with just text and transaction link
+
+### Removed
+- Removed `AnnouncementBanner` component (replaced by full-page MaintenancePage)
+
+---
+
 ## [0.7.25] - 2026-01-17
 
 ### Fixed

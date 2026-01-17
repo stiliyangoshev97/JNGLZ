@@ -1,6 +1,6 @@
 # JNGLZ.FUN CI Pipeline
 # Runs on every push to main and on all pull requests
-# Tests frontend build to catch bugs before merge
+# Builds frontend and subgraph to catch errors before merge
 
 name: CI
 
@@ -52,24 +52,55 @@ jobs:
         run: npm run build
         env:
           VITE_WALLETCONNECT_PROJECT_ID: test-project-id
-          VITE_CHAIN_ID: 97
-          VITE_ENABLE_TESTNET: true
+          VITE_CHAIN_ID: 56
+          VITE_ENABLE_TESTNET: false
           VITE_CONTRACT_ADDRESS: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
           VITE_SUBGRAPH_URL: https://gateway.thegraph.com/api/subgraphs/id/test
           VITE_GRAPH_API_KEY: test-api-key
+
+  # ============================================================================
+  # Subgraph Build & Codegen
+  # ============================================================================
+  subgraph:
+    name: Subgraph
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: subgraph
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: subgraph/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate types
+        run: npm run codegen
+
+      - name: Build subgraph
+        run: npm run build
 
   # ============================================================================
   # Summary Job (for branch protection)
   # ============================================================================
   ci-success:
     name: CI Success
-    needs: [frontend]
+    needs: [frontend, subgraph]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
-          if [[ "${{ needs.frontend.result }}" != "success" ]]; then
+          if [[ "${{ needs.frontend.result }}" != "success" ]] || [[ "${{ needs.subgraph.result }}" != "success" ]]; then
             echo "❌ CI failed"
             exit 1
           fi

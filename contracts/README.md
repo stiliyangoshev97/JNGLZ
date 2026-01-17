@@ -22,7 +22,37 @@
 | v3.3.0 | ✅ STABLE | Added proposer rewards |
 | v3.4.0 | ✅ STABLE | Pull Pattern, griefing protection |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), sweep protection |
-| v3.5.0 | ✅ DEPLOYED | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
+| v3.5.0 | ⚠️ BUG | **Emergency Refund Double-Spend** (see below) |
+
+---
+
+## 🚨 KNOWN BUG: Emergency Refund Double-Spend (v3.5.0)
+
+**Discovered:** January 18, 2026  
+**Severity:** CRITICAL - Potential fund drain  
+**Status:** UNPATCHED - Requires v3.6.0
+
+### Description
+A user can receive DOUBLE payment by exploiting emergency refund + claim:
+
+1. Market expires, 24h passes with no resolution (or resolution in progress)
+2. User calls `emergencyRefund()` → Gets proportional refund based on ALL shares
+3. Market gets finalized (resolved)
+4. User calls `claim()` → Gets payout for WINNING shares again!
+
+### Root Cause
+1. **`emergencyRefund()` does NOT reduce `market.poolBalance`**
+2. **`claim()` does NOT check `position.emergencyRefunded`**
+
+### Impact
+- User receives: Emergency Refund + Claim = ~2x their entitled amount
+- Pool becomes insolvent, other winners can't claim full amounts
+
+### Fix (v3.6.0)
+Add check in `claim()`:
+```solidity
+if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
+```
 
 ---
 

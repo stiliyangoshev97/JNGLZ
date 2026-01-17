@@ -131,31 +131,21 @@ export function MarketDetailPage() {
   // Only show loading on initial load, not on polls/refetches
   const isInitialLoading = loading && !data?.market;
 
-  // Retry fetching if market not found and we came from create page
-  // Also auto-retry on transient errors if market was previously loaded
+  // Retry fetching ONLY on initial load (not during normal operation)
+  // Predator v2: Removed aggressive retry loops that caused extra queries
   useEffect(() => {
-    const shouldRetry = !loading && !data?.market && retryCount < maxRetries;
-    const shouldAutoRetryOnError = error && hasLoadedOnce && !data?.market;
-    
-    if (shouldRetry || shouldAutoRetryOnError) {
+    // Only retry if we're on initial load and haven't loaded successfully yet
+    if (!hasLoadedOnce && !loading && !data?.market && retryCount < maxRetries) {
       const timer = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         refetch();
-      }, 3000); // Retry every 3 seconds
+      }, 3000); // Retry every 3 seconds during initial load only
       return () => clearTimeout(timer);
     }
-  }, [loading, data?.market, retryCount, refetch, error, hasLoadedOnce]);
+  }, [loading, data?.market, retryCount, refetch, hasLoadedOnce]);
 
-  // Keep polling even after errors to recover from transient issues
-  useEffect(() => {
-    // If we had data before but lost it, keep trying to recover
-    if (hasLoadedOnce && !data?.market && !loading) {
-      const recoveryInterval = setInterval(() => {
-        refetch();
-      }, 10000); // Try every 10 seconds
-      return () => clearInterval(recoveryInterval);
-    }
-  }, [hasLoadedOnce, data?.market, loading, refetch]);
+  // NOTE: Removed recovery polling - the main temperature-based polling handles reconnection
+  // The 10-second recovery interval was causing duplicate queries
 
   // Still loading or retrying - only on INITIAL load, not polls
   if (isInitialLoading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {

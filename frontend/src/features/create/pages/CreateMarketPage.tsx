@@ -323,11 +323,6 @@ export function CreateMarketPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <img 
-            src="/thejungle-logo.png" 
-            alt="The Jungle - Market Created" 
-            className="w-40 h-40 mx-auto mb-6 object-contain"
-          />
           <h1 className="text-2xl font-bold text-yes mb-4">MARKET CREATED!</h1>
           <p className="text-text-secondary mb-4">
             Your market is now live.

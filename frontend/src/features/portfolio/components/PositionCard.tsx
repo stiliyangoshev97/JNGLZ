@@ -482,75 +482,57 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         </div>
       </div>
 
-      {/* P/L Display - ALWAYS show this section for consistent layout */}
+      {/* P/L Display - ALWAYS show this section unconditionally */}
       <div className={cn(
         'p-3 mb-4 border',
-        // Color based on P/L status only (not refund)
-        (positionClosed && totalPnl.hasActivity)
+        // Color based on P/L activity and value
+        totalPnl.hasActivity
           ? (totalPnl.combined >= 0 ? 'bg-yes/10 border-yes/30' : 'bg-no/10 border-no/30')
           : 'bg-dark-800 border-dark-600'
       )}>
-        {/* Case 0: Position still open in active market - show placeholder */}
-        {!positionClosed && (hasYes || hasNo) && !resolutionStats.hasRefunded && (
-          <div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-mono text-text-muted">Total P/L</span>
-              <span className="font-mono text-sm text-text-muted">
-                — (position open)
-              </span>
-            </div>
-            {/* Breakdown placeholder - matches Case 1 structure */}
-            <div className="flex justify-end gap-2 mt-1 text-xs font-mono text-text-muted">
-              <span>Trading: —</span>
-              <span>|</span>
-              <span>Resolution: —</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Case 1: Has P/L activity AND position is closed (trades or resolution) */}
-        {positionClosed && totalPnl.hasActivity && (
-          <div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-mono text-text-muted">Total P/L</span>
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-mono text-text-muted">Total P/L</span>
+            {totalPnl.hasActivity ? (
               <span className={cn(
                 'font-mono text-sm font-bold',
                 totalPnl.combined >= 0 ? 'text-yes' : 'text-no'
               )}>
                 {totalPnl.combined >= 0 ? '+' : ''}{totalPnl.combined.toFixed(4)} BNB
               </span>
-            </div>
-            {/* Breakdown - always visible */}
-            <div className="flex justify-end gap-2 mt-1 text-xs font-mono">
-              <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes/80' : 'text-no/80'}>
-                Trading: {tradingPnl.realizedPnlBNB >= 0 ? '+' : ''}{tradingPnl.realizedPnlBNB.toFixed(4)}
-              </span>
-              <span className="text-text-muted">|</span>
-              <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes/80' : 'text-no/80'}>
-                Resolution: {resolutionStats.resolutionPnl >= 0 ? '+' : ''}{resolutionStats.resolutionPnl.toFixed(4)}
-              </span>
-            </div>
+            ) : positionClosed || resolutionStats.hasRefunded ? (
+              <span className="font-mono text-sm text-text-muted">+0.0000 BNB</span>
+            ) : (
+              <span className="font-mono text-sm text-text-muted">— (position open)</span>
+            )}
           </div>
-        )}
-        
-        {/* Case 2: Refund section removed - now shown in separate box below */}
-        
-        {/* Case 3: Position closed/refunded but no P/L activity - show placeholder */}
-        {(positionClosed || resolutionStats.hasRefunded) && !totalPnl.hasActivity && (
-          <div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-mono text-text-muted">Total P/L</span>
-              <span className="font-mono text-sm text-text-muted">
-                +0.0000 BNB
-              </span>
-            </div>
-            <div className="flex justify-end gap-2 mt-1 text-xs font-mono text-text-muted">
-              <span>Trading: +0.0000</span>
-              <span>|</span>
-              <span>Resolution: +0.0000</span>
-            </div>
+          {/* Breakdown - always visible */}
+          <div className="flex justify-end gap-2 mt-1 text-xs font-mono">
+            {totalPnl.hasActivity ? (
+              <>
+                <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                  Trading: {tradingPnl.realizedPnlBNB >= 0 ? '+' : ''}{tradingPnl.realizedPnlBNB.toFixed(4)}
+                </span>
+                <span className="text-text-muted">|</span>
+                <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                  Resolution: {resolutionStats.resolutionPnl >= 0 ? '+' : ''}{resolutionStats.resolutionPnl.toFixed(4)}
+                </span>
+              </>
+            ) : positionClosed || resolutionStats.hasRefunded ? (
+              <>
+                <span className="text-text-muted">Trading: +0.0000</span>
+                <span className="text-text-muted">|</span>
+                <span className="text-text-muted">Resolution: +0.0000</span>
+              </>
+            ) : (
+              <>
+                <span className="text-text-muted">Trading: —</span>
+                <span className="text-text-muted">|</span>
+                <span className="text-text-muted">Resolution: —</span>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Refund Box - Separate from P/L, always visible with consistent height */}

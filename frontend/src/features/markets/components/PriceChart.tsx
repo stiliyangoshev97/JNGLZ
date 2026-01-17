@@ -18,14 +18,29 @@
  * - NO OWN POLLING - receives trades from parent via props
  * - This prevents duplicate queries (parent polls, child displays)
  * - Falls back to own query (NO polling) if trades not provided
+ * 
+ * Timeframe Selector (v2.1):
+ * - Filter chart data by time period: 1H, 6H, 24H, 7D, ALL
+ * - Shows "No trades in this period" when timeframe is empty
  *
  * @module features/markets/components/PriceChart
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET_TRADES } from '@/shared/api';
 import { cn } from '@/shared/utils/cn';
+
+// Timeframe options in seconds
+const TIMEFRAMES = {
+  '1H': 60 * 60,
+  '6H': 6 * 60 * 60,
+  '24H': 24 * 60 * 60,
+  '7D': 7 * 24 * 60 * 60,
+  'ALL': Infinity,
+} as const;
+
+type TimeframeKey = keyof typeof TIMEFRAMES;
 
 interface Trade {
   id: string;
@@ -70,6 +85,9 @@ export function PriceChart({
   virtualLiquidity: propVirtualLiquidity,
   className 
 }: PriceChartProps) {
+  // Timeframe selector state
+  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeframeKey>('ALL');
+
   // Only fetch if trades not provided by parent
   // NO POLLING - just initial fetch as fallback
   const { data } = useQuery<{ trades: Trade[] }>(GET_MARKET_TRADES, {
@@ -80,6 +98,16 @@ export function PriceChart({
 
   // Use prop trades if available, otherwise fall back to own query
   const trades = propTrades || data?.trades || [];
+
+  // Filter trades by selected timeframe
+  const filteredTrades = useMemo(() => {
+    if (selectedTimeframe === 'ALL') return trades;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffTime = now - TIMEFRAMES[selectedTimeframe];
+    
+    return trades.filter(trade => Number(trade.timestamp) >= cutoffTime);
+  }, [trades, selectedTimeframe]);
 
   // Parse virtual liquidity from props (in wei) - default to 5e18 (CRACK level)
   const virtualLiquidity = useMemo(() => {
@@ -92,7 +120,7 @@ export function PriceChart({
   // Process trades into chart data points
   // We simulate the share supply changes over time to get probability at each point
   const chartData = useMemo(() => {
-    if (trades.length === 0) {
+    if (filteredTrades.length === 0) {
       return { 
         points: [{ x: 0, y: 50 }, { x: 100, y: 50 }], // Flat line at 50%
         minTime: 0, 
@@ -102,7 +130,7 @@ export function PriceChart({
     }
 
     // Sort trades by timestamp (oldest first for simulation)
-    const sortedTrades = [...trades].sort(
+    const sortedTrades = [...filteredTrades].sort(
       (a, b) => Number(a.timestamp) - Number(b.timestamp)
     );
 
@@ -160,7 +188,7 @@ export function PriceChart({
     }
 
     return { points, minTime, maxTime, hasRealData: true };
-  }, [trades, virtualLiquidity]);
+  }, [filteredTrades, virtualLiquidity]);
 
   // Calculate current price from props or last chart point
   const currentYesPercent = useMemo(() => {
@@ -219,6 +247,25 @@ export function PriceChart({
 
   return (
     <div className={cn('relative h-64 bg-dark-800', className)}>
+      {/* Timeframe Selector */}
+      <div className="absolute left-10 top-2 z-10 flex gap-1">
+        {(Object.keys(TIMEFRAMES) as TimeframeKey[]).map((tf) => (
+          <button
+            key={tf}
+            onClick={() => setSelectedTimeframe(tf)}
+            className={cn(
+              'px-2 py-0.5 text-xs font-mono transition-all',
+              'border border-dark-600 hover:border-primary/50',
+              selectedTimeframe === tf
+                ? 'bg-primary/20 text-primary border-primary/50'
+                : 'bg-dark-900/80 text-text-muted hover:text-text-secondary'
+            )}
+          >
+            {tf}
+          </button>
+        ))}
+      </div>
+
       {/* Grid lines */}
       <div className="absolute inset-0 pointer-events-none">
         {[0, 25, 50, 75, 100].map((percent) => (
@@ -299,13 +346,28 @@ export function PriceChart({
         </div>
       </div>
 
-      {/* Trade count */}
+      {/* Trade count - updated to show filtered count */}
       <div className="absolute left-10 bottom-2 text-xs font-mono text-text-muted">
-        <span>{trades.length} trade{trades.length !== 1 ? 's' : ''}</span>
+        <span>
+          {filteredTrades.length} trade{filteredTrades.length !== 1 ? 's' : ''}
+          {selectedTimeframe !== 'ALL' && trades.length !== filteredTrades.length && (
+            <span className="text-dark-500"> ({trades.length} total)</span>
+          )}
+        </span>
       </div>
 
-      {/* No trades message */}
-      {!chartData.hasRealData && (
+      {/* No trades in timeframe message */}
+      {!chartData.hasRealData && trades.length > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center bg-dark-900/80 px-4 py-2 rounded">
+            <p className="text-text-muted font-mono text-sm">NO TRADES IN {selectedTimeframe}</p>
+            <p className="text-text-muted text-xs mt-1">Try a longer timeframe</p>
+          </div>
+        </div>
+      )}
+
+      {/* No trades ever message */}
+      {!chartData.hasRealData && trades.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center bg-dark-900/80 px-4 py-2 rounded">
             <p className="text-text-muted font-mono text-sm">NO TRADES YET</p>

@@ -1,7 +1,7 @@
 {
   "name": "JNGLZ.FUN - Prediction Markets",
-  "short_name": "JNGLZ",
-  "description": "Decentralized Prediction Markets on BNB Chain",
+  "short_name": "JNGLZ.FUN",
+  "description": "Decentralized prediction markets on BNB Chain",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -14,7 +14,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#00f0ff",
+  "theme_color": "#0a0a0a",
   "background_color": "#0a0a0a",
   "display": "standalone",
   "start_url": "/",

@@ -414,6 +414,22 @@ export function HowToPlayPage() {
                     after the 24-hour window from market expiry passes.
                   </p>
                 </div>
+
+                {/* 2-HOUR CUTOFF */}
+                <div className="bg-orange-500/10 p-4 border border-orange-500">
+                  <p className="text-orange-400 font-bold mb-2">⏰ 2-HOUR SAFETY CUTOFF</p>
+                  <p className="text-text-secondary text-sm mb-3">
+                    To prevent race conditions between resolution and emergency refund:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm">
+                    <li><span className="text-orange-400">🚫</span> <strong className="text-white">No new proposals</strong> allowed within 2 hours of emergency refund</li>
+                    <li><span className="text-orange-400">🚫</span> <strong className="text-white">No new disputes</strong> allowed within 2 hours of emergency refund</li>
+                    <li><span className="text-cyber">⏳</span> <strong className="text-white">Existing votes</strong> can still be cast if within voting window</li>
+                  </ul>
+                  <p className="text-text-muted text-xs mt-3">
+                    This ensures resolution has enough time to complete (up to 1h 30min) before emergency refund becomes available.
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -871,6 +887,17 @@ export function HowToPlayPage() {
                 <div>
                   <p className="text-no font-bold">If No Proposal for 24h</p>
                   <p className="text-text-secondary text-sm">Emergency refund becomes available for all shareholders.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 bg-dark-800 border border-orange-500/30">
+                <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-orange-400 font-bold">⚠</div>
+                <div>
+                  <p className="text-orange-400 font-bold">2-Hour Safety Cutoff</p>
+                  <p className="text-text-secondary text-sm">
+                    When less than 2 hours remain before emergency refund, <strong className="text-white">no new proposals or disputes</strong> can be made. 
+                    This prevents race conditions between resolution and emergency refund.
+                  </p>
                 </div>
               </div>
             </div>

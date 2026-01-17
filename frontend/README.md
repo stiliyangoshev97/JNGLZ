@@ -191,14 +191,20 @@ interface PriceChartProps {
 
 | Query | Interval | Purpose |
 |-------|----------|---------|
-| `GET_USER_POSITIONS` | **2 minutes** | User's positions |
-| `GET_MARKETS_BY_CREATOR` | **2 minutes** | Markets created by user |
+| `GET_USER_POSITIONS` | **2 minutes** (active tab only) | User's positions |
+| `GET_MARKETS_BY_CREATOR` | **2 minutes** (active tab only) | Markets created by user |
+| `GET_USER_TRADES` | **ONCE** (no polling) | Historical trades for P/L |
 
 **File:** `src/features/portfolio/pages/PortfolioPage.tsx`
 
 ```typescript
-// Predator v2: 120s interval (was 60s)
-const pollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
+// Predator v2.1: Only poll the ACTIVE tab (positions OR my-markets, not both)
+const basePollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
+const positionsPollInterval = viewMode === 'positions' ? basePollInterval : 0;
+const myMarketsPollInterval = viewMode === 'my-markets' ? basePollInterval : 0;
+
+// Trades: fetch ONCE - historical data doesn't need polling
+const { data: tradesData } = useQuery(GET_USER_TRADES);  // No pollInterval!
 
 const { data } = useQuery(GET_USER_POSITIONS, { pollInterval });
 ```
@@ -251,23 +257,28 @@ triggerTradeRefetch();  // Waits 3s, then refetches
 
 ### 📈 Rate Limit Calculations
 
-#### Estimated Daily Usage (Predator v2)
+#### Estimated Daily Usage (Predator v2.1)
 
 | Scenario | Queries/Hour | With 50% Tab Active | Daily (8hr) |
 |----------|--------------|---------------------|-------------|
-| Markets page (HOT market) | 40 | 20 | **160** |
-| Markets page (COLD market) | 40 | 20 | **160** |
+| Markets page | 40 | 20 | **160** |
 | Detail page (HOT) | 240 | 120 | **960** |
 | Detail page (WARM) | 60 | 30 | **240** |
 | Detail page (COLD) | 12 | 6 | **48** |
 | Detail page (RESOLVED) | 0 | 0 | **0** |
-| Portfolio | 30 | 15 | **120** |
+| Portfolio (single tab) | 30 | 15 | **120** |
+| Leaderboard | 1-5 | 1-5 | **5** |
 
-**Realistic Usage:** 300-500 queries/day per user (down from 2,000+)
+**v2.1 Optimizations:**
+- Portfolio: Only polls active tab (was 3 parallel polls = 90/hr → now 30/hr)
+- Trades history: Fetches ONCE (was polling = 30/hr → now 0/hr)
+- MarketDetail: Removed recovery polling overlap (saves ~6/hr)
+
+**Realistic Usage:** 200-400 queries/day per user (down from 1600+)
 
 ---
 
-### ⚠️ Important Notes (Predator v2)
+### ⚠️ Important Notes (Predator v2.1)
 
 1. **notifyOnNetworkStatusChange: false** - Prevents UI re-renders during background polls.
 
@@ -280,6 +291,10 @@ triggerTradeRefetch();  // Waits 3s, then refetches
 5. **Temperature Override** - `triggerHotMode()` forces 15s polling for 2 minutes after trades.
 
 6. **Ticker Fetches ONCE** - Live ticker loads on page mount, no continuous polling.
+
+7. **Portfolio Active Tab Only** - Only the visible tab (positions/my-markets) polls, not both.
+
+8. **Trades History Static** - Historical trades fetch once, no polling needed.
 
 ---
 
