@@ -1,8 +1,18 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 17, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.24  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.25  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## ✅ v0.7.25 FRONTEND RELEASE (Jan 17, 2026)
+
+### MarketDetailPage Layout Fix
+- [x] Simplified two-column desktop layout (chart+tabs left, panels right)
+- [x] Fixed trades/holders/P/L container with consistent `max-h-[400px]`
+- [x] Centered empty state messages ("NO TRADES YET", "NO REALIZED P/L YET", "NO HOLDERS")
+- [x] Replaced skull emoji (💀) with warning emoji (⚠️) in ErrorBoundary
 
 ---
 
@@ -99,28 +109,23 @@
 
 ---
 
-## 🚀 REMAINING TODO: Frontend HeatSelector Update
+## ✅ COMPLETED: Frontend HeatSelector Update (Jan 2026)
 
-### Still Needed (Low Priority)
-- [ ] Update `HeatSelector` component for 5 tiers (currently shows 3)
-- [ ] Update `CreateMarketPage.tsx` to wire 5 tiers
-- [ ] Update `format.ts` - DEFAULT_VIRTUAL_LIQUIDITY constant
-- [ ] Add APEX and CORE icons/styling
-
-### Why Low Priority?
-Contract supports all 5 tiers. Frontend currently limits to 3, which is fine for MVP.
-Users can still create APEX/CORE markets via direct contract interaction.
+### All 5 Heat Tiers Implemented ✅
+- [x] Update `HeatSelector` component for 5 tiers
+- [x] Update `CreateMarketPage.tsx` to wire 5 tiers (0-4)
+- [x] Update `heatLevel.ts` with all 5 tier configs (DEGEN, STREET, WHALE, INSTITUTION, DEEP SPACE)
+- [x] Add APEX/INSTITUTION and CORE/DEEP SPACE styling
 
 ---
 
-## 🚨 NEXT PRIORITIES
+## ✅ COMPLETED: Public Leaderboard Page (Jan 2026)
 
-### 1. Public Leaderboard Page ⬜
-- [ ] Create `/leaderboard` page
-- [ ] Query users sorted by `totalPnL`, `winRate`, `totalVolume`
-- [ ] Display P/L stats, win rate, total trades
-- [ ] Pagination with "Load More"
-- [ ] Filter by timeframe (7d, 30d, all-time)
+- [x] Create `/leaderboard` page
+- [x] Query users sorted by `totalPnL`
+- [x] Display P/L stats with color coding
+- [x] Top 10 display with rank badges (1st, 2nd, 3rd)
+- [x] Predator v2: Fetch once on load, refetch on tab focus
 
 ### 2. Social Features (Comments) ⬜
 - [ ] Setup Supabase project
@@ -187,9 +192,9 @@ Users can still create APEX/CORE markets via direct contract interaction.
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| Smart Contracts | v3.4.1 | ✅ Deployed & Verified |
-| Subgraph | v3.4.1 | ✅ Deployed & Synced |
-| Frontend | v0.7.5 | ✅ Full Integration |
+| Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
+| Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
+| Frontend | v0.7.25 | ✅ MarketDetailPage Layout Fix |
 
 ---
 

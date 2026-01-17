@@ -427,9 +427,9 @@ export function CreateMarketPage() {
                     key={level.value}
                     type="button"
                     onClick={() => setValue('heatLevel', level.value)}
-                    className={`w-full p-4 border-2 transition-all text-left ${
+                    className={`w-full p-4 border transition-all text-left ${
                       isSelected
-                        ? `${level.borderColor} ${level.bgColor}`
+                        ? 'border-dark-500 bg-dark-800'
                         : 'border-dark-600 hover:border-dark-500'
                     }`}
                   >

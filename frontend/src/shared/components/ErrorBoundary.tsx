@@ -117,9 +117,9 @@ export function ErrorBoundary() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="max-w-lg w-full border-2 border-no bg-dark-900 p-8 text-center">
-        {/* Skull icon */}
+        {/* Error header */}
         <div className="mb-6">
-          <p className="text-6xl mb-4">💀</p>
+          <p className="text-6xl mb-4">⚠️</p>
           <h1 className="text-3xl font-black uppercase text-no">
             SOMETHING BROKE
           </h1>

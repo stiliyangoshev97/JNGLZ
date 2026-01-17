@@ -132,7 +132,7 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
         )}
 
         {/* Question - fixed min-height for consistent layout across cards */}
-        <h3 className="text-base font-semibold text-white line-clamp-2 mb-3 min-h-[48px] group-hover:text-cyber transition-colors">
+        <h3 className="text-base font-semibold text-white line-clamp-2 break-all mb-3 min-h-[48px] group-hover:text-cyber transition-colors">
           {market.question}
         </h3>
 

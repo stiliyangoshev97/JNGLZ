@@ -32,6 +32,7 @@ import { SplitHeatBar } from '@/shared/components/ui/HeatBar';
 import { Badge, ActiveBadge, ExpiredBadge, DisputedBadge } from '@/shared/components/ui/Badge';
 import { HeatLevelBadge, HeatLevelInfo } from '@/shared/components/ui/HeatLevelBadge';
 import { Button } from '@/shared/components/ui/Button';
+import { Modal } from '@/shared/components/ui/Modal';
 import { LoadingOverlay } from '@/shared/components/ui/Spinner';
 import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { TradePanel } from '../components';
@@ -56,6 +57,8 @@ export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
   // Initial query without polling to get market data first
@@ -254,8 +257,8 @@ export function MarketDetailPage() {
           )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Left: Question & Info */}
-            <div className="lg:col-span-2">
+            {/* Left: Question & Info - now spans full width */}
+            <div className="lg:col-span-3">
               {/* Status badges */}
               <div className="flex items-center gap-2 mb-3 md:mb-4 flex-wrap">
                 <HeatLevelBadge heatLevel={market.heatLevel} size="md" />
@@ -265,10 +268,20 @@ export function MarketDetailPage() {
                 {isDisputed && <DisputedBadge />}
               </div>
 
-              {/* Question */}
-              <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-white mb-3 md:mb-4">
-                {market.question}
-              </h1>
+              {/* Question - line-clamp for long text, clickable to expand */}
+              <div className="mb-3 md:mb-4">
+                <h1 
+                  className={cn(
+                    "text-xl md:text-2xl lg:text-4xl font-black text-white break-all",
+                    "line-clamp-2",
+                    market.question.length > 80 && "cursor-pointer hover:text-cyber/90 transition-colors"
+                  )}
+                  onClick={() => market.question.length > 80 && setShowQuestionModal(true)}
+                  title={market.question.length > 80 ? "Click to view full question" : undefined}
+                >
+                  {market.question}
+                </h1>
+              </div>
 
               {/* Creator & Time - Scrollable on mobile */}
               <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
@@ -294,58 +307,35 @@ export function MarketDetailPage() {
 
               {/* Market Info - Inline below header */}
               <div className="mt-4 pt-4 border-t border-dark-700">
-                <MarketInfoCompact market={market} />
+                <MarketInfoCompact market={market} onShowRules={() => setShowRulesModal(true)} />
               </div>
-            </div>
 
-            {/* Right: Big Chance Display */}
-            <div className="flex flex-col items-center justify-center p-6 border border-dark-600 bg-dark-900">
-              <ChanceDisplay
-                value={yesPercent}
-                size="hero"
-                label="CHANCE"
-                animate={isActive}
-              />
-              <SplitHeatBar
-                yesPercent={yesPercent}
-                noPercent={noPercent}
-                className="w-full mt-4"
-              />
+              {/* Chance Display - Horizontal banner */}
+              <div className="mt-4 p-4 border border-dark-600 bg-dark-900 flex flex-col sm:flex-row items-center gap-4">
+                <ChanceDisplay
+                  value={yesPercent}
+                  size="lg"
+                  label="CHANCE"
+                  animate={isActive}
+                />
+                <SplitHeatBar
+                  yesPercent={yesPercent}
+                  noPercent={noPercent}
+                  size="xl"
+                  className="w-full sm:flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-8">
+      {/* Main Content - Two-column layout with matching heights */}
+      <section className="hidden lg:block py-6">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Trade Panel - Shows first on mobile, right column on desktop */}
-            <div className="lg:col-span-1 lg:order-2">
-              <div className="sticky top-24 space-y-4">
-                <TradePanel
-                  market={market}
-                  yesPercent={yesPercent}
-                  noPercent={noPercent}
-                  isActive={isActive}
-                  onTradeSuccess={refreshMarket}
-                />
-                <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
-                
-                {/* Heat Level Info - Hidden on mobile, visible on desktop */}
-                <div className="hidden lg:block border border-dark-600 bg-dark-900">
-                  <div className="border-b border-dark-600 px-4 py-3">
-                    <h3 className="font-bold uppercase">MARKET TIER</h3>
-                  </div>
-                  <div className="p-4">
-                    <HeatLevelInfo heatLevel={market.heatLevel} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Left Column: Chart & History - Shows second on mobile */}
-            <div className="lg:col-span-2 lg:order-1 space-y-6">
+          <div className="grid grid-cols-3 gap-6">
+            {/* Left Column: Chart & Trades */}
+            <div className="col-span-2 flex flex-col gap-4">
               {/* Price Chart */}
               <div className="border border-dark-600 bg-dark-900">
                 <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
@@ -357,7 +347,6 @@ export function MarketDetailPage() {
                   />
                 </div>
                 <div className="p-4">
-                  {/* Predator v2: Pass trades from parent to prevent duplicate queries */}
                   <PriceChart 
                     marketId={market.id} 
                     trades={trades}
@@ -375,9 +364,21 @@ export function MarketDetailPage() {
                   positions={positions}
                 />
               </div>
+            </div>
+
+            {/* Right Column: Trade Panel & Info */}
+            <div className="col-span-1 space-y-4">
+              <TradePanel
+                market={market}
+                yesPercent={yesPercent}
+                noPercent={noPercent}
+                isActive={isActive}
+                onTradeSuccess={refreshMarket}
+              />
+              <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
               
-              {/* Heat Level Info - Mobile only, at bottom */}
-              <div className="lg:hidden border border-dark-600 bg-dark-900">
+              {/* Heat Level Info */}
+              <div className="border border-dark-600 bg-dark-900">
                 <div className="border-b border-dark-600 px-4 py-3">
                   <h3 className="font-bold uppercase">MARKET TIER</h3>
                 </div>
@@ -389,6 +390,83 @@ export function MarketDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Mobile Layout - Traditional scrolling */}
+      <section className="lg:hidden py-8">
+        <div className="max-w-7xl mx-auto px-4 space-y-6">
+          {/* Trade Panel first on mobile */}
+          <TradePanel
+            market={market}
+            yesPercent={yesPercent}
+            noPercent={noPercent}
+            isActive={isActive}
+            onTradeSuccess={refreshMarket}
+          />
+          <ResolutionPanel market={market} onActionSuccess={refreshMarket} />
+          
+          {/* Price Chart */}
+          <div className="border border-dark-600 bg-dark-900">
+            <div className="border-b border-dark-600 px-4 py-3 flex items-center justify-between">
+              <h2 className="font-bold uppercase">PRICE CHART</h2>
+              <PriceDisplay
+                yesPrice={yesPercent / 100}
+                noPrice={noPercent / 100}
+                size="sm"
+              />
+            </div>
+            <div className="p-4">
+              <PriceChart 
+                marketId={market.id} 
+                trades={trades}
+                currentYesShares={market.yesShares}
+                currentNoShares={market.noShares}
+                virtualLiquidity={market.virtualLiquidity}
+              />
+            </div>
+          </div>
+
+          {/* Trade History & Holders Tabs */}
+          <div className="border border-dark-600 bg-dark-900">
+            <TradesAndHoldersTabs
+              trades={trades}
+              positions={positions}
+            />
+          </div>
+          
+          {/* Heat Level Info */}
+          <div className="border border-dark-600 bg-dark-900">
+            <div className="border-b border-dark-600 px-4 py-3">
+              <h3 className="font-bold uppercase">MARKET TIER</h3>
+            </div>
+            <div className="p-4">
+              <HeatLevelInfo heatLevel={market.heatLevel} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Question Modal */}
+      <Modal
+        isOpen={showQuestionModal}
+        onClose={() => setShowQuestionModal(false)}
+        title="Full Question"
+        size="lg"
+      >
+        <p className="text-white break-all whitespace-pre-wrap">{market.question}</p>
+      </Modal>
+
+      {/* Rules Modal */}
+      <Modal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+        title="Resolution Rules"
+        size="lg"
+      >
+        <p className="text-text-secondary break-all whitespace-pre-wrap">{market.resolutionRules}</p>
+        <p className="text-yellow-500/80 mt-4 pt-4 border-t border-dark-700 text-sm">
+          Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
+        </p>
+      </Modal>
     </div>
   );
 }
@@ -396,7 +474,7 @@ export function MarketDetailPage() {
 /**
  * Compact market info displayed inline in the header area
  */
-function MarketInfoCompact({ market }: { market: Market }) {
+function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRules: () => void }) {
   // totalVolume is BigDecimal (already in BNB), poolBalance is BigInt (wei)
   const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
   const poolBalanceWei = BigInt(market.poolBalance || '0');
@@ -441,10 +519,15 @@ function MarketInfoCompact({ market }: { market: Market }) {
           {market.resolutionRules && (
             <div>
               <span className="text-text-muted font-mono">RULES: </span>
-              <span className="text-text-secondary">
-                {market.resolutionRules.length > 150 
-                  ? market.resolutionRules.slice(0, 150) + '...' 
-                  : market.resolutionRules}
+              <span 
+                className={cn(
+                  "text-text-secondary break-all line-clamp-2",
+                  market.resolutionRules.length > 80 && "cursor-pointer hover:text-cyber transition-colors"
+                )}
+                onClick={() => market.resolutionRules && market.resolutionRules.length > 80 && onShowRules()}
+                title={market.resolutionRules.length > 80 ? "Click to view full rules" : undefined}
+              >
+                {market.resolutionRules}
               </span>
             </div>
           )}
@@ -460,6 +543,7 @@ function MarketInfoCompact({ market }: { market: Market }) {
 
 /**
  * Tabbed interface for Trades, Realized P/L, and Holders
+ * Uses fixed max-height with internal scrolling
  */
 function TradesAndHoldersTabs({ 
   trades, 
@@ -509,14 +593,16 @@ function TradesAndHoldersTabs({
         </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'trades' ? (
-        <TradeHistory trades={trades} />
-      ) : activeTab === 'realized' ? (
-        <RealizedPnl trades={trades} />
-      ) : (
-        <HoldersTable positions={positions} />
-      )}
+      {/* Tab Content - Fixed max-height with scroll */}
+      <div className="max-h-[400px] overflow-y-auto">
+        {activeTab === 'trades' ? (
+          <TradeHistory trades={trades} />
+        ) : activeTab === 'realized' ? (
+          <RealizedPnl trades={trades} />
+        ) : (
+          <HoldersTable positions={positions} />
+        )}
+      </div>
     </>
   );
 }
@@ -555,8 +641,10 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
 
   if (sortedHolders.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-text-muted font-mono">NO HOLDERS</p>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-text-muted font-mono">NO HOLDERS</p>
+        </div>
       </div>
     );
   }
