@@ -36,7 +36,7 @@ export function Jazzicon({
 }: JazziconProps) {
   return (
     <img
-      src="/logo.png"
+      src="/jnglz-logo.png"
       alt="User"
       className={cn(
         'flex-shrink-0 rounded-full object-cover',
