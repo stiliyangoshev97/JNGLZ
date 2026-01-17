@@ -24,6 +24,7 @@ import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { Badge } from '@/shared/components/ui/Badge';
 import { HeatLevelBadge } from '@/shared/components/ui/HeatLevelBadge';
 import { cn } from '@/shared/utils/cn';
+import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees } from '@/shared/hooks';
@@ -45,6 +46,9 @@ interface PositionWithMarket {
     imageUrl?: string;
     yesShares?: string;
     noShares?: string;
+    poolBalance?: string;
+    totalVolume?: string;
+    createdAt?: string;
     proposer?: string;
     proposalTimestamp?: string;
     disputer?: string;
@@ -79,26 +83,44 @@ type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'none
 // Sub-filters for PENDING tab (resolution stages)
 type PendingSubFilter = 'all' | 'awaiting' | 'proposed' | 'disputed' | 'finalizing';
 
+// Sort options (matching MarketsPage)
+type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
+
+// Heat level filter (-1 = all)
+type HeatLevelFilter = -1 | 0 | 1 | 2 | 3 | 4;
+
 export function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [actionFilter, setActionFilter] = useState<PositionAction | 'all'>('all');
   const [pendingSubFilter, setPendingSubFilter] = useState<PendingSubFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest'); // Default: NEW
+  const [heatLevelFilter, setHeatLevelFilter] = useState<HeatLevelFilter>(-1); // -1 = all heat levels
+  const [heatDropdownOpen, setHeatDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('positions');
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [marketsDisplayCount, setMarketsDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const loadMoreMarketsRef = useRef<HTMLDivElement>(null);
+  const heatDropdownRef = useRef<HTMLDivElement>(null);
 
   // Predator Polling v2: 120s interval (was 60s), stops when tab is inactive
   const pollInterval = useSmartPollInterval(POLL_INTERVALS.PORTFOLIO);
 
-  const { data, loading, error } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
+  const { data, loading, error, refetch: refetchPositions } = useQuery<GetUserPositionsResponse>(GET_USER_POSITIONS, {
     variables: { user: address?.toLowerCase(), first: 100 },
     skip: !address,
     pollInterval, // Dynamic: 120s when visible, 0 when hidden
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
+
+  // Callback for PositionCard to trigger refetch after successful actions
+  const handlePositionActionSuccess = useCallback(() => {
+    // Wait for subgraph to index the transaction (3 seconds)
+    setTimeout(() => {
+      refetchPositions();
+    }, 3000);
+  }, [refetchPositions]);
 
   // Fetch markets created by this user
   const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
@@ -107,6 +129,17 @@ export function PortfolioPage() {
     pollInterval, // Dynamic: 120s when visible, 0 when hidden
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
+
+  // Close heat dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (heatDropdownRef.current && !heatDropdownRef.current.contains(event.target as Node)) {
+        setHeatDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetch user's trade history for realized P/L calculation
   const { data: tradesData } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
@@ -341,12 +374,18 @@ export function PortfolioPage() {
       const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
       const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
       
+      // Market supply (for one-sided market detection)
+      const marketYesSupply = BigInt(market.yesShares || '0');
+      const marketNoSupply = BigInt(market.noShares || '0');
+      const marketTotalSupply = marketYesSupply + marketNoSupply;
+      const isOneSidedMarket = marketTotalSupply > 0n && (marketYesSupply === 0n || marketNoSupply === 0n);
+      
       // Time windows
       const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
       const votingWindowEnd = disputeMs + VOTING_WINDOW;
       const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
       
-      // Check if eligible for emergency refund (24h+ expired, not resolved)
+      // Check if eligible for emergency refund (24h+ expired, not resolved, OR one-sided market after 24h)
       const isUnresolved = isExpired && !isResolved && now > emergencyRefundTime;
       
       // Determine what action the user can take
@@ -373,14 +412,25 @@ export function PortfolioPage() {
       }
       
       // 3. Can emergency refund (expired 24h+, not resolved, has shares, not refunded)
+      // Also includes one-sided markets after 24h (they cannot finalize)
       if (isUnresolved && hasShares && !alreadyRefunded) {
         categories.needsAction.push({ ...pos, action: 'refund' });
         categories.unresolved.push(pos);
         return;
       }
       
-      // 4. Can finalize (proposal/voting window ended, not resolved, has shares)
-      const canFinalize = hasProposal && !isResolved && hasShares && (
+      // 3b. One-sided market waiting for 24h refund (not yet unresolved but cannot finalize)
+      if (isOneSidedMarket && isExpired && !isResolved && hasShares && !alreadyRefunded) {
+        // One-sided markets cannot finalize, they wait for emergency refund
+        // If 24h hasn't passed, just show them as awaiting resolution
+        categories.awaitingResolution.push(pos);
+        subCategorizePending(pos, market);
+        return;
+      }
+      
+      // 4. Can finalize (proposal/voting window ended, not resolved, has shares, NOT one-sided)
+      // One-sided markets cannot be finalized - they can only get emergency refund
+      const canFinalize = hasProposal && !isResolved && hasShares && !isOneSidedMarket && (
         (hasDispute && now > votingWindowEnd) || 
         (!hasDispute && now > disputeWindowEnd)
       );
@@ -444,18 +494,21 @@ export function PortfolioPage() {
       case 'needs-action':
         // Apply sub-filter if selected
         if (actionFilter !== 'all') {
-          return categorizedPositions.needsAction.filter(pos => pos.action === actionFilter);
+          result = categorizedPositions.needsAction.filter(pos => pos.action === actionFilter);
+        } else {
+          result = categorizedPositions.needsAction;
         }
-        return categorizedPositions.needsAction;
+        break;
       case 'active':
         result = categorizedPositions.active;
         break;
       case 'awaiting-resolution':
         // Apply pending sub-filter if selected
         if (pendingSubFilter !== 'all') {
-          return categorizedPositions.pendingSub[pendingSubFilter];
+          result = categorizedPositions.pendingSub[pendingSubFilter];
+        } else {
+          result = categorizedPositions.awaitingResolution;
         }
-        result = categorizedPositions.awaitingResolution;
         break;
       case 'resolved':
         result = categorizedPositions.resolved;
@@ -466,8 +519,35 @@ export function PortfolioPage() {
       default:
         result = positions;
     }
+    
+    // Apply heat level filter if not "all" (-1)
+    if (heatLevelFilter !== -1) {
+      result = result.filter((pos) => {
+        const marketHeat = Number(pos.market.heatLevel ?? 1); // Default to 1 if undefined
+        return marketHeat === heatLevelFilter;
+      });
+    }
+    
     return result;
-  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions]);
+  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions, heatLevelFilter]);
+
+  // Sort positions
+  const sortedPositions = useMemo(() => {
+    return [...filteredPositions].sort((a, b) => {
+      switch (sortBy) {
+        case 'volume':
+          return Number(b.market.totalVolume || '0') - Number(a.market.totalVolume || '0');
+        case 'newest':
+          return Number(b.market.createdAt || '0') - Number(a.market.createdAt || '0');
+        case 'ending':
+          return Number(a.market.expiryTimestamp) - Number(b.market.expiryTimestamp);
+        case 'liquidity':
+          return Number(b.market.poolBalance || '0') - Number(a.market.poolBalance || '0');
+        default:
+          return 0;
+      }
+    });
+  }, [filteredPositions, sortBy]);
 
   // Reset action filter when switching away from needs-action
   const handleFilterChange = (newFilter: FilterOption) => {
@@ -487,6 +567,18 @@ export function PortfolioPage() {
     setDisplayCount(ITEMS_PER_PAGE);
   };
 
+  // Handle sort change
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort);
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
+  // Handle heat level filter change
+  const handleHeatLevelChange = (newHeatLevel: HeatLevelFilter) => {
+    setHeatLevelFilter(newHeatLevel);
+    setDisplayCount(ITEMS_PER_PAGE);
+  };
+
   // Reset display count when action filter changes
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
@@ -494,17 +586,17 @@ export function PortfolioPage() {
 
   // Paginated positions for display
   const paginatedPositions = useMemo(() => {
-    return filteredPositions.slice(0, displayCount);
-  }, [filteredPositions, displayCount]);
+    return sortedPositions.slice(0, displayCount);
+  }, [sortedPositions, displayCount]);
 
-  const hasMoreItems = displayCount < filteredPositions.length;
+  const hasMoreItems = displayCount < sortedPositions.length;
 
   // Infinite scroll - load more when sentinel is visible
   const loadMore = useCallback(() => {
     if (hasMoreItems) {
-      setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredPositions.length));
+      setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, sortedPositions.length));
     }
-  }, [hasMoreItems, filteredPositions.length]);
+  }, [hasMoreItems, sortedPositions.length]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -655,11 +747,10 @@ export function PortfolioPage() {
 
       {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) */}
       {hasPendingWithdrawals && (
-        <section className="bg-cyber/10 border-b border-cyber py-4">
+        <section className="bg-dark-700/50 border-b border-dark-600 py-4">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">💎</span>
                 <div>
                   <p className="text-cyber font-bold">PENDING WITHDRAWALS</p>
                   <p className="text-sm text-text-secondary">
@@ -760,16 +851,13 @@ export function PortfolioPage() {
                     "text-sm font-bold pb-1 transition-colors flex items-center gap-1 whitespace-nowrap",
                     filterBy === 'needs-action' 
                       ? categorizedPositions.needsAction.length > 0
-                        ? "text-warning border-b-2 border-warning"
+                        ? "text-status-disputed border-b-2 border-status-disputed"
                         : "text-cyber border-b-2 border-cyber"
                       : categorizedPositions.needsAction.length > 0
-                        ? "text-warning/80 hover:text-warning animate-pulse"
+                        ? "text-status-disputed/80 hover:text-status-disputed animate-pulse"
                         : "text-text-secondary hover:text-white"
                   )}
                 >
-                  {categorizedPositions.needsAction.length > 0 && (
-                    <span className="text-warning">⚡</span>
-                  )}
                   ACTION ({categorizedPositions.needsAction.length})
                 </button>
                 
@@ -824,7 +912,7 @@ export function PortfolioPage() {
                       "text-sm font-bold pb-1 transition-colors whitespace-nowrap",
                       filterBy === 'unresolved' 
                         ? "text-no border-b-2 border-no" 
-                        : "text-no/70 hover:text-no"
+                        : "text-text-secondary hover:text-white"
                     )}
                   >
                     UNRESOLVED ({categorizedPositions.unresolved.length})
@@ -833,80 +921,222 @@ export function PortfolioPage() {
                 </div>
               </div>
 
+              {/* Sort and Heat Filter Row */}
+              <div className={cn(
+                "flex items-center gap-2 -mx-4 px-4 mb-4",
+                heatDropdownOpen ? "overflow-visible" : "overflow-x-auto scrollbar-hide"
+              )}>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-text-muted text-xs font-mono">SORT:</span>
+                  <button
+                    onClick={() => handleSortChange('volume')}
+                    className={cn(
+                      'px-2 py-1 text-xs font-mono uppercase font-bold animate-pulse',
+                      'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 bg-clip-text text-transparent',
+                      sortBy === 'volume' 
+                        ? 'scale-110' 
+                        : 'hover:scale-105'
+                    )}
+                  >
+                    HOT
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('newest')}
+                    className={cn(
+                      'px-2 py-1 text-xs font-mono uppercase transition-colors',
+                      sortBy === 'newest'
+                        ? 'text-cyber font-bold'
+                        : 'text-text-secondary hover:text-white'
+                    )}
+                  >
+                    NEW
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('ending')}
+                    className={cn(
+                      'px-2 py-1 text-xs font-mono uppercase transition-colors',
+                      sortBy === 'ending'
+                        ? 'text-cyber font-bold'
+                        : 'text-text-secondary hover:text-white'
+                    )}
+                  >
+                    ENDING
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('liquidity')}
+                    className={cn(
+                      'px-2 py-1 text-xs font-mono uppercase transition-colors',
+                      sortBy === 'liquidity'
+                        ? 'text-cyber font-bold'
+                        : 'text-text-secondary hover:text-white'
+                    )}
+                  >
+                    LIQUID
+                  </button>
+                </div>
+                
+                {/* Heat Level Filter - Custom Dropdown */}
+                <div className="h-4 w-px bg-dark-600 mx-1 sm:mx-2 flex-shrink-0" />
+                <span className="text-text-muted text-xs font-mono flex-shrink-0">HEAT:</span>
+                <div className="relative flex-shrink-0" ref={heatDropdownRef}>
+                  <button
+                    onClick={() => setHeatDropdownOpen(!heatDropdownOpen)}
+                    className={cn(
+                      'px-2 sm:px-3 py-1.5 text-xs font-bold uppercase border transition-colors cursor-pointer flex items-center gap-1 sm:gap-2',
+                      'bg-dark-800 focus:outline-none',
+                      heatLevelFilter === -1 
+                        ? 'border-cyber text-cyber bg-cyber/10'
+                        : heatLevelFilter === 0 
+                          ? 'border-no text-no bg-no/10'
+                          : heatLevelFilter === 1
+                            ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10'
+                            : heatLevelFilter === 2
+                              ? 'border-cyber text-cyber bg-cyber/10'
+                              : heatLevelFilter === 3
+                                ? 'border-blue-400 text-blue-400 bg-blue-400/10'
+                                : 'border-purple-400 text-purple-400 bg-purple-400/10'
+                    )}
+                  >
+                    <span className="whitespace-nowrap">{heatLevelFilter === -1 ? 'ALL' : HEAT_LEVELS[heatLevelFilter]?.shortName}</span>
+                    <svg 
+                      className={cn('w-3 h-3 transition-transform flex-shrink-0', heatDropdownOpen && 'rotate-180')} 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  {heatDropdownOpen && (
+                    <div className="absolute top-full right-0 lg:left-0 lg:right-auto mt-1 z-50 min-w-[140px] bg-dark-900 border border-dark-500 shadow-xl">
+                      {/* ALL HEAT option */}
+                      <button
+                        onClick={() => {
+                          handleHeatLevelChange(-1);
+                          setHeatDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-3 py-2 text-left text-xs font-bold uppercase transition-colors',
+                          heatLevelFilter === -1
+                            ? 'bg-cyber/20 text-cyber'
+                            : 'text-text-secondary hover:bg-dark-800 hover:text-white'
+                        )}
+                      >
+                        ALL HEAT
+                      </button>
+                      
+                      {/* Heat level options */}
+                      {HEAT_LEVELS.map((level) => {
+                        const hoverTextColor = 
+                          level.value === 0 ? 'hover:text-no' :
+                          level.value === 1 ? 'hover:text-yellow-500' :
+                          level.value === 2 ? 'hover:text-cyber' :
+                          level.value === 3 ? 'hover:text-blue-400' :
+                          'hover:text-purple-400';
+                        
+                        return (
+                          <button
+                            key={level.value}
+                            onClick={() => {
+                              handleHeatLevelChange(level.value as HeatLevelFilter);
+                              setHeatDropdownOpen(false);
+                            }}
+                            className={cn(
+                              'w-full px-3 py-2 text-left text-xs font-bold uppercase transition-colors border-t border-dark-700',
+                              heatLevelFilter === level.value
+                                ? `${level.bgColor} ${level.textColor}`
+                                : `text-text-secondary hover:bg-dark-800 ${hoverTextColor}`
+                            )}
+                          >
+                            {level.shortName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Sub-filter buttons for NEEDS ACTION */}
-              {filterBy === 'needs-action' && categorizedPositions.needsAction.length > 0 && (
+              {filterBy === 'needs-action' && (
                 <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
-                  <div className="flex items-center gap-2 w-max pl-2 border-l-2 border-warning/30">
+                  <div className="flex items-center gap-2 w-max pl-2 border-l-2 border-status-disputed/30">
                     <span className="text-xs text-text-muted mr-1 whitespace-nowrap">FILTER:</span>
                   <button 
                     onClick={() => setActionFilter('all')}
                     className={cn(
                       "text-xs font-mono px-2 py-1 rounded transition-colors",
                       actionFilter === 'all' 
-                        ? "bg-warning/20 text-warning" 
+                        ? "bg-status-disputed/20 text-status-disputed" 
                         : "text-text-secondary hover:text-white hover:bg-dark-600"
                     )}
                   >
                     ALL
                   </button>
-                  {actionCounts.claim > 0 && (
-                    <button 
-                      onClick={() => setActionFilter('claim')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        actionFilter === 'claim' 
-                          ? "bg-yes/20 text-yes" 
-                          : "text-yes/70 hover:text-yes hover:bg-dark-600"
-                      )}
-                    >
-                      💰 CLAIM ({actionCounts.claim})
-                    </button>
-                  )}
-                  {actionCounts.vote > 0 && (
-                    <button 
-                      onClick={() => setActionFilter('vote')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        actionFilter === 'vote' 
-                          ? "bg-cyber/20 text-cyber" 
-                          : "text-cyber/70 hover:text-cyber hover:bg-dark-600"
-                      )}
-                    >
-                      🗳️ VOTE ({actionCounts.vote})
-                    </button>
-                  )}
-                  {actionCounts.finalize > 0 && (
-                    <button 
-                      onClick={() => setActionFilter('finalize')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        actionFilter === 'finalize' 
-                          ? "bg-purple-500/20 text-purple-400" 
-                          : "text-purple-400/70 hover:text-purple-400 hover:bg-dark-600"
-                      )}
-                    >
-                      ⚡ FINALIZE ({actionCounts.finalize})
-                    </button>
-                  )}
-                  {actionCounts.refund > 0 && (
-                    <button 
-                      onClick={() => setActionFilter('refund')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        actionFilter === 'refund' 
-                          ? "bg-no/20 text-no" 
-                          : "text-no/70 hover:text-no hover:bg-dark-600"
-                      )}
-                    >
-                      🔄 REFUND ({actionCounts.refund})
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => setActionFilter('claim')}
+                    disabled={actionCounts.claim === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'claim' 
+                        ? "bg-yes/20 text-yes" 
+                        : actionCounts.claim > 0
+                          ? "text-yes/70 hover:text-yes hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    CLAIM ({actionCounts.claim})
+                  </button>
+                  <button 
+                    onClick={() => setActionFilter('vote')}
+                    disabled={actionCounts.vote === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'vote' 
+                        ? "bg-orange-500/20 text-orange-400" 
+                        : actionCounts.vote > 0
+                          ? "text-orange-400/70 hover:text-orange-400 hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    VOTE ({actionCounts.vote})
+                  </button>
+                  <button 
+                    onClick={() => setActionFilter('finalize')}
+                    disabled={actionCounts.finalize === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'finalize' 
+                        ? "bg-purple-500/20 text-purple-400" 
+                        : actionCounts.finalize > 0
+                          ? "text-purple-400/70 hover:text-purple-400 hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    FINALIZE ({actionCounts.finalize})
+                  </button>
+                  <button 
+                    onClick={() => setActionFilter('refund')}
+                    disabled={actionCounts.refund === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'refund' 
+                        ? "bg-yes/20 text-yes" 
+                        : actionCounts.refund > 0
+                          ? "text-yes/70 hover:text-yes hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    REFUND ({actionCounts.refund})
+                  </button>
                   </div>
                 </div>
               )}
 
               {/* Sub-filter buttons for PENDING (awaiting-resolution) */}
-              {filterBy === 'awaiting-resolution' && categorizedPositions.awaitingResolution.length > 0 && (
+              {filterBy === 'awaiting-resolution' && (
                 <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
                   <div className="flex items-center gap-2 w-max pl-2 border-l-2 border-cyber/30">
                     <span className="text-xs text-text-muted mr-1 whitespace-nowrap">STAGE:</span>
@@ -921,58 +1151,62 @@ export function PortfolioPage() {
                   >
                     ALL ({categorizedPositions.awaitingResolution.length})
                   </button>
-                  {pendingSubCounts.awaiting > 0 && (
-                    <button 
-                      onClick={() => handlePendingSubFilterChange('awaiting')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        pendingSubFilter === 'awaiting' 
-                          ? "bg-warning/20 text-warning" 
-                          : "text-warning/70 hover:text-warning hover:bg-dark-600"
-                      )}
-                    >
-                      ⏳ AWAITING ({pendingSubCounts.awaiting})
-                    </button>
-                  )}
-                  {pendingSubCounts.proposed > 0 && (
-                    <button 
-                      onClick={() => handlePendingSubFilterChange('proposed')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        pendingSubFilter === 'proposed' 
-                          ? "bg-cyber/20 text-cyber" 
-                          : "text-cyber/70 hover:text-cyber hover:bg-dark-600"
-                      )}
-                    >
-                      📋 PROPOSED ({pendingSubCounts.proposed})
-                    </button>
-                  )}
-                  {pendingSubCounts.disputed > 0 && (
-                    <button 
-                      onClick={() => handlePendingSubFilterChange('disputed')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        pendingSubFilter === 'disputed' 
-                          ? "bg-orange-500/20 text-orange-400" 
-                          : "text-orange-400/70 hover:text-orange-400 hover:bg-dark-600"
-                      )}
-                    >
-                      ⚔️ DISPUTED ({pendingSubCounts.disputed})
-                    </button>
-                  )}
-                  {pendingSubCounts.finalizing > 0 && (
-                    <button 
-                      onClick={() => handlePendingSubFilterChange('finalizing')}
-                      className={cn(
-                        "text-xs font-mono px-2 py-1 rounded transition-colors",
-                        pendingSubFilter === 'finalizing' 
-                          ? "bg-yes/20 text-yes" 
-                          : "text-yes/70 hover:text-yes hover:bg-dark-600"
-                      )}
-                    >
-                      ✅ FINALIZING ({pendingSubCounts.finalizing})
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => handlePendingSubFilterChange('awaiting')}
+                    disabled={pendingSubCounts.awaiting === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      pendingSubFilter === 'awaiting' 
+                        ? "bg-dark-500/20 text-text-secondary" 
+                        : pendingSubCounts.awaiting > 0
+                          ? "text-text-muted hover:text-text-secondary hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    AWAITING ({pendingSubCounts.awaiting})
+                  </button>
+                  <button 
+                    onClick={() => handlePendingSubFilterChange('proposed')}
+                    disabled={pendingSubCounts.proposed === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      pendingSubFilter === 'proposed' 
+                        ? "bg-yes/20 text-yes" 
+                        : pendingSubCounts.proposed > 0
+                          ? "text-yes/70 hover:text-yes hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    PROPOSED ({pendingSubCounts.proposed})
+                  </button>
+                  <button 
+                    onClick={() => handlePendingSubFilterChange('disputed')}
+                    disabled={pendingSubCounts.disputed === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      pendingSubFilter === 'disputed' 
+                        ? "bg-orange-500/20 text-orange-400" 
+                        : pendingSubCounts.disputed > 0
+                          ? "text-orange-400/70 hover:text-orange-400 hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    DISPUTED ({pendingSubCounts.disputed})
+                  </button>
+                  <button 
+                    onClick={() => handlePendingSubFilterChange('finalizing')}
+                    disabled={pendingSubCounts.finalizing === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      pendingSubFilter === 'finalizing' 
+                        ? "bg-yes/20 text-yes" 
+                        : pendingSubCounts.finalizing > 0
+                          ? "text-yes/70 hover:text-yes hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    FINALIZING ({pendingSubCounts.finalizing})
+                  </button>
                   </div>
                 </div>
               )}
@@ -985,7 +1219,7 @@ export function PortfolioPage() {
             </div>
           ) : error ? (
             <ErrorState message={error.message} />
-          ) : filteredPositions.length === 0 ? (
+          ) : sortedPositions.length === 0 ? (
             filterBy === 'all' ? (
               <EmptyState />
             ) : (
@@ -1020,6 +1254,7 @@ export function PortfolioPage() {
                     key={position.id} 
                     position={position} 
                     trades={tradesData?.trades || []}
+                    onActionSuccess={handlePositionActionSuccess}
                   />
                 ))}
               </div>
@@ -1040,16 +1275,16 @@ export function PortfolioPage() {
                     ))}
                   </div>
                   <p className="text-xs text-text-muted font-mono">
-                    Showing {paginatedPositions.length} of {filteredPositions.length}
+                    Showing {paginatedPositions.length} of {sortedPositions.length}
                   </p>
                 </div>
               )}
               
               {/* End of list indicator */}
-              {!hasMoreItems && filteredPositions.length > ITEMS_PER_PAGE && (
+              {!hasMoreItems && sortedPositions.length > ITEMS_PER_PAGE && (
                 <div className="text-center py-6">
                   <p className="text-xs text-text-muted font-mono">
-                    — END OF LIST ({filteredPositions.length} positions) —
+                    — END OF LIST ({sortedPositions.length} positions) —
                   </p>
                 </div>
               )}
@@ -1280,6 +1515,7 @@ interface MyMarketCardProps {
     status: string;
     resolved: boolean;
     outcome?: boolean | null;
+    proposedOutcome?: boolean | null;
     totalVolume: string;
     totalTrades: string;
     poolBalance: string;
@@ -1290,6 +1526,8 @@ interface MyMarketCardProps {
     disputer?: string | null;
     disputeTimestamp?: string | null;
     heatLevel?: number;
+    yesShares?: string;
+    noShares?: string;
   };
 }
 
@@ -1303,6 +1541,12 @@ function MyMarketCard({ market }: MyMarketCardProps) {
   const totalVolume = parseFloat(market.totalVolume || '0');
   const creatorEarnings = totalVolume * 0.005;
   
+  // One-sided market detection
+  const marketYesSupply = BigInt(market.yesShares || '0');
+  const marketNoSupply = BigInt(market.noShares || '0');
+  const marketTotalSupply = marketYesSupply + marketNoSupply;
+  const isOneSidedMarket = marketTotalSupply > 0n && (marketYesSupply === 0n || marketNoSupply === 0n);
+  
   // Proposal and dispute status
   const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
   const disputeMs = market.disputeTimestamp ? Number(market.disputeTimestamp) * 1000 : 0;
@@ -1312,8 +1556,8 @@ function MyMarketCard({ market }: MyMarketCardProps) {
   const votingWindowEnd = disputeMs + VOTING_WINDOW;
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   
-  // Badge logic matching PositionCard
-  const getBadgeInfo = (): { text: string; variant: 'yes' | 'no' | 'active' | 'expired' | 'disputed' | 'whale' } => {
+  // Badge logic matching MarketCard
+  const getBadgeInfo = (): { text: string; variant: 'yes' | 'no' | 'active' | 'expired' | 'disputed' | 'whale' | 'neutral' } => {
     // RESOLVED - always green with outcome
     if (market.resolved) {
       const outcomeText = market.outcome ? 'YES WINS' : 'NO WINS';
@@ -1330,9 +1574,9 @@ function MyMarketCard({ market }: MyMarketCardProps) {
       return { text: 'DISPUTED', variant: 'disputed' };
     }
     
-    // PROPOSED - has proposal but not yet finalized
+    // PROPOSED - has proposal but not yet finalized (green)
     if (hasProposal && !hasDispute && now < disputeWindowEnd) {
-      return { text: 'PROPOSED', variant: 'whale' };
+      return { text: 'PROPOSED', variant: 'yes' };
     }
     
     // READY TO FINALIZE - voting or dispute window ended
@@ -1340,9 +1584,14 @@ function MyMarketCard({ market }: MyMarketCardProps) {
       return { text: 'READY TO FINALIZE', variant: 'whale' };
     }
     
-    // EXPIRED - awaiting proposal
-    if (isExpired) {
-      return { text: 'EXPIRED', variant: 'expired' };
+    // ONE-SIDED - expired with only one side having holders
+    if (isExpired && !hasProposal && isOneSidedMarket) {
+      return { text: 'ONE-SIDED', variant: 'disputed' };
+    }
+    
+    // AWAITING PROPOSAL - expired but no proposal yet (two-sided market)
+    if (isExpired && !hasProposal) {
+      return { text: 'AWAITING PROPOSAL', variant: 'neutral' };
     }
     
     // ACTIVE - not expired yet

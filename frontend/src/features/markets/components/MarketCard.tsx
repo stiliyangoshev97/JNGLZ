@@ -44,6 +44,13 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   const isUnresolved = isExpired && !market.resolved && now > emergencyRefundTime;
 
+  // One-sided market detection (has activity but only on one side)
+  const marketYesSupply = BigInt(market.yesShares || '0');
+  const marketNoSupply = BigInt(market.noShares || '0');
+  const marketTotalSupply = marketYesSupply + marketNoSupply;
+  const isEmptyMarket = marketTotalSupply === 0n;
+  const isOneSidedMarket = !isEmptyMarket && (marketYesSupply === 0n || marketNoSupply === 0n);
+
   // Calculate liquidity for heat bar (0-100 scale)
   // poolBalance from subgraph is BigInt in wei, need to convert to BNB
   const poolBalanceWei = BigInt(market.poolBalance || '0');
@@ -53,12 +60,29 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
   // Volume for HOT indicator - totalVolume from subgraph is BigDecimal (already in BNB)
   const volumeBNB = parseFloat(market.totalVolume || '0');
 
-  // Status badge
+  // Check resolution state for proper badge display
+  const hasProposal = market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
+  const hasDispute = market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000';
+
+  // Format time until emergency refund
+  const formatTimeUntilRefund = () => {
+    const diff = emergencyRefundTime - now;
+    if (diff <= 0) return null;
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  };
+
+  // Status badge - show resolution state for expired markets
   const getStatusBadge = () => {
     if (market.status === 'Resolved') return <Badge variant="yes">RESOLVED</Badge>;
-    if (market.status === 'Disputed') return <Badge variant="disputed">⚠ DISPUTED</Badge>;
+    if (market.status === 'Disputed' || hasDispute) return <Badge variant="disputed">DISPUTED</Badge>;
     if (isUnresolved) return <Badge variant="no">UNRESOLVED</Badge>;
-    if (isExpired) return <Badge variant="expired">EXPIRED</Badge>;
+    if (isExpired && hasProposal) return <Badge variant="yes">PROPOSED</Badge>;
+    // One-sided market - show as awaiting but with different messaging in details
+    if (isExpired && isOneSidedMarket) return <Badge variant="disputed">ONE-SIDED</Badge>;
+    if (isExpired) return <Badge variant="neutral">AWAITING PROPOSAL</Badge>;
     return null;
   };
 
@@ -150,13 +174,39 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
           />
         </div>
 
+        {/* Outcome/Proposed - show OUTCOME for resolved, PROPOSED for pending proposal, hide otherwise */}
+        {(market.resolved || hasProposal) && (
+          <div className="mb-3 flex justify-between items-center text-xs font-mono">
+            <span className="text-text-secondary uppercase">{market.resolved ? 'OUTCOME' : 'PROPOSED'}</span>
+            <span className={cn(
+              market.resolved 
+                ? market.outcome ? 'text-yes font-bold' : 'text-no font-bold'
+                : hasDispute
+                  ? !market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold' // Disputer proposes opposite
+                  : market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold' // Proposer's outcome
+            )}>
+              {market.resolved 
+                ? market.outcome ? 'YES' : 'NO'
+                : hasDispute
+                  ? !market.proposedOutcome ? 'YES' : 'NO' // Disputer wants opposite
+                  : market.proposedOutcome ? 'YES' : 'NO'
+              }
+            </span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-auto pt-3 border-t border-dark-700 flex items-center justify-between text-xs font-mono">
-          {/* Time remaining */}
+          {/* Time remaining / Refund timer */}
           <span className={cn(
             isExpired ? 'text-no' : 'text-text-secondary'
           )}>
-            {isExpired ? 'EXPIRED' : timeRemaining}
+            {isExpired 
+              ? (isEmptyMarket || isOneSidedMarket || (!hasProposal && !market.resolved)) && formatTimeUntilRefund()
+                ? `REFUND: ${formatTimeUntilRefund()}`
+                : 'EXPIRED'
+              : timeRemaining
+            }
           </span>
 
           {/* Volume */}

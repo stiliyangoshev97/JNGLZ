@@ -1,12 +1,12 @@
 # JNGLZ.FUN Frontend - TODO
 
-> **Last Updated:** January 14, 2026  
-> **Status:** Phase 2+ Complete (v0.7.12)
+> **Last Updated:** January 17, 2026  
+> **Status:** Phase 2+ Complete (v0.7.24)
 > **Design:** "High-Energy Brutalism" - Trading Terminal × Street Market
 
 ---
 
-## ✅ COMPLETED FEATURES (v0.7.12)
+## ✅ COMPLETED FEATURES (v0.7.24)
 
 ### Core Infrastructure
 - [x] Vite + React 19 + TypeScript setup
@@ -49,6 +49,20 @@
 - [x] **PENDING sub-filters**: AWAITING | PROPOSED | DISPUTED | FINALIZING
 - [x] **Price chart fix**: Uses market's actual virtualLiquidity (v0.7.10)
 - [x] **P/L display**: Only shows for closed positions (v0.7.12)
+
+### v0.7.24 Features
+- [x] **One-sided market detection**: Hide propose option, show refund timer
+- [x] **Empty market timer**: Shows "Status changes to UNRESOLVED in: Xh Xm"
+- [x] **FINALIZING sub-filter always visible**: Even when count=0 (disabled state)
+- [x] **One-sided market fix in PositionCard**: Shows "CLAIM REFUND" not "FINALIZE"
+- [x] **One-sided market categorization**: Properly categorized in Portfolio
+- [x] **Removed ⚠️ from "DISPUTED - VOTING"** in ResolutionPanel
+- [x] **OUTCOME/PROPOSED field in MarketCard**: Context-aware labels
+- [x] **Portfolio sorting**: HOT, NEW, ENDING, LIQUID sort options
+- [x] **Portfolio heat filter**: Full heat dropdown matching MarketsPage
+- [x] **UNRESOLVED tab styling**: Red only when selected
+- [x] **Heat dropdown fix**: Now properly shows when clicked
+- [x] **POOL SIZE/VOLUME in PositionCard**: Display market stats
 - [x] **Pending withdrawals**: Banner disappears after claim (v0.7.12)
 
 ---

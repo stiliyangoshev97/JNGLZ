@@ -1,8 +1,50 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 15, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.16  
+> **Last Updated:** January 17, 2026  
+> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.24  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## ✅ v0.7.24 FRONTEND RELEASE (Jan 17, 2026)
+
+### One-Sided Market Handling
+- [x] ResolutionPanel: Hide proposal option for one-sided markets
+- [x] ResolutionPanel: Show refund timer countdown for one-sided markets
+- [x] MarketCard: Badge shows "ONE-SIDED", footer shows refund countdown
+- [x] PositionCard: Fixed showing "FINALIZE" when should show "CLAIM REFUND"
+- [x] PortfolioPage: One-sided markets categorized as "awaiting resolution"
+
+### Empty Market Timer
+- [x] ResolutionPanel: Timer showing "Status changes to UNRESOLVED in: Xh Xm"
+- [x] Shows for markets with no participants before 24h mark
+
+### Markets Page Improvements
+- [x] FINALIZING sub-filter always visible (disabled when count=0)
+- [x] All PENDING sub-filters: AWAITING, PROPOSED, DISPUTED, FINALIZING always shown
+- [x] Removed ⚠️ from "DISPUTED - VOTING" text in ResolutionPanel
+
+### MarketCard Improvements
+- [x] Renamed "EXPECTED" field to "OUTCOME" for resolved markets
+- [x] Renamed "EXPECTED" field to "PROPOSED" for markets with pending proposal
+- [x] Contextual field display based on market state
+
+### Portfolio Page Improvements
+- [x] Added sorting: HOT (volume), NEW (created), ENDING (expiry), LIQUID (pool size)
+- [x] Default sort is "NEW"
+- [x] Added heat level filter dropdown matching MarketsPage
+- [x] Fixed UNRESOLVED tab: text red only when selected
+- [x] Fixed heat dropdown not showing (overflow clipping issue)
+
+### PositionCard Improvements
+- [x] Added OUTCOME/PROPOSED/EXPIRY field (context-aware like MarketCard)
+- [x] EXPIRED shows in orange (text-orange-400)
+- [x] Added POOL SIZE display
+- [x] Added VOLUME display
+- [x] Added `totalVolume` to market interface
+
+### GraphQL Updates
+- [x] positions.queries.ts: Added `totalVolume`, `createdAt` to POSITION_FRAGMENT
 
 ---
 

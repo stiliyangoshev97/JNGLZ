@@ -2,6 +2,134 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.24] - 2026-01-17
+
+### Fixed
+
+#### One-Sided Market Handling (PositionCard.tsx)
+- Fixed one-sided market bug showing "FINALIZE" button when it should show "CLAIM REFUND"
+- Added `isOneSidedMarket` detection (only YES or only NO holders exist)
+- Modified `canFinalize` to exclude one-sided markets
+- One-sided markets now show "CLAIM REFUND" action when 24h passes
+
+#### One-Sided Market Categorization (PortfolioPage.tsx)
+- Fixed one-sided markets being incorrectly categorized as "finalize" actions
+- One-sided markets now categorized as "awaiting resolution" instead of "finalize"
+- Added proper categorization for one-sided markets waiting for 24h refund
+
+#### UNRESOLVED Tab Styling (PortfolioPage.tsx)
+- Fixed UNRESOLVED tab text being red even when not selected
+- Now only shows red (`text-no`) when clicked/selected
+- When not selected, shows neutral gray (`text-text-secondary hover:text-white`)
+
+#### Heat Level Dropdown (PortfolioPage.tsx)
+- Fixed heat level dropdown not showing when clicked
+- Root cause: Parent container had `overflow-x-auto` which clipped the dropdown
+- Solution: Conditionally use `overflow-visible` when dropdown is open
+- Dropdown now properly displays and allows heat level filtering
+
+### Added
+
+#### PositionCard Enhancements
+- Added `totalVolume` to market interface for sorting
+- Added POOL SIZE display showing market's pool balance in BNB
+- Added VOLUME display showing market's total trading volume
+- New stats appear after "Total Spent" row, before P/L section
+
+#### Portfolio Page Sorting & Filtering
+- Added sort options: HOT (volume), NEW (created), ENDING (expiry), LIQUID (pool size)
+- Default sort is "NEW" (newest markets first)
+- Added heat level filter dropdown matching MarketsPage styling
+- Heat filter options: ALL, DEGEN, HIGH, PRO, APEX, CORE
+
+#### PositionCard Contextual Field
+- Added OUTCOME field for resolved markets (shows YES/NO in green/red)
+- Added PROPOSED field for markets with pending proposal
+- Added EXPIRY/STATUS field for markets without proposal (shows date or EXPIRED)
+- EXPIRED text styled in orange (`text-orange-400`) to match MarketCard
+
+### Changed
+
+#### positions.queries.ts
+- Added `totalVolume` and `createdAt` fields to POSITION_FRAGMENT
+- Enables sorting by volume and creation date in Portfolio page
+
+---
+
+## [0.7.23] - 2026-01-17
+
+### Fixed
+
+#### One-Sided Market Handling (ResolutionPanel.tsx)
+- Fixed confusing "Emergency refund available in: Ended" message for one-sided markets
+  - Now shows countdown timer when refund is not yet available
+  - Shows centered "✓ EMERGENCY REFUND AVAILABLE" message when timer ends
+- Removed ⚠️ emoji from "ONE-SIDED MARKET" label text for cleaner UI
+
+#### SubFilterButton Component (MarketsPage.tsx)
+- Added `disabled` prop support to SubFilterButton component
+- Disabled buttons now show muted text color with `cursor-not-allowed`
+- All PENDING sub-filters now always visible with disabled state when count=0:
+  - AWAITING - always visible, disabled when count=0
+  - PROPOSED - always visible, disabled when count=0
+  - DISPUTED - always visible, disabled when count=0
+  - FINALIZING - always visible, disabled when count=0
+
+### Changed
+
+#### Markets Page
+- PENDING sub-filter buttons no longer conditionally rendered based on count
+- Consistent user experience - users always see all filter options
+
+---
+
+## [0.7.22] - 2026-01-17
+
+### Fixed
+
+#### Market Creation Page
+- Fixed market creation success image size to match loading state (w-32 → w-40)
+  - Now both loading and success screens show The Jungle logo at the same size
+
+#### Resolution Panel (Market Detail Page)
+- Added emergency refund timer in "Awaiting Proposal" state (Issue #2)
+  - Timer now shows before any proposal is made, not just after
+- Simplified propose economics - removed dispute scenarios (Issue #3)
+  - Proposer now only sees "IF NO ONE DISPUTES" scenario when proposing
+  - Dispute economics moved to be shown only when disputing
+- Removed emojis from "PROPOSER ECONOMICS" and "DISPUTER ECONOMICS" headers
+
+#### MarketCard Badges (Issue #4 & #5)
+- Changed "EXPIRED" badge to "AWAITING PROPOSAL" for markets awaiting proposal
+- Added "PROPOSED" badge for markets that have a proposal but no dispute yet
+- Changed "⚠ DISPUTED" to just "DISPUTED" (removed emoji)
+- Badges now properly reflect resolution state (awaiting → proposed → disputed)
+
+#### Markets Page Sub-Filter Tabs (Issue #7)
+- Removed emojis from PROPOSED, DISPUTED, and FINALIZING sub-filter buttons
+  - Was: "📋 PROPOSED", "⚔️ DISPUTED", "✅ FINALIZING"
+  - Now: "PROPOSED", "DISPUTED", "FINALIZING"
+- PROPOSED and DISPUTED tabs now always visible (not conditional on count > 0)
+
+#### Portfolio Page
+- Removed all emojis from NEEDS ACTION sub-filter buttons (CLAIM, VOTE, FINALIZE, REFUND)
+- Removed emojis from PENDING sub-filter buttons (AWAITING, PROPOSED, DISPUTED, FINALIZING)
+- Fixed: Portfolio now auto-refetches after claim/refund/finalize actions succeed
+  - Previously required manual page refresh to see updated state
+  - PositionCard now triggers parent refetch via `onActionSuccess` callback
+  - 3-second delay allows subgraph to index the transaction
+
+### Added
+
+#### How To Play Page (Issue #6)
+- Added "WHAT IF THE VOTE IS A TIE?" section explaining tie scenario
+  - Proposer bond returned (no penalty)
+  - Disputer bond returned (no penalty)
+  - Emergency refund activates for all traders
+  - Documentation now matches smart contract behavior
+
+---
+
 ## [0.7.21] - 2026-01-17
 
 ### Added
@@ -1347,33 +1475,6 @@ Now with 1% default slippage:
 ### Added
 - **Grayscale image effect** on MarketDetailPage (matches MarketCard style)
 - **Market images in Portfolio** - PositionCard now displays market images with same grayscale hover effect
-- Added `imageUrl`, `yesShares`, `noShares` to position GraphQL query fragment
-
-### Changed
-- Updated subgraph URL to version `0.0.2` in `env.ts`
-- Updated `POSITION_FRAGMENT` in `positions.queries.ts` to include market image and share data
-
-## [0.1.0] - 2026-01-08
-
-### Added - Initial Foundation (Phase 1 Complete)
-
-#### Project Setup
-- Initialized Vite + React 19 + TypeScript project
-- Configured Tailwind CSS with "High-Energy Brutalism" theme
-- Setup path aliases (`@/` → `./src`)
-- Added Google Fonts: JetBrains Mono (numbers), Inter (headlines)
-- Environment variables configuration (`.env`, `.env.example`)
-
-#### Design System
-- **Colors**: True black `#000000`, YES green `#39FF14`, NO red `#FF3131`, Cyber blue `#00E0FF`
-- **Borders**: 1px harsh borders, NO shadows, NO rounded corners
-- **Typography**: Monospace for numbers, bold sans-serif for headlines
-- Custom RainbowKit brutalist theme override
-
-#### Dependencies Installed
-- `wagmi` + `viem` - Web3 interactions
-- `@rainbow-me/rainbowkit` - Wallet connection UI
-- `@tanstack/react-query` - Server state management
 - `@apollo/client` + `graphql` - GraphQL for The Graph
 - `react-router-dom` - Client-side routing
 - `react-hook-form` + `@hookform/resolvers` + `zod` - Forms & validation

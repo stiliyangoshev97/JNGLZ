@@ -7,7 +7,7 @@
  * @module features/portfolio/components/PositionCard
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { Card } from '@/shared/components/ui/Card';
@@ -37,6 +37,7 @@ interface PositionWithMarket {
     yesShares?: string;
     noShares?: string;
     poolBalance?: string;
+    totalVolume?: string;
     proposer?: string;
     proposalTimestamp?: string;
     disputer?: string;
@@ -63,6 +64,7 @@ const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 interface PositionCardProps {
   position: PositionWithMarket;
   trades?: Trade[]; // All user's trades - we'll filter by market
+  onActionSuccess?: () => void; // Callback when claim/refund/finalize succeeds
 }
 
 /**
@@ -135,7 +137,7 @@ function calculateMarketRealizedPnl(
   return { realizedPnlBNB, realizedPnlPercent, hasSells };
 }
 
-export function PositionCard({ position, trades = [] }: PositionCardProps) {
+export function PositionCard({ position, trades = [], onActionSuccess }: PositionCardProps) {
   const { address } = useAccount();
   const market = position.market;
   
@@ -160,6 +162,13 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
     isConfirming: isRefundConfirming,
     isSuccess: isRefundSuccess
   } = useEmergencyRefund();
+
+  // Trigger parent refetch when any action succeeds
+  useEffect(() => {
+    if ((isClaimSuccess || isRefundSuccess || isFinalizeSuccess) && onActionSuccess) {
+      onActionSuccess();
+    }
+  }, [isClaimSuccess, isRefundSuccess, isFinalizeSuccess, onActionSuccess]);
   
   // Parse share amounts - subgraph returns BigInt strings for shares
   const yesShares = Number(BigInt(position.yesShares || '0')) / 1e18;
@@ -270,15 +279,19 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
     ? (userSharesBigInt * poolBalance) / marketTotalSupply 
     : 0n;
   
+  // Check if this is a one-sided market (only YES or only NO holders)
+  const isOneSidedMarket = marketTotalSupply > 0n && (marketYesSupply === 0n || marketNoSupply === 0n);
+  
   // Check if proposed winning side has shareholders (if not, finalize will fail)
   const proposedWinningSideHasShares = hasProposal && market.proposedOutcome !== undefined && market.proposedOutcome !== null && (
     market.proposedOutcome ? marketYesSupply > 0n : marketNoSupply > 0n
   );
   
-  // Can finalize when: has proposal, not resolved (from data), proposed side has shares, and either:
+  // Can finalize when: has proposal, not resolved (from data), proposed side has shares, NOT one-sided, and either:
   // - No dispute AND dispute window ended
-  // - Has dispute AND voting window ended  
-  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && proposedWinningSideHasShares && (
+  // - Has dispute AND voting window ended
+  // One-sided markets cannot finalize - they can only get emergency refund after 24h
+  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && proposedWinningSideHasShares && !isOneSidedMarket && (
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
@@ -328,15 +341,29 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
       return { status: 'ACTIVE', badge: 'active', action: 'VIEW MARKET' };
     }
     
+    // One-sided market - can only get emergency refund after 24h, cannot finalize
+    if (isOneSidedMarket) {
+      // Already refunded
+      if (alreadyRefunded) {
+        return { status: 'ONE-SIDED', badge: 'disputed' };
+      }
+      // 24h passed - can claim refund
+      if (now > emergencyRefundTime && totalShares > 0) {
+        return { status: 'ONE-SIDED', badge: 'disputed', action: 'CLAIM REFUND' };
+      }
+      // Still waiting for 24h
+      return { status: 'ONE-SIDED', badge: 'disputed', action: 'VIEW MARKET' };
+    }
+    
     // Expired but no proposal yet
     if (!hasProposal) {
       const inCreatorPriority = now < creatorPriorityEnd;
       if (inCreatorPriority && isCreator) {
-        return { status: 'AWAITING PROPOSAL', badge: 'expired', action: 'PROPOSE NOW', actionColor: 'yellow' };
+        return { status: 'AWAITING PROPOSAL', badge: 'neutral', action: 'PROPOSE NOW', actionColor: 'yellow' };
       } else if (inCreatorPriority) {
-        return { status: 'CREATOR PRIORITY', badge: 'expired', action: 'VIEW MARKET' };
+        return { status: 'CREATOR PRIORITY', badge: 'neutral', action: 'VIEW MARKET' };
       }
-      return { status: 'AWAITING PROPOSAL', badge: 'expired', action: 'VIEW MARKET' };
+      return { status: 'AWAITING PROPOSAL', badge: 'neutral', action: 'VIEW MARKET' };
     }
     
     // Has proposal, check if disputed
@@ -444,6 +471,15 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
           <span className="text-sm text-text-muted">Total Spent</span>
           <span className="font-mono text-white">{invested.toFixed(4)} BNB</span>
         </div>
+        {/* Pool Size and Volume */}
+        <div className="flex justify-between items-center pt-2 border-t border-dark-700">
+          <span className="text-sm text-text-muted">Pool Size</span>
+          <span className="font-mono text-cyber">{formatBNB(poolBalance)} BNB</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-text-muted">Volume</span>
+          <span className="font-mono text-text-secondary">{parseFloat(market.totalVolume || '0').toFixed(4)} BNB</span>
+        </div>
       </div>
 
       {/* P/L Display - ALWAYS show this section for consistent layout */}
@@ -535,6 +571,47 @@ export function PositionCard({ position, trades = [] }: PositionCardProps) {
       ) : (
         /* Spacer for resolved markets to maintain consistent height */
         <div className="h-6 mb-4" />
+      )}
+
+      {/* Outcome/Proposed/Expiry - show OUTCOME for resolved, PROPOSED for pending proposal, EXPIRY for markets without proposal */}
+      {isResolved ? (
+        <div className="flex items-center justify-between text-sm mb-4">
+          <span className="text-text-muted">OUTCOME</span>
+          <span className={cn(
+            "font-mono font-bold",
+            market.outcome ? 'text-yes' : 'text-no'
+          )}>
+            {market.outcome ? 'YES' : 'NO'}
+          </span>
+        </div>
+      ) : hasProposal ? (
+        <div className="flex items-center justify-between text-sm mb-4">
+          <span className="text-text-muted">PROPOSED</span>
+          <span className={cn(
+            "font-mono font-bold",
+            hasDispute
+              ? !market.proposedOutcome ? 'text-yes' : 'text-no' // Disputer proposes opposite
+              : market.proposedOutcome ? 'text-yes' : 'text-no' // Proposer's outcome
+          )}>
+            {hasDispute
+              ? !market.proposedOutcome ? 'YES' : 'NO' // Disputer wants opposite
+              : market.proposedOutcome ? 'YES' : 'NO'
+            }
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between text-sm mb-4">
+          <span className="text-text-muted">{isExpired ? 'STATUS' : 'EXPIRY'}</span>
+          <span className={cn(
+            "font-mono",
+            isExpired ? "text-orange-400 font-bold" : "text-text-secondary"
+          )}>
+            {isExpired 
+              ? 'EXPIRED'
+              : new Date(expiryMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            }
+          </span>
+        </div>
       )}
 
       {/* Actions */}

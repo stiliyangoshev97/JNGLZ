@@ -133,6 +133,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   const marketTotalSupply = marketYesSupply + marketNoSupply;
   const isEmptyMarket = marketTotalSupply === 0n;
   
+  // One-sided market: has activity but only on one side (proposal is futile)
+  const isOneSidedMarket = !isEmptyMarket && (marketYesSupply === 0n || marketNoSupply === 0n);
+  
   // Status checks
   const isExpired = now > expiryMs;
   const isResolved = market.resolved;
@@ -149,9 +152,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Emergency refund time (24h after expiry)
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   
-  // Can only propose if market has participants (contract will revert with NoTradesToResolve otherwise)
+  // Can only propose if market has participants on BOTH sides (one-sided = futile, contract safety check will block finalization anyway)
   // Also: don't show propose if emergency refund is already available (24h passed)
-  const canPropose = isExpired && !hasProposal && !isEmptyMarket && (inCreatorPriority ? isCreator : true) && now <= emergencyRefundTime;
+  const canPropose = isExpired && !hasProposal && !isEmptyMarket && !isOneSidedMarket && (inCreatorPriority ? isCreator : true) && now <= emergencyRefundTime;
   
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
   // Proposer cannot dispute their own proposal
@@ -260,6 +263,8 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <Badge variant="no">UNRESOLVED</Badge>
         ) : isEmptyMarket ? (
           <Badge variant="neutral">NO ACTIVITY</Badge>
+        ) : isOneSidedMarket && !hasProposal ? (
+          <Badge variant="disputed">ONE-SIDED</Badge>
         ) : hasDispute ? (
           <Badge variant="neutral">DISPUTED</Badge>
         ) : hasProposal ? (
@@ -272,9 +277,39 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
       <div className="p-4 space-y-4">
         {/* Empty Market Message */}
         {isEmptyMarket && !isResolved && (
-          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
-            <p className="text-text-muted text-sm">
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+            <p className="text-text-muted text-center mb-3">
               This market had no participants. Nothing to resolve.
+            </p>
+            {now <= emergencyRefundTime && (
+              <div className="flex justify-between items-center p-2 bg-dark-700 rounded">
+                <span className="text-text-muted text-xs">Status changes to UNRESOLVED in:</span>
+                <span className="text-cyber font-mono font-bold">{formatTimeLeft(emergencyRefundTime)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* One-Sided Market Message */}
+        {isOneSidedMarket && !isResolved && !hasProposal && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+            <p className="text-status-disputed font-bold mb-2">ONE-SIDED MARKET</p>
+            <p className="text-text-secondary text-xs mb-3">
+              This market has no opposing positions — only <span className={marketYesSupply > 0n ? 'text-yes font-bold' : 'text-no font-bold'}>{marketYesSupply > 0n ? 'YES' : 'NO'}</span> holders exist.
+              Resolution is not possible because there is no valid winning outcome.
+            </p>
+            {now < emergencyRefundTime ? (
+              <div className="flex justify-between items-center p-2 bg-dark-700 rounded">
+                <span className="text-text-muted text-xs">Emergency refund available in:</span>
+                <span className="text-cyber font-mono font-bold">{formatTimeLeft(emergencyRefundTime)}</span>
+              </div>
+            ) : (
+              <div className="p-2 bg-yes/10 border border-yes/30 rounded text-center">
+                <p className="text-yes font-bold text-xs">✓ EMERGENCY REFUND AVAILABLE</p>
+              </div>
+            )}
+            <p className="text-text-muted text-xs mt-2">
+              All traders will be able to claim a full refund of their invested BNB.
             </p>
           </div>
         )}
@@ -324,34 +359,66 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Dispute Info */}
+        {/* Dispute Info - Always visible during dispute (for everyone) */}
         {hasDispute && !isResolved && (
           <div className="p-3 bg-dark-800 border border-no/50 text-sm">
-            <p className="text-no font-bold mb-2">⚠️ DISPUTED - VOTING ACTIVE</p>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-text-muted">Voting ends:</span>
-              <span className="font-mono text-cyber">{formatTimeLeft(votingWindowEnd)}</span>
+            <p className="text-no font-bold mb-2">DISPUTED - VOTING {now < votingWindowEnd ? 'ACTIVE' : 'ENDED'}</p>
+            <div className="flex justify-between text-xs mb-3">
+              <span className="text-text-muted">{now < votingWindowEnd ? 'Voting ends:' : 'Voting ended'}</span>
+              <span className="font-mono text-cyber">{now < votingWindowEnd ? formatTimeLeft(votingWindowEnd) : '—'}</span>
             </div>
-            <div className="border-t border-dark-600 pt-2 mt-2 space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-text-muted">
-                  Proposer ({market.proposedOutcome ? <span className="text-yes">YES</span> : <span className="text-no">NO</span>}):
-                </span>
-                <span className="font-mono text-white">{formatShares(BigInt(market.proposerVoteWeight || '0'))} votes</span>
+            
+            {/* Live Vote Tally - Always visible */}
+            <div className="grid grid-cols-2 gap-2 text-center mb-3">
+              <div className="p-2 border border-yes/30 bg-yes/10">
+                <p className="text-yes font-bold text-xs mb-1">
+                  PROPOSER ({market.proposedOutcome ? 'YES' : 'NO'})
+                </p>
+                <p className="text-white font-mono text-lg">{formatShares(proposerVotes)}</p>
+                <p className="text-text-muted text-[10px]">votes</p>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-text-muted">
-                  Disputer ({market.proposedOutcome ? <span className="text-no">NO</span> : <span className="text-yes">YES</span>}):
-                </span>
-                <span className="font-mono text-white">{formatShares(BigInt(market.disputerVoteWeight || '0'))} votes</span>
+              <div className="p-2 border border-no/30 bg-no/10">
+                <p className="text-no font-bold text-xs mb-1">
+                  DISPUTER ({market.proposedOutcome ? 'NO' : 'YES'})
+                </p>
+                <p className="text-white font-mono text-lg">{formatShares(disputerVotes)}</p>
+                <p className="text-text-muted text-[10px]">votes</p>
               </div>
             </div>
+
+            {/* Vote status messages */}
+            {hasVoted && (
+              <div className="p-2 bg-yes/10 border border-yes/30 text-xs text-center">
+                <span className="text-yes">✓ You have voted</span>
+              </div>
+            )}
+            {!hasVoted && totalShares === 0n && (
+              <div className="p-2 bg-dark-700 border border-dark-600 text-xs text-center">
+                <span className="text-text-muted">Only shareholders can vote</span>
+              </div>
+            )}
+            {!hasVoted && totalShares > 0n && now >= votingWindowEnd && (
+              <div className="p-2 bg-dark-700 border border-dark-600 text-xs text-center">
+                <span className="text-text-muted">Voting window has ended</span>
+              </div>
+            )}
           </div>
         )}
 
         {/* Propose Section */}
         {canPropose && !isResolved && (
           <div className="space-y-3">
+            {/* Emergency Refund Timer - Always show when awaiting proposal */}
+            <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-text-muted">Emergency refund available in:</span>
+                <span className="text-cyber font-mono font-bold">{formatTimeLeft(emergencyRefundTime)}</span>
+              </div>
+              <p className="text-text-muted text-xs mt-1">
+                If no one resolves by then, all traders can claim a refund.
+              </p>
+            </div>
+
             <p className="text-sm text-text-secondary">
               {inCreatorPriority && isCreator 
                 ? 'You have priority to propose the outcome.'
@@ -360,7 +427,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
             
             {/* Proposer Reward Info Box */}
             <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
-              <p className="text-cyber font-bold">💰 PROPOSER ECONOMICS</p>
+              <p className="text-cyber font-bold">PROPOSER ECONOMICS</p>
               
               {/* Bond & Reward Summary */}
               <div className="text-xs space-y-1">
@@ -376,7 +443,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               
               {/* Outcome Scenarios */}
               <div className="border-t border-dark-600 pt-2 space-y-2">
-                {/* Scenario 1: Undisputed */}
+                {/* Scenario: Undisputed */}
                 <div className="p-2 bg-yes/10 border border-yes/30 rounded">
                   <p className="text-yes text-xs font-bold mb-1">✓ IF NO ONE DISPUTES (30 min):</p>
                   <div className="text-xs space-y-0.5">
@@ -391,44 +458,6 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                     <div className="flex justify-between border-t border-yes/20 pt-1 mt-1">
                       <span className="text-white font-bold">Net profit:</span>
                       <span className="text-yes font-mono font-bold">+{formatBNB(estimatedReward)} BNB</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Scenario 2: Disputed & You Win */}
-                <div className="p-2 bg-cyber/10 border border-cyber/30 rounded">
-                  <p className="text-cyber text-xs font-bold mb-1">⚔️ IF DISPUTED & YOU WIN VOTE:</p>
-                  <div className="text-xs space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">You get back:</span>
-                      <span className="text-white font-mono">{formatBNB(bondAmount)} BNB (bond)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">From disputer:</span>
-                      <span className="text-yes font-mono">+{formatBNB(bondAmount)} BNB (50%)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Pool reward:</span>
-                      <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
-                    </div>
-                    <div className="flex justify-between border-t border-cyber/20 pt-1 mt-1">
-                      <span className="text-white font-bold">Net profit:</span>
-                      <span className="text-yes font-mono font-bold">+{formatBNB(bondAmount + estimatedReward)} BNB</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Scenario 3: Disputed & You Lose */}
-                <div className="p-2 bg-no/10 border border-no/30 rounded">
-                  <p className="text-no text-xs font-bold mb-1">✗ IF DISPUTED & YOU LOSE VOTE:</p>
-                  <div className="text-xs space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Your bond goes to:</span>
-                      <span className="text-no font-mono">Disputer & voters</span>
-                    </div>
-                    <div className="flex justify-between border-t border-no/20 pt-1 mt-1">
-                      <span className="text-white font-bold">Net loss:</span>
-                      <span className="text-no font-mono font-bold">-{formatBNB(bondAmount)} BNB</span>
                     </div>
                   </div>
                 </div>
@@ -488,7 +517,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="space-y-3 border-t border-dark-600 pt-4">
             {/* Dispute Economics Box */}
             <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-2">
-              <p className="text-no font-bold">⚔️ DISPUTER ECONOMICS</p>
+              <p className="text-no font-bold">DISPUTER ECONOMICS</p>
               <p className="text-text-muted text-xs mb-2">
                 You believe the outcome should be <span className={market.proposedOutcome ? 'text-no font-bold' : 'text-yes font-bold'}>{market.proposedOutcome ? 'NO' : 'YES'}</span> instead of <span className={market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold'}>{market.proposedOutcome ? 'YES' : 'NO'}</span>
               </p>
@@ -584,7 +613,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Vote Section */}
+        {/* Vote Section - Only for users who CAN vote */}
         {canVote && !isResolved && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
             {/* Voting Power & Potential Earnings */}
@@ -620,23 +649,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               </p>
             </div>
 
-            {/* Current Vote Tally */}
-            <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
-              <p className="text-text-muted text-xs mb-2">CURRENT VOTES:</p>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="p-2 border border-yes/30 bg-yes/10 rounded">
-                  <p className="text-yes font-bold text-sm">PROPOSER ({market.proposedOutcome ? 'YES' : 'NO'})</p>
-                  <p className="text-white font-mono">{formatShares(proposerVotes)}</p>
-                </div>
-                <div className="p-2 border border-no/30 bg-no/10 rounded">
-                  <p className="text-no font-bold text-sm">DISPUTER ({market.proposedOutcome ? 'NO' : 'YES'})</p>
-                  <p className="text-white font-mono">{formatShares(disputerVotes)}</p>
-                </div>
-              </div>
-            </div>
-
             <div className="text-xs text-text-muted space-y-1">
-              <div>Time remaining: <span className="text-cyber font-mono">{formatTimeLeft(votingWindowEnd)}</span></div>
               <div className="text-yes">✓ No bond required - only gas (~$0.01)</div>
             </div>
 
@@ -649,7 +662,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                 {isVoting || isConfirmingVote ? (
                   <Spinner size="sm" variant="yes" />
                 ) : (
-                  `VOTE ${market.proposedOutcome ? 'PROPOSER' : 'DISPUTER'}`
+                  `VOTE ${market.proposedOutcome ? 'YES' : 'NO'}`
                 )}
               </Button>
               <Button
@@ -660,7 +673,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                 {isVoting || isConfirmingVote ? (
                   <Spinner size="sm" variant="no" />
                 ) : (
-                  `VOTE ${market.proposedOutcome ? 'DISPUTER' : 'PROPOSER'}`
+                  `VOTE ${market.proposedOutcome ? 'NO' : 'YES'}`
                 )}
               </Button>
             </div>
@@ -683,7 +696,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
             {/* Proposer reward info */}
             {estimatedReward > 0n && (
               <div className="text-xs text-text-muted">
-                💰 Proposer will receive <span className="text-yes font-mono">{formatBNB(estimatedReward)} BNB</span> reward
+                Proposer will receive <span className="text-yes font-mono">{formatBNB(estimatedReward)} BNB</span> reward
               </div>
             )}
             
@@ -829,7 +842,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         )}
 
         {/* Waiting for Emergency Refund */}
-        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && (
+        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && !isOneSidedMarket && (
           <div className="p-3 bg-dark-800 border border-cyber/30 text-center">
             {resolutionMayHaveFailed ? (
               <>
