@@ -20,7 +20,7 @@ interface HeatBarProps {
   /** Show percentage value */
   showValue?: boolean;
   /** Size variant */
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Optional max value for scaling */
   max?: number;
   /** Additional class names */
@@ -31,6 +31,7 @@ const sizeClasses = {
   sm: 'h-0.5',
   md: 'h-1',
   lg: 'h-2',
+  xl: 'h-4',
 };
 
 export function HeatBar({
@@ -88,7 +89,7 @@ interface SplitHeatBarProps {
   yesPercent: number;
   noPercent: number;
   showLabels?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 

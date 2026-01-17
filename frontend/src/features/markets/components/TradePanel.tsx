@@ -18,6 +18,7 @@ import { Input } from '@/shared/components/ui/Input';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { SlippageSettings, useSlippage, applySlippage } from '@/shared/components/SlippageSettings';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import { useToast } from '@/shared/components/ui/Toast';
 import {
   useBuyYes,
   useBuyNo,
@@ -50,6 +51,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   
   // Slippage settings (default 1%)
   const { slippageBps, slippagePercent } = useSlippage();
@@ -134,6 +136,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   // Reset form on success
   useEffect(() => {
     if (isSuccess) {
+      // Show success toast
+      showToast('Trade successful!', 'success');
       setAmount('');
       // Refetch position after successful trade
       refetchPosition();
@@ -143,15 +147,13 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Trigger market data refetch for instant UI update
       onTradeSuccess?.();
-      // Reset all write hooks
-      setTimeout(() => {
-        resetBuyYes();
-        resetBuyNo();
-        resetSellYes();
-        resetSellNo();
-      }, 2000);
+      // Reset all write hooks immediately (no delay needed since we use toast)
+      resetBuyYes();
+      resetBuyNo();
+      resetSellYes();
+      resetSellNo();
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient, showToast]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
@@ -245,18 +247,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
         <h3 className="font-bold uppercase mb-4 text-center">TRADING CLOSED</h3>
         <p className="text-text-secondary text-sm text-center">
           This market is no longer accepting trades
-        </p>
-      </div>
-    );
-  }
-
-  // Success state (briefly show)
-  if (isSuccess) {
-    return (
-      <div className="border border-yes bg-yes/10 p-6">
-        <h3 className="font-bold uppercase mb-4 text-center text-yes">✓ TRADE SUCCESSFUL</h3>
-        <p className="text-text-secondary text-sm text-center">
-          Your trade has been executed
         </p>
       </div>
     );

@@ -257,8 +257,8 @@ export function MarketDetailPage() {
           )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Left: Question & Info */}
-            <div className="lg:col-span-2">
+            {/* Left: Question & Info - now spans full width */}
+            <div className="lg:col-span-3">
               {/* Status badges */}
               <div className="flex items-center gap-2 mb-3 md:mb-4 flex-wrap">
                 <HeatLevelBadge heatLevel={market.heatLevel} size="md" />
@@ -309,21 +309,22 @@ export function MarketDetailPage() {
               <div className="mt-4 pt-4 border-t border-dark-700">
                 <MarketInfoCompact market={market} onShowRules={() => setShowRulesModal(true)} />
               </div>
-            </div>
 
-            {/* Right: Big Chance Display */}
-            <div className="flex flex-col items-center justify-center p-6 border border-dark-600 bg-dark-900">
-              <ChanceDisplay
-                value={yesPercent}
-                size="hero"
-                label="CHANCE"
-                animate={isActive}
-              />
-              <SplitHeatBar
-                yesPercent={yesPercent}
-                noPercent={noPercent}
-                className="w-full mt-4"
-              />
+              {/* Chance Display - Horizontal banner */}
+              <div className="mt-4 p-4 border border-dark-600 bg-dark-900 flex flex-col sm:flex-row items-center gap-4">
+                <ChanceDisplay
+                  value={yesPercent}
+                  size="lg"
+                  label="CHANCE"
+                  animate={isActive}
+                />
+                <SplitHeatBar
+                  yesPercent={yesPercent}
+                  noPercent={noPercent}
+                  size="xl"
+                  className="w-full sm:flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -480,7 +481,7 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
               <span 
                 className={cn(
                   "text-text-secondary break-all line-clamp-2",
-                  market.resolutionRules.length > 80 && "cursor-pointer hover:text-white transition-colors"
+                  market.resolutionRules.length > 80 && "cursor-pointer hover:text-cyber transition-colors"
                 )}
                 onClick={() => market.resolutionRules && market.resolutionRules.length > 80 && onShowRules()}
                 title={market.resolutionRules.length > 80 ? "Click to view full rules" : undefined}

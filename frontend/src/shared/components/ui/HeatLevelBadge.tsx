@@ -74,7 +74,7 @@ export function HeatLevelInfo({ heatLevel, className }: HeatLevelInfoProps) {
   const config = getHeatLevel(heatLevel);
   
   return (
-    <div className={cn('border p-4 space-y-3', config.bgColor, config.borderColor, className)}>
+    <div className={cn('space-y-3', className)}>
       {/* Header */}
       <div className="flex items-center gap-2">
         <div>
