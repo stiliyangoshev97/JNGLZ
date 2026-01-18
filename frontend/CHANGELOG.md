@@ -21,6 +21,12 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 - Updated CI contract address to v3.6.1: `0x96662c54622304804065210F16483C5f2F3b6a75`
 - Updated chain ID from `56` (mainnet) to `97` (testnet) for CI builds
 
+#### How to Play Page - v3.6.1 Accuracy
+- **Fixed** incorrect information about 2-hour cutoff blocking disputes
+- Updated to reflect v3.6.1 behavior: disputes are ALWAYS allowed within 30-min window
+- Clarified that only NEW PROPOSALS are blocked at the 22h+ cutoff
+- Added worst-case timeline explanation (proposal at 21:59 → resolves by 23:30)
+
 ### Changed
 
 #### Improved .gitignore Files
