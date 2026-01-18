@@ -100,3 +100,16 @@ export interface LeaderboardEntry {
 export interface GetLeaderboardResponse {
   users: LeaderboardEntry[];
 }
+
+// User Earnings (v3.6.1 - Resolution earnings + Creator fees)
+export interface UserEarnings {
+  id: string;
+  totalProposerRewardsEarned: string;
+  totalBondEarnings: string;
+  totalJuryFeesEarned: string;
+  totalCreatorFeesEarned: string;
+}
+
+export interface GetUserEarningsResponse {
+  user: UserEarnings | null;
+}

@@ -47,6 +47,24 @@ export const GET_USER_STATS = gql`
 `;
 
 /**
+ * Get user earnings (resolution earnings + creator fees)
+ * Separate from P/L - only tracks positive earnings, not losses
+ */
+export const GET_USER_EARNINGS = gql`
+  query GetUserEarnings($user: ID!) {
+    user(id: $user) {
+      id
+      # Resolution Earnings (proposer/disputer/jury)
+      totalProposerRewardsEarned
+      totalBondEarnings
+      totalJuryFeesEarned
+      # Creator Fees (separate - passive income)
+      totalCreatorFeesEarned
+    }
+  }
+`;
+
+/**
  * Get daily stats for charts
  * Note: This entity may not exist in the subgraph yet
  */

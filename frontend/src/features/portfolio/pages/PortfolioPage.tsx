@@ -14,8 +14,8 @@ import { useAccount } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES } from '@/shared/api';
-import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse } from '@/shared/api';
+import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS } from '@/shared/api';
+import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse, GetUserEarningsResponse } from '@/shared/api';
 import { PositionCard } from '../components';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
@@ -151,6 +151,14 @@ export function PortfolioPage() {
     variables: { trader: address?.toLowerCase(), first: 500 },
     skip: !address,
     // NO pollInterval - trades history doesn't need real-time updates
+    notifyOnNetworkStatusChange: false,
+  });
+
+  // Fetch user's resolution earnings (proposer/disputes/jury) and creator fees
+  // NO POLLING - earnings are historical, update after withdrawals
+  const { data: earningsData, refetch: refetchEarnings } = useQuery<GetUserEarningsResponse>(GET_USER_EARNINGS, {
+    variables: { user: address?.toLowerCase() },
+    skip: !address,
     notifyOnNetworkStatusChange: false,
   });
 
@@ -298,6 +306,8 @@ export function PortfolioPage() {
     if (bondWithdrawn || feesWithdrawn) {
       // Refetch pending amounts to update the UI
       refetchPending();
+      // Refetch earnings to update the totals
+      refetchEarnings();
       // Invalidate balance queries so Header updates
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Reset the mutation state after a short delay so the banner can disappear
@@ -307,12 +317,24 @@ export function PortfolioPage() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [bondWithdrawn, feesWithdrawn, refetchPending, queryClient, resetBondWithdraw, resetFeesWithdraw]);
+  }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
   const pendingFeesFormatted = pendingCreatorFees ? parseFloat(formatEther(pendingCreatorFees)) : 0;
   const hasPendingWithdrawals = pendingBondsFormatted > 0 || pendingFeesFormatted > 0;
+
+  // Parse resolution earnings (v3.6.1)
+  const earnings = useMemo(() => {
+    const user = earningsData?.user;
+    const proposer = parseFloat(user?.totalProposerRewardsEarned || '0');
+    const disputes = parseFloat(user?.totalBondEarnings || '0');
+    const jury = parseFloat(user?.totalJuryFeesEarned || '0');
+    const creator = parseFloat(user?.totalCreatorFeesEarned || '0');
+    const totalResolution = proposer + disputes + jury; // Excludes creator fees
+    const hasEarnings = proposer > 0 || disputes > 0 || jury > 0 || creator > 0;
+    return { proposer, disputes, jury, creator, totalResolution, hasEarnings };
+  }, [earningsData]);
 
   // Only show loading on initial load, not polls
   const isInitialLoading = loading && !data?.positions;
@@ -670,26 +692,7 @@ export function PortfolioPage() {
   // Calculate portfolio stats
   const stats = calculatePortfolioStats(positions, categorizedPositions);
 
-  // Not connected state - AFTER all hooks
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md flex flex-col items-center">
-          <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
-          <p className="text-text-secondary mb-6">
-            Connect your wallet to view your positions and trading history.
-          </p>
-          <ConnectButton.Custom>
-            {({ openConnectModal }) => (
-              <Button variant="cyber" size="lg" onClick={openConnectModal}>
-                CONNECT WALLET
-              </Button>
-            )}
-          </ConnectButton.Custom>
-        </div>
-      </div>
-    );
-  }
+  // Main render - show layout for both connected and disconnected states
 
   return (
     <div className="min-h-screen">
@@ -703,26 +706,29 @@ export function PortfolioPage() {
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
                 PORT<span className="text-cyber">FOLIO</span>
               </h1>
-              <div className="mt-2">
-                <AddressDisplay address={address!} iconSize={24} />
-              </div>
+              {isConnected && address && (
+                <div className="mt-2">
+                  <AddressDisplay address={address} iconSize={24} />
+                </div>
+              )}
             </div>
 
-            {/* Stats Grid - 2x2 on mobile, row on desktop */}
-            <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4">
-              <StatBox label="POSITIONS" value={stats.totalPositions.toString()} />
+            {/* Stats Grid - All stats in one row on desktop, 2-col grid on mobile */}
+            <div className="grid grid-cols-2 md:flex md:items-center md:flex-wrap gap-3 md:gap-4">
+              {/* Trading Stats */}
+              <StatBox label="POSITIONS" value={isConnected ? stats.totalPositions.toString() : '—'} />
               <StatBox 
                 label="INVESTED" 
-                value={`${stats.totalInvested.toFixed(2)} BNB`}
+                value={isConnected ? `${stats.totalInvested.toFixed(2)} BNB` : '—'}
               />
               <StatBox 
                 label="TOTAL P/L" 
-                value={totalPnl.hasActivity 
+                value={isConnected && totalPnl.hasActivity 
                   ? `${totalPnl.combined >= 0 ? '+' : ''}${totalPnl.combined.toFixed(4)} BNB`
                   : '—'
                 }
-                color={totalPnl.hasActivity ? (totalPnl.combined >= 0 ? 'yes' : 'no') : undefined}
-                subtextElement={totalPnl.hasActivity 
+                color={isConnected && totalPnl.hasActivity ? (totalPnl.combined >= 0 ? 'yes' : 'no') : undefined}
+                subtextElement={isConnected && totalPnl.hasActivity 
                   ? (
                     <span className="text-[10px] md:text-xs">
                       <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes' : 'text-no'}>
@@ -737,21 +743,46 @@ export function PortfolioPage() {
                   : undefined
                 }
               />
-              {resolutionStats.hasRefunds && (
-                <StatBox 
-                  label="REFUNDED" 
-                  value={`${resolutionStats.totalRefunded.toFixed(4)} BNB`}
-                  color="neutral"
-                  subtext="Capital recovery"
-                />
-              )}
+              <StatBox 
+                label="REFUNDED" 
+                value={resolutionStats.totalRefunded > 0 ? `${resolutionStats.totalRefunded.toFixed(4)} BNB` : '—'}
+                color={resolutionStats.totalRefunded > 0 ? 'neutral' : undefined}
+              />
+              
+              {/* Resolution Earnings */}
+              <StatBox 
+                label="PROPOSER" 
+                value={earnings.proposer > 0 ? `+${earnings.proposer.toFixed(4)} BNB` : '—'}
+                color={earnings.proposer > 0 ? 'yes' : undefined}
+                subtext="0.5% pool rewards"
+              />
+              <StatBox 
+                label="DISPUTES" 
+                value={earnings.disputes > 0 ? `+${earnings.disputes.toFixed(4)} BNB` : '—'}
+                color={earnings.disputes > 0 ? 'yes' : undefined}
+                subtext="Bond winnings"
+              />
+              <StatBox 
+                label="JURY" 
+                value={earnings.jury > 0 ? `+${earnings.jury.toFixed(4)} BNB` : '—'}
+                color={earnings.jury > 0 ? 'yes' : undefined}
+                subtext="Voting rewards"
+              />
+              
+              {/* Creator Fees (separate) */}
+              <StatBox 
+                label="CREATOR" 
+                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(4)} BNB` : '—'}
+                color={earnings.creator > 0 ? 'cyber' : undefined}
+                subtext="0.5% of trades"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) */}
-      {hasPendingWithdrawals && (
+      {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) - Only when connected */}
+      {isConnected && hasPendingWithdrawals && (
         <section className="bg-dark-700/50 border-b border-dark-600 py-4">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1224,9 +1255,9 @@ export function PortfolioPage() {
             </div>
           ) : error ? (
             <ErrorState message={error.message} />
-          ) : sortedPositions.length === 0 ? (
-            filterBy === 'all' ? (
-              <EmptyState />
+          ) : !isConnected || sortedPositions.length === 0 ? (
+            filterBy === 'all' || !isConnected ? (
+              <EmptyState isConnected={isConnected} />
             ) : (
               <div className="text-center py-16">
                 <p className="text-xl font-bold text-white mb-2">
@@ -1299,7 +1330,21 @@ export function PortfolioPage() {
           ) : (
             /* My Markets View */
             <div>
-              {isInitialMarketsLoading ? (
+              {!isConnected ? (
+                <div className="text-center py-16">
+                  <p className="text-xl font-bold text-white mb-2">CONNECT TO VIEW YOUR MARKETS</p>
+                  <p className="text-text-secondary mb-6">
+                    Connect your wallet to see markets you've created
+                  </p>
+                  <ConnectButton.Custom>
+                    {({ openConnectModal }) => (
+                      <Button variant="cyber" onClick={openConnectModal}>
+                        CONNECT WALLET
+                      </Button>
+                    )}
+                  </ConnectButton.Custom>
+                </div>
+              ) : isInitialMarketsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <PositionCardSkeleton key={i} />
@@ -1373,7 +1418,7 @@ function StatBox({
   label: string; 
   value: string; 
   highlight?: boolean;
-  color?: 'yes' | 'no' | 'neutral';
+  color?: 'yes' | 'no' | 'neutral' | 'cyber';
   subtext?: string;
   subtextElement?: React.ReactNode;
 }) {
@@ -1390,6 +1435,7 @@ function StatBox({
         color === 'yes' && 'text-yes',
         color === 'no' && 'text-no',
         color === 'neutral' && 'text-text-secondary',
+        color === 'cyber' && 'text-cyber',
         !color && 'text-white'
       )}>
         {value}
@@ -1402,6 +1448,7 @@ function StatBox({
           color === 'yes' && 'text-yes/70',
           color === 'no' && 'text-no/70',
           color === 'neutral' && 'text-text-muted',
+          color === 'cyber' && 'text-cyber/70',
           !color && 'text-text-muted'
         )}>
           {subtext}
@@ -1434,7 +1481,25 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ isConnected }: { isConnected: boolean }) {
+  if (!isConnected) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-xl font-bold text-white mb-2">CONNECT TO VIEW PORTFOLIO</p>
+        <p className="text-text-secondary mb-6">
+          Connect your wallet to see your positions and earnings
+        </p>
+        <ConnectButton.Custom>
+          {({ openConnectModal }) => (
+            <Button variant="cyber" onClick={openConnectModal}>
+              CONNECT WALLET
+            </Button>
+          )}
+        </ConnectButton.Custom>
+      </div>
+    );
+  }
+  
   return (
     <div className="text-center py-16">
       <p className="text-xl font-bold text-white mb-2">NO POSITIONS YET</p>

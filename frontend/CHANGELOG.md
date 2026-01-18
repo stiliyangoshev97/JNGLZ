@@ -2,6 +2,69 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.30] - 2026-01-19
+
+### Added - Explore Before Connect UX
+
+#### Create Market Page
+- **No longer requires wallet connection** to view the page
+- Full form is now visible and interactive without connecting
+- All fields (question, duration, heat level, image, etc.) can be explored
+- Submit button shows "CONNECT WALLET TO CREATE" when not connected
+- Clicking opens wallet connection modal, then user can proceed
+- Users can understand the full market creation flow before committing
+
+#### Portfolio Page
+- **No longer requires wallet connection** to view the page
+- Full page structure visible: stats grid, tabs (MY POSITIONS / MY MARKETS)
+- Stats show "—" placeholder values when not connected
+- Prominent banner at top: "Connect your wallet to view your positions and earnings"
+- Empty state shows connect button with helpful messaging
+- Users can see the 8 earnings categories (POSITIONS, INVESTED, P/L, REFUNDED, PROPOSER, DISPUTES, JURY, CREATOR)
+
+#### UX Philosophy
+- "Feel the app" before connecting - reduces friction for new users
+- Transparent about what features exist before wallet commitment
+- Progressive disclosure: explore → connect → use
+
+### Technical Changes
+- Removed early `!isConnected` return from both pages
+- Added conditional rendering for wallet-dependent UI elements
+- Skip GraphQL queries when no wallet connected (no wasted requests)
+- `EmptyState` component now accepts `isConnected` prop for dynamic messaging
+- Added `ConnectButton.Custom` in submit areas for seamless connection flow
+
+---
+
+## [0.7.29] - 2026-01-18
+
+### Added - Portfolio Earnings Display
+
+#### Resolution Earnings Section
+- **New stats row** in Portfolio header showing resolution activity earnings
+- **PROPOSER**: 0.5% pool rewards for correct proposals (`totalProposerRewardsEarned`)
+- **DISPUTES**: 50% of loser's bond when winning disputes (`totalBondEarnings`)
+- **JURY**: Jury fees from voting correctly (`totalJuryFeesEarned`)
+- **TOTAL EARNINGS**: Sum of proposer + disputes + jury (excludes creator fees)
+
+#### Creator Fees Section
+- **Separate stats row** for creator fees (passive income)
+- **CREATOR FEES**: 0.5% of all trades on markets you created (`totalCreatorFeesEarned`)
+- Displayed separately from resolution earnings (different income stream)
+
+#### Technical Changes
+- Added `GET_USER_EARNINGS` GraphQL query to fetch earnings from subgraph
+- Added `GetUserEarningsResponse` type for type-safe earnings data
+- Extended `StatBox` component to support "cyber" color variant
+- Earnings rows only display when user has earnings > 0
+
+### Notes
+- **Only tracks positive earnings** - Bond losses are NOT subtracted
+- **Separate from P/L** - Trading P/L and resolution earnings are distinct
+- **Requires subgraph v3.6.2** - New `totalBondEarnings` field
+
+---
+
 ## [0.7.28] - 2026-01-18
 
 ### Fixed

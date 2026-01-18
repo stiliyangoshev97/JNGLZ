@@ -108,10 +108,12 @@ type User @entity(immutable: false) {
   winCount: BigInt! # Number of winning positions (claimed > 0)
   lossCount: BigInt! # Number of losing positions (resolved with 0 claim)
   winRate: BigDecimal! # winCount / (winCount + lossCount) * 100
-  # Creator Earnings (separate from P/L)
-  totalCreatorFeesEarned: BigDecimal! # Total fees earned as market creator
-  totalProposerRewardsEarned: BigDecimal! # Total proposer rewards earned
-  totalJuryFeesEarned: BigDecimal! # Total jury fees earned from voting
+  # Resolution Earnings (separate from P/L - only tracks gains, not losses)
+  totalProposerRewardsEarned: BigDecimal! # 0.5% pool rewards for correct proposals
+  totalBondEarnings: BigDecimal! # 50% of loser's bond when winning disputes (proposer or disputer)
+  totalJuryFeesEarned: BigDecimal! # Jury fees earned from voting correctly
+  # Creator Earnings (passive income - separate from resolution earnings)
+  totalCreatorFeesEarned: BigDecimal! # 0.5% of all trades on markets created
   # Withdrawal Tracking (Pull Pattern)
   pendingWithdrawals: BigDecimal! # Unclaimed bonds/jury fees
   pendingCreatorFees: BigDecimal! # Unclaimed creator fees
