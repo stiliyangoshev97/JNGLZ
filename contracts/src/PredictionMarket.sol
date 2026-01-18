@@ -57,9 +57,10 @@ contract PredictionMarket is ReentrancyGuard {
     uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours;
 
     /// @notice Resolution cutoff buffer before emergency refund (2 hours)
-    /// @dev Proposals and disputes are blocked when less than 2 hours remain before emergency refund
-    ///      This prevents race conditions where resolution happens too close to refund eligibility
-    ///      Effective resolution window: 0-22 hours after expiry (not 0-24 hours)
+    /// @dev Only PROPOSALS are blocked when less than 2 hours remain before emergency refund
+    ///      Disputes are allowed anytime within their 30-min window (v3.6.1 fix)
+    ///      This prevents race conditions while ensuring legitimate disputes aren't blocked
+    ///      Effective proposal window: 0-22 hours after expiry
     uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
 
     /// @notice Maximum market creation fee (0.1 BNB)

@@ -39,10 +39,10 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 - Consistent styling with existing UI components
 
 #### Emergency Refund Double-Spend Mitigation
-- Block proposals AND disputes when <2 hours remain before emergency refund
-- New "RESOLUTION WINDOW CLOSED" UI state when in cutoff period
-- Shows contextual message (no proposal vs proposal exists but disputes blocked)
-- Shows emergency refund countdown when resolution actions are blocked
+- Block proposals when <2 hours remain before emergency refund
+- Disputes remain allowed within their 30-minute window (v3.6.1 contract fix)
+- New "PROPOSAL WINDOW CLOSED" UI state when in cutoff period (no proposal yet)
+- Shows emergency refund countdown when proposal actions are blocked
 - Prevents race condition between resolution and emergency refund (contract bug mitigation)
 - Updated How To Play page with 2-hour safety cutoff information
 

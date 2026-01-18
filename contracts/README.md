@@ -86,17 +86,17 @@ function claim(uint256 marketId) external {
 }
 ```
 
-### Timeline (v3.6.0)
+### Timeline (v3.6.0, updated v3.6.1)
 
 ```
 Expiry ─────────────────────────────────────────────────> Emergency Refund
   │                                                              │
-  │  0-22h: Resolution window                                   │ 24h+
+  │  0-22h: Proposal window                                     │ 24h+
   │  ├─ Propose (10min creator priority, then anyone)           │
-  │  ├─ Dispute window (30min after proposal)                   │
+  │  ├─ Dispute window (30min after proposal) - allowed anytime │
   │  └─ Voting window (1h after dispute)                        │
   │                                                              │
-  │  22-24h: CUTOFF - No new proposals/disputes                 │
+  │  22-24h: CUTOFF - No new PROPOSALS (disputes still allowed) │
   │         (ensures resolution completes before refund)         │
 ```
 
