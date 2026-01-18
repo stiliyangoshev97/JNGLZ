@@ -22,7 +22,7 @@
  * @module features/markets/pages/MarketDetailPage
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET } from '@/shared/api';
@@ -59,6 +59,8 @@ export function MarketDetailPage() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
+  const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
   const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
 
   // Initial query without polling to get market data first
@@ -76,6 +78,17 @@ export function MarketDetailPage() {
       setHasLoadedOnce(true);
     }
   }, [data?.market, hasLoadedOnce]);
+
+  // Store last good market data to prevent flicker during reconnection
+  useEffect(() => {
+    if (data?.market) {
+      lastGoodMarketRef.current = data.market;
+      setDisconnectedTime(null); // Reset disconnected timer when we get data
+    } else if (hasLoadedOnce && !disconnectedTime) {
+      // Start tracking how long we've been disconnected
+      setDisconnectedTime(Date.now());
+    }
+  }, [data?.market, hasLoadedOnce, disconnectedTime]);
 
   // Get last trade timestamp from market data
   const lastTradeTimestamp = useMemo(() => {
@@ -147,8 +160,19 @@ export function MarketDetailPage() {
   // NOTE: Removed recovery polling - the main temperature-based polling handles reconnection
   // The 10-second recovery interval was causing duplicate queries
 
+  // Use either fresh data or last good data (prevents flicker during brief reconnection)
+  const displayMarket = data?.market ?? lastGoodMarketRef.current;
+  
+  // Calculate if we should show reconnecting state
+  // Only show after 10 seconds of no data (grace period for transient issues)
+  const RECONNECT_GRACE_PERIOD = 10000; // 10 seconds
+  const shouldShowReconnecting = hasLoadedOnce && 
+    !data?.market && 
+    disconnectedTime !== null && 
+    (Date.now() - disconnectedTime) > RECONNECT_GRACE_PERIOD;
+
   // Still loading or retrying - only on INITIAL load, not polls
-  if (isInitialLoading || (!data?.market && retryCount < maxRetries && retryCount > 0)) {
+  if (isInitialLoading || (!displayMarket && retryCount < maxRetries && retryCount > 0)) {
     return (
       <LoadingOverlay 
         message={retryCount > 0 ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
@@ -157,8 +181,9 @@ export function MarketDetailPage() {
     );
   }
 
-  // Show reconnecting state if we had data before but lost it
-  if (hasLoadedOnce && !data?.market) {
+  // Show reconnecting state only if we've been disconnected for more than grace period
+  // AND we don't have any cached data to show
+  if (shouldShowReconnecting && !displayMarket) {
     return (
       <LoadingOverlay 
         message="RECONNECTING" 
@@ -167,7 +192,8 @@ export function MarketDetailPage() {
     );
   }
 
-  if (error || !data?.market) {
+  // Only show error if we don't have ANY data (fresh or cached)
+  if ((error || !data?.market) && !displayMarket) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -183,6 +209,7 @@ export function MarketDetailPage() {
               variant="ghost" 
               onClick={() => {
                 setRetryCount(0);
+                setDisconnectedTime(null);
                 refetch();
               }}
             >
@@ -197,9 +224,13 @@ export function MarketDetailPage() {
     );
   }
 
-  const market = data.market;
-  const trades = data.market.trades || [];
-  const positions = data.market.positions || [];
+  // Use displayMarket (fresh data or cached fallback) for rendering
+  const market = displayMarket!;
+  const trades = displayMarket?.trades || [];
+  const positions = displayMarket?.positions || [];
+  
+  // Show a subtle indicator if using stale data
+  const isUsingStaleData = !data?.market && !!lastGoodMarketRef.current;
 
   // Calculate prices using bonding curve formula (with market's virtual liquidity)
   const yesPercent = calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
@@ -256,6 +287,11 @@ export function MarketDetailPage() {
                 {isExpired && !isResolved && <ExpiredBadge />}
                 {isResolved && <Badge variant="yes">✓ RESOLVED</Badge>}
                 {isDisputed && <DisputedBadge />}
+                {isUsingStaleData && (
+                  <Badge variant="neutral" className="animate-pulse">
+                    ⟳ Syncing...
+                  </Badge>
+                )}
               </div>
 
               {/* Question - line-clamp for long text, clickable to expand */}

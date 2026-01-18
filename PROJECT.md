@@ -40,7 +40,7 @@ Prices move based on supply. Early buyers get better prices.
 | **Website** | https://jnglz.fun |
 | **Twitter/X** | https://x.com/jnglzdotfun |
 | **GitHub** | N/A|
-| **Contract (Testnet)** | [0x4e20Df...7464](https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464) |
+| **Contract (Testnet)** | [0x96662c5...2F3b6a75](https://testnet.bscscan.com/address/0x96662c54622304804065210F16483C5f2F3b6a75) |
 
 ---
 

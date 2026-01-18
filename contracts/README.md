@@ -1035,6 +1035,63 @@ WITH safety check (v3.4.0+):
 
 ---
 
+### 1️⃣2️⃣.6️⃣ 2-HOUR PROPOSAL CUTOFF (Safety Mechanism v3.6.0+) ⭐
+
+**The Problem:**
+Resolution and emergency refund could overlap, creating race conditions and double-spend opportunities.
+
+**The Solution:**
+New proposals are blocked 2 hours before emergency refund becomes available:
+
+```
+Timeline (v3.6.1):
+─────────────────────────────────────────────────────────────────────────
+Expiry                                                     Emergency Refund
+  │                                                              │
+  │  0-22h: Proposals ALLOWED                                   │ 24h+
+  │         Disputes ALLOWED (within 30min of any proposal)     │
+  │                                                              │
+  │  22-24h: PROPOSAL CUTOFF                                    │
+  │          ├─ NO new proposals allowed                         │
+  │          └─ Disputes STILL ALLOWED within 30min window       │
+  │                                                              │
+─────────────────────────────────────────────────────────────────────────
+```
+
+**Why Disputes Are Still Allowed (v3.6.1 Fix):**
+```
+In v3.6.0, both proposals AND disputes were blocked at the 22h cutoff.
+This created an exploit:
+
+v3.6.0 Attack:
+1. Attacker waits until T=21:59:30
+2. Proposes WRONG outcome (e.g., YES when NO is true)
+3. Cutoff kicks in at T=22:00:00
+4. Honest users try to dispute → BLOCKED by DisputeWindowClosed!
+5. 30 min passes → Market finalizes with WRONG outcome
+6. Attacker steals everyone's money
+
+v3.6.1 Fix:
+- Proposals still blocked at 22h ✅
+- Disputes ONLY blocked by natural 30-min window expiry ✅
+- Attacker at T=21:59 can be disputed until T=22:29 ✅
+- Resolution completes by T=23:30 at worst ✅
+- 30-minute safety gap before T=24:00 emergency refund ✅
+```
+
+**Worst-Case Timeline (v3.6.1):**
+```
+T=21:59:59  Last possible proposal (cutoff at T=22:00:00)
+T=22:29:58  Last possible dispute (30min window)
+T=23:29:58  Voting ends (1h window)
+T=23:29:59  finalize() called
+T=24:00:00  Emergency refund available
+
+GAP: 30 minutes between resolution and emergency refund - ALWAYS SAFE!
+```
+
+---
+
 ### 1️⃣3️⃣ COMPLETE FEE SUMMARY
 
 | Action | Fee | Recipient |

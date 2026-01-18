@@ -1,5 +1,17 @@
+# ============================================
+# JNGLZ.FUN - Frontend Git Ignore
+# ============================================
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,13 +19,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
 # Environment files (NEVER commit secrets)
 .env
+.env.*
 .env.local
 .env.development
 .env.production
@@ -22,17 +30,30 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
 
-# Testing
+# Testing & Coverage
 coverage/
+.nyc_output/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# Vercel
+.vercel/
 
 # Misc
 *.bak
 *.tmp
+*.local

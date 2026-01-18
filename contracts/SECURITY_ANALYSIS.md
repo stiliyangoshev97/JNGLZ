@@ -1,7 +1,7 @@
-# Security Analysis: v3.6.0 Emergency Refund Vulnerability Fix
+# Security Analysis: v3.6.0 → v3.6.1 Emergency Refund & Dispute Window Fixes
 
 **Date:** January 18, 2026  
-**Version:** v3.6.0  
+**Version:** v3.6.1 (includes v3.6.0 fixes)  
 **Analyst:** GitHub Copilot  
 **Status:** ✅ ALL VULNERABILITIES FIXED
 
@@ -9,7 +9,7 @@
 
 ## Part 1: Critical Vulnerabilities Found & Fixed
 
-### 🚨 CRITICAL: Emergency Refund Double-Spend Vulnerability (FIXED)
+### 🚨 CRITICAL: Emergency Refund Double-Spend Vulnerability (FIXED in v3.6.0)
 
 **Discovered:** January 18, 2026  
 **Severity:** CRITICAL  
@@ -62,7 +62,7 @@ function emergencyRefund(uint256 marketId) external {
 }
 ```
 
-**Fix 3: Race Condition Prevention**
+**Fix 3: Race Condition Prevention (2-hour cutoff for PROPOSALS ONLY)**
 ```solidity
 uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours; // ✅ ADDED
 
@@ -72,10 +72,6 @@ function proposeOutcome(uint256 marketId, bool outcome) external {
         revert ProposalWindowClosed(); // ✅ ADDED
     }
     // ...
-}
-
-function dispute(uint256 marketId) external {
-    // Same check with DisputeWindowClosed error
 }
 ```
 
@@ -95,13 +91,88 @@ function claim(uint256 marketId) external {
 
 ---
 
+### 🟡 MEDIUM: Dispute Window Edge Case (FIXED in v3.6.1)
+
+**Discovered:** January 18, 2026  
+**Severity:** MEDIUM  
+**Status:** ✅ FIXED in v3.6.1
+
+#### v3.6.0 Bug Found
+
+The v3.6.0 fix applied the 2-hour cutoff to BOTH `proposeOutcome()` AND `dispute()`. This created a critical edge case:
+
+**The Problem:** If someone proposes at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+#### Attack Scenario (v3.6.0)
+
+```
+1. Market expires at T=0
+2. Malicious actor waits until T=21:59:30
+3. Proposes WRONG outcome (e.g., YES when NO is true)
+4. Cutoff kicks in at T=22:00
+5. Honest users try to dispute at T=22:00:01 → BLOCKED by DisputeWindowClosed
+6. 30-minute dispute window expires at T=22:29:30
+7. Market finalizes with WRONG outcome
+8. Honest users lose their money to the attacker
+```
+
+#### v3.6.1 Fix Applied
+
+Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry, not by the 2-hour cutoff.
+
+```solidity
+// v3.6.1: REMOVED cutoff check from dispute()
+function dispute(uint256 marketId) external {
+    // REMOVED in v3.6.1: 
+    // if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+    //     revert DisputeWindowClosed();
+    // }
+    
+    // KEPT: Natural 30-min window check only
+    if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+        revert DisputeWindowExpired();
+    }
+    // ...
+}
+```
+
+#### Why This is Safe
+
+The proposal cutoff at 22h already guarantees resolution completes before the 24h emergency refund:
+
+```
+Timeline Analysis:
+─────────────────────────────────────────────────────────────────────────────
+Worst case: Proposal at T=21:59:59 (last second before cutoff)
+
+T=21:59:59  Proposal submitted
+T=22:29:58  Dispute at last second of 30-min window  
+T=23:29:58  Voting ends (1h after dispute)
+T=23:29:59  Finalize called
+T=24:00:00  Emergency refund becomes available
+
+GAP: 30 minutes between finalization and emergency refund - SAFE!
+─────────────────────────────────────────────────────────────────────────────
+
+The key insight: By blocking NEW PROPOSALS at 22h, we guarantee that even 
+the worst-case resolution timeline (proposal + dispute + voting) completes 
+at most at 23:30, leaving a 30-minute safety buffer before emergency refund.
+```
+
+#### Test Coverage Added
+- `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
+- `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix works
+- **180 total tests passing**
+
+---
+
 ## Part 2: Bond/Fee Claiming Security Analysis
 
 ### Executive Summary
 
-After analyzing the codebase with the v3.6.0 timeline constraints, **NO vulnerabilities were found** in the bond/fee claiming mechanisms related to emergency refunds.
+After analyzing the codebase with the v3.6.0/v3.6.1 timeline constraints, **NO vulnerabilities were found** in the bond/fee claiming mechanisms related to emergency refunds.
 
-The v3.6.0 fix (2-hour resolution cutoff) creates a clear separation:
+The v3.6.0 fix (2-hour proposal cutoff) creates a clear separation:
 - **Resolved markets** → users claim via `claim()` (bonds/fees distributed normally)
 - **Unresolved markets after 24h** → users get emergency refund (no resolution, no bonds to distribute)
 
@@ -109,26 +180,29 @@ These two paths are **mutually exclusive** by design.
 
 ---
 
-### Timeline Analysis (Critical Context)
+### Timeline Analysis (Critical Context) - Updated for v3.6.1
 
 ```
-Expiry ─────────────────────────────────────────────────────> Emergency Refund
-  │                                                                  │
-  │  0-22h: Resolution window                                       │ 24h+
-  │  ├─ Propose (10min creator priority, then anyone)               │
-  │  ├─ Dispute window (30min after proposal)                       │
-  │  └─ Voting window (1h after dispute)                            │
-  │                                                                  │
-  │  22-24h: CUTOFF - No new proposals/disputes (v3.6.0 fix)        │
-  │                                                                  │
+Expiry ──────────────────────────────────────────────────────> Emergency Refund
+  │                                                                   │
+  │  0-22h: Proposal window open                                     │ 24h+
+  │  ├─ Propose (10min creator priority, then anyone)                │
+  │  ├─ Dispute window (30min after proposal) - ALWAYS ALLOWED       │
+  │  └─ Voting window (1h after dispute)                             │
+  │                                                                   │
+  │  22-24h: PROPOSAL CUTOFF (v3.6.0)                                │
+  │          ├─ NO new proposals allowed                              │
+  │          └─ Disputes STILL ALLOWED within 30-min window (v3.6.1) │
+  │                                                                   │
 ```
 
-**Maximum resolution timeline:**
-- Last proposal at 22h + 30min dispute + 1h voting = **23.5 hours**
-- Emergency refund available at **24 hours**
+**Maximum resolution timeline (v3.6.1):**
+- Last proposal at 21:59:59 (cutoff is at 22:00:00)
+- Last dispute at 22:29:59 (30min dispute window)
+- Voting ends at 23:29:59 (1h voting window)
 - **Gap of 30 minutes** ensures resolution always completes before emergency refund
 
-**Key insight:** If a dispute/vote occurs, the market WILL resolve before emergency refund becomes available. Emergency refund is only for markets where NO resolution activity happened.
+**Key insight:** The proposal cutoff at 22h is the key constraint. By preventing new proposals, we guarantee the maximum resolution time is ~1.5 hours (30min dispute + 1h vote), which always completes before the 24h emergency refund window.
 
 ---
 
@@ -151,11 +225,12 @@ These paths are mutually exclusive.
 
 **Why this is IMPOSSIBLE:**
 1. Voting only happens during `Disputed` status
-2. Dispute can only be filed before 22h cutoff
-3. Voting window is 1h after dispute
-4. Maximum: dispute at 22h + 1h voting = resolves at 23h
-5. Emergency refund requires 24h AND unresolved market
-6. **If user voted → market will resolve → no emergency refund available**
+2. Dispute can only happen within 30min of a proposal
+3. Proposals can only happen before 22h cutoff
+4. Voting window is 1h after dispute
+5. Maximum: proposal at 21:59 + dispute at 22:29 + 1h voting = resolves at 23:29
+6. Emergency refund requires 24h AND unresolved market
+7. **If user voted → market will resolve → no emergency refund available**
 
 ---
 
@@ -222,12 +297,13 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 ## Conclusion
 
 ### Vulnerabilities Fixed ✅
-| Bug | Status |
-|-----|--------|
-| Double-Spend | ✅ FIXED |
-| Pool Insolvency | ✅ FIXED |
-| Race Condition | ✅ FIXED |
-| Stale Pool Data | ✅ FIXED |
+| Bug | Version | Status |
+|-----|---------|--------|
+| Double-Spend | v3.6.0 | ✅ FIXED |
+| Pool Insolvency | v3.6.0 | ✅ FIXED |
+| Race Condition (Proposals) | v3.6.0 | ✅ FIXED |
+| Stale Pool Data | v3.6.0 | ✅ FIXED |
+| Dispute Window Edge Case | v3.6.1 | ✅ FIXED |
 
 ### Security Verified ✅
 | Component | Status |
@@ -236,6 +312,13 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 | Virtual liquidity | ✅ NOT AFFECTED |
 | Heat levels | ✅ NOT AFFECTED |
 
+### Resolution Timeline (v3.6.1)
+```
+0-22h:  Proposals allowed, disputes allowed within 30min of proposal
+22-24h: NO new proposals, disputes STILL allowed within 30min window
+24h+:   Emergency refund available (only if no resolution occurred)
+```
+
 **Resolution and Emergency Refund paths are now mutually exclusive by design.**
 
-**All 179 tests passing.**
+**All 180 tests passing.**

@@ -417,17 +417,19 @@ export function HowToPlayPage() {
 
                 {/* 2-HOUR CUTOFF */}
                 <div className="bg-orange-500/10 p-4 border border-orange-500">
-                  <p className="text-orange-400 font-bold mb-2">⏰ 2-HOUR SAFETY CUTOFF</p>
+                  <p className="text-orange-400 font-bold mb-2">⏰ 2-HOUR PROPOSAL CUTOFF</p>
                   <p className="text-text-secondary text-sm mb-3">
                     To prevent race conditions between resolution and emergency refund:
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm">
-                    <li><span className="text-orange-400">🚫</span> <strong className="text-white">No new proposals</strong> allowed within 2 hours of emergency refund</li>
-                    <li><span className="text-orange-400">🚫</span> <strong className="text-white">No new disputes</strong> allowed within 2 hours of emergency refund</li>
-                    <li><span className="text-cyber">⏳</span> <strong className="text-white">Existing votes</strong> can still be cast if within voting window</li>
+                    <li><span className="text-orange-400">🚫</span> <strong className="text-white">No new proposals</strong> allowed within 2 hours of emergency refund (22h+ after expiry)</li>
+                    <li><span className="text-yes">✓</span> <strong className="text-white">Disputes still allowed</strong> within the natural 30-minute dispute window</li>
+                    <li><span className="text-cyber">⏳</span> <strong className="text-white">Voting continues</strong> normally if already in progress</li>
                   </ul>
                   <p className="text-text-muted text-xs mt-3">
-                    This ensures resolution has enough time to complete (up to 1h 30min) before emergency refund becomes available.
+                    This ensures resolution always completes before emergency refund becomes available. 
+                    The worst case: proposal at T=21:59, dispute at T=22:29, voting ends at T=23:29 — 
+                    still 30 minutes before emergency refund at T=24:00.
                   </p>
                 </div>
               </div>
@@ -893,10 +895,10 @@ export function HowToPlayPage() {
               <div className="flex items-center gap-4 p-4 bg-dark-800 border border-orange-500/30">
                 <div className="w-8 h-8 bg-dark-900 rounded flex items-center justify-center text-orange-400 font-bold">⚠</div>
                 <div>
-                  <p className="text-orange-400 font-bold">2-Hour Safety Cutoff</p>
+                  <p className="text-orange-400 font-bold">2-Hour Proposal Cutoff (22h+ after expiry)</p>
                   <p className="text-text-secondary text-sm">
-                    When less than 2 hours remain before emergency refund, <strong className="text-white">no new proposals or disputes</strong> can be made. 
-                    This prevents race conditions between resolution and emergency refund.
+                    No new proposals allowed. <strong className="text-white">Disputes still allowed</strong> within 30min of any existing proposal. 
+                    Ensures resolution completes before emergency refund.
                   </p>
                 </div>
               </div>

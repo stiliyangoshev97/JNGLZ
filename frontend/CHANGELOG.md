@@ -2,6 +2,46 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.28] - 2026-01-18
+
+### Fixed
+
+#### Reconnecting State Stability
+- **Fixed** false "RECONNECTING..." message when returning to market page after inactivity
+- Added 10-second grace period before showing reconnecting state (prevents flicker on transient errors)
+- Store last good market data in ref to continue displaying UI during brief disconnections
+- Use cached market data while retrying connection instead of showing loading overlay
+- Added subtle "⟳ Syncing..." badge when using stale data (instead of blocking the UI)
+- Improved user experience when tab is backgrounded for extended periods
+
+#### CI/CD Pipeline Fix
+- **Fixed** GitHub Actions CI workflow failing with YAML parse error
+- Root cause: `0x...` contract addresses were interpreted as numbers by YAML parser
+- Solution: Quoted all environment variable values as strings
+- Updated CI contract address to v3.6.1: `0x96662c54622304804065210F16483C5f2F3b6a75`
+- Updated chain ID from `56` (mainnet) to `97` (testnet) for CI builds
+
+#### How to Play Page - v3.6.1 Accuracy
+- **Fixed** incorrect information about 2-hour cutoff blocking disputes
+- Updated to reflect v3.6.1 behavior: disputes are ALWAYS allowed within 30-min window
+- Clarified that only NEW PROPOSALS are blocked at the 22h+ cutoff
+- Added worst-case timeline explanation (proposal at 21:59 → resolves by 23:30)
+
+### Changed
+
+#### Improved .gitignore Files
+- Enhanced `frontend/.gitignore` with comprehensive patterns
+- Enhanced `subgraph/.gitignore` with editor and log patterns
+- Better organization with section headers
+
+### Technical Details
+- `lastGoodMarketRef` stores the most recent successful market fetch
+- `displayMarket` falls back to cached data when fresh data is unavailable
+- `disconnectedTime` tracks how long we've been without fresh data
+- Only show full "RECONNECTING" overlay after 10+ seconds of no data AND no cached fallback
+
+---
+
 ## [0.7.27] - 2026-01-18
 
 ### Fixed
