@@ -432,10 +432,13 @@ contract EmergencyRefundSecurityTest is TestHelper {
     }
 
     /**
-     * @notice Test that dispute reverts in the cutoff window
+     * @notice Test that dispute reverts when dispute window has expired
+     * @dev v3.6.1: Removed cutoff check from dispute() - disputes are now only blocked
+     *      by the 30-minute dispute window expiry, not by the 2-hour cutoff.
+     *      This is safe because the proposal cutoff ensures resolution completes before 24h.
      */
-    function test_Dispute_RevertInCutoffWindow() public {
-        console.log("=== FIX 3: DISPUTE CUTOFF WINDOW ===");
+    function test_Dispute_RevertWhenDisputeWindowExpired() public {
+        console.log("=== v3.6.1: DISPUTE WINDOW EXPIRY (NO CUTOFF) ===");
 
         uint256 marketId = createTestMarket(marketCreator, 7 days);
 
@@ -453,11 +456,10 @@ contract EmergencyRefundSecurityTest is TestHelper {
         // Propose outcome
         proposeOutcomeFor(charlie, marketId, true);
 
-        // Now warp to cutoff window
-        uint256 cutoffTime = expiryTimestamp +
-            EMERGENCY_REFUND_DELAY -
-            RESOLUTION_CUTOFF_BUFFER;
-        vm.warp(cutoffTime);
+        // v3.6.1: Warp past the 30-minute dispute window (not just to cutoff)
+        // The dispute window is 30 minutes after proposal
+        uint256 proposalTime = block.timestamp;
+        vm.warp(proposalTime + DISPUTE_WINDOW + 1);
 
         // Get dispute bond
         uint256 requiredDisputeBond = market.getRequiredDisputeBond(marketId);
@@ -466,12 +468,12 @@ contract EmergencyRefundSecurityTest is TestHelper {
             (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
             1;
 
-        // Try to dispute at cutoff (should revert)
+        // Try to dispute after window expired (should revert with DisputeWindowExpired)
         vm.prank(bob);
-        vm.expectRevert(PredictionMarket.DisputeWindowClosed.selector);
+        vm.expectRevert(PredictionMarket.DisputeWindowExpired.selector);
         market.dispute{value: totalRequired}(marketId);
 
-        console.log("SUCCESS: Dispute blocked at cutoff time");
+        console.log("SUCCESS: Dispute blocked when dispute window expired");
     }
 
     /**
@@ -521,6 +523,65 @@ contract EmergencyRefundSecurityTest is TestHelper {
         // Verify dispute was accepted (disputer address is set)
         (address disputerAddr, , , , , ) = market.getDispute(marketId);
         assertEq(disputerAddr, bob, "Bob should be disputer");
+    }
+
+    /**
+     * @notice v3.6.1 FIX: Test that disputes ARE allowed after cutoff if within 30-min window
+     * @dev This is the critical fix - prevents last-minute proposal griefing attack
+     *      where attacker proposes at T=21:59 and nobody can dispute because cutoff is T=22:00
+     */
+    function test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow() public {
+        console.log("=== v3.6.1 FIX: DISPUTE ALLOWED AFTER CUTOFF ===");
+
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice buys shares
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
+            marketId
+        );
+
+        // Simulate last-minute proposal attack:
+        // Propose 1 minute BEFORE the cutoff (at T=21:59)
+        uint256 cutoffTime = expiryTimestamp +
+            EMERGENCY_REFUND_DELAY -
+            RESOLUTION_CUTOFF_BUFFER;
+        uint256 proposalTime = cutoffTime - 1 minutes;
+
+        vm.warp(proposalTime);
+        proposeOutcomeFor(charlie, marketId, true);
+
+        // Now warp to 5 minutes AFTER the cutoff (at T=22:05)
+        // This is still within the 30-min dispute window (which ends at T=22:29)
+        vm.warp(cutoffTime + 5 minutes);
+
+        // In v3.6.0, this would have FAILED with DisputeWindowClosed
+        // In v3.6.1, this should SUCCEED because we're within 30-min dispute window
+
+        uint256 requiredDisputeBond = market.getRequiredDisputeBond(marketId);
+        uint256 totalRequired = requiredDisputeBond +
+            (requiredDisputeBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        // Dispute should work! This is the v3.6.1 fix
+        vm.prank(bob);
+        market.dispute{value: totalRequired}(marketId);
+
+        // Verify dispute was accepted
+        (address disputerAddr, , , , , ) = market.getDispute(marketId);
+        assertEq(
+            disputerAddr,
+            bob,
+            "Bob should be disputer - v3.6.1 fix working!"
+        );
+
+        console.log(
+            "SUCCESS: v3.6.1 fix allows dispute after cutoff within 30-min window"
+        );
+        console.log("This prevents the last-minute proposal griefing attack!");
     }
 
     /**

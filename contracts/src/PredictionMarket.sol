@@ -868,6 +868,9 @@ contract PredictionMarket is ReentrancyGuard {
      * @notice Dispute a proposed outcome
      * @param marketId The market with the proposal to dispute
      * @dev Requires 2x the proposal bond. Triggers voting period.
+     *      v3.6.1: Removed cutoff check - disputes are always allowed within their 30-min window
+     *      The proposal cutoff at 22h ensures resolution always completes before 24h refund
+     *      (proposal at 21:59 + 30min dispute + 1h voting = 23:29, well before 24h)
      */
     function dispute(
         uint256 marketId
@@ -877,16 +880,10 @@ contract PredictionMarket is ReentrancyGuard {
         MarketStatus status = _getMarketStatus(market);
         if (status != MarketStatus.Proposed) revert NotProposed();
 
-        // v3.6.0 FIX: Block disputes when too close to emergency refund time
-        // Prevents race condition where dispute starts but voting can't complete
-        // before emergency refunds become available (creating conflicting resolution paths)
-        uint256 emergencyRefundTime = market.expiryTimestamp +
-            EMERGENCY_REFUND_DELAY;
-        if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
-            revert DisputeWindowClosed();
-        }
-
-        // Check we're still in dispute window
+        // Check we're still in dispute window (30 min after proposal)
+        // Note: No cutoff check needed here - the proposal cutoff guarantees safety
+        // If proposal was made before 22h cutoff, dispute window ends max at 22.5h
+        // Voting then ends at 23.5h max, well before 24h emergency refund
         if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
             revert DisputeWindowExpired();
         }
