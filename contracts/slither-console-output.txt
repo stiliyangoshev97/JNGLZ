@@ -2,84 +2,85 @@
 'forge config --json' running
 'forge build --build-info src/PredictionMarket.sol' running (wd: /Users/stiliyangoshev/Desktop/Coding/Full Projects/JunkieDotFun/contracts)
 
-PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1149-1186) sends eth to arbitrary user
+PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1174-1211) sends eth to arbitrary user
 	Dangerous calls:
-	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1161)
-PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1833-1973) sends eth to arbitrary user
+	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1186)
+PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1885-2025) sends eth to arbitrary user
 	Dangerous calls:
-	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1936)
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1988)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations
 
-PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1193-1232) performs a multiplication on the result of a division:
-	- grossPayout = (winningShares * market.poolBalance) / totalWinningShares (src/PredictionMarket.sol#1211-1212)
-	- fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR (src/PredictionMarket.sol#1215)
+PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1218-1273) performs a multiplication on the result of a division:
+	- grossPayout = (winningShares * market.poolBalance) / totalWinningShares (src/PredictionMarket.sol#1242-1243)
+	- fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR (src/PredictionMarket.sol#1246)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
 
-Reentrancy in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#641-683):
+Reentrancy in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#651-693):
 	External calls:
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#671)
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#681)
 	State variables written after the call(s):
-	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#677)
-	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#678)
-Reentrancy in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#594-636):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#687)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#688)
+Reentrancy in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#604-646):
 	External calls:
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#624)
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#634)
 	State variables written after the call(s):
-	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#630)
-	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#631)
-Reentrancy in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#743-793):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#640)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#641)
+Reentrancy in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#753-803):
 	External calls:
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#778)
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#788)
 	State variables written after the call(s):
-	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#784)
-	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#785)
-Reentrancy in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#688-738):
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#794)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#795)
+Reentrancy in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#698-748):
 	External calls:
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#723)
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#733)
 	State variables written after the call(s):
-	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#729)
-	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#730)
+	- pendingCreatorFees[market.creator] += creatorFee (src/PredictionMarket.sol#739)
+	- totalPendingCreatorFees += creatorFee (src/PredictionMarket.sol#740)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
 
-Reentrancy in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1833-1973):
+Reentrancy in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1885-2025):
 	External calls:
-	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1936)
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1988)
 	Event emitted after the call(s):
-	- ActionExecuted(actionId,action.actionType) (src/PredictionMarket.sol#1972)
-	- FundsSwept(surplus,totalLocked,contractBalance) (src/PredictionMarket.sol#1939)
+	- ActionExecuted(actionId,action.actionType) (src/PredictionMarket.sol#2024)
+	- FundsSwept(surplus,totalLocked,contractBalance) (src/PredictionMarket.sol#1991)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
 
-PredictionMarket._createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#542-587) uses timestamp for comparisons
+PredictionMarket._createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#552-597) uses timestamp for comparisons
 	Dangerous comparisons:
-	- expiryTimestamp <= block.timestamp (src/PredictionMarket.sol#553)
-PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#803-847) uses timestamp for comparisons
+	- expiryTimestamp <= block.timestamp (src/PredictionMarket.sol#563)
+PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#813-866) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp < market.expiryTimestamp + CREATOR_PRIORITY_WINDOW (src/PredictionMarket.sol#820)
-PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#854-888) uses timestamp for comparisons
+	- block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER (src/PredictionMarket.sol#833)
+	- block.timestamp < market.expiryTimestamp + CREATOR_PRIORITY_WINDOW (src/PredictionMarket.sol#839)
+PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#876-913) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#863)
-PredictionMarket.vote(uint256,bool) (src/PredictionMarket.sol#896-928) uses timestamp for comparisons
+	- block.timestamp > market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#888)
+PredictionMarket.vote(uint256,bool) (src/PredictionMarket.sol#921-953) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#903)
-PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#935-1063) uses timestamp for comparisons
+	- block.timestamp > market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#928)
+PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#960-1088) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp <= market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#943)
-	- block.timestamp <= market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#1008)
-PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1238-1269) uses timestamp for comparisons
+	- block.timestamp <= market.proposalTime + DISPUTE_WINDOW (src/PredictionMarket.sol#968)
+	- block.timestamp <= market.disputeTime + VOTING_WINDOW (src/PredictionMarket.sol#1033)
+PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1279-1321) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp < market.expiryTimestamp + EMERGENCY_REFUND_DELAY (src/PredictionMarket.sol#1244)
-PredictionMarket.canEmergencyRefund(uint256) (src/PredictionMarket.sol#1529-1544) uses timestamp for comparisons
+	- block.timestamp < market.expiryTimestamp + EMERGENCY_REFUND_DELAY (src/PredictionMarket.sol#1285)
+PredictionMarket.canEmergencyRefund(uint256) (src/PredictionMarket.sol#1581-1596) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp >= emergencyTime (src/PredictionMarket.sol#1539)
-PredictionMarket.confirmAction(uint256) (src/PredictionMarket.sol#1694-1717) uses timestamp for comparisons
+	- block.timestamp >= emergencyTime (src/PredictionMarket.sol#1591)
+PredictionMarket.confirmAction(uint256) (src/PredictionMarket.sol#1746-1769) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1698)
-PredictionMarket.executeAction(uint256) (src/PredictionMarket.sol#1723-1739) uses timestamp for comparisons
+	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1750)
+PredictionMarket.executeAction(uint256) (src/PredictionMarket.sol#1775-1791) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1727)
-PredictionMarket._getMarketStatus(PredictionMarket.Market) (src/PredictionMarket.sol#1750-1759) uses timestamp for comparisons
+	- block.timestamp > action.createdAt + ACTION_EXPIRY (src/PredictionMarket.sol#1779)
+PredictionMarket._getMarketStatus(PredictionMarket.Market) (src/PredictionMarket.sol#1802-1811) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp >= market.expiryTimestamp (src/PredictionMarket.sol#1756)
+	- block.timestamp >= market.expiryTimestamp (src/PredictionMarket.sol#1808)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
 
 StorageSlot.getAddressSlot(bytes32) (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#66-70) uses assembly
@@ -110,8 +111,8 @@ Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembl
 		-0.8.24 (src/PredictionMarket.sol#2)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
 
-PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#935-1063) has a high cyclomatic complexity (12).
-PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1833-1973) has a high cyclomatic complexity (43).
+PredictionMarket.finalizeMarket(uint256) (src/PredictionMarket.sol#960-1088) has a high cyclomatic complexity (12).
+PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1885-2025) has a high cyclomatic complexity (43).
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
 
 Version constraint ^0.8.20 contains known severe issues (https://solidity.readthedocs.io/en/latest/bugs.html)
@@ -123,37 +124,37 @@ It is used by:
 	- ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol#5)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
 
-Low level call in PredictionMarket.createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#441-465):
-	- (success,None) = treasury.call{value: msg.value}() (src/PredictionMarket.sol#462)
-Low level call in PredictionMarket.createMarketAndBuy(string,string,string,string,uint256,PredictionMarket.HeatLevel,bool,uint256) (src/PredictionMarket.sol#472-540):
-	- (success,None) = treasury.call{value: treasuryAmount}() (src/PredictionMarket.sol#528)
-Low level call in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#594-636):
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#624)
-Low level call in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#641-683):
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#671)
-Low level call in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#688-738):
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#723)
-	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#734)
-Low level call in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#743-793):
-	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#778)
-	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#789)
-Low level call in PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#803-847):
-	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#842)
-Low level call in PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#854-888):
-	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#883)
-Low level call in PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1149-1186):
-	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1161)
-Low level call in PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1193-1232):
-	- (feeSuccess,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#1223)
-	- (success,None) = msg.sender.call{value: payout}() (src/PredictionMarket.sol#1228)
-Low level call in PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1238-1269):
-	- (success,None) = msg.sender.call{value: refund}() (src/PredictionMarket.sol#1265)
-Low level call in PredictionMarket.withdrawBond() (src/PredictionMarket.sol#1278-1291):
-	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1287)
-Low level call in PredictionMarket.withdrawCreatorFees() (src/PredictionMarket.sol#1298-1315):
-	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1311)
-Low level call in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1833-1973):
-	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1936)
+Low level call in PredictionMarket.createMarket(string,string,string,string,uint256,PredictionMarket.HeatLevel) (src/PredictionMarket.sol#451-475):
+	- (success,None) = treasury.call{value: msg.value}() (src/PredictionMarket.sol#472)
+Low level call in PredictionMarket.createMarketAndBuy(string,string,string,string,uint256,PredictionMarket.HeatLevel,bool,uint256) (src/PredictionMarket.sol#482-550):
+	- (success,None) = treasury.call{value: treasuryAmount}() (src/PredictionMarket.sol#538)
+Low level call in PredictionMarket.buyYes(uint256,uint256) (src/PredictionMarket.sol#604-646):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#634)
+Low level call in PredictionMarket.buyNo(uint256,uint256) (src/PredictionMarket.sol#651-693):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#681)
+Low level call in PredictionMarket.sellYes(uint256,uint256,uint256) (src/PredictionMarket.sol#698-748):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#733)
+	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#744)
+Low level call in PredictionMarket.sellNo(uint256,uint256,uint256) (src/PredictionMarket.sol#753-803):
+	- (success,None) = treasury.call{value: platformFee}() (src/PredictionMarket.sol#788)
+	- (successTransfer,None) = msg.sender.call{value: bnbOut}() (src/PredictionMarket.sol#799)
+Low level call in PredictionMarket.proposeOutcome(uint256,bool) (src/PredictionMarket.sol#813-866):
+	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#861)
+Low level call in PredictionMarket.dispute(uint256) (src/PredictionMarket.sol#876-913):
+	- (success,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#908)
+Low level call in PredictionMarket._distributeJuryFees(uint256,PredictionMarket.Market,uint256) (src/PredictionMarket.sol#1174-1211):
+	- (success,None) = treasury.call{value: voterPool}() (src/PredictionMarket.sol#1186)
+Low level call in PredictionMarket.claim(uint256) (src/PredictionMarket.sol#1218-1273):
+	- (feeSuccess,None) = treasury.call{value: fee}() (src/PredictionMarket.sol#1264)
+	- (success,None) = msg.sender.call{value: payout}() (src/PredictionMarket.sol#1269)
+Low level call in PredictionMarket.emergencyRefund(uint256) (src/PredictionMarket.sol#1279-1321):
+	- (success,None) = msg.sender.call{value: refund}() (src/PredictionMarket.sol#1317)
+Low level call in PredictionMarket.withdrawBond() (src/PredictionMarket.sol#1330-1343):
+	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1339)
+Low level call in PredictionMarket.withdrawCreatorFees() (src/PredictionMarket.sol#1350-1367):
+	- (success,None) = msg.sender.call{value: amount}() (src/PredictionMarket.sol#1363)
+Low level call in PredictionMarket._executeAction(uint256) (src/PredictionMarket.sol#1885-2025):
+	- (success,None) = treasury.call{value: surplus}() (src/PredictionMarket.sol#1988)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
 src/PredictionMarket.sol analyzed (3 contracts with 100 detectors), 45 result(s) found
 INFO:Slither:slither-output.json exists already, the overwrite is prevented

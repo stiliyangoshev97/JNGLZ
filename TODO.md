@@ -1,8 +1,58 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.0 READY (179 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
+> **Status:** Smart Contracts ✅ v3.6.1 READY (180 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.27  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## ✅ FIXED: Dispute Window Edge Case (v3.6.1)
+
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Severity:** MEDIUM (in v3.6.0) → **RESOLVED** (in v3.6.1)
+
+### Vulnerability Summary (FIXED)
+
+| # | Problem | Status | Fix Applied |
+|---|---------|--------|-------------|
+| 1 | **Dispute Blocked by Cutoff** | ✅ FIXED | Removed cutoff check from `dispute()` |
+
+**The Bug:** If someone proposed at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+**The Fix:** Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+### Implementation Details
+
+```solidity
+// v3.6.1: REMOVED cutoff check from dispute()
+function dispute(uint256 marketId) external {
+    // REMOVED: 
+    // if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+    //     revert DisputeWindowClosed();
+    // }
+    
+    // KEPT: Natural 30-min window check only
+    if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+        revert DisputeWindowExpired();
+    }
+}
+```
+
+### Why This is Safe
+```
+Worst case: Proposal at T=21:59:59
+Dispute at T=22:29:58 (last second of 30-min window)  
+Voting ends T=23:29:58
+Finalize at T=23:29:59
+Emergency refund at T=24:00:00
+GAP: 30 minutes - SAFE!
+```
+
+### Test Coverage ✅
+- Modified `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix
+- 180 total tests passing
 
 ---
 
@@ -57,36 +107,16 @@ function proposeOutcome(uint256 marketId, bool outcome) external {
 
 ### Test Coverage ✅
 - 15 new security tests in `EmergencyRefundSecurity.t.sol`
-- 179 total tests passing
+- 180 total tests passing (179 + 1 new v3.6.1 test)
 - Full attack scenario simulation verified
 
-### Timeline (v3.6.0)
+### Timeline (v3.6.0, updated v3.6.1)
 ```
 Expiry ─────────────────────────────────────────────────> Emergency Refund
   │                                                              │
-  │  0-22h: Resolution window                                   │ 24h+
-  │  22-24h: CUTOFF - No new proposals/disputes                 │
+  │  0-22h: Proposal window                                     │ 24h+
+  │  22-24h: CUTOFF - No new PROPOSALS (disputes still allowed) │
   │         (ensures resolution completes before refund)         │
-```
-    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
-        revert ProposalWindowClosed();
-    }
-    
-    // ... rest of function ...
-}
-
-function dispute(uint256 marketId) external {
-    Market storage market = markets[marketId];
-    // ... existing checks ...
-    
-    // ✅ ADD: Block disputes too close to emergency refund time
-    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
-    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
-        revert DisputeWindowClosed();
-    }
-    
-    // ... rest of function ...
-}
 ```
 
 ### Defense in Depth Matrix
@@ -98,10 +128,10 @@ function dispute(uint256 marketId) external {
 | Late proposal race condition | - | ⚠️ Mitigated | ✅ BLOCKED | Safe |
 | Direct contract bypass | ✅ | ✅ | ✅ | Safe |
 
-### Frontend Mitigation (v0.7.26) ✅
-- [x] Block proposals AND disputes in UI when <2 hours remain before emergency refund
-- [x] Show "RESOLUTION WINDOW CLOSED" with emergency refund countdown
-- [x] Contextual messaging for no-proposal vs has-proposal scenarios
+### Frontend Mitigation (v0.7.27) ✅
+- [x] Block proposals in UI when <2 hours remain before emergency refund
+- [x] Disputes remain enabled (within their 30-min window) per v3.6.1 fix
+- [x] Show "PROPOSAL WINDOW CLOSED" with emergency refund countdown
 - [x] Added "2-Hour Safety Cutoff" section in HowToPlayPage
 
 ### Deployment Checklist for v3.6.0
@@ -338,9 +368,9 @@ function dispute(uint256 marketId) external {
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
+| Smart Contracts | v3.6.1 | ✅ READY (180 tests, Slither: 45 findings - no critical) |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.26 | ✅ Maintenance Mode + Bug Fixes |
+| Frontend | v0.7.27 | ✅ Updated for v3.6.1 dispute window fix |
 
 ---
 
@@ -384,9 +414,9 @@ function dispute(uint256 marketId) external {
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| Smart Contracts | v3.5.0 | ✅ Deployed & Verified |
+| Smart Contracts | v3.6.1 | ✅ READY (180 tests, Slither: 45 findings - no critical) |
 | Subgraph | v3.4.2 | ✅ Deployed with P/L tracking |
-| Frontend | v0.7.26 | ✅ Maintenance Mode + Bug Fixes |
+| Frontend | v0.7.27 | ✅ Updated for v3.6.1 dispute window fix |
 
 ---
 

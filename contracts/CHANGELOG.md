@@ -5,11 +5,69 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.6.0] - 2026-01-18
+## [3.6.1] - 2026-01-18
 
 ### NOT YET DEPLOYED ⏳
 - Ready for deployment to BNB Testnet
-- **CRITICAL SECURITY FIX** - Must replace v3.5.0
+- **DISPUTE WINDOW EDGE CASE FIX** - Must replace v3.6.0
+
+### Fixed
+
+#### 🚨 MEDIUM: Dispute Window Edge Case Vulnerability
+Fixed an edge case where malicious proposers could propose a wrong outcome at T=21:59 knowing nobody could dispute it.
+
+**Vulnerability Details (v3.6.0):**
+
+If someone proposed at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+**Fix Applied:**
+Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+```solidity
+// v3.6.1: REMOVED cutoff check from dispute()
+function dispute(uint256 marketId) external {
+    // REMOVED: 
+    // uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    // if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+    //     revert DisputeWindowClosed();
+    // }
+    
+    // KEPT: Natural 30-min window check only
+    if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+        revert DisputeWindowExpired();
+    }
+    // ...
+}
+```
+
+### Changed
+
+#### Resolution Timeline (Updated)
+```
+v3.6.1 Timeline:
+- Proposal cutoff: 22h after expiry (unchanged)
+- Disputes: Allowed within 30-min window REGARDLESS of cutoff (CHANGED!)
+- Worst case: Proposal at 21:59 + Dispute at 22:29 + Voting at 23:29
+- Emergency refund: 24h after expiry
+- Gap: Still 30+ minutes - SAFE!
+```
+
+### Security Notes
+- **This is safe** because the proposal cutoff at 22h guarantees disputes end by 22.5h max
+- Voting would then end by 23.5h, well before the 24h emergency refund
+- 180 tests passing (1 test renamed, 1 new test added)
+
+### Test Changes
+- Renamed `test_Dispute_RevertInCutoffWindow` → `test_Dispute_RevertWhenDisputeWindowExpired`
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow`
+
+---
+
+## [3.6.0] - 2026-01-18
+
+### ⚠️ DEPRECATED - Contains Edge Case Bug
+- **DO NOT USE** - Has Dispute Window Edge Case vulnerability
+- Upgrade to v3.6.1 immediately
 
 ### Fixed
 

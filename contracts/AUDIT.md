@@ -1,7 +1,7 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.6.0  
+**Version:** v3.6.1  
 **Audit Date:** January 18, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
@@ -51,15 +51,69 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,070 |
-| Total Tests | **179** |
+| Total Lines of Code | ~2,077 |
+| Total Tests | **180** |
 | Test Suites | **11** |
-| Slither Findings | 35 (see breakdown below) |
+| Slither Findings | 45 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
+
+---
+
+## Version 3.6.1 Changes (DISPUTE WINDOW EDGE CASE FIX)
+
+### Dispute Window Edge Case Vulnerability Fix
+
+**Severity:** MEDIUM  
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Tests Added:** 1 new test, 1 test modified in `EmergencyRefundSecurity.t.sol`
+
+#### The Bug (v3.6.0)
+
+If someone proposed at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+#### The Fix
+
+Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+**Code Removed from `dispute()`:**
+```solidity
+// REMOVED in v3.6.1:
+// uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+// if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+//     revert DisputeWindowClosed();
+// }
+```
+
+**Code Kept (natural 30-min window):**
+```solidity
+if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+    revert DisputeWindowExpired();
+}
+```
+
+#### Why This is Safe
+
+The proposal cutoff at 22h already guarantees resolution completes before the 24h emergency refund:
+
+```
+Worst case timeline:
+- Proposal at T=21:59:59 (just before cutoff)
+- Dispute at T=22:29:58 (last second of 30-min window)  
+- Voting ends T=23:29:58
+- Finalize at T=23:29:59
+- Emergency refund at T=24:00:00
+- GAP: 30 minutes - SAFE!
+```
+
+#### Test Changes
+- Renamed `test_Dispute_RevertInCutoffWindow` → `test_Dispute_RevertWhenDisputeWindowExpired`
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` to verify the fix
+- **180 tests now passing**
 
 ---
 
@@ -78,7 +132,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 |---|---------|-------------|
 | 1 | **Double-Spend** - User could get emergency refund + claim payout (~2x) | Added `if (position.emergencyRefunded) revert` in `claim()` |
 | 2 | **Pool Insolvency** - `emergencyRefund()` didn't reduce `poolBalance` | Added `poolBalance -= refund` and zero shares |
-| 3 | **Race Condition** - Proposals/disputes 22-24h after expiry conflicted with emergency refund | Added 2-hour resolution cutoff buffer |
+| 3 | **Race Condition** - Proposals 22-24h after expiry conflicted with emergency refund | Added 2-hour proposal cutoff buffer (disputes still allowed - v3.6.1) |
 
 #### Code Changes
 
@@ -136,24 +190,24 @@ error ProposalWindowClosed();
 error DisputeWindowClosed();
 ```
 
-#### Timeline Diagram (v3.6.0)
+#### Timeline Diagram (v3.6.1)
 ```
 Expiry ─────────────────────────────────────────────────> Emergency Refund
   │                                                              │
   │  0-22h: Resolution window                                   │ 24h+
   │  ├─ Propose (10min creator priority, then anyone)           │
-  │  ├─ Dispute window (30min after proposal)                   │
+  │  ├─ Dispute window (30min after proposal) - NO CUTOFF!      │
   │  └─ Voting window (1h after dispute)                        │
   │                                                              │
-  │  22-24h: CUTOFF - No new proposals/disputes (NEW!)          │
-  │                                                              │
+  │  22-24h: CUTOFF - No new proposals only                     │
+  │         (disputes still allowed within their 30-min window)  │
 ```
 
 **Maximum resolution time:** 22h + 30min + 1h = 23.5 hours  
 **Emergency refund available:** 24 hours  
 **Gap:** 30 minutes (ensures resolution always completes before refund)
 
-#### Security Test Coverage (13 new tests)
+#### Security Test Coverage (v3.6.0: 13 tests, v3.6.1: +1 test = 14 tests)
 - `test_EmergencyRefund_SetsFlag` - Flag set correctly
 - `test_Claim_RevertAfterEmergencyRefund` - Double-spend blocked
 - `test_DoubleSpend_Prevention` - Full attack scenario blocked
@@ -161,7 +215,8 @@ Expiry ────────────────────────�
 - `test_EmergencyRefund_ZerosUserShares` - Shares zeroed after refund
 - `test_ProposeOutcome_RevertInCutoffWindow` - Proposals blocked in cutoff
 - `test_ProposeOutcome_WorksBeforeCutoff` - Normal proposals still work
-- `test_Dispute_RevertInCutoffWindow` - Disputes blocked in cutoff
+- `test_Dispute_RevertWhenDisputeWindowExpired` - Natural 30-min window check (renamed in v3.6.1)
+- `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - **NEW v3.6.1** - Disputes allowed after cutoff
 - `test_Dispute_WorksBeforeCutoff` - Normal disputes still work
 - `test_ResolutionCutoff_BoundaryConditions` - Edge cases at 22h
 - `test_FullAttackScenario_AllFixesWork` - Complete attack simulation
@@ -262,11 +317,11 @@ Increased all virtual liquidity values by 10x and added 2 new tiers for institut
 
 ---
 
-## Slither Static Analysis Results (v3.6.0)
+## Slither Static Analysis Results (v3.6.1)
 
 **Tool:** Slither v0.11.x  
 **Detectors Run:** 100  
-**Results:** 35 findings (reduced from 45 in v3.5.0)
+**Results:** 45 findings (no change from v3.6.0)
 
 ### Finding Categories
 
@@ -274,16 +329,25 @@ Increased all virtual liquidity values by 10x and added 2 new tiers for institut
 |----------|-------|--------|
 | High | 2 | ⚠️ False Positives (arbitrary-send-eth to treasury - we control it) |
 | Medium | 2 | ✅ Mitigated by Design |
-| Low | 12 | ℹ️ Informational / By Design |
-| Optimization | 10+ | 📝 Assembly in OpenZeppelin (expected) |
+| Low | 14 | ℹ️ Informational / By Design |
+| Optimization | 9 | 📝 Assembly in OpenZeppelin (expected) |
+| Complexity | 2 | 📝 High cyclomatic complexity in `finalizeMarket` and `_executeAction` |
+| Informational | 16+ | 📝 Low-level calls, pragma versions, timestamps |
 
-### New Timestamp Comparisons in v3.6.0
+### Timestamp Comparisons (Expected)
 
-The following functions now have additional timestamp comparisons for the resolution cutoff:
-- `proposeOutcome()` - Checks `block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER`
-- `dispute()` - Same check
+The following functions use timestamp comparisons (all expected by design):
+- `proposeOutcome()` - Checks resolution cutoff and creator priority window
+- `dispute()` - Checks dispute window (v3.6.1: only natural 30-min window, no cutoff check)
+- `vote()` - Checks voting window
+- `finalizeMarket()` - Checks dispute/voting window expiry
+- `emergencyRefund()` - Checks 24h delay
+- `canEmergencyRefund()` - View function for UI
+- `confirmAction()` / `executeAction()` - Action expiry check
+- `_getMarketStatus()` - Market state determination
+- `_createMarket()` - Expiry validation
 
-**Risk Assessment:** LOW - Same as other timestamp checks. Windows are long (2 hours), miner manipulation of ~15 seconds cannot meaningfully exploit.
+**Risk Assessment:** LOW - All windows are measured in hours (30 min to 24 hours). Miner manipulation of ~15 seconds cannot meaningfully exploit any of these checks.
 
 ---
 
@@ -530,10 +594,10 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 - No time limit on withdrawals
 - Funds are safe indefinitely
 
-### 7. Resolution Window Limited to 22 Hours (v3.6.0)
-**Decision:** Proposals/disputes blocked 2 hours before emergency refund  
-**Reason:** Prevents race condition between resolution and emergency refund  
-**Impact:** Markets must be resolved within 22h of expiry (not 24h)  
+### 7. Resolution Window Limited to 22 Hours (v3.6.0, updated v3.6.1)
+**Decision:** Only PROPOSALS blocked 2 hours before emergency refund (v3.6.1: disputes allowed within their window)  
+**Reason:** Prevents race condition while ensuring legitimate disputes aren't blocked  
+**Impact:** Proposals must be made within 22h of expiry; disputes allowed anytime within 30-min window  
 **Mitigation:** 22 hours is more than sufficient for resolution (typical: <2 hours)
 
 ---
@@ -541,8 +605,8 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 ## Pre-Deployment Checklist
 
 ### Smart Contract
-- [x] All 179 tests passing (178 pass + 1 expected skip)
-- [x] Slither analysis completed (no critical/high issues)
+- [x] All 180 tests passing (179 pass + 1 expected skip)
+- [x] Slither analysis completed (45 findings - no critical/high issues)
 - [x] ReentrancyGuard applied to all state-changing external functions
 - [x] Constructor validates no duplicate signers
 - [x] ReplaceSigner validates no duplicate signers at runtime
@@ -551,6 +615,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 - [x] **Emergency refund double-spend FIXED (v3.6.0)**
 - [x] **Pool insolvency prevention FIXED (v3.6.0)**
 - [x] **Resolution cutoff implemented (v3.6.0)**
+- [x] **Dispute window edge case FIXED (v3.6.1)** - disputes allowed within 30-min window regardless of cutoff
 - [ ] MultiSig addresses configured correctly (3 unique addresses)
 - [ ] Treasury address set
 

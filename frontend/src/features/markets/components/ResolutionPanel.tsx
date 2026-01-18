@@ -166,8 +166,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
   // Proposer cannot dispute their own proposal
-  // Also block disputes within 2h of emergency refund (resolution cutoff)
-  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd && !isProposer && now < resolutionCutoffTime;
+  // v3.6.1: Disputes are allowed even after cutoff, as long as within 30-min dispute window
+  // The proposal cutoff already ensures resolution completes before emergency refund
+  const canDispute = hasProposal && !hasDispute && now < disputeWindowEnd && !isProposer;
   
   const votingWindowEnd = disputeMs + VOTING_WINDOW;
   const canVote = hasDispute && now < votingWindowEnd && totalShares > 0n && !hasVoted;
@@ -850,15 +851,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Resolution Cutoff Period - Less than 2h before emergency refund, proposals AND disputes blocked */}
-        {isInResolutionCutoff && !isOneSidedMarket && totalShares > 0n && !hasEmergencyRefunded && (
+        {/* Resolution Cutoff Period - Less than 2h before emergency refund, only new proposals blocked */}
+        {isInResolutionCutoff && !isOneSidedMarket && totalShares > 0n && !hasEmergencyRefunded && !hasProposal && (
           <div className="p-3 bg-dark-800 border border-orange-500/30 text-center">
-            <p className="text-orange-400 font-bold text-sm mb-2">RESOLUTION WINDOW CLOSED</p>
+            <p className="text-orange-400 font-bold text-sm mb-2">PROPOSAL WINDOW CLOSED</p>
             <p className="text-text-secondary text-xs mb-3">
-              {hasProposal 
-                ? "Less than 2 hours remain before emergency refund. New disputes are blocked."
-                : "No resolution was proposed in time. Emergency refund will be available soon."
-              }
+              No resolution was proposed in time. Emergency refund will be available soon.
             </p>
             <div className="bg-dark-900 border border-dark-600 p-3">
               <p className="text-text-muted text-xs">Emergency refund unlocks in:</p>

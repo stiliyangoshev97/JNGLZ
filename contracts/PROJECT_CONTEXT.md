@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 18, 2026  
-> **Status:** ✅ Smart Contracts v3.6.0 READY (179 tests)
+> **Status:** ✅ Smart Contracts v3.6.1 READY (180 tests)
 
 ---
 
@@ -10,7 +10,8 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.6.0** | ✅ **READY** | Emergency Refund Security Fix, 2-hour resolution cutoff |
+| **v3.6.1** | ✅ **READY** | Dispute Window Edge Case Fix |
+| v3.6.0 | ⚠️ DEPRECATED | Emergency Refund Security Fix - **HAS EDGE CASE BUG** |
 | v3.5.0 | ⚠️ DEPRECATED | 5 Heat Levels (10x liquidity) - **HAS CRITICAL BUG** |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
@@ -18,7 +19,7 @@
 - **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
 - **Network:** BNB Testnet (Chain ID: 97)
 - **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
-- **Action Required:** Deploy v3.6.0
+- **Action Required:** Deploy v3.6.1
 
 ---
 
@@ -59,6 +60,7 @@
 | **Sweep Protection** | ✅ 100% | Includes pending funds (v3.4.1) |
 | **Emergency Refund Security** | ✅ 100% | Double-spend fix, pool insolvency fix (v3.6.0) |
 | **Resolution Cutoff** | ✅ 100% | 2-hour buffer before emergency refund (v3.6.0) |
+| **Dispute Window Edge Case** | ✅ 100% | Removed cutoff check from dispute() (v3.6.1) |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
@@ -74,11 +76,15 @@
 | WalletB Scenario | ✅ 100% | 1 test passing |
 | EmptyWinningSide Tests | ✅ 100% | 6 tests passing |
 | PullPattern Tests | ✅ 100% | 28 tests passing |
-| **EmergencyRefundSecurity Tests** | ✅ 100% | **15 tests passing (NEW v3.6.0)** |
-| Testnet Deployment | ⏳ 90% | Ready for v3.6.0 deployment |
+| **EmergencyRefundSecurity Tests** | ✅ 100% | **16 tests passing (v3.6.0 + v3.6.1)** |
+| Slither Analysis | ✅ 100% | 45 findings (no critical/high issues) |
+| Testnet Deployment | ⏳ 90% | Ready for v3.6.1 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 179 ✅** (1 skipped)
+**Total Tests: 180 ✅** (1 skipped)
+
+**Overall Progress: 100%** ✅
+**Total Tests: 180 ✅** (1 skipped)
 
 ---
 
