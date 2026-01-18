@@ -797,4 +797,269 @@ contract EmergencyRefundSecurityTest is TestHelper {
 
         console.log("SUCCESS: Order independence verified");
     }
+
+    // ============ Clean Accounting Tests (v3.6.0) ============
+
+    /**
+     * @notice Test that claim() reduces poolBalance and winning supply
+     * @dev v3.6.0: Clean accounting - pool shows actual remaining BNB
+     */
+    function test_Claim_ReducesPoolAndSupply() public {
+        console.log("=== CLAIM CLEAN ACCOUNTING TEST ===");
+
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Alice and Bob buy YES shares
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+        vm.prank(bob);
+        market.buyYes{value: 0.5 ether}(marketId, 0);
+
+        // Charlie buys NO (will lose)
+        vm.prank(charlie);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Get initial state
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 yesSupplyBefore,
+            uint256 noSupplyBefore,
+            uint256 poolBefore,
+            ,
+
+        ) = market.getMarket(marketId);
+
+        console.log("Before claims:");
+        console.log("  Pool balance:", poolBefore);
+        console.log("  YES supply:", yesSupplyBefore);
+        console.log("  NO supply:", noSupplyBefore);
+
+        // Expire and resolve (YES wins)
+        vm.warp(block.timestamp + 7 days + 1);
+
+        // Calculate required bond (dynamic based on pool size)
+        uint256 requiredBond1 = market.getRequiredBond(marketId);
+        uint256 totalRequired1 = requiredBond1 +
+            (requiredBond1 * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(marketCreator);
+        market.proposeOutcome{value: totalRequired1}(marketId, true);
+        vm.warp(block.timestamp + 31 minutes);
+        market.finalizeMarket(marketId);
+
+        // Get state after resolution (proposer reward deducted)
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 yesSupplyAfterResolve,
+            ,
+            uint256 poolAfterResolve,
+            ,
+
+        ) = market.getMarket(marketId);
+
+        console.log("After resolution (proposer reward deducted):");
+        console.log("  Pool balance:", poolAfterResolve);
+        console.log("  YES supply:", yesSupplyAfterResolve);
+
+        // Alice claims
+        vm.prank(alice);
+        uint256 alicePayout = market.claim(marketId);
+
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 yesSupplyAfterAlice,
+            ,
+            uint256 poolAfterAlice,
+            ,
+
+        ) = market.getMarket(marketId);
+
+        console.log("After Alice claims:");
+        console.log("  Pool balance:", poolAfterAlice);
+        console.log("  YES supply:", yesSupplyAfterAlice);
+        console.log("  Alice payout:", alicePayout);
+
+        // Pool should be reduced
+        assertLt(
+            poolAfterAlice,
+            poolAfterResolve,
+            "Pool should decrease after claim"
+        );
+
+        // YES supply should be reduced
+        assertLt(
+            yesSupplyAfterAlice,
+            yesSupplyAfterResolve,
+            "YES supply should decrease after claim"
+        );
+
+        // Bob claims
+        vm.prank(bob);
+        uint256 bobPayout = market.claim(marketId);
+
+        (, , , , , , uint256 yesSupplyFinal, , uint256 poolFinal, , ) = market
+            .getMarket(marketId);
+
+        console.log("After Bob claims (all winners claimed):");
+        console.log("  Pool balance:", poolFinal);
+        console.log("  YES supply:", yesSupplyFinal);
+        console.log("  Bob payout:", bobPayout);
+
+        // After all winners claim, pool should be near 0 (just dust from rounding)
+        assertLe(
+            poolFinal,
+            3,
+            "Pool should be ~0 after all claims (max 3 wei dust)"
+        );
+
+        // YES supply should be 0
+        assertEq(yesSupplyFinal, 0, "YES supply should be 0 after all claims");
+
+        // NO supply unchanged (losers don't claim)
+        (, , , , , , , uint256 noSupplyFinal, , , ) = market.getMarket(
+            marketId
+        );
+        assertEq(
+            noSupplyFinal,
+            noSupplyBefore,
+            "NO supply should be unchanged"
+        );
+
+        console.log("SUCCESS: Clean accounting verified");
+    }
+
+    /**
+     * @notice Test that multiple claimers get correct proportional payouts
+     * @dev Verifies the accounting fix doesn't break payout calculations
+     */
+    function test_Claim_MultipleClaimersGetCorrectPayouts() public {
+        console.log("=== MULTIPLE CLAIMERS PAYOUT TEST ===");
+
+        uint256 marketId = createTestMarket(marketCreator, 7 days);
+
+        // Three winners with different share amounts
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0); // ~50% of winners
+
+        vm.prank(bob);
+        market.buyYes{value: 0.6 ether}(marketId, 0); // ~30% of winners
+
+        vm.prank(charlie);
+        market.buyYes{value: 0.4 ether}(marketId, 0); // ~20% of winners
+
+        // Get share counts
+        (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);
+        (uint256 bobShares, , , , , ) = market.getPosition(marketId, bob);
+        (uint256 charlieShares, , , , , ) = market.getPosition(
+            marketId,
+            charlie
+        );
+
+        uint256 totalWinnerShares = aliceShares + bobShares + charlieShares;
+
+        console.log("Winner shares:");
+        console.log("  Alice:", aliceShares);
+        console.log("  Bob:", bobShares);
+        console.log("  Charlie:", charlieShares);
+        console.log("  Total:", totalWinnerShares);
+
+        // Expire and resolve (YES wins)
+        vm.warp(block.timestamp + 7 days + 1);
+
+        // Calculate required bond (dynamic based on pool size)
+        uint256 requiredBond2 = market.getRequiredBond(marketId);
+        uint256 totalRequired2 = requiredBond2 +
+            (requiredBond2 * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
+
+        vm.prank(marketCreator);
+        market.proposeOutcome{value: totalRequired2}(marketId, true);
+        vm.warp(block.timestamp + 31 minutes);
+        market.finalizeMarket(marketId);
+
+        // Get pool after resolution
+        (, , , , , , , , uint256 poolAfterResolve, , ) = market.getMarket(
+            marketId
+        );
+
+        // Claims can happen in any order
+        vm.prank(charlie);
+        uint256 charliePayout = market.claim(marketId);
+
+        vm.prank(alice);
+        uint256 alicePayout = market.claim(marketId);
+
+        vm.prank(bob);
+        uint256 bobPayout = market.claim(marketId);
+
+        console.log("Payouts (gross, before 0.3% fee):");
+        console.log("  Charlie:", charliePayout);
+        console.log("  Alice:", alicePayout);
+        console.log("  Bob:", bobPayout);
+
+        // Verify proportions are correct based on SHARES held (not BNB invested)
+        // Due to bonding curve, early buyers get more shares per BNB
+        uint256 totalPayouts = alicePayout + bobPayout + charliePayout;
+
+        // Payouts should be proportional to share holdings
+        uint256 alicePercent = (alicePayout * 100) / totalPayouts;
+        uint256 bobPercent = (bobPayout * 100) / totalPayouts;
+        uint256 charliePercent = (charliePayout * 100) / totalPayouts;
+
+        // Calculate expected percentages from shares
+        uint256 expectedAlicePercent = (aliceShares * 100) / totalWinnerShares;
+        uint256 expectedBobPercent = (bobShares * 100) / totalWinnerShares;
+        uint256 expectedCharliePercent = (charlieShares * 100) /
+            totalWinnerShares;
+
+        console.log("Payout percentages (actual vs expected):");
+        console.log("  Alice actual %:", alicePercent);
+        console.log("  Alice expected %:", expectedAlicePercent);
+        console.log("  Bob actual %:", bobPercent);
+        console.log("  Bob expected %:", expectedBobPercent);
+        console.log("  Charlie actual %:", charliePercent);
+        console.log("  Charlie expected %:", expectedCharliePercent);
+
+        // Verify payouts match share proportions (allow ±2% for fees/rounding)
+        assertApproxEqAbs(
+            alicePercent,
+            expectedAlicePercent,
+            2,
+            "Alice payout should match share proportion"
+        );
+        assertApproxEqAbs(
+            bobPercent,
+            expectedBobPercent,
+            2,
+            "Bob payout should match share proportion"
+        );
+        assertApproxEqAbs(
+            charliePercent,
+            expectedCharliePercent,
+            2,
+            "Charlie payout should match share proportion"
+        );
+
+        console.log(
+            "SUCCESS: Multiple claimers get correct proportional payouts"
+        );
+    }
 }

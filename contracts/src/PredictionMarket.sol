@@ -1251,6 +1251,16 @@ contract PredictionMarket is ReentrancyGuard {
         // Update state
         position.claimed = true;
 
+        // v3.6.0: Reduce pool balance and winning supply for clean accounting
+        // This ensures poolBalance reflects actual BNB remaining after claims
+        // Must reduce BOTH to maintain correct payout ratio for remaining claimers
+        market.poolBalance -= grossPayout;
+        if (market.outcome) {
+            market.yesSupply -= winningShares;
+        } else {
+            market.noSupply -= winningShares;
+        }
+
         // Transfer fee to treasury
         if (fee > 0) {
             (bool feeSuccess, ) = treasury.call{value: fee}("");

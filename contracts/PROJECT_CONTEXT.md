@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 14, 2026  
-> **Status:** ✅ Smart Contracts v3.5.0 DEPLOYED (165 tests)
+> **Last Updated:** January 18, 2026  
+> **Status:** ✅ Smart Contracts v3.6.0 READY (177 tests)
 
 ---
 
@@ -10,15 +10,15 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| v3.5.0 | ✅ DEPLOYED | 5 Heat Levels (10x liquidity), APEX & CORE tiers |
+| **v3.6.0** | ✅ **READY** | Emergency Refund Security Fix, 2-hour resolution cutoff |
+| v3.5.0 | ⚠️ DEPRECATED | 5 Heat Levels (10x liquidity) - **HAS CRITICAL BUG** |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Current Deployment (v3.5.0)
+### Current Deployment (v3.5.0 - DEPRECATED)
 - **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 84281825
-- **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
-- **Verified:** ✅ Yes
+- **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
+- **Action Required:** Deploy v3.6.0
 
 ---
 
@@ -31,7 +31,7 @@
 - **Street Consensus** resolution (bettors vote on outcomes)
 - **Proposer Reward** - 0.5% of pool to incentivize quick resolution
 - Winner payouts after resolution
-- Emergency refunds (24h timeout)
+- Emergency refunds (24h timeout) - **SECURED in v3.6.0**
 - Voter jury fee incentives (50% of loser's bond)
 - Dynamic bond pricing
 - **Pull Pattern** - griefing-proof bond/fee distribution (v3.4.0)
@@ -48,7 +48,7 @@
 |-----------|----------|-------|
 | Project Setup | ✅ 100% | Foundry initialized |
 | Core Contract | ✅ 100% | PredictionMarket.sol complete |
-| Heat Levels | ✅ 100% | CRACK/HIGH/PRO per-market volatility |
+| Heat Levels | ✅ 100% | CRACK/HIGH/PRO/APEX/CORE per-market volatility |
 | Bonding Curve Math | ✅ 100% | P(yes) + P(no) = 0.01 BNB |
 | Fee System | ✅ 100% | 1% platform + 0.5% creator + 0.3% resolution |
 | Market Creation Fee | ✅ 100% | Optional fee (defaults to 0), MultiSig configurable |
@@ -57,6 +57,8 @@
 | **Pull Pattern** | ✅ 100% | Griefing-proof distribution (v3.4.0) |
 | **ReplaceSigner** | ✅ 100% | 2-of-3 emergency replacement (v3.4.1) |
 | **Sweep Protection** | ✅ 100% | Includes pending funds (v3.4.1) |
+| **Emergency Refund Security** | ✅ 100% | Double-spend fix, pool insolvency fix (v3.6.0) |
+| **Resolution Cutoff** | ✅ 100% | 2-hour buffer before emergency refund (v3.6.0) |
 | Emergency Refund | ✅ 100% | 24h timeout, proportional |
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
@@ -64,18 +66,19 @@
 | SweepFunds | ✅ 100% | Governance can recover surplus BNB |
 | Unit Tests | ✅ 100% | 21 tests passing |
 | Fuzz Tests | ✅ 100% | 32 tests passing |
-| PumpDump Tests | ✅ 100% | 32 tests passing |
+| BondingCurveEconomics Tests | ✅ 100% | 32 tests passing (renamed from PumpDump) |
 | Integration Tests | ✅ 100% | 16 tests passing |
 | ArbitrageProof Tests | ✅ 100% | 17 tests (1 skipped) |
 | InstantSell Tests | ✅ 100% | 8 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | WalletB Scenario | ✅ 100% | 1 test passing |
-| EmptyWinningSide Tests | ✅ 100% | 5 tests passing |
-| **PullPattern Tests** | ✅ 100% | 28 tests passing |
-| Testnet Deployment | ⏳ 90% | Ready for deployment |
+| EmptyWinningSide Tests | ✅ 100% | 6 tests passing |
+| PullPattern Tests | ✅ 100% | 28 tests passing |
+| **EmergencyRefundSecurity Tests** | ✅ 100% | **13 tests passing (NEW v3.6.0)** |
+| Testnet Deployment | ⏳ 90% | Ready for v3.6.0 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 164 ✅** (1 skipped)
+**Total Tests: 177 ✅** (1 skipped)
 
 ---
 

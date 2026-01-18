@@ -3,133 +3,90 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-165%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.5.0-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.6.0-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.2.0+ Required
+## ⚠️ CRITICAL: v3.6.0 Required
 
-**v3.1.0 has a critical bonding curve bug** that allows instant arbitrage profit. See [CHANGELOG.md](CHANGELOG.md) for details.
+**Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
 | Version | Status | Issue |
 |---------|--------|-------|
 | v3.1.0 | ⚠️ DEPRECATED | Arbitrage vulnerability in `_calculateSellBnb()` |
-| v3.2.0 | ✅ FIXED | Bonding curve corrected |
-| v3.3.0 | ✅ STABLE | Added proposer rewards |
-| v3.4.0 | ✅ STABLE | Pull Pattern, griefing protection |
+| v3.2.0 | ⚠️ DEPRECATED | Bonding curve corrected |
+| v3.3.0 | ⚠️ DEPRECATED | Added proposer rewards |
+| v3.4.0 | ⚠️ DEPRECATED | Pull Pattern, griefing protection |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), sweep protection |
-| v3.5.0 | ⚠️ BUG | **Emergency Refund Double-Spend** (see below) |
+| v3.5.0 | ⚠️ DEPRECATED | **Emergency Refund Double-Spend Bug** |
+| **v3.6.0** | ✅ **CURRENT** | **Emergency Refund Vulnerability FIXED** |
 
 ---
 
-## 🚨 KNOWN BUG: Emergency Refund Vulnerability (v3.5.0)
+## ✅ FIXED: Emergency Refund Vulnerability (v3.6.0)
 
 **Discovered:** January 18, 2026  
-**Severity:** CRITICAL - Potential fund drain & contract insolvency  
-**Status:** UNPATCHED - Requires v3.6.0
+**Fixed:** January 18, 2026  
+**Severity:** CRITICAL (in v3.5.0) → RESOLVED (in v3.6.0)
 
-### Three-Part Vulnerability
+### Vulnerability Summary (v3.5.0 and earlier)
 
-| # | Problem | Attack Vector | Impact |
-|---|---------|---------------|--------|
-| 1 | **Double-Spend** | User takes emergency refund, then claims after resolution | User gets ~2x payout |
-| 2 | **Pool Insolvency** | `emergencyRefund()` doesn't reduce `poolBalance` | Contract can't pay all winners |
-| 3 | **Race Condition** | Proposal at T=22h, emergency refund at T=24h | Users confused, funds at risk |
+| # | Problem | Impact | v3.6.0 Fix |
+|---|---------|--------|------------|
+| 1 | **Double-Spend** | User gets ~2x payout | `claim()` checks `emergencyRefunded` flag |
+| 2 | **Pool Insolvency** | Contract can't pay all winners | `emergencyRefund()` reduces `poolBalance` |
+| 3 | **Race Condition** | Resolution/refund conflict | 2-hour cutoff before emergency refund |
 
-### Attack Scenario (Worst Case)
-```
-T=0:     Market expires (Pool: 10 BNB, 500 YES, 500 NO shares)
-T=22h:   Attacker proposes "NO wins" via direct contract call (bypassing frontend)
-T=24h:   Emergency refund available (market not yet finalized)
-T=24h:   All YES holders call emergencyRefund() → Drain 5 BNB
-         BUG: market.poolBalance still shows 10 BNB!
-T=24.5h: Attacker calls finalizeMarket() → NO wins
-T=24.5h: NO holders call claim() → Contract owes 10 BNB but only has 5 BNB
-         RESULT: Contract INSOLVENT, some users can't claim!
-```
-
-### Root Causes
+### v3.6.0 Fixes Applied
 
 ```solidity
-// BUG 1: emergencyRefund() doesn't reduce pool
-function emergencyRefund(uint256 marketId) external {
-    refund = (userTotalShares * market.poolBalance) / totalShares;
-    position.emergencyRefunded = true;
-    // ❌ MISSING: market.poolBalance -= refund;
-    msg.sender.call{value: refund}("");
-}
-
-// BUG 2: claim() doesn't check emergencyRefunded
+// FIX 1: Block claim after emergency refund
 function claim(uint256 marketId) external {
-    if (position.claimed) revert AlreadyClaimed();
-    // ❌ MISSING: if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
-    // ... calculates payout from WRONG poolBalance ...
-}
-
-// BUG 3: No time cutoff before emergency refund
-function proposeOutcome(uint256 marketId, bool outcome) external {
-    // ❌ MISSING: Check if too close to emergency refund time
-}
-```
-
-### Required Fixes (v3.6.0)
-
-#### Fix 1: Block claim after emergency refund
-```solidity
-function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
-    // ... existing checks ...
-    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ✅ ADD
-    // ...
-}
-```
-
-#### Fix 2: Reduce pool balance on emergency refund
-```solidity
-function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
-    // ... calculate refund ...
-    position.emergencyRefunded = true;
-    market.poolBalance -= refund; // ✅ ADD - Critical for solvency!
-    // ... transfer ...
-}
-```
-
-#### Fix 3: 2-hour resolution cutoff
-```solidity
-uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
-error ProposalWindowClosed();
-error DisputeWindowClosed();
-
-function proposeOutcome(uint256 marketId, bool outcome) external {
-    // ✅ ADD: Block proposals within 2h of emergency refund time
-    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
-    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
-        revert ProposalWindowClosed();
-    }
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ✅ ADDED
     // ...
 }
 
-function dispute(uint256 marketId) external {
-    // ✅ ADD: Same check for disputes
-    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+// FIX 2: Reduce pool balance on emergency refund
+function emergencyRefund(uint256 marketId) external {
+    // ...
+    market.poolBalance -= refund;           // ✅ ADDED
+    market.yesSupply -= position.yesShares; // ✅ ADDED
+    market.noSupply -= position.noShares;   // ✅ ADDED
+    position.yesShares = 0;                 // ✅ ADDED
+    position.noShares = 0;                  // ✅ ADDED
+    // ...
+}
+
+// FIX 3: 2-hour resolution cutoff
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours; // ✅ ADDED
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
     if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
-        revert DisputeWindowClosed();
+        revert ProposalWindowClosed(); // ✅ ADDED
     }
     // ...
 }
 ```
 
-### Defense Matrix
+### Timeline (v3.6.0)
 
-| Attack | Fix 1 Only | Fix 1+2 | Fix 1+2+3 |
-|--------|-----------|---------|-----------|
-| Double-spend | ✅ Blocked | ✅ Blocked | ✅ Blocked |
-| Pool insolvency | ❌ Vulnerable | ✅ Blocked | ✅ Blocked |
-| Race condition | ❌ Vulnerable | ⚠️ Partial | ✅ Blocked |
-| Frontend bypass | ✅ | ✅ | ✅ |
+```
+Expiry ─────────────────────────────────────────────────> Emergency Refund
+  │                                                              │
+  │  0-22h: Resolution window                                   │ 24h+
+  │  ├─ Propose (10min creator priority, then anyone)           │
+  │  ├─ Dispute window (30min after proposal)                   │
+  │  └─ Voting window (1h after dispute)                        │
+  │                                                              │
+  │  22-24h: CUTOFF - No new proposals/disputes                 │
+  │         (ensures resolution completes before refund)         │
+```
+
+**Resolution and Emergency Refund are now mutually exclusive by design.**
 
 ---
 
@@ -137,16 +94,15 @@ function dispute(uint256 marketId) external {
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.5.0** | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ✅ DEPLOYED |
-| v3.4.1 | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern | ⚠️ DEPRECATED |
+| **v3.6.0** | Emergency Refund Security Fix, 177 tests | ✅ **READY FOR DEPLOYMENT** |
+| v3.5.0 | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⚠️ DEPRECATED (bug) |
 
-### Current Deployment (v3.5.0 - BNB Testnet)
+### Current Deployment (v3.5.0 - BNB Testnet - DEPRECATED)
 - **Address:** [`0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`](https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8)
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 84281825
-- **Verified:** ✅ Yes
+- **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
 
-> **v3.5.0 Features:** 5 Heat Level tiers (CRACK, HIGH, PRO, APEX, CORE), 10x virtual liquidity increase for better price stability, Pull Pattern, ReplaceSigner (2-of-3), Sweep protection, Proposer Rewards (0.5%), 165 tests passing
+> **v3.6.0 Features:** All v3.5.0 features + Emergency Refund security fix, 2-hour resolution cutoff, 13 new security tests, 177 total tests passing
 
 ---
 

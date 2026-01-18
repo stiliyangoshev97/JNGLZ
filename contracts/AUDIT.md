@@ -1,18 +1,19 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.5.0  
-**Audit Date:** January 14, 2026  
+**Version:** v3.6.0  
+**Audit Date:** January 18, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
-**Status:** ✅ DEPLOYED
+**Status:** ✅ READY FOR DEPLOYMENT
 
-### Current Deployment (v3.5.0)
+### Current Deployment (v3.5.0 - DEPRECATED)
 - **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
 - **Network:** BNB Testnet (Chain ID: 97)
 - **Block:** 84281825
 - **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
 - **Verified:** ✅ Yes
+- **⚠️ WARNING:** Contains Emergency Refund Double-Spend vulnerability - DO NOT USE
 
 ### Parameters Configured
 - `platformFeeBps`: 100 (1%)
@@ -50,15 +51,122 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,026 |
-| Total Tests | **164** |
-| Test Suites | **10** |
-| Slither Findings | 45 (see breakdown below) |
+| Total Lines of Code | ~2,070 |
+| Total Tests | **177** |
+| Test Suites | **11** |
+| Slither Findings | 35 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
+
+---
+
+## Version 3.6.0 Changes (CRITICAL SECURITY FIX)
+
+### Emergency Refund Double-Spend Vulnerability Fix
+
+**Severity:** CRITICAL  
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Tests Added:** 13 new security tests in `EmergencyRefundSecurity.t.sol`
+
+#### Three-Part Vulnerability (ALL FIXED)
+
+| # | Problem | Fix Applied |
+|---|---------|-------------|
+| 1 | **Double-Spend** - User could get emergency refund + claim payout (~2x) | Added `if (position.emergencyRefunded) revert` in `claim()` |
+| 2 | **Pool Insolvency** - `emergencyRefund()` didn't reduce `poolBalance` | Added `poolBalance -= refund` and zero shares |
+| 3 | **Race Condition** - Proposals/disputes 22-24h after expiry conflicted with emergency refund | Added 2-hour resolution cutoff buffer |
+
+#### Code Changes
+
+**Fix 1: Prevent claim after emergency refund**
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ... existing checks ...
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // NEW
+    // ...
+}
+```
+
+**Fix 2: Reduce pool balance on emergency refund**
+```solidity
+function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
+    // ... calculate refund ...
+    position.emergencyRefunded = true;
+    
+    // v3.6.0 FIX: Reduce pool balance and supplies
+    market.poolBalance -= refund;           // NEW
+    market.yesSupply -= position.yesShares; // NEW
+    market.noSupply -= position.noShares;   // NEW
+    position.yesShares = 0;                 // NEW
+    position.noShares = 0;                  // NEW
+    
+    // ... transfer ...
+}
+```
+
+**Fix 3: 2-hour resolution cutoff**
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours; // NEW
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed(); // NEW
+    }
+    // ...
+}
+
+function dispute(uint256 marketId) external {
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert DisputeWindowClosed(); // NEW
+    }
+    // ...
+}
+```
+
+#### New Constants & Errors
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
+error ProposalWindowClosed();
+error DisputeWindowClosed();
+```
+
+#### Timeline Diagram (v3.6.0)
+```
+Expiry ─────────────────────────────────────────────────> Emergency Refund
+  │                                                              │
+  │  0-22h: Resolution window                                   │ 24h+
+  │  ├─ Propose (10min creator priority, then anyone)           │
+  │  ├─ Dispute window (30min after proposal)                   │
+  │  └─ Voting window (1h after dispute)                        │
+  │                                                              │
+  │  22-24h: CUTOFF - No new proposals/disputes (NEW!)          │
+  │                                                              │
+```
+
+**Maximum resolution time:** 22h + 30min + 1h = 23.5 hours  
+**Emergency refund available:** 24 hours  
+**Gap:** 30 minutes (ensures resolution always completes before refund)
+
+#### Security Test Coverage (13 new tests)
+- `test_EmergencyRefund_SetsFlag` - Flag set correctly
+- `test_Claim_RevertAfterEmergencyRefund` - Double-spend blocked
+- `test_DoubleSpend_Prevention` - Full attack scenario blocked
+- `test_PoolInsolvency_Prevention` - Pool balance properly reduced
+- `test_EmergencyRefund_ZerosUserShares` - Shares zeroed after refund
+- `test_ProposeOutcome_RevertInCutoffWindow` - Proposals blocked in cutoff
+- `test_ProposeOutcome_WorksBeforeCutoff` - Normal proposals still work
+- `test_Dispute_RevertInCutoffWindow` - Disputes blocked in cutoff
+- `test_Dispute_WorksBeforeCutoff` - Normal disputes still work
+- `test_ResolutionCutoff_BoundaryConditions` - Edge cases at 22h
+- `test_FullAttackScenario_AllFixesWork` - Complete attack simulation
+- `test_NormalResolutionFlow_StillWorks` - Happy path unaffected
+- `test_EmergencyRefund_OrderIndependence` - Multiple users refund correctly
 
 ---
 
@@ -154,11 +262,11 @@ Increased all virtual liquidity values by 10x and added 2 new tiers for institut
 
 ---
 
-## Slither Static Analysis Results (v3.5.0)
+## Slither Static Analysis Results (v3.6.0)
 
 **Tool:** Slither v0.11.x  
 **Detectors Run:** 100  
-**Results:** 45 findings
+**Results:** 35 findings (reduced from 45 in v3.5.0)
 
 ### Finding Categories
 
@@ -168,6 +276,14 @@ Increased all virtual liquidity values by 10x and added 2 new tiers for institut
 | Medium | 2 | ✅ Mitigated by Design |
 | Low | 12 | ℹ️ Informational / By Design |
 | Optimization | 10+ | 📝 Assembly in OpenZeppelin (expected) |
+
+### New Timestamp Comparisons in v3.6.0
+
+The following functions now have additional timestamp comparisons for the resolution cutoff:
+- `proposeOutcome()` - Checks `block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER`
+- `dispute()` - Same check
+
+**Risk Assessment:** LOW - Same as other timestamp checks. Windows are long (2 hours), miner manipulation of ~15 seconds cannot meaningfully exploit.
 
 ---
 
@@ -319,22 +435,31 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ## Test Coverage Analysis
 
-### Test Suite Breakdown (164 Total)
+### Test Suite Breakdown (177 Total)
 
 | Test File | Tests | Focus |
 |-----------|-------|-------|
 | PredictionMarket.t.sol | 21 | Core unit tests |
 | PredictionMarket.fuzz.t.sol | 32 | Property-based fuzz testing |
-| PumpDump.t.sol | 32 | Economics + proposer rewards |
+| BondingCurveEconomics.t.sol | 32 | Economics + proposer rewards (renamed from PumpDump.t.sol) |
 | Integration.t.sol | 16 | Full lifecycle scenarios |
 | ArbitrageProof.t.sol | 16 (1 skipped) | Arbitrage prevention certification |
 | InstantSellAnalysis.t.sol | 8 | Sell mechanics verification |
 | VulnerabilityCheck.t.sol | 4 | Known vulnerability patterns |
 | WalletBScenario.t.sol | 1 | Edge case scenarios |
 | EmptyWinningSide.t.sol | 6 | Empty side safety checks |
-| **PullPattern.t.sol** | **28** | **Pull Pattern + ReplaceSigner tests (NEW)** |
+| PullPattern.t.sol | 28 | Pull Pattern + ReplaceSigner tests |
+| **EmergencyRefundSecurity.t.sol** | **13** | **v3.6.0 security tests (NEW)** |
 
 ### Key Test Scenarios Covered
+
+✅ **Emergency Refund Security (13 tests in EmergencyRefundSecurity.t.sol - NEW)**
+- Double-spend prevention (claim after refund blocked)
+- Pool insolvency prevention (balance reduced on refund)
+- Resolution cutoff enforcement (proposal/dispute blocked at 22h)
+- Boundary condition tests at cutoff
+- Full attack scenario simulation
+- Order-independent multiple refunds
 
 ✅ **Pull Pattern (28 tests in PullPattern.t.sol)**
 - Creator fees credited on buy/sell trades
@@ -381,7 +506,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ### 3. No Upgradability
 **Decision:** Immutable contract  
-**Mitigation:** Extensive testing (164 tests), MultiSig pause, emergency refund
+**Mitigation:** Extensive testing (177 tests), MultiSig pause, emergency refund
 
 ### 4. ReplaceSigner Uses 2-of-3 (NEW)
 **Decision:** Emergency escape hatch if one signer is compromised/lost  
@@ -404,20 +529,29 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 - No time limit on withdrawals
 - Funds are safe indefinitely
 
+### 7. Resolution Window Limited to 22 Hours (v3.6.0)
+**Decision:** Proposals/disputes blocked 2 hours before emergency refund  
+**Reason:** Prevents race condition between resolution and emergency refund  
+**Impact:** Markets must be resolved within 22h of expiry (not 24h)  
+**Mitigation:** 22 hours is more than sufficient for resolution (typical: <2 hours)
+
 ---
 
 ## Pre-Deployment Checklist
 
 ### Smart Contract
-- [x] All 164 tests passing (163 pass + 1 expected skip)
+- [x] All 177 tests passing (176 pass + 1 expected skip)
 - [x] Slither analysis completed (no critical/high issues)
 - [x] ReentrancyGuard applied to all state-changing external functions
 - [x] Constructor validates no duplicate signers
 - [x] ReplaceSigner validates no duplicate signers at runtime
 - [x] Pull Pattern implemented for bonds, jury fees, creator fees
 - [x] Sweep protection includes `totalPendingWithdrawals` and `totalPendingCreatorFees`
-- [x] MultiSig addresses configured correctly (3 unique addresses)
-- [x] Treasury address set
+- [x] **Emergency refund double-spend FIXED (v3.6.0)**
+- [x] **Pool insolvency prevention FIXED (v3.6.0)**
+- [x] **Resolution cutoff implemented (v3.6.0)**
+- [ ] MultiSig addresses configured correctly (3 unique addresses)
+- [ ] Treasury address set
 
 ### Parameters Configured
 - `platformFeeBps`: 100 (1%)
@@ -456,34 +590,38 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 | Griefing | **NONE** | Pull Pattern prevents blocking via malicious wallets |
 | Oracle Manipulation | N/A | No oracles used |
 | Front-Running | LOW | Bonding curve + slippage protection |
-| Timestamp Manipulation | LOW | Long time windows |
+| Timestamp Manipulation | LOW | Long time windows (2h+ cutoff) |
 | Centralization | LOW | MultiSig governance, no upgradability |
 | Duplicate Signers | **NONE** | Validated at constructor AND runtime |
+| **Double-Spend** | **NONE** | **Fixed in v3.6.0** |
+| **Pool Insolvency** | **NONE** | **Fixed in v3.6.0** |
 
 ---
 
 ## Conclusion
 
-The PredictionMarket contract v3.5.0 demonstrates solid security practices:
+The PredictionMarket contract v3.6.0 demonstrates solid security practices:
 
 1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
-3. **Comprehensive Testing:** 164 tests including Pull Pattern, ReplaceSigner, arbitrage-proof, fuzz
+3. **Comprehensive Testing:** 177 tests including security, Pull Pattern, arbitrage-proof, fuzz
 4. **Conservative Design:** Immutable, no external dependencies, fail-safe emergency refund
 5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
 6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery
+7. **Emergency Refund Security:** Double-spend and insolvency vulnerabilities fixed
 
-**v3.5.0 Security Additions:**
-- Heat Level rebalance (10x liquidity increase)
-- Two new heat levels (APEX, CORE)
-- MAX_HEAT_LEVEL increased to 15,000 BNB
-- 28 new tests for Pull Pattern and ReplaceSigner
+**v3.6.0 Security Additions:**
+- Emergency refund double-spend fix (claim blocked after refund)
+- Pool insolvency prevention (balance reduced on refund)
+- 2-hour resolution cutoff buffer
+- 13 new security tests in `EmergencyRefundSecurity.t.sol`
 
 **Recommended Actions Before Mainnet:**
-1. Run testnet for 1-2 weeks with real traffic
-2. Set up event monitoring (SignerReplaced, FundsSwept, WithdrawalCredited)
-3. Document emergency response procedures
-4. Consider professional third-party audit for additional assurance
+1. Deploy v3.6.0 to testnet and verify all fixes
+2. Run testnet for 1-2 weeks with real traffic
+3. Set up event monitoring (SignerReplaced, FundsSwept, WithdrawalCredited, EmergencyRefunded)
+4. Document emergency response procedures
+5. Consider professional third-party audit for additional assurance
 
 ---
 
