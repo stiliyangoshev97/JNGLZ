@@ -1,68 +1,169 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
+> **Status:** Smart Contracts ✅ v3.6.0 READY (179 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚨 CRITICAL BUG - Emergency Refund Double-Spend (v3.5.0)
+## ✅ FIXED: Emergency Refund Vulnerability (v3.6.0)
 
 **Discovered:** January 18, 2026  
-**Severity:** CRITICAL - Potential fund drain  
-**Status:** UNPATCHED - Requires contract upgrade (v3.6.0)
+**Fixed:** January 18, 2026  
+**Severity:** CRITICAL (in v3.5.0) → **RESOLVED** (in v3.6.0)
 
-### Description
-A user can potentially receive DOUBLE payment by exploiting the emergency refund + claim flow:
+### Vulnerability Summary (FIXED)
 
-1. Market expires at T=0
-2. At T=24h, emergency refund becomes available (no proposal or proposal still pending)
-3. User calls `emergencyRefund()` → Gets proportional refund based on ALL their shares
-4. Someone calls `finalizeMarket()` → Market gets resolved
-5. User calls `claim()` → Gets payout for their WINNING shares again!
+| # | Problem | Status | Fix Applied |
+|---|---------|--------|-------------|
+| 1 | **Double-Spend** | ✅ FIXED | `claim()` checks `emergencyRefunded` flag |
+| 2 | **Pool Insolvency** | ✅ FIXED | `emergencyRefund()` reduces `poolBalance` and zeroes shares |
+| 3 | **Race Condition** | ✅ FIXED | 2-hour resolution cutoff before emergency refund |
 
-### Root Cause
-Two issues in `PredictionMarket.sol`:
+### Implementation Details
 
-1. **`emergencyRefund()` does NOT reduce `market.poolBalance`**
-   - User gets refund but pool balance stays the same
-   - Later claims calculate payout from the unreduced pool
-
-2. **`claim()` does NOT check `position.emergencyRefunded`**
-   - User can claim even after taking emergency refund
-   - No protection against double-payment
-
-### Impact
-- User could receive: Emergency Refund + Claim Payout = ~2x their entitled amount
-- This drains the pool, leaving other winners unable to claim full amounts
-- Contract could become insolvent
-
-### Proposed Fix (v3.6.0)
-**Option A (Recommended):** Add check in `claim()`:
+#### Fix 1: Block claim after emergency refund ✅
 ```solidity
-function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+function claim(uint256 marketId) external {
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ADDED
+    // ...
+}
+```
+
+#### Fix 2: Reduce pool balance on emergency refund ✅
+```solidity
+function emergencyRefund(uint256 marketId) external {
+    // ...
+    market.poolBalance -= refund;           // ADDED
+    market.yesSupply -= position.yesShares; // ADDED  
+    market.noSupply -= position.noShares;   // ADDED
+    position.yesShares = 0;                 // ADDED
+    position.noShares = 0;                  // ADDED
+    // ...
+}
+```
+
+#### Fix 3: 2-hour resolution cutoff ✅
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours; // ADDED
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed(); // ADDED
+    }
+    // ...
+}
+```
+
+### Test Coverage ✅
+- 15 new security tests in `EmergencyRefundSecurity.t.sol`
+- 179 total tests passing
+- Full attack scenario simulation verified
+
+### Timeline (v3.6.0)
+```
+Expiry ─────────────────────────────────────────────────> Emergency Refund
+  │                                                              │
+  │  0-22h: Resolution window                                   │ 24h+
+  │  22-24h: CUTOFF - No new proposals/disputes                 │
+  │         (ensures resolution completes before refund)         │
+```
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed();
+    }
+    
+    // ... rest of function ...
+}
+
+function dispute(uint256 marketId) external {
+    Market storage market = markets[marketId];
     // ... existing checks ...
-    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ADD THIS
+    
+    // ✅ ADD: Block disputes too close to emergency refund time
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert DisputeWindowClosed();
+    }
+    
     // ... rest of function ...
 }
 ```
 
-**Option B:** Reduce pool balance in `emergencyRefund()`:
-```solidity
-function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
-    // ... calculate refund ...
-    market.poolBalance -= refund; // ADD THIS
-    position.emergencyRefunded = true;
-    // ... transfer ...
-}
-```
+### Defense in Depth Matrix
+
+| Attack Vector | Fix 1 | Fix 2 | Fix 3 | Result |
+|---------------|-------|-------|-------|--------|
+| User claims after refund | ✅ BLOCKED | - | - | Safe |
+| Pool insolvency from refunds | - | ✅ BLOCKED | - | Safe |
+| Late proposal race condition | - | ⚠️ Mitigated | ✅ BLOCKED | Safe |
+| Direct contract bypass | ✅ | ✅ | ✅ | Safe |
 
 ### Frontend Mitigation (v0.7.26) ✅
 - [x] Block proposals AND disputes in UI when <2 hours remain before emergency refund
 - [x] Show "RESOLUTION WINDOW CLOSED" with emergency refund countdown
 - [x] Contextual messaging for no-proposal vs has-proposal scenarios
-- [x] Show "PROPOSAL WINDOW CLOSED" with emergency refund countdown
-- [ ] Show warning when emergency refund available but resolution in progress (edge case)
+- [x] Added "2-Hour Safety Cutoff" section in HowToPlayPage
+
+### Deployment Checklist for v3.6.0
+
+#### ✅ Code Implementation Complete
+- [x] Implement Fix 1: Add `emergencyRefunded` check in `claim()`
+- [x] Implement Fix 2: Reduce `poolBalance` and supplies in `emergencyRefund()`
+- [x] Implement Fix 3: Add 2-hour cutoff in `proposeOutcome()` and `dispute()`
+- [x] Implement Fix 4: Add clean pool accounting in `claim()` (reduces poolBalance and supply)
+- [x] Implement Fix 5: Add `nonReentrant` to `createMarket()` for defense-in-depth
+- [x] Add new constant: `RESOLUTION_CUTOFF_BUFFER = 2 hours`
+- [x] Add new error types: `ProposalWindowClosed`, `DisputeWindowClosed`
+- [x] Write tests for all attack vectors (15 new tests in `EmergencyRefundSecurity.t.sol`)
+- [x] Update existing tests (`BondingCurveEconomics.t.sol` - renamed from PumpDump.t.sol)
+- [x] Run full test suite: **179 tests pass, 0 fail, 1 skip**
+- [x] Update AUDIT.md, README.md, CHANGELOG.md, SECURITY_ANALYSIS_v3.6.0.md
+- [x] Commit and push to `feature/contract-v3.6.0-emergency-refund-fix` branch
+
+#### ⏳ Testnet Deployment
+- [ ] **1. Deploy contract to BSC Testnet**
+  - Run: `forge script script/Deploy.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast --verify`
+  - Save new contract address: `__________________________`
+  - Verify on BscScan Testnet
+- [ ] **2. Export new ABI**
+  - Run: `forge build && cp out/PredictionMarket.sol/PredictionMarket.json ../subgraph/abis/`
+  - Copy ABI to frontend: `cp out/PredictionMarket.sol/PredictionMarket.json ../frontend/src/abi/`
+- [ ] **3. Update Subgraph for Testnet**
+  - Edit `subgraph/subgraph.yaml`: Update `address` and `startBlock` for new contract
+  - Edit `subgraph/networks.json`: Update testnet contract address
+  - Run: `graph codegen && graph build`
+  - Deploy to The Graph Studio (testnet subgraph)
+- [ ] **4. Update Frontend for Testnet**
+  - Edit `frontend/.env.testnet`: Update `VITE_CONTRACT_ADDRESS`
+  - Edit `frontend/.env.testnet`: Update `VITE_SUBGRAPH_URL` if subgraph URL changed
+  - Test all flows: create market, buy/sell, propose, dispute, claim, emergency refund
+
+#### ⏳ Mainnet Deployment (After Testnet Verification)
+- [ ] **5. Deploy contract to BSC Mainnet**
+  - Run: `forge script script/Deploy.s.sol --rpc-url $BSC_MAINNET_RPC --broadcast --verify`
+  - Save new contract address: `__________________________`
+  - Verify on BscScan
+- [ ] **6. Update Subgraph for Mainnet**
+  - Edit `subgraph/subgraph.yaml`: Update `address` and `startBlock`
+  - Edit `subgraph/networks.json`: Update mainnet contract address
+  - Run: `graph deploy --studio jnglz-mainnet`
+- [ ] **7. Update Frontend for Mainnet**
+  - Edit `frontend/.env.production`: Update `VITE_CONTRACT_ADDRESS`
+  - Edit `frontend/.env.production`: Update `VITE_SUBGRAPH_URL` if endpoint changed
+- [ ] **8. Enable Maintenance Mode** (optional, recommended for smooth transition)
+  - Set `VITE_MAINTENANCE_MODE=true` with message about upgrade
+- [ ] **9. Deploy Frontend to Production**
+  - Merge PR to main branch
+  - Vercel auto-deploys
+- [ ] **10. Disable Maintenance Mode**
+  - Set `VITE_MAINTENANCE_MODE=false`
+  - Monitor for any issues
+
+#### ⚠️ Important Notes
+- **Existing markets** on old contract will continue to work until resolved
+- **New markets** will be created on v3.6.0 contract
+- Consider running **both contracts in parallel** during transition period
+- The subgraph can index multiple contract addresses if needed
 
 ---
 

@@ -5,10 +5,146 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.5.0] - 2026-01-14
+## [3.6.0] - 2026-01-18
 
 ### NOT YET DEPLOYED ⏳
-- Pending deployment to BNB Testnet
+- Ready for deployment to BNB Testnet
+- **CRITICAL SECURITY FIX** - Must replace v3.5.0
+
+### Fixed
+
+#### 🚨 CRITICAL: Emergency Refund Double-Spend Vulnerability
+Fixed a three-part vulnerability that could drain funds from the contract.
+
+**Vulnerability Details (v3.5.0 and earlier):**
+
+| # | Problem | Impact | Fix Applied |
+|---|---------|--------|-------------|
+| 1 | **Double-Spend** | User gets emergency refund + claim (~2x payout) | Added `emergencyRefunded` check in `claim()` |
+| 2 | **Pool Insolvency** | `emergencyRefund()` didn't reduce `poolBalance` | Now reduces pool balance and zeroes shares |
+| 3 | **Race Condition** | Proposals at T=22h, refund at T=24h conflicts | Added 2-hour resolution cutoff buffer |
+| 4 | **Stale Pool Data** | `claim()` didn't reduce `poolBalance` after payout | `claim()` now reduces pool and winning supply |
+
+**Fix 1: Block claim after emergency refund**
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ...existing checks...
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // NEW
+    // ...
+}
+```
+
+**Fix 2: Reduce pool balance on emergency refund**
+```solidity
+function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
+    // ...calculate refund...
+    position.emergencyRefunded = true;
+    
+    // v3.6.0 FIX: Reduce pool balance and supplies
+    market.poolBalance -= refund;           // NEW
+    market.yesSupply -= position.yesShares; // NEW
+    market.noSupply -= position.noShares;   // NEW
+    position.yesShares = 0;                 // NEW
+    position.noShares = 0;                  // NEW
+    
+    // ...transfer...
+}
+```
+
+**Fix 3: 2-hour resolution cutoff**
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours; // NEW
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed(); // NEW
+    }
+    // ...
+}
+
+function dispute(uint256 marketId) external {
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert DisputeWindowClosed(); // NEW
+    }
+    // ...
+}
+```
+
+**Fix 4: Clean pool accounting on claim**
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ...calculate payout...
+    
+    // v3.6.0 FIX: Reduce pool balance and winning supply
+    market.poolBalance -= grossPayout;      // NEW
+    if (market.outcome) {
+        market.yesSupply -= winningShares;  // NEW
+    } else {
+        market.noSupply -= winningShares;   // NEW
+    }
+    
+    // ...transfer...
+}
+```
+
+### Added
+
+#### New Constants
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
+```
+
+#### New Errors
+```solidity
+error ProposalWindowClosed();
+error DisputeWindowClosed();
+```
+
+#### New Test Suite
+- `EmergencyRefundSecurity.t.sol` - 15 comprehensive security tests
+- Tests cover: double-spend prevention, pool insolvency, cutoff enforcement, boundary conditions, full attack simulation
+
+### Changed
+
+#### Resolution Timeline
+```
+Before (v3.5.0):
+- Resolution window: 0-24h after expiry
+- Emergency refund: 24h+ after expiry
+- Problem: Resolution at 23h could conflict with refund at 24h
+
+After (v3.6.0):
+- Resolution window: 0-22h after expiry (CUTOFF at 22h)
+- Emergency refund: 24h+ after expiry
+- Gap: 2 hours ensures resolution completes before refund available
+```
+
+#### Test File Rename
+- `PumpDump.t.sol` → `BondingCurveEconomics.t.sol` (better describes content)
+- Contract renamed from `PumpDumpTest` → `BondingCurveEconomicsTest`
+
+### Security Notes
+- **All bond/fee mechanisms verified safe** - See `SECURITY_ANALYSIS_v3.6.0.md`
+- Resolution path and Emergency refund path are now **mutually exclusive by design**
+- **Virtual liquidity / Heat levels NOT affected** - Bonding curve code unchanged
+- 179 tests passing (15 new security tests added)
+- Slither analysis: 35 findings (no critical/high issues)
+
+### Migration Notes
+- **Breaking:** Markets created after upgrade have 22h resolution window (not 24h)
+- **Frontend:** Should show "Resolution closes in X hours" warning
+- **Subgraph:** No changes needed (same events)
+- **Existing markets unaffected:** Fix applies to all markets (storage unchanged)
+
+---
+
+## [3.5.0] - 2026-01-14
+
+### ⚠️ DEPRECATED - Contains Critical Bug
+- **DO NOT USE** - Has Emergency Refund Double-Spend vulnerability
+- Upgrade to v3.6.0 immediately
 
 ### Added
 
