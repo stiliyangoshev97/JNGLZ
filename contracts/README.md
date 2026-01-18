@@ -3,15 +3,15 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-179%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-180%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.6.0-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.6.1-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.6.0 Required
+## ⚠️ CRITICAL: v3.6.1 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -23,7 +23,8 @@
 | v3.4.0 | ⚠️ DEPRECATED | Pull Pattern, griefing protection |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), sweep protection |
 | v3.5.0 | ⚠️ DEPRECATED | **Emergency Refund Double-Spend Bug** |
-| **v3.6.0** | ✅ **CURRENT** | **Emergency Refund Vulnerability FIXED** |
+| v3.6.0 | ⚠️ DEPRECATED | **Dispute Window Edge Case Bug** |
+| **v3.6.1** | ✅ **CURRENT** | **Dispute Window Edge Case FIXED** |
 
 ---
 
@@ -103,11 +104,62 @@ Expiry ────────────────────────�
 
 ---
 
+## ✅ FIXED: Dispute Window Edge Case (v3.6.1)
+
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Severity:** MEDIUM (in v3.6.0) → RESOLVED (in v3.6.1)
+
+### v3.6.0 Bug Found
+
+If someone proposes at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+### v3.6.1 Fix Applied
+
+Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+```solidity
+// v3.6.1: REMOVED cutoff check from dispute()
+function dispute(uint256 marketId) external {
+    // REMOVED: 
+    // if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+    //     revert DisputeWindowClosed();
+    // }
+    
+    // KEPT: Natural 30-min window check only
+    if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+        revert DisputeWindowExpired();
+    }
+    // ...
+}
+```
+
+### Why This is Safe
+
+The proposal cutoff at 22h already guarantees resolution completes before the 24h emergency refund:
+
+```
+Worst case: Proposal at T=21:59:59
+Dispute at T=22:29:58 (last second of 30-min window)  
+Voting ends T=23:29:58
+Finalize at T=23:29:59
+Emergency refund at T=24:00:00
+GAP: 30 minutes - SAFE!
+```
+
+### Test Coverage
+- Modified `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix
+- **180 total tests passing**
+
+---
+
 ## 🚀 Contract Status
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.6.0** | Emergency Refund Security Fix, 179 tests | ✅ **READY FOR DEPLOYMENT** |
+| **v3.6.1** | Dispute Window Edge Case Fix, 180 tests | ✅ **READY FOR DEPLOYMENT** |
+| v3.6.0 | Emergency Refund Security Fix | ⚠️ DEPRECATED (edge case bug) |
 | v3.5.0 | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⚠️ DEPRECATED (bug) |
 
 ### Current Deployment (v3.5.0 - BNB Testnet - DEPRECATED)
@@ -115,7 +167,7 @@ Expiry ────────────────────────�
 - **Network:** BNB Testnet (Chain ID: 97)
 - **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
 
-> **v3.6.0 Features:** All v3.5.0 features + Emergency Refund security fix, 2-hour resolution cutoff, 15 security tests, 179 total tests passing
+> **v3.6.1 Features:** All v3.6.0 features + Dispute window edge case fix, 180 total tests passing
 
 ---
 

@@ -1,8 +1,58 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.0 READY (179 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
+> **Status:** Smart Contracts ✅ v3.6.1 READY (180 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## ✅ FIXED: Dispute Window Edge Case (v3.6.1)
+
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Severity:** MEDIUM (in v3.6.0) → **RESOLVED** (in v3.6.1)
+
+### Vulnerability Summary (FIXED)
+
+| # | Problem | Status | Fix Applied |
+|---|---------|--------|-------------|
+| 1 | **Dispute Blocked by Cutoff** | ✅ FIXED | Removed cutoff check from `dispute()` |
+
+**The Bug:** If someone proposed at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+**The Fix:** Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+### Implementation Details
+
+```solidity
+// v3.6.1: REMOVED cutoff check from dispute()
+function dispute(uint256 marketId) external {
+    // REMOVED: 
+    // if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+    //     revert DisputeWindowClosed();
+    // }
+    
+    // KEPT: Natural 30-min window check only
+    if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+        revert DisputeWindowExpired();
+    }
+}
+```
+
+### Why This is Safe
+```
+Worst case: Proposal at T=21:59:59
+Dispute at T=22:29:58 (last second of 30-min window)  
+Voting ends T=23:29:58
+Finalize at T=23:29:59
+Emergency refund at T=24:00:00
+GAP: 30 minutes - SAFE!
+```
+
+### Test Coverage ✅
+- Modified `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix
+- 180 total tests passing
 
 ---
 

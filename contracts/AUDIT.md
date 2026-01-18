@@ -1,7 +1,7 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.6.0  
+**Version:** v3.6.1  
 **Audit Date:** January 18, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
@@ -52,7 +52,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 | Metric | Value |
 |--------|-------|
 | Total Lines of Code | ~2,070 |
-| Total Tests | **179** |
+| Total Tests | **180** |
 | Test Suites | **11** |
 | Slither Findings | 35 (see breakdown below) |
 | Critical Issues | 0 |
@@ -60,6 +60,60 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
+
+---
+
+## Version 3.6.1 Changes (DISPUTE WINDOW EDGE CASE FIX)
+
+### Dispute Window Edge Case Vulnerability Fix
+
+**Severity:** MEDIUM  
+**Discovered:** January 18, 2026  
+**Fixed:** January 18, 2026  
+**Tests Added:** 1 new test, 1 test modified in `EmergencyRefundSecurity.t.sol`
+
+#### The Bug (v3.6.0)
+
+If someone proposed at T=21:59 (1 minute before the 2-hour cutoff), the cutoff would kick in at T=22:00, blocking ALL disputes with `DisputeWindowClosed` error. This allowed a malicious proposer to propose a WRONG outcome knowing nobody could dispute it.
+
+#### The Fix
+
+Removed the cutoff check from `dispute()` function. Disputes are now ONLY blocked by the natural 30-minute dispute window expiry (`DisputeWindowExpired`), not by the 2-hour cutoff.
+
+**Code Removed from `dispute()`:**
+```solidity
+// REMOVED in v3.6.1:
+// uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+// if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+//     revert DisputeWindowClosed();
+// }
+```
+
+**Code Kept (natural 30-min window):**
+```solidity
+if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
+    revert DisputeWindowExpired();
+}
+```
+
+#### Why This is Safe
+
+The proposal cutoff at 22h already guarantees resolution completes before the 24h emergency refund:
+
+```
+Worst case timeline:
+- Proposal at T=21:59:59 (just before cutoff)
+- Dispute at T=22:29:58 (last second of 30-min window)  
+- Voting ends T=23:29:58
+- Finalize at T=23:29:59
+- Emergency refund at T=24:00:00
+- GAP: 30 minutes - SAFE!
+```
+
+#### Test Changes
+- Renamed `test_Dispute_RevertInCutoffWindow` → `test_Dispute_RevertWhenDisputeWindowExpired`
+- Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` to verify the fix
+- **180 tests now passing**
 
 ---
 
@@ -136,24 +190,24 @@ error ProposalWindowClosed();
 error DisputeWindowClosed();
 ```
 
-#### Timeline Diagram (v3.6.0)
+#### Timeline Diagram (v3.6.1)
 ```
 Expiry ─────────────────────────────────────────────────> Emergency Refund
   │                                                              │
   │  0-22h: Resolution window                                   │ 24h+
   │  ├─ Propose (10min creator priority, then anyone)           │
-  │  ├─ Dispute window (30min after proposal)                   │
+  │  ├─ Dispute window (30min after proposal) - NO CUTOFF!      │
   │  └─ Voting window (1h after dispute)                        │
   │                                                              │
-  │  22-24h: CUTOFF - No new proposals/disputes (NEW!)          │
-  │                                                              │
+  │  22-24h: CUTOFF - No new proposals only                     │
+  │         (disputes still allowed within their 30-min window)  │
 ```
 
 **Maximum resolution time:** 22h + 30min + 1h = 23.5 hours  
 **Emergency refund available:** 24 hours  
 **Gap:** 30 minutes (ensures resolution always completes before refund)
 
-#### Security Test Coverage (13 new tests)
+#### Security Test Coverage (v3.6.0: 13 tests, v3.6.1: +1 test = 14 tests)
 - `test_EmergencyRefund_SetsFlag` - Flag set correctly
 - `test_Claim_RevertAfterEmergencyRefund` - Double-spend blocked
 - `test_DoubleSpend_Prevention` - Full attack scenario blocked
@@ -161,7 +215,8 @@ Expiry ────────────────────────�
 - `test_EmergencyRefund_ZerosUserShares` - Shares zeroed after refund
 - `test_ProposeOutcome_RevertInCutoffWindow` - Proposals blocked in cutoff
 - `test_ProposeOutcome_WorksBeforeCutoff` - Normal proposals still work
-- `test_Dispute_RevertInCutoffWindow` - Disputes blocked in cutoff
+- `test_Dispute_RevertWhenDisputeWindowExpired` - Natural 30-min window check (renamed in v3.6.1)
+- `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - **NEW v3.6.1** - Disputes allowed after cutoff
 - `test_Dispute_WorksBeforeCutoff` - Normal disputes still work
 - `test_ResolutionCutoff_BoundaryConditions` - Edge cases at 22h
 - `test_FullAttackScenario_AllFixesWork` - Complete attack simulation

@@ -2,6 +2,25 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.27] - 2026-01-18
+
+### Fixed
+
+#### Contract v3.6.1 Compatibility - Dispute Window Edge Case Fix
+- **Removed** cutoff check from `canDispute` logic - disputes are now allowed even after 2h cutoff
+- Updated ResolutionPanel to match contract v3.6.1 behavior
+- Disputes are blocked ONLY by the natural 30-minute dispute window, not by the 2-hour cutoff
+- **This matches the contract fix** that prevents malicious proposers from gaming the system
+
+### Changed
+
+#### Resolution Cutoff Period UI
+- Simplified "Resolution Cutoff Period" message - only shown when there's NO proposal
+- Removed confusing message about disputes being blocked (they aren't anymore)
+- Renamed from "RESOLUTION WINDOW CLOSED" to "PROPOSAL WINDOW CLOSED"
+
+---
+
 ## [0.7.26] - 2026-01-18
 
 ### Added
