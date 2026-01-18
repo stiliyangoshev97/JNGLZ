@@ -6,22 +6,22 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 | Metric | Value |
 |--------|-------|
-| Status | ✅ Deployed (v3.4.1) |
+| Status | ✅ Deployed (v3.6.1) |
 | Network | BNB Testnet (Chapel) |
-| Contract | `0x4e20Df1772D972f10E9604e7e9C775B1ae897464` |
-| Start Block | 83514593 |
+| Contract | `0x96662c54622304804065210F16483C5f2F3b6a75` |
+| Start Block | 85135831 |
 | Entities | 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep) |
 
 ## 🔗 GraphQL Endpoint
 
 **Production:**
 ```
-https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1
 ```
 
 **Studio:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1
 ```
 
 **Studio Dashboard:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet

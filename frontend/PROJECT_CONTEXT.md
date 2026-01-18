@@ -26,16 +26,15 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.5.0) | `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8` |
+| PredictionMarket (v3.6.1) | `0x96662c54622304804065210F16483C5f2F3b6a75` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8 |
+| BscScan | https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75 |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Gateway URL (Published) | `https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn` |
-| Studio URL (Dev) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2` |
-| Version | v3.4.2 (P/L tracking for leaderboard) |
+| Studio URL (v3.6.1) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1` |
+| Version | v3.6.1 (Contract v3.6.1 - Emergency Refund Fix + Dispute Window Fix) |
 | Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)

@@ -1,12 +1,18 @@
 ========================================
-JunkieFun Deployment
+JunkieFun Deployment History
 ========================================
 
-Network: BNB Testnet (Chain ID: 97)
-Deployed at block: 84281810
-Timestamp: 1768347911
+================================================
+v3.6.1 - CURRENT ACTIVE DEPLOYMENT
+Deployed: January 18, 2026
+================================================
 
-PredictionMarket: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+Network: BNB Testnet (Chain ID: 97)
+Block: 85135831
+Transaction: 0x31e69508b1c38a43c033a32eb65a436c19eded7c420ffedecc33e72e5578c16d
+
+PredictionMarket: 0x96662c54622304804065210F16483C5f2F3b6a75
+BscScan: https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
 
 MultiSig Signers:
   Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
@@ -15,4 +21,32 @@ MultiSig Signers:
 Treasury: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
 
 Resolution: Street Consensus
+Status: VERIFIED ✅
+
+Changes in v3.6.1:
+- Fixed Dispute Window Edge Case (v3.6.1)
+- Fixed Emergency Refund Double-Spend Vulnerability (v3.6.0)
+- Added 2-hour resolution cutoff buffer
+- Pool accounting fixes in claim() and emergencyRefund()
+- 180 tests passing
+
+========================================
+DEPRECATED DEPLOYMENTS (DO NOT USE)
+========================================
+
+------------------------------------------------
+v3.5.0 - DEPRECATED (Emergency Refund Bug)
+Deployed: January 14, 2026
+------------------------------------------------
+Network: BNB Testnet (Chain ID: 97)
+Block: 84281825
+PredictionMarket: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+⚠️ Contains Emergency Refund Double-Spend vulnerability
+
+------------------------------------------------
+v3.4.1 - DEPRECATED 
+------------------------------------------------
+PredictionMarket: 0x4e20Df1772D972f10E9604e7e9C775B1ae897464
+⚠️ Superseded by v3.5.0
+
 ========================================

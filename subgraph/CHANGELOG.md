@@ -2,6 +2,26 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.6.1] - 2026-01-18
+
+### Changed - Contract v3.6.1 Integration
+- **Contract Address**: `0x96662c54622304804065210F16483C5f2F3b6a75` (v3.6.1)
+- **Start Block**: `85135831` (v3.6.1 deployment block)
+- **ABI**: Updated with v3.6.1 ABI (Emergency Refund Security Fix + Dispute Window Fix)
+
+### Contract Changes Indexed
+- Emergency Refund Double-Spend vulnerability fixed
+- Dispute Window Edge Case fixed (disputes allowed within 30-min window regardless of cutoff)
+- Pool accounting fixes in `claim()` and `emergencyRefund()`
+- 2-hour resolution cutoff buffer for proposals
+
+### Deployed
+- **Version**: `3.6.1`
+- **Studio URL**: `https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet`
+- **Queries Endpoint**: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1`
+
+---
+
 ## [3.4.2] - 2026-01-14
 
 ### Added - P/L Tracking for Leaderboard
