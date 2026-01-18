@@ -2,6 +2,26 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.28] - 2026-01-18
+
+### Fixed
+
+#### Reconnecting State Stability
+- **Fixed** false "RECONNECTING..." message when returning to market page after inactivity
+- Added 10-second grace period before showing reconnecting state (prevents flicker on transient errors)
+- Store last good market data in ref to continue displaying UI during brief disconnections
+- Use cached market data while retrying connection instead of showing loading overlay
+- Added subtle "⟳ Syncing..." badge when using stale data (instead of blocking the UI)
+- Improved user experience when tab is backgrounded for extended periods
+
+### Technical Details
+- `lastGoodMarketRef` stores the most recent successful market fetch
+- `displayMarket` falls back to cached data when fresh data is unavailable
+- `disconnectedTime` tracks how long we've been without fresh data
+- Only show full "RECONNECTING" overlay after 10+ seconds of no data AND no cached fallback
+
+---
+
 ## [0.7.27] - 2026-01-18
 
 ### Fixed
