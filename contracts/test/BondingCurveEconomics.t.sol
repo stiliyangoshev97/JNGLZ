@@ -4,11 +4,11 @@ pragma solidity 0.8.24;
 import "./helpers/TestHelper.sol";
 
 /**
- * @title PumpDump Economics Test
- * @notice Tests to verify that early buyers profit when later buyers enter
- * @dev This is the core "Pump.fun" mechanic that makes the platform viral
+ * @title Bonding Curve Economics Test
+ * @notice Tests for bonding curve pricing, early/late buyer dynamics, and market economics
+ * @dev Covers: buy/sell mechanics, slippage, fees, emergency refunds, proposer rewards
  */
-contract PumpDumpTest is TestHelper {
+contract BondingCurveEconomicsTest is TestHelper {
     // Uses alice, bob, charlie, marketCreator from TestHelper
 
     // Constants for fee calculations
