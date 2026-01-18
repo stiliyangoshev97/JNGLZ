@@ -14,6 +14,20 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 - Added subtle "⟳ Syncing..." badge when using stale data (instead of blocking the UI)
 - Improved user experience when tab is backgrounded for extended periods
 
+#### CI/CD Pipeline Fix
+- **Fixed** GitHub Actions CI workflow failing with YAML parse error
+- Root cause: `0x...` contract addresses were interpreted as numbers by YAML parser
+- Solution: Quoted all environment variable values as strings
+- Updated CI contract address to v3.6.1: `0x96662c54622304804065210F16483C5f2F3b6a75`
+- Updated chain ID from `56` (mainnet) to `97` (testnet) for CI builds
+
+### Changed
+
+#### Improved .gitignore Files
+- Enhanced `frontend/.gitignore` with comprehensive patterns
+- Enhanced `subgraph/.gitignore` with editor and log patterns
+- Better organization with section headers
+
 ### Technical Details
 - `lastGoodMarketRef` stores the most recent successful market fetch
 - `displayMarket` falls back to cached data when fresh data is unavailable

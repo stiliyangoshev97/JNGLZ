@@ -51,12 +51,12 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_WALLETCONNECT_PROJECT_ID: test-project-id
-          VITE_CHAIN_ID: 56
-          VITE_ENABLE_TESTNET: false
-          VITE_CONTRACT_ADDRESS: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
-          VITE_SUBGRAPH_URL: https://gateway.thegraph.com/api/subgraphs/id/test
-          VITE_GRAPH_API_KEY: test-api-key
+          VITE_WALLETCONNECT_PROJECT_ID: "test-project-id"
+          VITE_CHAIN_ID: "97"
+          VITE_ENABLE_TESTNET: "true"
+          VITE_CONTRACT_ADDRESS: "0x96662c54622304804065210F16483C5f2F3b6a75"
+          VITE_SUBGRAPH_URL: "https://gateway.thegraph.com/api/subgraphs/id/test"
+          VITE_GRAPH_API_KEY: "test-api-key"
 
   # ============================================================================
   # Subgraph Build & Codegen

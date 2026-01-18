@@ -1,7 +1,7 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.1 READY (180 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.27  
+> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.6.1 | Frontend ✅ v0.7.28  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
