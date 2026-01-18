@@ -730,8 +730,9 @@ export function PortfolioPage() {
               </div>
             </div>
 
-            {/* Stats Grid - 2x2 on mobile, row on desktop */}
-            <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4">
+            {/* Stats Grid - All stats in one row on desktop, 2-col grid on mobile */}
+            <div className="grid grid-cols-2 md:flex md:items-center md:flex-wrap gap-3 md:gap-4">
+              {/* Trading Stats */}
               <StatBox label="POSITIONS" value={stats.totalPositions.toString()} />
               <StatBox 
                 label="INVESTED" 
@@ -759,57 +760,40 @@ export function PortfolioPage() {
                   : undefined
                 }
               />
-              {resolutionStats.hasRefunds && (
-                <StatBox 
-                  label="REFUNDED" 
-                  value={`${resolutionStats.totalRefunded.toFixed(4)} BNB`}
-                  color="neutral"
-                  subtext="Capital recovery"
-                />
-              )}
+              <StatBox 
+                label="REFUNDED" 
+                value={resolutionStats.totalRefunded > 0 ? `${resolutionStats.totalRefunded.toFixed(4)} BNB` : '—'}
+                color={resolutionStats.totalRefunded > 0 ? 'neutral' : undefined}
+              />
+              
+              {/* Resolution Earnings */}
+              <StatBox 
+                label="PROPOSER" 
+                value={earnings.proposer > 0 ? `+${earnings.proposer.toFixed(4)} BNB` : '—'}
+                color={earnings.proposer > 0 ? 'yes' : undefined}
+                subtext="0.5% pool rewards"
+              />
+              <StatBox 
+                label="DISPUTES" 
+                value={earnings.disputes > 0 ? `+${earnings.disputes.toFixed(4)} BNB` : '—'}
+                color={earnings.disputes > 0 ? 'yes' : undefined}
+                subtext="Bond winnings"
+              />
+              <StatBox 
+                label="JURY" 
+                value={earnings.jury > 0 ? `+${earnings.jury.toFixed(4)} BNB` : '—'}
+                color={earnings.jury > 0 ? 'yes' : undefined}
+                subtext="Voting rewards"
+              />
+              
+              {/* Creator Fees (separate) */}
+              <StatBox 
+                label="CREATOR" 
+                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(4)} BNB` : '—'}
+                color={earnings.creator > 0 ? 'cyber' : undefined}
+                subtext="0.5% of trades"
+              />
             </div>
-
-            {/* Resolution Earnings Row (v3.6.1) - PROPOSER | DISPUTES | JURY | TOTAL */}
-            {earnings.hasEarnings && (
-              <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4 pt-2 border-t border-dark-700">
-                <StatBox 
-                  label="PROPOSER" 
-                  value={earnings.proposer > 0 ? `+${earnings.proposer.toFixed(4)} BNB` : '—'}
-                  color={earnings.proposer > 0 ? 'yes' : undefined}
-                  subtext="0.5% pool rewards"
-                />
-                <StatBox 
-                  label="DISPUTES" 
-                  value={earnings.disputes > 0 ? `+${earnings.disputes.toFixed(4)} BNB` : '—'}
-                  color={earnings.disputes > 0 ? 'yes' : undefined}
-                  subtext="Bond winnings"
-                />
-                <StatBox 
-                  label="JURY" 
-                  value={earnings.jury > 0 ? `+${earnings.jury.toFixed(4)} BNB` : '—'}
-                  color={earnings.jury > 0 ? 'yes' : undefined}
-                  subtext="Voting rewards"
-                />
-                <StatBox 
-                  label="TOTAL EARNINGS" 
-                  value={`+${earnings.totalResolution.toFixed(4)} BNB`}
-                  color="yes"
-                  subtext="Resolution activity"
-                />
-              </div>
-            )}
-
-            {/* Creator Fees Row (separate from resolution earnings) */}
-            {earnings.creator > 0 && (
-              <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4 pt-2 border-t border-dark-700">
-                <StatBox 
-                  label="CREATOR FEES" 
-                  value={`+${earnings.creator.toFixed(4)} BNB`}
-                  color="cyber"
-                  subtext="0.5% of trades on your markets"
-                />
-              </div>
-            )}
           </div>
         </div>
       </section>
