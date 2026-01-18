@@ -10,16 +10,17 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.6.1** | ✅ **READY** | Dispute Window Edge Case Fix |
+| **v3.6.1** | ✅ **DEPLOYED** | Dispute Window Edge Case Fix |
 | v3.6.0 | ⚠️ DEPRECATED | Emergency Refund Security Fix - **HAS EDGE CASE BUG** |
 | v3.5.0 | ⚠️ DEPRECATED | 5 Heat Levels (10x liquidity) - **HAS CRITICAL BUG** |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Current Deployment (v3.5.0 - DEPRECATED)
-- **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
+### Current Deployment (v3.6.1 - ACTIVE)
+- **Address:** `0x96662c54622304804065210F16483C5f2F3b6a75`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
-- **Action Required:** Deploy v3.6.1
+- **Block:** 85135831
+- **BscScan:** https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
+- **Verified:** ✅ Yes
 
 ---
 

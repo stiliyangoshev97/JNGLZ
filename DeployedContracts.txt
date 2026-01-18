@@ -1,24 +1,36 @@
 # ============================================
 # JNGLZ.FUN - Deployed Contracts
 # ============================================
-# Last Updated: January 14, 2026
+# Last Updated: January 18, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v3.5.0 - Heat Level Rebalance) ✅ LIVE
+### PredictionMarket Contract (v3.6.1 - Security Fix) ✅ LIVE
+- **Address**: 0x96662c54622304804065210F16483C5f2F3b6a75
+- **BscScan**: https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
+- **Verified**: ✅ Yes
+- **Deployed**: January 18, 2026
+- **Block**: 85135831
+- **Transaction**: 0x31e69508b1c38a43c033a32eb65a436c19eded7c420ffedecc33e72e5578c16d
+- **Features**: 
+  - ✅ Dispute Window Edge Case Fix (v3.6.1)
+  - ✅ Emergency Refund Double-Spend Fix (v3.6.0)
+  - ✅ 2-hour Resolution Cutoff Buffer
+  - ✅ Pool Accounting Fixes in claim() and emergencyRefund()
+  - 5 Heat Levels (CRACK, HIGH, PRO, APEX, CORE)
+  - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
+  - Proposer Rewards (0.5%), Street Consensus Resolution
+- **Tests**: 180 passing (1 skipped)
+
+### PredictionMarket Contract (v3.5.0 - Heat Level Rebalance) ⚠️ DEPRECATED - SECURITY BUG
 - **Address**: 0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
 - **BscScan**: https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
 - **Verified**: ✅ Yes
 - **Deployed**: January 14, 2026
 - **Block**: 84281825
-- **Features**: 
-  - 5 Heat Levels (CRACK, HIGH, PRO, APEX, CORE)
-  - 10x Virtual Liquidity Increase for better price stability
-  - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
-  - Proposer Rewards (0.5%), Street Consensus Resolution
-- **Tests**: 165 passing (164 + 1 skipped)
+- **Status**: ⚠️ DEPRECATED - Contains Emergency Refund Double-Spend vulnerability
 
 ### PredictionMarket Contract (v3.4.1 - Pull Pattern + ReplaceSigner) ⚠️ DEPRECATED
 - **Address**: 0x4e20Df1772D972f10E9604e7e9C775B1ae897464
@@ -58,10 +70,10 @@
 
 ### Subgraph (The Graph)
 - **Subgraph Name**: junkiefun-bnb-testnet
-- **Version**: v3.4.1 (NEEDS UPDATE)
-- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.3.1
+- **Version**: v3.6.1
+- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.6.1
 - **Studio URL**: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
-- **Status**: ⚠️ Needs update to v3.4.1 contract address
+- **Status**: ✅ Updated to v3.6.1 contract address
 
 ### MultiSig Signers (3-of-3)
 - Signer 1: 0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2
