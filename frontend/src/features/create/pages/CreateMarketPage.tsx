@@ -258,29 +258,8 @@ export function CreateMarketPage() {
     }
   };
 
-  // Not connected state
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md flex flex-col items-center">
-          <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
-          <p className="text-text-secondary mb-6">
-            Connect your wallet to create a prediction market.
-          </p>
-          <ConnectButton.Custom>
-            {({ openConnectModal }) => (
-              <Button variant="cyber" size="lg" onClick={openConnectModal}>
-                CONNECT WALLET
-              </Button>
-            )}
-          </ConnectButton.Custom>
-        </div>
-      </div>
-    );
-  }
-
-  // Wrong network state
-  if (isWrongNetwork) {
+  // Wrong network state (only show when connected)
+  if (isConnected && isWrongNetwork) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -696,31 +675,48 @@ export function CreateMarketPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              variant="cyber"
-              size="lg"
-              disabled={isPending || isConfirming || !hasEnoughBalance}
-              className="w-full"
-            >
-              {isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner size="sm" variant="cyber" />
-                  CONFIRM IN WALLET...
-                </span>
-              ) : isConfirming ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner size="sm" variant="cyber" />
-                  CREATING...
-                </span>
-              ) : !hasEnoughBalance ? (
-                'INSUFFICIENT BALANCE'
-              ) : wantFirstTrade ? (
-                'CREATE MARKET & TRADE'
-              ) : (
-                'CREATE MARKET (FREE)'
-              )}
-            </Button>
+            {/* Connect Wallet button when not connected */}
+            {!isConnected ? (
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => (
+                  <Button
+                    type="button"
+                    variant="cyber"
+                    size="lg"
+                    onClick={openConnectModal}
+                    className="w-full"
+                  >
+                    CONNECT WALLET TO CREATE
+                  </Button>
+                )}
+              </ConnectButton.Custom>
+            ) : (
+              <Button
+                type="submit"
+                variant="cyber"
+                size="lg"
+                disabled={isPending || isConfirming || !hasEnoughBalance}
+                className="w-full"
+              >
+                {isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner size="sm" variant="cyber" />
+                    CONFIRM IN WALLET...
+                  </span>
+                ) : isConfirming ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner size="sm" variant="cyber" />
+                    CREATING...
+                  </span>
+                ) : !hasEnoughBalance ? (
+                  'INSUFFICIENT BALANCE'
+                ) : wantFirstTrade ? (
+                  'CREATE MARKET & TRADE'
+                ) : (
+                  'CREATE MARKET (FREE)'
+                )}
+              </Button>
+            )}
           </Card>
         </form>
       </div>

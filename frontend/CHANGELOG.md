@@ -2,6 +2,40 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.30] - 2026-01-19
+
+### Added - Explore Before Connect UX
+
+#### Create Market Page
+- **No longer requires wallet connection** to view the page
+- Full form is now visible and interactive without connecting
+- All fields (question, duration, heat level, image, etc.) can be explored
+- Submit button shows "CONNECT WALLET TO CREATE" when not connected
+- Clicking opens wallet connection modal, then user can proceed
+- Users can understand the full market creation flow before committing
+
+#### Portfolio Page
+- **No longer requires wallet connection** to view the page
+- Full page structure visible: stats grid, tabs (MY POSITIONS / MY MARKETS)
+- Stats show "—" placeholder values when not connected
+- Prominent banner at top: "Connect your wallet to view your positions and earnings"
+- Empty state shows connect button with helpful messaging
+- Users can see the 8 earnings categories (POSITIONS, INVESTED, P/L, REFUNDED, PROPOSER, DISPUTES, JURY, CREATOR)
+
+#### UX Philosophy
+- "Feel the app" before connecting - reduces friction for new users
+- Transparent about what features exist before wallet commitment
+- Progressive disclosure: explore → connect → use
+
+### Technical Changes
+- Removed early `!isConnected` return from both pages
+- Added conditional rendering for wallet-dependent UI elements
+- Skip GraphQL queries when no wallet connected (no wasted requests)
+- `EmptyState` component now accepts `isConnected` prop for dynamic messaging
+- Added `ConnectButton.Custom` in submit areas for seamless connection flow
+
+---
+
 ## [0.7.29] - 2026-01-18
 
 ### Added - Portfolio Earnings Display

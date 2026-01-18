@@ -692,29 +692,33 @@ export function PortfolioPage() {
   // Calculate portfolio stats
   const stats = calculatePortfolioStats(positions, categorizedPositions);
 
-  // Not connected state - AFTER all hooks
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md flex flex-col items-center">
-          <h1 className="text-2xl font-bold mb-4">CONNECT WALLET</h1>
-          <p className="text-text-secondary mb-6">
-            Connect your wallet to view your positions and trading history.
-          </p>
-          <ConnectButton.Custom>
-            {({ openConnectModal }) => (
-              <Button variant="cyber" size="lg" onClick={openConnectModal}>
-                CONNECT WALLET
-              </Button>
-            )}
-          </ConnectButton.Custom>
-        </div>
-      </div>
-    );
-  }
+  // Main render - show layout for both connected and disconnected states
 
   return (
     <div className="min-h-screen">
+      {/* Connect Wallet Banner - Show when not connected */}
+      {!isConnected && (
+        <section className="bg-cyber/10 border-b border-cyber/30 py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-cyber font-bold">CONNECT YOUR WALLET</p>
+                <p className="text-sm text-text-secondary">
+                  View your positions, earnings, and trading history.
+                </p>
+              </div>
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => (
+                  <Button variant="cyber" size="sm" onClick={openConnectModal}>
+                    CONNECT WALLET
+                  </Button>
+                )}
+              </ConnectButton.Custom>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Header */}
       <section className="border-b border-dark-600 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
@@ -725,27 +729,29 @@ export function PortfolioPage() {
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
                 PORT<span className="text-cyber">FOLIO</span>
               </h1>
-              <div className="mt-2">
-                <AddressDisplay address={address!} iconSize={24} />
-              </div>
+              {isConnected && address && (
+                <div className="mt-2">
+                  <AddressDisplay address={address} iconSize={24} />
+                </div>
+              )}
             </div>
 
             {/* Stats Grid - All stats in one row on desktop, 2-col grid on mobile */}
             <div className="grid grid-cols-2 md:flex md:items-center md:flex-wrap gap-3 md:gap-4">
               {/* Trading Stats */}
-              <StatBox label="POSITIONS" value={stats.totalPositions.toString()} />
+              <StatBox label="POSITIONS" value={isConnected ? stats.totalPositions.toString() : '—'} />
               <StatBox 
                 label="INVESTED" 
-                value={`${stats.totalInvested.toFixed(2)} BNB`}
+                value={isConnected ? `${stats.totalInvested.toFixed(2)} BNB` : '—'}
               />
               <StatBox 
                 label="TOTAL P/L" 
-                value={totalPnl.hasActivity 
+                value={isConnected && totalPnl.hasActivity 
                   ? `${totalPnl.combined >= 0 ? '+' : ''}${totalPnl.combined.toFixed(4)} BNB`
                   : '—'
                 }
-                color={totalPnl.hasActivity ? (totalPnl.combined >= 0 ? 'yes' : 'no') : undefined}
-                subtextElement={totalPnl.hasActivity 
+                color={isConnected && totalPnl.hasActivity ? (totalPnl.combined >= 0 ? 'yes' : 'no') : undefined}
+                subtextElement={isConnected && totalPnl.hasActivity 
                   ? (
                     <span className="text-[10px] md:text-xs">
                       <span className={tradingPnl.realizedPnlBNB >= 0 ? 'text-yes' : 'text-no'}>
@@ -798,8 +804,8 @@ export function PortfolioPage() {
         </div>
       </section>
 
-      {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) */}
-      {hasPendingWithdrawals && (
+      {/* Pending Withdrawals Banner (Pull Pattern v3.4.0) - Only when connected */}
+      {isConnected && hasPendingWithdrawals && (
         <section className="bg-dark-700/50 border-b border-dark-600 py-4">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1272,9 +1278,9 @@ export function PortfolioPage() {
             </div>
           ) : error ? (
             <ErrorState message={error.message} />
-          ) : sortedPositions.length === 0 ? (
-            filterBy === 'all' ? (
-              <EmptyState />
+          ) : !isConnected || sortedPositions.length === 0 ? (
+            filterBy === 'all' || !isConnected ? (
+              <EmptyState isConnected={isConnected} />
             ) : (
               <div className="text-center py-16">
                 <p className="text-xl font-bold text-white mb-2">
@@ -1347,7 +1353,21 @@ export function PortfolioPage() {
           ) : (
             /* My Markets View */
             <div>
-              {isInitialMarketsLoading ? (
+              {!isConnected ? (
+                <div className="text-center py-16">
+                  <p className="text-xl font-bold text-white mb-2">CONNECT TO VIEW YOUR MARKETS</p>
+                  <p className="text-text-secondary mb-6">
+                    Connect your wallet to see markets you've created
+                  </p>
+                  <ConnectButton.Custom>
+                    {({ openConnectModal }) => (
+                      <Button variant="cyber" onClick={openConnectModal}>
+                        CONNECT WALLET
+                      </Button>
+                    )}
+                  </ConnectButton.Custom>
+                </div>
+              ) : isInitialMarketsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <PositionCardSkeleton key={i} />
@@ -1484,7 +1504,25 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ isConnected }: { isConnected: boolean }) {
+  if (!isConnected) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-xl font-bold text-white mb-2">CONNECT TO VIEW PORTFOLIO</p>
+        <p className="text-text-secondary mb-6">
+          Connect your wallet to see your positions and earnings
+        </p>
+        <ConnectButton.Custom>
+          {({ openConnectModal }) => (
+            <Button variant="cyber" onClick={openConnectModal}>
+              CONNECT WALLET
+            </Button>
+          )}
+        </ConnectButton.Custom>
+      </div>
+    );
+  }
+  
   return (
     <div className="text-center py-16">
       <p className="text-xl font-bold text-white mb-2">NO POSITIONS YET</p>
