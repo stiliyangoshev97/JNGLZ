@@ -305,6 +305,15 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 | Stale Pool Data | v3.6.0 | ✅ FIXED |
 | Dispute Window Edge Case | v3.6.1 | ✅ FIXED |
 
+### Vulnerabilities Identified (Pending Fix) 🔴
+| Bug | Target Version | Status |
+|-----|----------------|--------|
+| One-Sided Market Proposals | v3.6.2 | 🔴 PENDING |
+| Emergency Refund Bypass | v3.6.2 | 🔴 PENDING |
+| Stale Proposer State | v3.6.2 | 🔴 PENDING |
+
+See README.md "PENDING: Bugs Identified for v3.6.2" section for full details.
+
 ### Security Verified ✅
 | Component | Status |
 |-----------|--------|
@@ -319,6 +328,7 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 24h+:   Emergency refund available (only if no resolution occurred)
 ```
 
-**Resolution and Emergency Refund paths are now mutually exclusive by design.**
+**⚠️ Note:** Resolution and Emergency Refund paths are NOT fully mutually exclusive in v3.6.1. 
+The v3.6.2 fixes will ensure they are truly mutually exclusive.
 
 **All 180 tests passing.**

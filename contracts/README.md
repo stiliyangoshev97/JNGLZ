@@ -154,6 +154,188 @@ GAP: 30 minutes - SAFE!
 
 ---
 
+## 🐛 PENDING: Bugs Identified for v3.6.2
+
+**Discovered:** January 19, 2026  
+**Status:** 🔴 IDENTIFIED - Fix pending  
+**Target Version:** v3.6.2
+
+### Bug Summary
+
+| # | Bug Name | Severity | Description |
+|---|----------|----------|-------------|
+| 1 | **One-Sided Market Proposals** | 🟠 HIGH | Can propose on markets where one side has 0 holders |
+| 2 | **Emergency Refund Bypass** | 🟠 HIGH | Losers can avoid resolution by not finalizing, then taking emergency refund |
+| 3 | **Stale Proposer State** | 🟡 MEDIUM | Failed finalization doesn't clear `proposer`/`disputer`, blocking emergency refund |
+
+---
+
+### Bug 1: One-Sided Market Proposals
+
+**Problem:** `proposeOutcome()` only checks if BOTH sides are empty, not if ONE side is empty.
+
+```solidity
+// Current check (v3.6.1):
+if (market.yesSupply == 0 && market.noSupply == 0) {
+    revert NoTradesToResolve();  // Only blocks if BOTH are zero
+}
+```
+
+**Attack Scenario:**
+```
+Market State: 100 YES holders, 0 NO holders (one-sided)
+
+1. Attacker proposes NO outcome (the empty side)
+2. Proposal accepted (bug: only checks if both zero)
+3. finalizeMarket() called
+4. winningSupply = noSupply = 0 → SAFETY CHECK triggers
+5. Bond returned, market not resolved
+6. Users must wait 24h for emergency refund (unnecessary delay)
+
+Alternative attack:
+1. Attacker proposes YES outcome (the side with holders)
+2. Market resolves with YES winning
+3. Everyone "wins" but just gets their own money back (minus fees)
+4. Pointless resolution - should have been emergency refund
+```
+
+**Fix:** Block proposals on one-sided markets entirely.
+```solidity
+// v3.6.2 Fix:
+if (market.yesSupply == 0 || market.noSupply == 0) {
+    revert OneSidedMarket();  // Block if EITHER side is empty
+}
+```
+
+---
+
+### Bug 2: Emergency Refund Bypass (Finalization Avoidance)
+
+**Problem:** `emergencyRefund()` only checks `!market.resolved`, not whether a valid proposal exists.
+
+```solidity
+// Current check (v3.6.1):
+function emergencyRefund(uint256 marketId) external {
+    if (market.resolved) revert MarketAlreadyResolved();
+    // ❌ Does NOT check if proposal exists!
+}
+```
+
+**Attack Scenario:**
+```
+T=0h      Market expires
+T=10h     Alice (holding losing side) proposes correct outcome
+T=10.5h   Dispute window ends, no dispute
+          Market is READY to finalize, but nobody calls it...
+
+T=24h     Emergency refund becomes available
+          - market.resolved = false ✓
+          - 24 hours passed ✓
+
+T=24h+    Bob (also losing side) calls emergencyRefund()
+          - Gets proportional refund instead of losing!
+          - Alice's valid proposal is ignored
+
+RESULT: Losers can avoid losing by simply not finalizing.
+```
+
+**Fix:** Block emergency refund if a valid proposal exists.
+```solidity
+// v3.6.2 Fix:
+function emergencyRefund(uint256 marketId) external {
+    // Block if resolution in progress (unless contract paused for emergencies)
+    if (!paused && market.proposer != address(0)) {
+        revert ResolutionInProgress();
+    }
+    // ... rest of function
+}
+```
+
+---
+
+### Bug 3: Stale Proposer State After Failed Finalization
+
+**Problem:** When `finalizeMarket()` fails legitimately (winning side has 0 holders, or vote tie), it returns bonds but doesn't clear `proposer`/`disputer`.
+
+```solidity
+// Current behavior (v3.6.1):
+if (winningSupply == 0) {
+    pendingWithdrawals[market.proposer] += bondAmount;  // Return bond ✓
+    emit MarketResolutionFailed(...);
+    return;  // ❌ proposer NOT cleared!
+}
+```
+
+**Problem Scenario:**
+```
+1. Market has 100 YES, 50 NO holders
+2. Someone proposes YES
+3. All YES holders sell their shares (yesSupply becomes 0)
+4. finalizeMarket() called → fails (winning side empty)
+5. Bond returned ✓
+6. market.proposer still set (not cleared) ✗
+
+If we implement Bug 2 fix without this fix:
+7. Emergency refund blocked (proposer != 0)
+8. Users STUCK forever!
+```
+
+**Fix:** Clear proposer/disputer when finalization legitimately fails.
+```solidity
+// v3.6.2 Fix in finalizeMarket():
+if (winningSupply == 0) {
+    // ... return bond ...
+    market.proposer = address(0);  // ← ADD: Clear for emergency refund
+    emit MarketResolutionFailed(...);
+    return;
+}
+
+// v3.6.2 Fix in _returnBondsOnTie():
+function _returnBondsOnTie(Market storage market) internal {
+    // ... return bonds ...
+    market.proposer = address(0);  // ← ADD
+    market.disputer = address(0);  // ← ADD
+}
+```
+
+---
+
+### Fix Dependencies
+
+**⚠️ IMPORTANT:** These fixes must be implemented TOGETHER.
+
+| Fix | Depends On | Without Dependency |
+|-----|------------|-------------------|
+| Fix 1 (One-sided proposals) | None | Safe alone |
+| Fix 2 (Emergency refund check) | Fix 3 | Users get STUCK |
+| Fix 3 (Clear proposer on failure) | None | Safe alone |
+
+**Implementation Order:**
+1. Fix 1 - Block one-sided proposals
+2. Fix 3 - Clear proposer/disputer on failed finalization  
+3. Fix 2 - Block emergency refund if proposer exists
+
+---
+
+### Expected Behavior After v3.6.2
+
+| Market Type | Proposal Allowed? | Resolution Path |
+|-------------|-------------------|-----------------|
+| Normal (YES > 0, NO > 0) | ✅ Yes | Propose → Finalize → Claim |
+| One-sided (YES > 0, NO = 0) | ❌ No | Emergency refund at 24h |
+| One-sided (YES = 0, NO > 0) | ❌ No | Emergency refund at 24h |
+| Empty (YES = 0, NO = 0) | ❌ No | Nothing to refund |
+
+| Scenario | Emergency Refund? |
+|----------|-------------------|
+| No proposal, 24h passed | ✅ Yes |
+| Proposal exists, not finalized | ❌ No → Must finalize first |
+| Finalization failed (0 winners) | ✅ Yes (proposer cleared) |
+| Vote tie | ✅ Yes (proposer cleared) |
+| Contract paused | ✅ Yes (emergency escape) |
+
+---
+
 ## 🚀 Contract Status
 
 | Version | Features | Status |

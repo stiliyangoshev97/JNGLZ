@@ -696,29 +696,6 @@ export function PortfolioPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Connect Wallet Banner - Show when not connected */}
-      {!isConnected && (
-        <section className="bg-cyber/10 border-b border-cyber/30 py-4">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <p className="text-cyber font-bold">CONNECT YOUR WALLET</p>
-                <p className="text-sm text-text-secondary">
-                  View your positions, earnings, and trading history.
-                </p>
-              </div>
-              <ConnectButton.Custom>
-                {({ openConnectModal }) => (
-                  <Button variant="cyber" size="sm" onClick={openConnectModal}>
-                    CONNECT WALLET
-                  </Button>
-                )}
-              </ConnectButton.Custom>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Header */}
       <section className="border-b border-dark-600 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
