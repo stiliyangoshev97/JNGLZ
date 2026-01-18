@@ -48,6 +48,7 @@ export {
 export {
   GET_GLOBAL_STATS,
   GET_USER_STATS,
+  GET_USER_EARNINGS,
   GET_DAILY_STATS,
   GET_MARKET_HOURLY_STATS,
   GET_LEADERBOARD,
@@ -68,5 +69,6 @@ export type {
   GetMarketPositionsResponse,
   GetGlobalStatsResponse,
   GetUserStatsResponse,
+  GetUserEarningsResponse,
   GetLeaderboardResponse,
 } from './types';

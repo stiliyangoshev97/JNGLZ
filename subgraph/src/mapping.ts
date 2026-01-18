@@ -92,6 +92,7 @@ function getOrCreateUser(address: Address): User {
     // Creator/Resolution earnings
     user.totalCreatorFeesEarned = ZERO_BD;
     user.totalProposerRewardsEarned = ZERO_BD;
+    user.totalBondEarnings = ZERO_BD;
     user.totalJuryFeesEarned = ZERO_BD;
     
     // Withdrawal tracking
@@ -614,13 +615,24 @@ export function handleEmergencyRefunded(event: EmergencyRefunded): void {
 }
 
 /**
- * Handle BondDistributed event (optional - for analytics)
- * Can be used to track bond distribution details
+ * Handle BondDistributed event (v3.6.1 - Earnings tracking)
+ * Tracks bond earnings when winning disputes (50% of loser's bond)
+ * 
+ * Event: BondDistributed(marketId, winner, winnerAmount, voterPoolAmount)
+ * - winner: proposer or disputer who won
+ * - winnerAmount: total payout (original bond + 50% loser bond + proposer reward if applicable)
+ * - voterPoolAmount: 50% of loser bond that goes to jury (same as winner's bond earnings)
  */
 export function handleBondDistributed(event: BondDistributed): void {
-  // This event is primarily for analytics/transparency
-  // The key data is already tracked in Market resolution
-  // Could add a BondDistribution entity if detailed tracking needed
+  // voterPoolAmount = 50% of loser's bond = winner's bond earnings
+  let bondEarnings = toBigDecimal(event.params.voterPoolAmount);
+  
+  // Get or create winner user
+  let user = getOrCreateUser(event.params.winner);
+  
+  // Track bond earnings (50% of loser's bond)
+  user.totalBondEarnings = user.totalBondEarnings.plus(bondEarnings);
+  user.save();
 }
 
 /**

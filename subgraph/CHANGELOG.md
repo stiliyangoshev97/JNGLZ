@@ -2,6 +2,20 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.6.2] - 2026-01-18
+
+### Added - Bond Earnings Tracking
+- **New User Field**: `totalBondEarnings` - Tracks 50% of loser's bond when winning disputes
+- **Updated `handleBondDistributed`**: Now extracts bond earnings from `voterPoolAmount` parameter
+- Earnings are tracked for both proposers and disputers who win disputes
+
+### Schema Changes
+- Reorganized User entity earnings fields with better documentation:
+  - Resolution Earnings: `totalProposerRewardsEarned`, `totalBondEarnings`, `totalJuryFeesEarned`
+  - Creator Earnings: `totalCreatorFeesEarned` (separate from resolution)
+
+---
+
 ## [3.6.1] - 2026-01-18
 
 ### Changed - Contract v3.6.1 Integration

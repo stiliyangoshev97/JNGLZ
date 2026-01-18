@@ -2,6 +2,35 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.29] - 2026-01-18
+
+### Added - Portfolio Earnings Display
+
+#### Resolution Earnings Section
+- **New stats row** in Portfolio header showing resolution activity earnings
+- **PROPOSER**: 0.5% pool rewards for correct proposals (`totalProposerRewardsEarned`)
+- **DISPUTES**: 50% of loser's bond when winning disputes (`totalBondEarnings`)
+- **JURY**: Jury fees from voting correctly (`totalJuryFeesEarned`)
+- **TOTAL EARNINGS**: Sum of proposer + disputes + jury (excludes creator fees)
+
+#### Creator Fees Section
+- **Separate stats row** for creator fees (passive income)
+- **CREATOR FEES**: 0.5% of all trades on markets you created (`totalCreatorFeesEarned`)
+- Displayed separately from resolution earnings (different income stream)
+
+#### Technical Changes
+- Added `GET_USER_EARNINGS` GraphQL query to fetch earnings from subgraph
+- Added `GetUserEarningsResponse` type for type-safe earnings data
+- Extended `StatBox` component to support "cyber" color variant
+- Earnings rows only display when user has earnings > 0
+
+### Notes
+- **Only tracks positive earnings** - Bond losses are NOT subtracted
+- **Separate from P/L** - Trading P/L and resolution earnings are distinct
+- **Requires subgraph v3.6.2** - New `totalBondEarnings` field
+
+---
+
 ## [0.7.28] - 2026-01-18
 
 ### Fixed

@@ -14,8 +14,8 @@ import { useAccount } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES } from '@/shared/api';
-import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse } from '@/shared/api';
+import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS } from '@/shared/api';
+import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse, GetUserEarningsResponse } from '@/shared/api';
 import { PositionCard } from '../components';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
@@ -151,6 +151,14 @@ export function PortfolioPage() {
     variables: { trader: address?.toLowerCase(), first: 500 },
     skip: !address,
     // NO pollInterval - trades history doesn't need real-time updates
+    notifyOnNetworkStatusChange: false,
+  });
+
+  // Fetch user's resolution earnings (proposer/disputes/jury) and creator fees
+  // NO POLLING - earnings are historical, update after withdrawals
+  const { data: earningsData, refetch: refetchEarnings } = useQuery<GetUserEarningsResponse>(GET_USER_EARNINGS, {
+    variables: { user: address?.toLowerCase() },
+    skip: !address,
     notifyOnNetworkStatusChange: false,
   });
 
@@ -298,6 +306,8 @@ export function PortfolioPage() {
     if (bondWithdrawn || feesWithdrawn) {
       // Refetch pending amounts to update the UI
       refetchPending();
+      // Refetch earnings to update the totals
+      refetchEarnings();
       // Invalidate balance queries so Header updates
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       // Reset the mutation state after a short delay so the banner can disappear
@@ -307,12 +317,24 @@ export function PortfolioPage() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [bondWithdrawn, feesWithdrawn, refetchPending, queryClient, resetBondWithdraw, resetFeesWithdraw]);
+  }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
   const pendingFeesFormatted = pendingCreatorFees ? parseFloat(formatEther(pendingCreatorFees)) : 0;
   const hasPendingWithdrawals = pendingBondsFormatted > 0 || pendingFeesFormatted > 0;
+
+  // Parse resolution earnings (v3.6.1)
+  const earnings = useMemo(() => {
+    const user = earningsData?.user;
+    const proposer = parseFloat(user?.totalProposerRewardsEarned || '0');
+    const disputes = parseFloat(user?.totalBondEarnings || '0');
+    const jury = parseFloat(user?.totalJuryFeesEarned || '0');
+    const creator = parseFloat(user?.totalCreatorFeesEarned || '0');
+    const totalResolution = proposer + disputes + jury; // Excludes creator fees
+    const hasEarnings = proposer > 0 || disputes > 0 || jury > 0 || creator > 0;
+    return { proposer, disputes, jury, creator, totalResolution, hasEarnings };
+  }, [earningsData]);
 
   // Only show loading on initial load, not polls
   const isInitialLoading = loading && !data?.positions;
@@ -746,6 +768,48 @@ export function PortfolioPage() {
                 />
               )}
             </div>
+
+            {/* Resolution Earnings Row (v3.6.1) - PROPOSER | DISPUTES | JURY | TOTAL */}
+            {earnings.hasEarnings && (
+              <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4 pt-2 border-t border-dark-700">
+                <StatBox 
+                  label="PROPOSER" 
+                  value={earnings.proposer > 0 ? `+${earnings.proposer.toFixed(4)} BNB` : '—'}
+                  color={earnings.proposer > 0 ? 'yes' : undefined}
+                  subtext="0.5% pool rewards"
+                />
+                <StatBox 
+                  label="DISPUTES" 
+                  value={earnings.disputes > 0 ? `+${earnings.disputes.toFixed(4)} BNB` : '—'}
+                  color={earnings.disputes > 0 ? 'yes' : undefined}
+                  subtext="Bond winnings"
+                />
+                <StatBox 
+                  label="JURY" 
+                  value={earnings.jury > 0 ? `+${earnings.jury.toFixed(4)} BNB` : '—'}
+                  color={earnings.jury > 0 ? 'yes' : undefined}
+                  subtext="Voting rewards"
+                />
+                <StatBox 
+                  label="TOTAL EARNINGS" 
+                  value={`+${earnings.totalResolution.toFixed(4)} BNB`}
+                  color="yes"
+                  subtext="Resolution activity"
+                />
+              </div>
+            )}
+
+            {/* Creator Fees Row (separate from resolution earnings) */}
+            {earnings.creator > 0 && (
+              <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:gap-4 pt-2 border-t border-dark-700">
+                <StatBox 
+                  label="CREATOR FEES" 
+                  value={`+${earnings.creator.toFixed(4)} BNB`}
+                  color="cyber"
+                  subtext="0.5% of trades on your markets"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -1373,7 +1437,7 @@ function StatBox({
   label: string; 
   value: string; 
   highlight?: boolean;
-  color?: 'yes' | 'no' | 'neutral';
+  color?: 'yes' | 'no' | 'neutral' | 'cyber';
   subtext?: string;
   subtextElement?: React.ReactNode;
 }) {
@@ -1390,6 +1454,7 @@ function StatBox({
         color === 'yes' && 'text-yes',
         color === 'no' && 'text-no',
         color === 'neutral' && 'text-text-secondary',
+        color === 'cyber' && 'text-cyber',
         !color && 'text-white'
       )}>
         {value}
@@ -1402,6 +1467,7 @@ function StatBox({
           color === 'yes' && 'text-yes/70',
           color === 'no' && 'text-no/70',
           color === 'neutral' && 'text-text-muted',
+          color === 'cyber' && 'text-cyber/70',
           !color && 'text-text-muted'
         )}>
           {subtext}
