@@ -52,7 +52,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 | Metric | Value |
 |--------|-------|
 | Total Lines of Code | ~2,070 |
-| Total Tests | **177** |
+| Total Tests | **179** |
 | Test Suites | **11** |
 | Slither Findings | 35 (see breakdown below) |
 | Critical Issues | 0 |
@@ -435,7 +435,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ## Test Coverage Analysis
 
-### Test Suite Breakdown (177 Total)
+### Test Suite Breakdown (179 Total)
 
 | Test File | Tests | Focus |
 |-----------|-------|-------|
@@ -449,17 +449,18 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 | WalletBScenario.t.sol | 1 | Edge case scenarios |
 | EmptyWinningSide.t.sol | 6 | Empty side safety checks |
 | PullPattern.t.sol | 28 | Pull Pattern + ReplaceSigner tests |
-| **EmergencyRefundSecurity.t.sol** | **13** | **v3.6.0 security tests (NEW)** |
+| **EmergencyRefundSecurity.t.sol** | **15** | **v3.6.0 security tests (NEW)** |
 
 ### Key Test Scenarios Covered
 
-✅ **Emergency Refund Security (13 tests in EmergencyRefundSecurity.t.sol - NEW)**
+✅ **Emergency Refund Security (15 tests in EmergencyRefundSecurity.t.sol - NEW)**
 - Double-spend prevention (claim after refund blocked)
 - Pool insolvency prevention (balance reduced on refund)
 - Resolution cutoff enforcement (proposal/dispute blocked at 22h)
 - Boundary condition tests at cutoff
 - Full attack scenario simulation
 - Order-independent multiple refunds
+- Clean pool accounting on claim (pool/supply reduction)
 
 ✅ **Pull Pattern (28 tests in PullPattern.t.sol)**
 - Creator fees credited on buy/sell trades
@@ -506,7 +507,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ### 3. No Upgradability
 **Decision:** Immutable contract  
-**Mitigation:** Extensive testing (177 tests), MultiSig pause, emergency refund
+**Mitigation:** Extensive testing (179 tests), MultiSig pause, emergency refund
 
 ### 4. ReplaceSigner Uses 2-of-3 (NEW)
 **Decision:** Emergency escape hatch if one signer is compromised/lost  
@@ -540,7 +541,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 ## Pre-Deployment Checklist
 
 ### Smart Contract
-- [x] All 177 tests passing (176 pass + 1 expected skip)
+- [x] All 179 tests passing (178 pass + 1 expected skip)
 - [x] Slither analysis completed (no critical/high issues)
 - [x] ReentrancyGuard applied to all state-changing external functions
 - [x] Constructor validates no duplicate signers
@@ -604,7 +605,7 @@ The PredictionMarket contract v3.6.0 demonstrates solid security practices:
 
 1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
-3. **Comprehensive Testing:** 177 tests including security, Pull Pattern, arbitrage-proof, fuzz
+3. **Comprehensive Testing:** 179 tests including security, Pull Pattern, arbitrage-proof, fuzz
 4. **Conservative Design:** Immutable, no external dependencies, fail-safe emergency refund
 5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
 6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery

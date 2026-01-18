@@ -454,7 +454,7 @@ contract PredictionMarket is ReentrancyGuard {
         string calldata imageUrl,
         uint256 expiryTimestamp,
         HeatLevel heatLevel
-    ) external payable whenNotPaused returns (uint256 marketId) {
+    ) external payable nonReentrant whenNotPaused returns (uint256 marketId) {
         if (msg.value < marketCreationFee) revert InsufficientCreationFee();
 
         marketId = _createMarket(

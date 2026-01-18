@@ -1,7 +1,7 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.0 READY (177 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
+> **Status:** Smart Contracts ✅ v3.6.0 READY (179 tests) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -56,8 +56,8 @@ function proposeOutcome(uint256 marketId, bool outcome) external {
 ```
 
 ### Test Coverage ✅
-- 13 new security tests in `EmergencyRefundSecurity.t.sol`
-- 177 total tests passing
+- 15 new security tests in `EmergencyRefundSecurity.t.sol`
+- 179 total tests passing
 - Full attack scenario simulation verified
 
 ### Timeline (v3.6.0)
@@ -105,17 +105,65 @@ function dispute(uint256 marketId) external {
 - [x] Added "2-Hour Safety Cutoff" section in HowToPlayPage
 
 ### Deployment Checklist for v3.6.0
+
+#### ✅ Code Implementation Complete
 - [x] Implement Fix 1: Add `emergencyRefunded` check in `claim()`
 - [x] Implement Fix 2: Reduce `poolBalance` and supplies in `emergencyRefund()`
 - [x] Implement Fix 3: Add 2-hour cutoff in `proposeOutcome()` and `dispute()`
+- [x] Implement Fix 4: Add clean pool accounting in `claim()` (reduces poolBalance and supply)
+- [x] Implement Fix 5: Add `nonReentrant` to `createMarket()` for defense-in-depth
 - [x] Add new constant: `RESOLUTION_CUTOFF_BUFFER = 2 hours`
 - [x] Add new error types: `ProposalWindowClosed`, `DisputeWindowClosed`
-- [x] Write tests for all three attack vectors (13 new tests in `EmergencyRefundSecurity.t.sol`)
-- [x] Update existing tests (`PumpDump.t.sol` - `test_EmergencyRefund_AfterTimeout`)
-- [x] Run full test suite: **177 tests pass, 0 fail, 1 skip**
-- [ ] Deploy to testnet and verify
-- [ ] Update subgraph if needed
-- [ ] Deploy to mainnet
+- [x] Write tests for all attack vectors (15 new tests in `EmergencyRefundSecurity.t.sol`)
+- [x] Update existing tests (`BondingCurveEconomics.t.sol` - renamed from PumpDump.t.sol)
+- [x] Run full test suite: **179 tests pass, 0 fail, 1 skip**
+- [x] Update AUDIT.md, README.md, CHANGELOG.md, SECURITY_ANALYSIS_v3.6.0.md
+- [x] Commit and push to `feature/contract-v3.6.0-emergency-refund-fix` branch
+
+#### ⏳ Testnet Deployment
+- [ ] **1. Deploy contract to BSC Testnet**
+  - Run: `forge script script/Deploy.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast --verify`
+  - Save new contract address: `__________________________`
+  - Verify on BscScan Testnet
+- [ ] **2. Export new ABI**
+  - Run: `forge build && cp out/PredictionMarket.sol/PredictionMarket.json ../subgraph/abis/`
+  - Copy ABI to frontend: `cp out/PredictionMarket.sol/PredictionMarket.json ../frontend/src/abi/`
+- [ ] **3. Update Subgraph for Testnet**
+  - Edit `subgraph/subgraph.yaml`: Update `address` and `startBlock` for new contract
+  - Edit `subgraph/networks.json`: Update testnet contract address
+  - Run: `graph codegen && graph build`
+  - Deploy to The Graph Studio (testnet subgraph)
+- [ ] **4. Update Frontend for Testnet**
+  - Edit `frontend/.env.testnet`: Update `VITE_CONTRACT_ADDRESS`
+  - Edit `frontend/.env.testnet`: Update `VITE_SUBGRAPH_URL` if subgraph URL changed
+  - Test all flows: create market, buy/sell, propose, dispute, claim, emergency refund
+
+#### ⏳ Mainnet Deployment (After Testnet Verification)
+- [ ] **5. Deploy contract to BSC Mainnet**
+  - Run: `forge script script/Deploy.s.sol --rpc-url $BSC_MAINNET_RPC --broadcast --verify`
+  - Save new contract address: `__________________________`
+  - Verify on BscScan
+- [ ] **6. Update Subgraph for Mainnet**
+  - Edit `subgraph/subgraph.yaml`: Update `address` and `startBlock`
+  - Edit `subgraph/networks.json`: Update mainnet contract address
+  - Run: `graph deploy --studio jnglz-mainnet`
+- [ ] **7. Update Frontend for Mainnet**
+  - Edit `frontend/.env.production`: Update `VITE_CONTRACT_ADDRESS`
+  - Edit `frontend/.env.production`: Update `VITE_SUBGRAPH_URL` if endpoint changed
+- [ ] **8. Enable Maintenance Mode** (optional, recommended for smooth transition)
+  - Set `VITE_MAINTENANCE_MODE=true` with message about upgrade
+- [ ] **9. Deploy Frontend to Production**
+  - Merge PR to main branch
+  - Vercel auto-deploys
+- [ ] **10. Disable Maintenance Mode**
+  - Set `VITE_MAINTENANCE_MODE=false`
+  - Monitor for any issues
+
+#### ⚠️ Important Notes
+- **Existing markets** on old contract will continue to work until resolved
+- **New markets** will be created on v3.6.0 contract
+- Consider running **both contracts in parallel** during transition period
+- The subgraph can index multiple contract addresses if needed
 
 ---
 

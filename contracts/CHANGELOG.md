@@ -23,6 +23,7 @@ Fixed a three-part vulnerability that could drain funds from the contract.
 | 1 | **Double-Spend** | User gets emergency refund + claim (~2x payout) | Added `emergencyRefunded` check in `claim()` |
 | 2 | **Pool Insolvency** | `emergencyRefund()` didn't reduce `poolBalance` | Now reduces pool balance and zeroes shares |
 | 3 | **Race Condition** | Proposals at T=22h, refund at T=24h conflicts | Added 2-hour resolution cutoff buffer |
+| 4 | **Stale Pool Data** | `claim()` didn't reduce `poolBalance` after payout | `claim()` now reduces pool and winning supply |
 
 **Fix 1: Block claim after emergency refund**
 ```solidity
@@ -71,6 +72,23 @@ function dispute(uint256 marketId) external {
 }
 ```
 
+**Fix 4: Clean pool accounting on claim**
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ...calculate payout...
+    
+    // v3.6.0 FIX: Reduce pool balance and winning supply
+    market.poolBalance -= grossPayout;      // NEW
+    if (market.outcome) {
+        market.yesSupply -= winningShares;  // NEW
+    } else {
+        market.noSupply -= winningShares;   // NEW
+    }
+    
+    // ...transfer...
+}
+```
+
 ### Added
 
 #### New Constants
@@ -85,7 +103,7 @@ error DisputeWindowClosed();
 ```
 
 #### New Test Suite
-- `EmergencyRefundSecurity.t.sol` - 13 comprehensive security tests
+- `EmergencyRefundSecurity.t.sol` - 15 comprehensive security tests
 - Tests cover: double-spend prevention, pool insolvency, cutoff enforcement, boundary conditions, full attack simulation
 
 ### Changed
@@ -110,7 +128,8 @@ After (v3.6.0):
 ### Security Notes
 - **All bond/fee mechanisms verified safe** - See `SECURITY_ANALYSIS_v3.6.0.md`
 - Resolution path and Emergency refund path are now **mutually exclusive by design**
-- 177 tests passing (13 new security tests added)
+- **Virtual liquidity / Heat levels NOT affected** - Bonding curve code unchanged
+- 179 tests passing (15 new security tests added)
 - Slither analysis: 35 findings (no critical/high issues)
 
 ### Migration Notes

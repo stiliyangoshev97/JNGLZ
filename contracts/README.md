@@ -3,7 +3,7 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-179%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
@@ -40,6 +40,7 @@
 | 1 | **Double-Spend** | User gets ~2x payout | `claim()` checks `emergencyRefunded` flag |
 | 2 | **Pool Insolvency** | Contract can't pay all winners | `emergencyRefund()` reduces `poolBalance` |
 | 3 | **Race Condition** | Resolution/refund conflict | 2-hour cutoff before emergency refund |
+| 4 | **Stale Pool Data** | Pool shows BNB already paid out | `claim()` reduces `poolBalance` and supply |
 
 ### v3.6.0 Fixes Applied
 
@@ -70,6 +71,18 @@ function proposeOutcome(uint256 marketId, bool outcome) external {
     }
     // ...
 }
+
+// FIX 4: Clean pool accounting on claim
+function claim(uint256 marketId) external {
+    // ... calculate payout ...
+    market.poolBalance -= grossPayout;      // ✅ ADDED
+    if (market.outcome) {
+        market.yesSupply -= winningShares;  // ✅ ADDED
+    } else {
+        market.noSupply -= winningShares;   // ✅ ADDED
+    }
+    // ... transfer payout ...
+}
 ```
 
 ### Timeline (v3.6.0)
@@ -94,7 +107,7 @@ Expiry ────────────────────────�
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.6.0** | Emergency Refund Security Fix, 177 tests | ✅ **READY FOR DEPLOYMENT** |
+| **v3.6.0** | Emergency Refund Security Fix, 179 tests | ✅ **READY FOR DEPLOYMENT** |
 | v3.5.0 | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⚠️ DEPRECATED (bug) |
 
 ### Current Deployment (v3.5.0 - BNB Testnet - DEPRECATED)
@@ -102,7 +115,7 @@ Expiry ────────────────────────�
 - **Network:** BNB Testnet (Chain ID: 97)
 - **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
 
-> **v3.6.0 Features:** All v3.5.0 features + Emergency Refund security fix, 2-hour resolution cutoff, 13 new security tests, 177 total tests passing
+> **v3.6.0 Features:** All v3.5.0 features + Emergency Refund security fix, 2-hour resolution cutoff, 15 security tests, 179 total tests passing
 
 ---
 

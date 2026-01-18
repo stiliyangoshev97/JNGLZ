@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 18, 2026  
-> **Status:** ✅ Smart Contracts v3.6.0 READY (177 tests)
+> **Status:** ✅ Smart Contracts v3.6.0 READY (179 tests)
 
 ---
 
@@ -74,11 +74,11 @@
 | WalletB Scenario | ✅ 100% | 1 test passing |
 | EmptyWinningSide Tests | ✅ 100% | 6 tests passing |
 | PullPattern Tests | ✅ 100% | 28 tests passing |
-| **EmergencyRefundSecurity Tests** | ✅ 100% | **13 tests passing (NEW v3.6.0)** |
+| **EmergencyRefundSecurity Tests** | ✅ 100% | **15 tests passing (NEW v3.6.0)** |
 | Testnet Deployment | ⏳ 90% | Ready for v3.6.0 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 177 ✅** (1 skipped)
+**Total Tests: 179 ✅** (1 skipped)
 
 ---
 
