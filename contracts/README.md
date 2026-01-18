@@ -26,33 +26,110 @@
 
 ---
 
-## 🚨 KNOWN BUG: Emergency Refund Double-Spend (v3.5.0)
+## 🚨 KNOWN BUG: Emergency Refund Vulnerability (v3.5.0)
 
 **Discovered:** January 18, 2026  
-**Severity:** CRITICAL - Potential fund drain  
+**Severity:** CRITICAL - Potential fund drain & contract insolvency  
 **Status:** UNPATCHED - Requires v3.6.0
 
-### Description
-A user can receive DOUBLE payment by exploiting emergency refund + claim:
+### Three-Part Vulnerability
 
-1. Market expires, 24h passes with no resolution (or resolution in progress)
-2. User calls `emergencyRefund()` → Gets proportional refund based on ALL shares
-3. Market gets finalized (resolved)
-4. User calls `claim()` → Gets payout for WINNING shares again!
+| # | Problem | Attack Vector | Impact |
+|---|---------|---------------|--------|
+| 1 | **Double-Spend** | User takes emergency refund, then claims after resolution | User gets ~2x payout |
+| 2 | **Pool Insolvency** | `emergencyRefund()` doesn't reduce `poolBalance` | Contract can't pay all winners |
+| 3 | **Race Condition** | Proposal at T=22h, emergency refund at T=24h | Users confused, funds at risk |
 
-### Root Cause
-1. **`emergencyRefund()` does NOT reduce `market.poolBalance`**
-2. **`claim()` does NOT check `position.emergencyRefunded`**
-
-### Impact
-- User receives: Emergency Refund + Claim = ~2x their entitled amount
-- Pool becomes insolvent, other winners can't claim full amounts
-
-### Fix (v3.6.0)
-Add check in `claim()`:
-```solidity
-if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
+### Attack Scenario (Worst Case)
 ```
+T=0:     Market expires (Pool: 10 BNB, 500 YES, 500 NO shares)
+T=22h:   Attacker proposes "NO wins" via direct contract call (bypassing frontend)
+T=24h:   Emergency refund available (market not yet finalized)
+T=24h:   All YES holders call emergencyRefund() → Drain 5 BNB
+         BUG: market.poolBalance still shows 10 BNB!
+T=24.5h: Attacker calls finalizeMarket() → NO wins
+T=24.5h: NO holders call claim() → Contract owes 10 BNB but only has 5 BNB
+         RESULT: Contract INSOLVENT, some users can't claim!
+```
+
+### Root Causes
+
+```solidity
+// BUG 1: emergencyRefund() doesn't reduce pool
+function emergencyRefund(uint256 marketId) external {
+    refund = (userTotalShares * market.poolBalance) / totalShares;
+    position.emergencyRefunded = true;
+    // ❌ MISSING: market.poolBalance -= refund;
+    msg.sender.call{value: refund}("");
+}
+
+// BUG 2: claim() doesn't check emergencyRefunded
+function claim(uint256 marketId) external {
+    if (position.claimed) revert AlreadyClaimed();
+    // ❌ MISSING: if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
+    // ... calculates payout from WRONG poolBalance ...
+}
+
+// BUG 3: No time cutoff before emergency refund
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    // ❌ MISSING: Check if too close to emergency refund time
+}
+```
+
+### Required Fixes (v3.6.0)
+
+#### Fix 1: Block claim after emergency refund
+```solidity
+function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    // ... existing checks ...
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ✅ ADD
+    // ...
+}
+```
+
+#### Fix 2: Reduce pool balance on emergency refund
+```solidity
+function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
+    // ... calculate refund ...
+    position.emergencyRefunded = true;
+    market.poolBalance -= refund; // ✅ ADD - Critical for solvency!
+    // ... transfer ...
+}
+```
+
+#### Fix 3: 2-hour resolution cutoff
+```solidity
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
+error ProposalWindowClosed();
+error DisputeWindowClosed();
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    // ✅ ADD: Block proposals within 2h of emergency refund time
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed();
+    }
+    // ...
+}
+
+function dispute(uint256 marketId) external {
+    // ✅ ADD: Same check for disputes
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert DisputeWindowClosed();
+    }
+    // ...
+}
+```
+
+### Defense Matrix
+
+| Attack | Fix 1 Only | Fix 1+2 | Fix 1+2+3 |
+|--------|-----------|---------|-----------|
+| Double-spend | ✅ Blocked | ✅ Blocked | ✅ Blocked |
+| Pool insolvency | ❌ Vulnerable | ✅ Blocked | ✅ Blocked |
+| Race condition | ❌ Vulnerable | ⚠️ Partial | ✅ Blocked |
+| Frontend bypass | ✅ | ✅ | ✅ |
 
 ---
 

@@ -56,6 +56,12 @@ contract PredictionMarket is ReentrancyGuard {
     /// @notice Emergency refund delay after expiry (24 hours)
     uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours;
 
+    /// @notice Resolution cutoff buffer before emergency refund (2 hours)
+    /// @dev Proposals and disputes are blocked when less than 2 hours remain before emergency refund
+    ///      This prevents race conditions where resolution happens too close to refund eligibility
+    ///      Effective resolution window: 0-22 hours after expiry (not 0-24 hours)
+    uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
+
     /// @notice Maximum market creation fee (0.1 BNB)
     uint256 public constant MAX_MARKET_CREATION_FEE = 0.1 ether;
 
@@ -392,6 +398,9 @@ contract PredictionMarket is ReentrancyGuard {
     // v3.4.1 errors
     error InvalidSignerReplacement();
     error SignerNotFound();
+    // v3.6.0 errors (emergency refund vulnerability fix)
+    error ProposalWindowClosed();
+    error DisputeWindowClosed();
 
     // ============ Modifiers ============
 
@@ -815,6 +824,15 @@ contract PredictionMarket is ReentrancyGuard {
             revert NoTradesToResolve();
         }
 
+        // v3.6.0 FIX: Block proposals when too close to emergency refund time
+        // Prevents race condition where proposal starts but can't complete before
+        // emergency refunds become available (creating conflicting resolution paths)
+        uint256 emergencyRefundTime = market.expiryTimestamp +
+            EMERGENCY_REFUND_DELAY;
+        if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+            revert ProposalWindowClosed();
+        }
+
         // Creator priority: first 10 minutes only creator can propose
         if (
             block.timestamp < market.expiryTimestamp + CREATOR_PRIORITY_WINDOW
@@ -858,6 +876,15 @@ contract PredictionMarket is ReentrancyGuard {
 
         MarketStatus status = _getMarketStatus(market);
         if (status != MarketStatus.Proposed) revert NotProposed();
+
+        // v3.6.0 FIX: Block disputes when too close to emergency refund time
+        // Prevents race condition where dispute starts but voting can't complete
+        // before emergency refunds become available (creating conflicting resolution paths)
+        uint256 emergencyRefundTime = market.expiryTimestamp +
+            EMERGENCY_REFUND_DELAY;
+        if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+            revert DisputeWindowClosed();
+        }
 
         // Check we're still in dispute window
         if (block.timestamp > market.proposalTime + DISPUTE_WINDOW) {
@@ -1199,6 +1226,12 @@ contract PredictionMarket is ReentrancyGuard {
         Position storage position = positions[marketId][msg.sender];
         if (position.claimed) revert AlreadyClaimed();
 
+        // v3.6.0 FIX: Prevent double-spend vulnerability
+        // Users who took emergency refund cannot also claim resolution payout
+        // Without this check, a user could: 1) take emergency refund, 2) wait for resolution, 3) claim again
+        // This would result in ~2x payout and drain the pool, leaving other winners unable to claim
+        if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
+
         uint256 winningShares = market.outcome
             ? position.yesShares
             : position.noShares;
@@ -1260,6 +1293,17 @@ contract PredictionMarket is ReentrancyGuard {
 
         // Update state
         position.emergencyRefunded = true;
+
+        // v3.6.0 FIX: Reduce pool balance and supplies to prevent insolvency
+        // Without this, later refunders would calculate from wrong totals
+        // (their share of a pool that no longer has enough funds)
+        market.poolBalance -= refund;
+        market.yesSupply -= position.yesShares;
+        market.noSupply -= position.noShares;
+
+        // Clear user's shares to prevent any future miscalculations
+        position.yesShares = 0;
+        position.noShares = 0;
 
         // Transfer refund
         (bool success, ) = msg.sender.call{value: refund}("");

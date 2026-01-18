@@ -1213,13 +1213,33 @@ contract PumpDumpTest is TestHelper {
         vm.prank(bob);
         uint256 bobRefund = market.emergencyRefund(marketId);
 
-        // Bob's refund should be proportional to ORIGINAL pool (not remaining)
-        // This ensures fairness regardless of claim order
-        uint256 expectedBobRefund = (bobShares * poolBalance) / totalShares;
-        assertEq(
+        // v3.6.0 FIX: Pool is now reduced after each refund to prevent insolvency
+        // Bob's refund is calculated from the REMAINING pool and shares
+        // This is correct because Alice's shares were also removed
+        // The proportional share remains fair: Bob still gets his fair share
+
+        // Get remaining pool after Alice's refund
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 remainingYesSupply,
+            ,
+            uint256 remainingPool,
+            ,
+
+        ) = market.getMarket(marketId);
+
+        // Bob should get all remaining pool (since he's the only one left with shares)
+        // Due to rounding, use approximate equality
+        assertApproxEqAbs(
             bobRefund,
-            expectedBobRefund,
-            "Bob refund should be proportional to original pool"
+            remainingPool + bobRefund, // This was the pool before Bob's refund
+            1,
+            "Bob should get remaining pool"
         );
 
         console.log("Bob refund:", bobRefund);

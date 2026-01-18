@@ -1,68 +1,152 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.5.0 DEPLOYED | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
+> **Status:** Smart Contracts ⚠️ v3.5.0 DEPLOYED (v3.6.0 FIX READY) | Subgraph ✅ v3.4.2 | Frontend ✅ v0.7.26  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚨 CRITICAL BUG - Emergency Refund Double-Spend (v3.5.0)
+## 🚨 CRITICAL BUG - Emergency Refund Vulnerability (v3.5.0)
 
 **Discovered:** January 18, 2026  
-**Severity:** CRITICAL - Potential fund drain  
-**Status:** UNPATCHED - Requires contract upgrade (v3.6.0)
+**Severity:** CRITICAL - Potential fund drain & contract insolvency  
+**Status:** ✅ FIX IMPLEMENTED - Ready for deployment (v3.6.0)
 
-### Description
-A user can potentially receive DOUBLE payment by exploiting the emergency refund + claim flow:
+### Three-Part Vulnerability
 
-1. Market expires at T=0
-2. At T=24h, emergency refund becomes available (no proposal or proposal still pending)
-3. User calls `emergencyRefund()` → Gets proportional refund based on ALL their shares
-4. Someone calls `finalizeMarket()` → Market gets resolved
-5. User calls `claim()` → Gets payout for their WINNING shares again!
+#### Problem 1: Double-Spend (User gets refund + claim)
+```
+T=0:     Market expires
+T=24h:   User calls emergencyRefund() → Gets proportional refund
+T=24.5h: Market resolves via finalizeMarket()
+T=24.5h: User calls claim() → Gets payout AGAIN!
+```
 
-### Root Cause
-Two issues in `PredictionMarket.sol`:
+#### Problem 2: Pool Insolvency (Contract can't pay all winners)
+```
+T=0:     Market expires (Pool: 10 BNB, 500 YES, 500 NO shares)
+T=24h:   All YES holders call emergencyRefund() → Drain 5 BNB
+         Pool balance UNCHANGED at 10 BNB (bug!)
+T=24.5h: Market resolves, NO wins
+T=24.5h: NO holders try to claim → Contract only has 5 BNB but owes 10 BNB!
+```
 
-1. **`emergencyRefund()` does NOT reduce `market.poolBalance`**
-   - User gets refund but pool balance stays the same
-   - Later claims calculate payout from the unreduced pool
+#### Problem 3: Race Condition (Late proposal bypasses frontend)
+```
+T=0:     Market expires
+T=22h:   Attacker bypasses frontend, proposes via direct contract call
+T=24h:   Emergency refund becomes available (market still in Proposed status)
+T=24h:   Users take emergency refund (thinking market is stuck)
+T=24.5h: Attacker finalizes market → Chaos ensues
+```
 
-2. **`claim()` does NOT check `position.emergencyRefunded`**
-   - User can claim even after taking emergency refund
-   - No protection against double-payment
+### Root Causes in `PredictionMarket.sol`
 
-### Impact
-- User could receive: Emergency Refund + Claim Payout = ~2x their entitled amount
-- This drains the pool, leaving other winners unable to claim full amounts
-- Contract could become insolvent
+| Function | Issue | Impact |
+|----------|-------|--------|
+| `emergencyRefund()` | Does NOT reduce `market.poolBalance` | Pool insolvency |
+| `claim()` | Does NOT check `position.emergencyRefunded` | Double-spend |
+| `proposeOutcome()` | No cutoff before emergency refund time | Race condition |
+| `dispute()` | No cutoff before emergency refund time | Race condition |
 
-### Proposed Fix (v3.6.0)
-**Option A (Recommended):** Add check in `claim()`:
+### Required Fixes for v3.6.0
+
+#### Fix 1: Block claim after emergency refund
 ```solidity
 function claim(uint256 marketId) external nonReentrant returns (uint256 payout) {
+    Market storage market = markets[marketId];
+    if (!market.resolved) revert MarketNotResolved();
+
+    Position storage position = positions[marketId][msg.sender];
+    if (position.claimed) revert AlreadyClaimed();
+    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ✅ ADD THIS
+    
+    // ... rest unchanged ...
+}
+```
+
+#### Fix 2: Reduce pool balance on emergency refund
+```solidity
+function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
     // ... existing checks ...
-    if (position.emergencyRefunded) revert AlreadyEmergencyRefunded(); // ADD THIS
+    
+    // Calculate proportional refund
+    uint256 totalShares = market.yesSupply + market.noSupply;
+    refund = (userTotalShares * market.poolBalance) / totalShares;
+
+    // Update state
+    position.emergencyRefunded = true;
+    market.poolBalance -= refund; // ✅ ADD THIS - Critical for solvency!
+
+    // Transfer refund
+    (bool success, ) = msg.sender.call{value: refund}("");
+    // ...
+}
+```
+
+#### Fix 3: Contract-level 2-hour resolution cutoff
+```solidity
+// Add new constant
+uint256 public constant RESOLUTION_CUTOFF_BUFFER = 2 hours;
+
+// Add new errors
+error ProposalWindowClosed();
+error DisputeWindowClosed();
+
+function proposeOutcome(uint256 marketId, bool outcome) external {
+    Market storage market = markets[marketId];
+    // ... existing checks ...
+    
+    // ✅ ADD: Block proposals too close to emergency refund time
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert ProposalWindowClosed();
+    }
+    
+    // ... rest of function ...
+}
+
+function dispute(uint256 marketId) external {
+    Market storage market = markets[marketId];
+    // ... existing checks ...
+    
+    // ✅ ADD: Block disputes too close to emergency refund time
+    uint256 emergencyRefundTime = market.expiryTimestamp + EMERGENCY_REFUND_DELAY;
+    if (block.timestamp >= emergencyRefundTime - RESOLUTION_CUTOFF_BUFFER) {
+        revert DisputeWindowClosed();
+    }
+    
     // ... rest of function ...
 }
 ```
 
-**Option B:** Reduce pool balance in `emergencyRefund()`:
-```solidity
-function emergencyRefund(uint256 marketId) external nonReentrant returns (uint256 refund) {
-    // ... calculate refund ...
-    market.poolBalance -= refund; // ADD THIS
-    position.emergencyRefunded = true;
-    // ... transfer ...
-}
-```
+### Defense in Depth Matrix
+
+| Attack Vector | Fix 1 | Fix 2 | Fix 3 | Result |
+|---------------|-------|-------|-------|--------|
+| User claims after refund | ✅ BLOCKED | - | - | Safe |
+| Pool insolvency from refunds | - | ✅ BLOCKED | - | Safe |
+| Late proposal race condition | - | ⚠️ Mitigated | ✅ BLOCKED | Safe |
+| Direct contract bypass | ✅ | ✅ | ✅ | Safe |
 
 ### Frontend Mitigation (v0.7.26) ✅
 - [x] Block proposals AND disputes in UI when <2 hours remain before emergency refund
 - [x] Show "RESOLUTION WINDOW CLOSED" with emergency refund countdown
 - [x] Contextual messaging for no-proposal vs has-proposal scenarios
-- [x] Show "PROPOSAL WINDOW CLOSED" with emergency refund countdown
-- [ ] Show warning when emergency refund available but resolution in progress (edge case)
+- [x] Added "2-Hour Safety Cutoff" section in HowToPlayPage
+
+### Deployment Checklist for v3.6.0
+- [x] Implement Fix 1: Add `emergencyRefunded` check in `claim()`
+- [x] Implement Fix 2: Reduce `poolBalance` and supplies in `emergencyRefund()`
+- [x] Implement Fix 3: Add 2-hour cutoff in `proposeOutcome()` and `dispute()`
+- [x] Add new constant: `RESOLUTION_CUTOFF_BUFFER = 2 hours`
+- [x] Add new error types: `ProposalWindowClosed`, `DisputeWindowClosed`
+- [x] Write tests for all three attack vectors (13 new tests in `EmergencyRefundSecurity.t.sol`)
+- [x] Update existing tests (`PumpDump.t.sol` - `test_EmergencyRefund_AfterTimeout`)
+- [x] Run full test suite: **177 tests pass, 0 fail, 1 skip**
+- [ ] Deploy to testnet and verify
+- [ ] Update subgraph if needed
+- [ ] Deploy to mainnet
 
 ---
 
