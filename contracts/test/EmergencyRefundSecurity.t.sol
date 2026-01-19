@@ -367,6 +367,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
         // Alice buys shares (needed for proposal)
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Get expiry timestamp
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
@@ -403,6 +406,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
 
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
@@ -445,6 +451,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
         // Alice buys shares
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
@@ -484,6 +493,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
 
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
@@ -538,6 +550,8 @@ contract EmergencyRefundSecurityTest is TestHelper {
         // Alice buys shares
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        buyNoFor(charlie, marketId, 0.5 ether, 0);
 
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
@@ -594,6 +608,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
 
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
@@ -624,6 +641,9 @@ contract EmergencyRefundSecurityTest is TestHelper {
         uint256 marketId2 = createTestMarket(marketCreator, 7 days);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId2, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId2, 0);
 
         (, , , , , uint256 expiryTimestamp2, , , , , ) = market.getMarket(
             marketId2
@@ -1024,6 +1044,10 @@ contract EmergencyRefundSecurityTest is TestHelper {
 
         vm.prank(charlie);
         market.buyYes{value: 0.4 ether}(marketId, 0); // ~20% of winners
+
+        // v3.6.2: Need both sides for normal market
+        vm.prank(disputer);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Get share counts
         (uint256 aliceShares, , , , , ) = market.getPosition(marketId, alice);

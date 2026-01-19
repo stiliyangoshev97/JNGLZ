@@ -617,6 +617,9 @@ contract PredictionMarketFuzzTest is TestHelper {
         uint256 aliceShares = buyYesFor(alice, marketId, aliceAmount, 0);
         uint256 bobShares = buyYesFor(bob, marketId, bobAmount, 0);
 
+        // v3.6.2: Need both sides for normal market
+        buyNoFor(charlie, marketId, MIN_BNB_AMOUNT, 0);
+
         // YES wins
         expireMarket(marketId);
         assertAndResolve(marketId, charlie, true, true);

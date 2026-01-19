@@ -365,9 +365,11 @@ contract IntegrationTest is TestHelper {
      * @dev If someone proposes wrong outcome, single holder can dispute and win
      */
     function test_Integration_SingleShareholder_CanDispute() public {
-        // === SETUP: Alice is the ONLY buyer ===
+        // === SETUP: Alice is the main YES buyer ===
         uint256 marketId = createTestMarket(marketCreator, 1 days);
         buyYesFor(alice, marketId, 1 ether, 0);
+        // v3.6.2: Need both sides for normal market
+        buyNoFor(bob, marketId, 0.01 ether, 0); // Small NO position
 
         // === EXPIRY ===
         vm.warp(block.timestamp + 1 days + 1);
@@ -434,6 +436,8 @@ contract IntegrationTest is TestHelper {
     function test_Integration_TimingBoundary_DisputeTooLate() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        // v3.6.2: Need both sides for normal market
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
@@ -492,7 +496,9 @@ contract IntegrationTest is TestHelper {
      */
     function test_Integration_TieScenario_NoVotes() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
@@ -629,7 +635,9 @@ contract IntegrationTest is TestHelper {
      */
     function test_Integration_CreatorPriority_NonCreatorBlocked() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Expire
         vm.warp(block.timestamp + 1 days + 1);
@@ -654,7 +662,9 @@ contract IntegrationTest is TestHelper {
      */
     function test_Integration_CreatorPriority_NonCreatorAllowedAfter() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Expire + wait past priority window
         vm.warp(block.timestamp + 1 days + 1 + CREATOR_PRIORITY_WINDOW + 1);
@@ -677,7 +687,9 @@ contract IntegrationTest is TestHelper {
      */
     function test_Integration_NonShareholderCannotVote() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(charlie, marketId, 0.3 ether, 0);
 
         // Expire, propose, dispute
         vm.warp(block.timestamp + 1 days + 1);
@@ -699,7 +711,9 @@ contract IntegrationTest is TestHelper {
      */
     function test_Integration_DoubleClaimBlocked() public {
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Resolve market
         vm.warp(block.timestamp + 1 days + 1);
@@ -727,7 +741,9 @@ contract IntegrationTest is TestHelper {
     function test_Integration_EmergencyRefundVsClaim_MutualExclusion() public {
         // Scenario: Market resolves normally, user claims, then tries emergency refund
         uint256 marketId = createTestMarket(marketCreator, 1 days);
+        // v3.6.2: Need both sides for normal market
         buyYesFor(alice, marketId, 0.5 ether, 0);
+        buyNoFor(bob, marketId, 0.3 ether, 0);
 
         // Resolve
         vm.warp(block.timestamp + 1 days + 1);

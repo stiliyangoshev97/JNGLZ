@@ -206,10 +206,14 @@ contract PullPatternTest is TestHelper {
     // ============================================
 
     function test_BondWithdrawal_ProposerGetsBonus() public {
-        // Setup: Alice buys YES
+        // Setup: Alice buys YES, Bob buys NO (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Expire market
         vm.warp(block.timestamp + 1 days + 1);
@@ -244,10 +248,14 @@ contract PullPatternTest is TestHelper {
     }
 
     function test_WithdrawBond_Success() public {
-        // Setup: Create scenario where bond is credited
+        // Setup: Create scenario where bond is credited (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
@@ -321,16 +329,48 @@ contract PullPatternTest is TestHelper {
 
         vm.deal(proposer, bondWithFee);
         vm.prank(proposer);
-        vm.expectRevert(PredictionMarket.NoTradesToResolve.selector);
+        // v3.6.2: Empty market = one-sided market (both sides are 0), revert OneSidedMarket
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
         market.proposeOutcome{value: bondWithFee}(emptyMarketId, true);
     }
 
-    function test_NoTradesToResolve_AllowsIfOnesSideHasTrades() public {
-        // Market already has NO trades after setup, let's add some
+    function test_OneSidedMarket_BlocksProposal() public {
+        // v3.6.2: One-sided markets (only one side has trades) are blocked
+        // Market already has NO trades after setup, let's add only YES trades
 
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 0.1 ether}(marketId, 0);
+
+        // Verify it's one-sided
+        (, , , , , , uint256 yesSupply, uint256 noSupply, , , ) = market
+            .getMarket(marketId);
+        assertGt(yesSupply, 0, "YES supply should be > 0");
+        assertEq(noSupply, 0, "NO supply should be 0");
+
+        // Expire and try to propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+    }
+
+    function test_NormalMarket_AllowsProposal() public {
+        // v3.6.2: Normal markets (both sides have trades) are allowed
+
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 0.1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.1 ether}(marketId, 0);
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
@@ -360,10 +400,7 @@ contract PullPatternTest is TestHelper {
 
         // Signer1 proposes to replace signer3
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         // Just 1 confirmation so far (proposer auto-confirms)
         (, , uint256 confirmations, , bool executed) = market.pendingActions(
@@ -389,10 +426,7 @@ contract PullPatternTest is TestHelper {
 
         // Signer1 proposes
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         // Try to execute with only 1 confirmation
         vm.prank(signer1);
@@ -404,10 +438,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer2);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer1, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer1, newSigner);
 
         vm.prank(signer3);
         market.confirmAction(actionId);
@@ -419,10 +450,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer2, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer2, newSigner);
 
         vm.prank(signer3);
         market.confirmAction(actionId);
@@ -431,59 +459,34 @@ contract PullPatternTest is TestHelper {
     }
 
     function test_ReplaceSigner_InvalidZeroAddress() public {
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, address(0))
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidAddress.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, address(0));
     }
 
     function test_ReplaceSigner_InvalidSameAddress() public {
-        // Try to replace signer with themselves
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, signer3)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidSignerReplacement.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, signer3);
     }
 
     function test_ReplaceSigner_SignerNotFound() public {
         address notASigner = makeAddr("notASigner");
         address newSigner = makeAddr("newSigner");
 
-        // Try to replace someone who isn't a signer
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(notASigner, newSigner)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.SignerNotFound.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(notASigner, newSigner);
     }
 
     function test_ReplaceSigner_PreventDuplicateSigner() public {
-        // Attempt to replace signer3 with signer1 (who is already a signer)
-        // This should revert with InvalidSignerReplacement because it would create duplicate signers
-
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, signer1) // Replace signer3 with signer1 (already a signer!)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidSignerReplacement.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, signer1);
 
         // Verify all signers remain unchanged
         assertEq(
@@ -507,10 +510,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         vm.expectEmit(true, true, true, true);
         emit PredictionMarket.SignerReplaced(signer3, newSigner, actionId);
@@ -522,10 +522,7 @@ contract PullPatternTest is TestHelper {
     function test_OtherActions_StillRequire3of3() public {
         // Test that SetFee still requires 3-of-3
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(200)
-        );
+        uint256 actionId = market.proposeSetFee(200);
 
         vm.prank(signer2);
         market.confirmAction(actionId);
@@ -543,94 +540,7 @@ contract PullPatternTest is TestHelper {
     }
 
     // ============================================
-    // SWEEP PROTECTION TESTS
-    // ============================================
-
-    function test_SweepProtection_IncludesPendingWithdrawals() public {
-        // Setup a scenario with pending withdrawals
-        vm.deal(alice, 10 ether);
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
-
-        vm.warp(block.timestamp + 1 days + 1);
-        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
-
-        uint256 bond = market.getRequiredBond(marketId);
-        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
-
-        vm.deal(proposer, bondWithFee);
-        vm.prank(proposer);
-        market.proposeOutcome{value: bondWithFee}(marketId, true);
-
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-        market.finalizeMarket(marketId);
-
-        // Now we have pending withdrawals
-        uint256 pending = market.totalPendingWithdrawals();
-        assertGt(pending, 0, "Should have pending withdrawals");
-
-        // Check that getSweepableAmount includes pending in locked funds
-        (uint256 surplus, uint256 locked, ) = market.getSweepableAmount();
-
-        // The pending withdrawals should be part of locked
-        assertGe(locked, pending, "Locked should include pending withdrawals");
-    }
-
-    function test_SweepProtection_IncludesPendingCreatorFees() public {
-        // Generate creator fees
-        vm.deal(alice, 10 ether);
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
-
-        uint256 pendingFees = market.totalPendingCreatorFees();
-        assertGt(pendingFees, 0, "Should have pending creator fees");
-
-        (uint256 surplus, uint256 locked, ) = market.getSweepableAmount();
-
-        assertGe(locked, pendingFees, "Locked should include pending fees");
-    }
-
-    function test_SweepProtection_CannotSweepPendingFunds() public {
-        // Create scenario with only pending withdrawals (market resolved)
-        vm.deal(alice, 10 ether);
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
-
-        vm.warp(block.timestamp + 1 days + 1);
-        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
-
-        uint256 bond = market.getRequiredBond(marketId);
-        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
-
-        vm.deal(proposer, bondWithFee);
-        vm.prank(proposer);
-        market.proposeOutcome{value: bondWithFee}(marketId, true);
-
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-        market.finalizeMarket(marketId);
-
-        // Even though market is resolved, sweeping should not take pending funds
-        (uint256 surplus, , ) = market.getSweepableAmount();
-
-        // If no surplus, sweep should fail
-        if (surplus == 0) {
-            vm.prank(signer1);
-            uint256 actionId = market.proposeAction(
-                PredictionMarket.ActionType.SweepFunds,
-                ""
-            );
-
-            vm.prank(signer2);
-            market.confirmAction(actionId);
-
-            vm.prank(signer3);
-            vm.expectRevert(PredictionMarket.NothingToSweep.selector);
-            market.confirmAction(actionId);
-        }
-    }
-
-    // ============================================
-    // JURY FEES DISTRIBUTION TEST
+    // JURY FEES DISTRIBUTION TEST (v3.7.0: Pull Pattern)
     // ============================================
 
     function test_JuryFees_CreditedToPendingWithdrawals() public {
@@ -688,33 +598,39 @@ contract PullPatternTest is TestHelper {
         // Wait for voting to end
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
-        // Record pending before
-        uint256 alicePendingBefore = market.getPendingWithdrawal(alice);
-        uint256 charliePendingBefore = market.getPendingWithdrawal(charlie);
+        // Record balances before finalization
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 charlieBalanceBefore = charlie.balance;
 
         // Finalize
         market.finalizeMarket(marketId);
 
-        // Alice and Charlie should have jury fees credited (if YES won)
-        // But first check which side won
+        // Check which side won
         (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
 
         if (outcome == true) {
-            // YES won - Alice and Charlie should get jury fees
-            uint256 alicePendingAfter = market.getPendingWithdrawal(alice);
-            uint256 charliePendingAfter = market.getPendingWithdrawal(charlie);
+            // YES won - Alice and Charlie should be able to claim jury fees (v3.7.0 Pull Pattern)
+            vm.prank(alice);
+            uint256 aliceJuryFees = market.claimJuryFees(marketId);
 
-            assertGt(
-                alicePendingAfter,
-                alicePendingBefore,
-                "Alice should have jury fees"
+            vm.prank(charlie);
+            uint256 charlieJuryFees = market.claimJuryFees(marketId);
+
+            assertGt(aliceJuryFees, 0, "Alice should have jury fees");
+            assertGt(charlieJuryFees, 0, "Charlie should have jury fees");
+
+            // Verify they received the BNB
+            assertEq(
+                alice.balance,
+                aliceBalanceBefore + aliceJuryFees,
+                "Alice should receive jury fees"
             );
-            assertGt(
-                charliePendingAfter,
-                charliePendingBefore,
-                "Charlie should have jury fees"
+            assertEq(
+                charlie.balance,
+                charlieBalanceBefore + charlieJuryFees,
+                "Charlie should receive jury fees"
             );
         } else {
             // NO won - Bob should get jury fees (and be bond winner)
@@ -843,10 +759,14 @@ contract PullPatternTest is TestHelper {
     // ============================================
 
     function test_WithdrawBond_NonReentrant() public {
-        // Setup pending withdrawal
+        // Setup pending withdrawal (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
@@ -867,5 +787,316 @@ contract PullPatternTest is TestHelper {
         market.withdrawBond();
 
         assertEq(market.getPendingWithdrawal(proposer), 0, "Should be 0");
+    }
+
+    // ============================================
+    // v3.7.0 JURY FEES PULL PATTERN TESTS
+    // ============================================
+
+    function test_JuryFees_PoolCreatedOnDispute() public {
+        // Setup: Create market with trades on both sides
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 1 ether}(marketId, 0);
+
+        // Expire and propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Get proposal bond for dispute
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Bob votes NO
+        vm.prank(bob);
+        market.vote(marketId, false);
+
+        // Finalize - YES wins (alice has more shares)
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Check jury fees pool was created
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 juryFeesPool
+        ) = market.markets(marketId);
+        assertGt(juryFeesPool, 0, "Jury fees pool should be created");
+    }
+
+    function test_JuryFees_ClaimByWinningVoter() public {
+        // Setup: Create market with trades on both sides
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire and propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Dispute
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Both vote YES (alice wins)
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        vm.prank(bob);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Alice claims jury fees
+        uint256 aliceBalanceBefore = alice.balance;
+        vm.prank(alice);
+        uint256 claimed = market.claimJuryFees(marketId);
+
+        assertGt(claimed, 0, "Alice should claim jury fees");
+        assertEq(
+            alice.balance,
+            aliceBalanceBefore + claimed,
+            "Alice balance should increase"
+        );
+    }
+
+    function test_JuryFees_RevertIfNotVoted() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Only alice votes
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Charlie (never voted) tries to claim
+        vm.prank(charlie);
+        vm.expectRevert(PredictionMarket.DidNotVote.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfVotedForLoser() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES, Bob votes NO
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        vm.prank(bob);
+        market.vote(marketId, false);
+
+        // Finalize - YES wins
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Bob (voted for loser) tries to claim
+        vm.prank(bob);
+        vm.expectRevert(PredictionMarket.VotedForLosingOutcome.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfAlreadyClaimed() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // First claim succeeds
+        vm.prank(alice);
+        market.claimJuryFees(marketId);
+
+        // Second claim fails
+        vm.prank(alice);
+        vm.expectRevert(PredictionMarket.JuryFeesAlreadyClaimed.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfNoPool() public {
+        // Setup market with non-disputed resolution
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire and propose (no dispute)
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Finalize WITHOUT dispute (no jury fees pool created)
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Try to claim jury fees
+        vm.prank(alice);
+        vm.expectRevert(PredictionMarket.NoJuryFeesPool.selector);
+        market.claimJuryFees(marketId);
     }
 }

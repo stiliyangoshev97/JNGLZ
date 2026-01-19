@@ -185,6 +185,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(marketId);
 
@@ -232,6 +233,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(marketId);
 
@@ -269,6 +271,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             uint256 virtualLiquidity,
             PredictionMarket.HeatLevel heatLevel,
+            ,
             ,
             ,
             ,
@@ -369,6 +372,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(marketId);
 
@@ -380,20 +384,11 @@ contract PredictionMarketTest is TestHelper {
     }
 
     function test_HeatLevel_InvalidValueReverts() public {
+        // v3.8.0: Validation now happens at propose time
         // Try to set heat level below minimum (1e18)
-        // The revert happens on the 3rd confirmation (execution)
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetHeatLevelCrack,
-            abi.encode(0.5e18)
-        );
-
-        vm.prank(signer2);
-        market.confirmAction(actionId);
-
-        vm.prank(signer3);
         vm.expectRevert(PredictionMarket.InvalidFee.selector);
-        market.confirmAction(actionId);
+        market.proposeSetHeatLevelCrack(0.5e18);
     }
 
     // ============================================
@@ -691,8 +686,31 @@ contract PredictionMarketTest is TestHelper {
         );
 
         // Get initial virtualLiquidity
-        (, , , , , , , , , uint256 initialVLiq, , , , , , , , , , , , ) = market
-            .markets(crackMarket);
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 initialVLiq,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(crackMarket);
         assertEq(initialVLiq, 50e18, "Initial CRACK should be 50e18");
 
         // MultiSig changes CRACK default to 100e18
@@ -731,6 +749,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(crackMarket);
         assertEq(
@@ -745,7 +764,7 @@ contract PredictionMarketTest is TestHelper {
             7 days,
             PredictionMarket.HeatLevel.CRACK
         );
-        (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , ) = market
+        (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , , ) = market
             .markets(newMarket);
         assertEq(newVLiq, 100e18, "New market should have 100e18");
     }

@@ -5,6 +5,356 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **GOVERNANCE UX OVERHAUL** - Individual propose functions for human-friendly governance
+
+### Changed
+
+#### 🎮 GOVERNANCE UX: Individual Propose Functions
+Replaced the generic `proposeAction(ActionType, bytes)` with 18 individual propose functions for dramatically better UX.
+
+**Problem Solved:**
+The old system required ABI-encoding parameters manually:
+```solidity
+// OLD: Nightmare to use in practice
+proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
+```
+
+**New System:**
+```solidity
+// NEW: Human-readable, type-safe, works directly in any wallet
+proposeSetMarketCreationFee(0.01 ether)
+```
+
+**New Propose Functions:**
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(uint256)` | Fee in BPS (max 500) | Platform fee |
+| `proposeSetMinBet(uint256)` | Wei amount (0.001-0.1 BNB) | Minimum bet |
+| `proposeSetTreasury(address)` | Treasury address | Treasury recipient |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume operations |
+| `proposeSetCreatorFee(uint256)` | Fee in BPS (max 200) | Creator fee |
+| `proposeSetResolutionFee(uint256)` | Fee in BPS (max 100) | Resolution fee |
+| `proposeSetMinBondFloor(uint256)` | Wei amount (0.005-0.1 BNB) | Min bond |
+| `proposeSetDynamicBondBps(uint256)` | BPS (50-500) | Dynamic bond % |
+| `proposeSetBondWinnerShare(uint256)` | BPS (2000-8000) | Winner's share |
+| `proposeSetMarketCreationFee(uint256)` | Wei amount (max 0.1 BNB) | Creation fee |
+| `proposeSetHeatLevelCrack(uint256)` | Virtual liquidity | CRACK tier |
+| `proposeSetHeatLevelHigh(uint256)` | Virtual liquidity | HIGH tier |
+| `proposeSetHeatLevelPro(uint256)` | Virtual liquidity | PRO tier |
+| `proposeSetHeatLevelApex(uint256)` | Virtual liquidity | APEX tier |
+| `proposeSetHeatLevelCore(uint256)` | Virtual liquidity | CORE tier |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new signer | Replace signer (2-of-3) |
+
+**Key Improvements:**
+- ✅ **Type-safe**: Solidity validates parameters at compile time
+- ✅ **Human-readable**: Function names describe exactly what they do
+- ✅ **Fail-fast**: Validation at propose time, not execution time
+- ✅ **Works in any wallet**: No external tooling needed
+- ✅ **Emergency-ready**: Can pause contract in seconds at 3AM
+
+**Workflow:**
+1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
+2. Signer2 calls `confirmAction(actionId)` → (2/3 confirmations)
+3. Signer3 calls `confirmAction(actionId)` → auto-executes (3/3)
+
+**Trade-offs:**
+- ~10-15KB more bytecode (one-time deployment cost)
+- Slightly higher deployment gas (~$30 more on BSC)
+- Worth it for: operational simplicity, emergency response time, reduced human error
+
+---
+
+## [3.7.0] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **GAS GRIEFING FIX** - Replaces v3.6.2
+- **SWEEP REMOVAL** - Trust minimization
+- **DEAD CODE CLEANUP** - Gas optimization
+
+### Removed
+
+#### 🔒 SECURITY: SweepFunds Functionality Removed Entirely
+Removed the entire `SweepFunds` governance action after discovering 2 critical bugs in sweep protection logic.
+
+**Rationale:**
+1. **Risk/Reward Analysis**: Risk of catastrophic user fund loss far outweighs recovering ~1-2 BNB dust
+2. **Critical Bugs Found**: Found 2 critical vulnerabilities in `_calculateTotalLockedFunds()`:
+   - Missing `juryFeesPool` in locked funds calculation
+   - Resolved markets' unclaimed winner funds not protected
+3. **Industry Best Practice**: Major protocols (Uniswap, Aave, Compound) don't have sweep functions
+4. **Trust Minimization**: "Code is law" - admins cannot extract any funds under any circumstances
+5. **Deflationary**: Locked dust benefits the BNB ecosystem
+
+**What Was Removed:**
+```solidity
+// REMOVED from ActionType enum:
+SweepFunds
+
+// REMOVED event:
+event FundsSwept(uint256 amount, uint256 totalLocked, uint256 contractBalance);
+
+// REMOVED error:
+error NothingToSweep();
+
+// REMOVED from _executeAction():
+} else if (action.actionType == ActionType.SweepFunds) { ... }
+
+// REMOVED functions:
+function _calculateTotalLockedFunds() internal view returns (uint256)
+function getSweepableAmount() external view returns (uint256, uint256, uint256)
+```
+
+**Trust Guarantees After Removal:**
+- ✅ Governance CANNOT extract any BNB from contract
+- ✅ All user funds 100% protected from admin actions
+- ✅ Even "dust" remains locked forever (deflationary)
+- ✅ Maximum trust minimization achieved
+
+#### 🧹 Dead Code Cleanup
+Removed legacy code that was no longer used after v3.7.0 jury fees Pull Pattern:
+
+```solidity
+// REMOVED mapping (no longer populated):
+mapping(uint256 => address[]) public marketVoters;
+
+// REMOVED function (returns 0 for all markets):
+function getVoterCount(uint256 marketId) external view returns (uint256)
+
+// REMOVED event (replaced by JuryFeesClaimed):
+event JuryFeeDistributed(uint256 indexed marketId, address indexed voter, uint256 amount);
+```
+
+**Gas Savings:**
+- ~20K gas saved per vote (no more array push)
+- Smaller contract bytecode
+
+### Fixed
+
+#### 🚨 CRITICAL: Jury Fees Gas Griefing Vulnerability
+Fixed a gas griefing vulnerability where markets with >4,600 winning voters could permanently brick `finalizeMarket()`.
+
+**Vulnerability Details (v3.6.2 and earlier):**
+- `_distributeJuryFees()` had an O(n) loop through ALL winning voters
+- At ~4,600 voters, the loop would exceed the 30M gas limit
+- `finalizeMarket()` would revert, leaving the market stuck forever
+- Neither claims nor emergency refunds would work
+
+**Attack Scenario:**
+```
+1. Attacker creates/joins a market with clear outcome
+2. Creates 5,000+ wallets, each buys minimum shares
+3. All wallets vote for the winning side
+4. On finalization, _distributeJuryFees() loops through 5,000+ voters
+5. Gas exceeds 30M limit → finalizeMarket() reverts
+6. Market is STUCK - winners can never claim
+```
+
+**Fix Applied - Pull Pattern for Jury Fees:**
+```solidity
+// OLD (v3.6.2 - VULNERABLE): O(n) loop
+function _distributeJuryFees(...) internal {
+    for (uint256 i = 0; i < winningVoterCount; i++) {
+        address voter = winningVoters[i];
+        // ... calculate share ...
+        pendingWithdrawals[voter] += share;  // O(n) operations
+    }
+}
+
+// NEW (v3.7.0 - FIXED): O(1) storage
+function _distributeJuryFees(...) internal {
+    // ... treasury fallback if no winners ...
+    market.juryFeesPool = voterPool;  // Single storage write
+    emit JuryFeesPoolCreated(marketId, voterPool);
+}
+
+// NEW: Users claim their share
+function claimJuryFees(uint256 marketId) external nonReentrant returns (uint256 amount) {
+    // Calculate proportional share
+    // Transfer to voter
+}
+```
+
+#### 🚨 CRITICAL: SweepFunds Could Steal Unclaimed Winner Payouts
+Fixed a vulnerability where governance could accidentally sweep funds reserved for unclaimed winners.
+
+**Vulnerability Details:**
+- `_calculateTotalLockedFunds()` only included pool balance for UNRESOLVED markets
+- Resolved markets still have `poolBalance > 0` until all winners claim
+- SweepFunds could sweep these funds, leaving winners unable to claim
+
+**Fix Applied:**
+```solidity
+// OLD (VULNERABLE):
+if (!market.resolved) {
+    totalLocked += market.poolBalance;  // Only unresolved!
+}
+
+// NEW (FIXED):
+if (market.poolBalance > 0) {
+    totalLocked += market.poolBalance;  // ALL markets with funds
+}
+```
+
+### Added
+
+#### New Storage Fields
+- `Market.juryFeesPool` - Stores total jury fees for Pull Pattern claiming
+- `Position.juryFeesClaimed` - Tracks if voter has claimed their jury fees
+
+#### New Events
+- `JuryFeesPoolCreated(uint256 indexed marketId, uint256 amount)` - Emitted when jury fees pool is created
+- `JuryFeesClaimed(uint256 indexed marketId, address indexed voter, uint256 amount)` - Emitted when voter claims
+
+#### New Errors
+- `DidNotVote()` - User did not vote in this market
+- `VotedForLosingOutcome()` - User voted for the losing side
+- `JuryFeesAlreadyClaimed()` - User already claimed jury fees
+- `NoJuryFeesPool()` - No jury fees pool exists for this market
+
+#### New Functions
+- `claimJuryFees(uint256 marketId)` - Claim proportional share of jury fees pool
+
+### Changed
+
+#### Pull Pattern Completion
+The contract now uses Pull Pattern for ALL fund distributions:
+| What | v3.6.2 (Push) | v3.7.0 (Pull) |
+|------|---------------|---------------|
+| Winner claims | Pull | Pull (unchanged) |
+| Proposer bond | Pull | Pull (unchanged) |
+| Disputer bond | Pull | Pull (unchanged) |
+| Creator fees | Pull | Pull (unchanged) |
+| **Jury fees** | **Push (O(n) loop)** | **Pull (O(1))** ✅ |
+
+### Security Notes
+- `finalizeMarket()` now runs in O(1) time regardless of voter count
+- Markets cannot be bricked by large voter counts
+- Jury fees remain claimable indefinitely (no expiry)
+- **198 tests passing** (1 skipped is expected)
+
+#### 🚨 CRITICAL FIX #2: Sweep Protection for Jury Fees Pool
+Fixed a vulnerability where `SweepFunds` governance action could sweep BNB reserved for jury fee claims.
+
+**Vulnerability (during v3.7.0 development):**
+- `_calculateTotalLockedFunds()` did NOT include `market.juryFeesPool`
+- Governance could inadvertently sweep funds reserved for jury fee claims
+- Winning voters would be unable to claim their jury fees
+
+**Fix Applied:**
+```solidity
+function _calculateTotalLockedFunds() internal view returns (uint256 totalLocked) {
+    // ... pool balance, pending withdrawals, pending creator fees ...
+    
+    // ✅ v3.7.0: Jury fees pool is locked
+    if (market.juryFeesPool > 0) {
+        totalLocked += market.juryFeesPool;
+    }
+}
+```
+
+---
+
+## [3.6.2] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **ALL SECURITY FIXES APPLIED** - Replaces v3.6.1
+
+### Fixed
+
+#### 🟠 HIGH: One-Sided Market Proposals
+Fixed a vulnerability where proposals could be made on markets with only one side having holders.
+
+**Vulnerability Details (v3.6.1):**
+- `proposeOutcome()` only checked if BOTH sides were empty (`&&`)
+- Allowed proposals on one-sided markets (e.g., 100 YES, 0 NO)
+- Could cause griefing (force users to wait 24h for emergency refund) or pointless resolution
+
+**Fix Applied:**
+```solidity
+// OLD (v3.6.1 - VULNERABLE):
+if (market.yesSupply == 0 && market.noSupply == 0) {
+    revert NoTradesToResolve();
+}
+
+// NEW (v3.6.2 - FIXED):
+if (market.yesSupply == 0 || market.noSupply == 0) {
+    revert OneSidedMarket();
+}
+```
+
+#### 🟠 HIGH: Emergency Refund Bypass
+Fixed a vulnerability where losers could avoid resolution by not calling `finalizeMarket()` and waiting for emergency refund.
+
+**Vulnerability Details (v3.6.1):**
+- `emergencyRefund()` only checked `!market.resolved`
+- Did NOT check if a valid proposal existed
+- Losers could avoid losing by simply waiting for emergency refund
+
+**Fix Applied:**
+```solidity
+function emergencyRefund(uint256 marketId) external {
+    // ... other checks ...
+    // ✅ NEW: Block if resolution in progress (unless contract paused)
+    if (!paused && market.proposer != address(0)) {
+        revert ResolutionInProgress();
+    }
+}
+```
+
+#### 🟡 MEDIUM: Stale Proposer State After Failed Finalization
+Fixed a bug where `proposer`/`disputer` weren't cleared when finalization legitimately failed.
+
+**Vulnerability Details (v3.6.1):**
+- When finalization failed (0 winners or vote tie), bonds were returned
+- But `market.proposer` was NOT cleared
+- Combined with emergency refund fix, would STUCK users forever
+
+**Fix Applied:**
+```solidity
+// In finalizeMarket() when winningSupply == 0:
+if (winningSupply == 0) {
+    pendingWithdrawals[market.proposer] += bondAmount;
+    market.proposer = address(0);  // ✅ ADDED
+    emit MarketResolutionFailed(...);
+    return;
+}
+
+// In _returnBondsOnTie():
+function _returnBondsOnTie(...) {
+    // ... return bonds ...
+    market.proposer = address(0);  // ✅ ADDED
+    market.disputer = address(0);  // ✅ ADDED
+}
+```
+
+### Added
+
+#### New Error Codes
+- `OneSidedMarket()` - Reverts when proposing on market with one side empty
+- `ResolutionInProgress()` - Reverts when emergency refund attempted with active proposal
+
+#### New Tests
+- `OneSidedMarket.t.sol` - 7 new tests for one-sided market blocking
+- Rewrote `EmptyWinningSide.t.sol` - 6 tests for v3.6.2 behavior
+- Updated 20+ tests across all files for new one-sided market rules
+
+### Security Notes
+- Resolution and emergency refund are now **truly mutually exclusive**
+- One-sided markets correctly use emergency refund path
+- Failed finalization properly resets market state for emergency refund
+- Paused contract allows emergency refund as escape hatch
+- **189 tests passing**
+
+---
+
 ## [3.6.1] - 2026-01-18
 
 ### NOT YET DEPLOYED ⏳
