@@ -395,13 +395,18 @@ function _returnBondsOnTie(Market storage market) internal {
 | One-sided (YES = 0, NO > 0) | ❌ No | Emergency refund at 24h |
 | Empty (YES = 0, NO = 0) | ❌ No | Nothing to refund |
 
-| Scenario | Emergency Refund? |
-|----------|-------------------|
-| No proposal, 24h passed | ✅ Yes |
-| Proposal exists, not finalized | ❌ No → Must finalize first |
-| Finalization failed (0 winners) | ✅ Yes (proposer cleared) |
-| Vote tie | ✅ Yes (proposer cleared) |
-| Contract paused | ✅ Yes (emergency escape hatch) |
+| Scenario | Finalize Needed? | Emergency Refund? |
+|----------|------------------|-------------------|
+| **One-sided market** (YES=0 or NO=0) | ❌ No | ✅ Directly after 24h |
+| **Empty market** (YES=0 AND NO=0) | ❌ No | N/A (no positions) |
+| **Normal market, no proposal** | ❌ No | ✅ Directly after 24h |
+| **Normal market, with proposal** | ✅ Yes | After finalize clears proposer |
+| **Proposal exists, not finalized** | ✅ Yes | ❌ No → Must finalize first |
+| **Finalization failed** (0 winners) | ✅ Yes (clears proposer) | ✅ Yes (proposer cleared) |
+| **Vote tie** | ✅ Yes (clears proposer) | ✅ Yes (proposer cleared) |
+| **Contract paused** | ❌ No | ✅ Yes (emergency escape hatch) |
+
+> **Key Insight:** For one-sided markets or markets where nobody proposes, `finalizeMarket()` is NOT needed - users can call `emergencyRefund()` directly after 24h passes. The protection ensures losers cannot game the system by refusing to finalize.
 
 ### New Error Codes (v3.6.2)
 - `OneSidedMarket()` - Reverts when trying to propose on a market where one side has 0 supply
