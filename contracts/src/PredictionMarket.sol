@@ -208,9 +208,6 @@ contract PredictionMarket is ReentrancyGuard {
     mapping(uint256 => Market) public markets;
     mapping(uint256 => mapping(address => Position)) public positions;
 
-    // Track voters for jury fee distribution
-    mapping(uint256 => address[]) public marketVoters;
-
     // ============ Pull Pattern State (v3.4.0) ============
 
     /// @notice Pending withdrawals for bonds and jury fees (Pull Pattern)
@@ -284,12 +281,6 @@ contract PredictionMarket is ReentrancyGuard {
         address indexed winner,
         uint256 winnerAmount,
         uint256 voterPoolAmount
-    );
-
-    event JuryFeeDistributed(
-        uint256 indexed marketId,
-        address indexed voter,
-        uint256 amount
     );
 
     event ProposerRewardPaid(
@@ -959,10 +950,6 @@ contract PredictionMarket is ReentrancyGuard {
         } else {
             market.noVotes += voteWeight;
         }
-
-        // Note: marketVoters mapping is no longer updated here (v3.7.0)
-        // Jury fees now use Pull Pattern - voters call claimJuryFees() directly
-        // This saves ~20K gas per vote by avoiding storage array push
 
         emit VoteCast(marketId, msg.sender, outcome, voteWeight);
     }
@@ -1771,13 +1758,6 @@ contract PredictionMarket is ReentrancyGuard {
             m.resolved,
             m.outcome
         );
-    }
-
-    /**
-     * @notice Get number of voters for a market
-     */
-    function getVoterCount(uint256 marketId) external view returns (uint256) {
-        return marketVoters[marketId].length;
     }
 
     // ============ MultiSig Governance ============

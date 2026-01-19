@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ready for deployment to BNB Testnet
 - **GAS GRIEFING FIX** - Replaces v3.6.2
 - **SWEEP REMOVAL** - Trust minimization
+- **DEAD CODE CLEANUP** - Gas optimization
 
 ### Removed
 
@@ -50,6 +51,24 @@ function getSweepableAmount() external view returns (uint256, uint256, uint256)
 - ✅ All user funds 100% protected from admin actions
 - ✅ Even "dust" remains locked forever (deflationary)
 - ✅ Maximum trust minimization achieved
+
+#### 🧹 Dead Code Cleanup
+Removed legacy code that was no longer used after v3.7.0 jury fees Pull Pattern:
+
+```solidity
+// REMOVED mapping (no longer populated):
+mapping(uint256 => address[]) public marketVoters;
+
+// REMOVED function (returns 0 for all markets):
+function getVoterCount(uint256 marketId) external view returns (uint256)
+
+// REMOVED event (replaced by JuryFeesClaimed):
+event JuryFeeDistributed(uint256 indexed marketId, address indexed voter, uint256 amount);
+```
+
+**Gas Savings:**
+- ~20K gas saved per vote (no more array push)
+- Smaller contract bytecode
 
 ### Fixed
 
