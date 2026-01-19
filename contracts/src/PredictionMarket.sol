@@ -1234,40 +1234,41 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 marketId
     ) external nonReentrant returns (uint256 amount) {
         Market storage market = markets[marketId];
-        
+
         // Must be resolved
         if (!market.resolved) revert MarketNotResolved();
-        
+
         // Must have jury fees pool (only disputed markets have this)
         if (market.juryFeesPool == 0) revert NoJuryFeesPool();
-        
+
         Position storage position = positions[marketId][msg.sender];
-        
+
         // Must have voted
         if (!position.hasVoted) revert DidNotVote();
-        
+
         // Must have voted for winning outcome
-        if (position.votedOutcome != market.outcome) revert VotedForLosingOutcome();
-        
+        if (position.votedOutcome != market.outcome)
+            revert VotedForLosingOutcome();
+
         // Must not have already claimed
         if (position.juryFeesClaimed) revert JuryFeesAlreadyClaimed();
-        
+
         // Calculate voter's share
         uint256 totalWinningVotes = market.outcome
             ? market.yesVotes
             : market.noVotes;
         uint256 voterWeight = position.yesShares + position.noShares;
         amount = (market.juryFeesPool * voterWeight) / totalWinningVotes;
-        
+
         if (amount == 0) revert NothingToClaim();
-        
+
         // CEI: Update state before transfer
         position.juryFeesClaimed = true;
-        
+
         // Transfer to voter
         (bool success, ) = msg.sender.call{value: amount}("");
         if (!success) revert TransferFailed();
-        
+
         emit JuryFeesClaimed(marketId, msg.sender, amount);
     }
 
@@ -2105,8 +2106,10 @@ contract PredictionMarket is ReentrancyGuard {
         for (uint256 i = 0; i < marketCount; i++) {
             Market storage market = markets[i];
 
-            // Add pool balance for unresolved markets
-            if (!market.resolved) {
+            // v3.7.0 FIX: Include pool balance for ALL markets (resolved or not)
+            // Resolved markets still have poolBalance until all winners claim
+            // Without this, SweepFunds could steal unclaimed winner payouts
+            if (market.poolBalance > 0) {
                 totalLocked += market.poolBalance;
             }
 

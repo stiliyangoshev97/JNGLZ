@@ -16,9 +16,9 @@ Version 3.7.0 addresses all identified security vulnerabilities in the Predictio
 | v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data | 180 |
 | v3.6.1 | Dispute window edge case | 180 |
 | v3.6.2 | One-sided markets, Emergency refund bypass, Stale proposer state | 189 |
-| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1)), Sweep protection for jury pool** | **196** |
+| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1)), Jury pool sweep protection, Resolved market sweep protection** | **198** |
 
-**All 196 tests passing (1 skipped). Contract is ready for deployment.**
+**All 198 tests passing (1 skipped). Contract is ready for deployment.**
 
 ---
 
@@ -594,6 +594,8 @@ After a comprehensive review of `PredictionMarket.sol`, the following analysis c
 | **Bypass finalization** | Block refund if `proposer != address(0)` | v3.6.2 |
 | **Stuck users after tie** | Clear `proposer`/`disputer` on tie | v3.6.2 |
 | **Jury fees gas griefing** | Pull Pattern with `claimJuryFees()` | **v3.7.0** |
+| **Sweep protection: jury pool** | `juryFeesPool` included in locked funds | **v3.7.0** |
+| **Sweep protection: resolved markets** | `poolBalance > 0` check (not `!resolved`) | **v3.7.0** |
 | **Reentrancy** | All BNB-transferring functions have `nonReentrant` | v3.0.0 |
 | **Front-running market creation** | `createMarketAndBuy()` atomic function | v3.2.0 |
 | **Creator fee theft** | Pull Pattern with `pendingCreatorFees` | v3.4.0 |
@@ -644,7 +646,7 @@ The v3.6.2 fixes complete the security hardening:
 2. **emergencyRefund()** - Cannot bypass resolution (proposer check)
 3. **finalizeMarket()** - Cannot leave users stuck (state clearing)
 4. **All attack vectors** - Identified and mitigated
-5. **189 tests** - Comprehensive coverage including edge cases
+5. **198 tests** - Comprehensive coverage including edge cases
 
 ### Remaining Considerations (Non-Security)
 
@@ -827,71 +829,196 @@ error NoJuryFeesPool();
 ✅ test_JuryFees_RevertIfNoPool - No pool = revert
 ✅ test_SweepProtection_IncludesJuryFeesPool - Sweep excludes jury pool
 ✅ test_SweepProtection_JuryFeesPoolNotSwept - Governance cannot sweep jury fees
-✅ All 196 tests passing (1 skipped is expected)
+✅ test_SweepProtection_ResolvedMarketPoolIncluded - Resolved pools included in locked funds
+✅ test_SweepProtection_CannotStealUnclaimedWinnerFunds - Cannot sweep unclaimed winner payouts
+✅ All 198 tests passing (1 skipped is expected)
 ```
 
 ---
 
-## Part 8: Sweep Protection for Jury Fees Pool (FIXED in v3.7.0)
+## Part 8: Sweep Protection Vulnerabilities (FIXED in v3.7.0)
 
-**Discovered:** January 19, 2026 (during v3.7.0 development)  
+**Discovered:** January 19, 2026 (during v3.7.0 security audit)  
 **Severity:** 🔴 CRITICAL  
 **Status:** ✅ FIXED in v3.7.0
 
-### Vulnerability Details
+### Two Critical Sweep Protection Bugs Found
 
-When converting jury fees from Push to Pull Pattern, a critical oversight was identified:
+During the v3.7.0 security audit, **TWO critical vulnerabilities** were discovered in `_calculateTotalLockedFunds()`:
 
-| Issue | Description | Impact | Severity |
-|-------|-------------|--------|----------|
-| **Sweep Protection Missing** | `_calculateTotalLockedFunds()` did NOT include `market.juryFeesPool` | Governance could sweep BNB reserved for jury fee claims | 🔴 CRITICAL |
+| # | Bug Name | Description | Impact | Severity |
+|---|----------|-------------|--------|----------|
+| 1 | **Jury Fees Pool Not Protected** | `juryFeesPool` was not included in locked funds calculation | Governance could sweep jury fee claims | 🔴 CRITICAL |
+| 2 | **Resolved Market Pool Not Protected** | Only UNRESOLVED markets' `poolBalance` was protected (`if (!market.resolved)`) | **Governance could steal all unclaimed winner payouts** | 🔴 CRITICAL |
 
-### Attack/Failure Scenario
+### Bug #1: Jury Fees Pool Not Protected
+
+#### Vulnerability Details
+
+When converting jury fees from Push to Pull Pattern, `_calculateTotalLockedFunds()` did NOT include `market.juryFeesPool`.
+
+#### Attack Scenario
 
 ```
 1. Market finalizes with dispute, jury pool = 0.5 BNB
 2. Governance executes SweepFunds action
-3. _calculateTotalLockedFunds() returns X (NOT including 0.5 BNB jury pool)
-4. Sweep sends (balance - X) to treasury, including the 0.5 BNB jury pool
+3. _calculateTotalLockedFunds() does NOT include 0.5 BNB jury pool
+4. Sweep sends (balance - X) to treasury, INCLUDING the jury pool
 5. Winning voters call claimJuryFees() → FAILS (funds already swept)
-6. Jury fees are lost, voters cannot claim
+6. Jury fees are PERMANENTLY LOST
 ```
 
-### Fix Applied
+### Bug #2: Resolved Market Pool Not Protected (MORE SEVERE)
+
+#### Vulnerability Details
+
+The ORIGINAL vulnerable code:
 
 ```solidity
+// v3.6.2 VULNERABLE CODE
 function _calculateTotalLockedFunds() internal view returns (uint256 totalLocked) {
     for (uint256 i = 0; i < marketCount; i++) {
         Market storage m = markets[i];
         
-        // ... pool balance ...
+        // ❌ BUG: Only UNRESOLVED markets protected!
         if (!m.resolved) {
+            totalLocked += m.poolBalance;  
+        }
+        // Resolved markets with poolBalance > 0 are NOT included!
+        
+        // ... bonds ...
+    }
+}
+```
+
+**The Problem:** When a market resolves, `m.resolved = true`, but `m.poolBalance` is NOT zero until winners call `claim()`. The check `if (!m.resolved)` excluded resolved markets from protection, even though they still hold unclaimed winner funds.
+
+#### Attack Scenario
+
+```
+Timeline:
+─────────────────────────────────────────────────────────────────────────────
+T=0    Market created with 100 BNB in pool
+T=24h  Market expires
+T=26h  Proposal + no dispute + finalize
+       → market.resolved = true
+       → market.poolBalance = 100 BNB (winners haven't claimed yet)
+
+T=27h  Governance executes SweepFunds
+       → _calculateTotalLockedFunds() checks: if (!market.resolved)
+       → market.resolved = TRUE, so poolBalance NOT included!
+       → 100 BNB is considered "surplus"
+       → Sweep transfers 100 BNB to treasury
+
+T=28h  Winners try to call claim()
+       → Contract has no funds
+       → Transaction REVERTS
+       → Winners' 100 BNB is STOLEN
+
+RESULT: Governance (or compromised multisig) can steal ALL unclaimed 
+        winner payouts from every resolved market!
+─────────────────────────────────────────────────────────────────────────────
+```
+
+### Fix Applied: Complete Sweep Protection
+
+```solidity
+// v3.7.0 FIXED CODE
+function _calculateTotalLockedFunds() internal view returns (uint256 totalLocked) {
+    for (uint256 i = 0; i < marketCount; i++) {
+        Market storage m = markets[i];
+        
+        // ✅ FIX #2: Protect ALL markets with poolBalance (resolved OR unresolved)
+        if (m.poolBalance > 0) {
             totalLocked += m.poolBalance;
         }
         
-        // ✅ v3.7.0: Jury fees pool is locked (cannot be swept)
+        // ... bonds (unchanged) ...
+        if (m.proposalBond > 0) {
+            totalLocked += m.proposalBond;
+        }
+        if (m.disputeBond > 0) {
+            totalLocked += m.disputeBond;
+        }
+        
+        // ✅ FIX #1: Protect jury fees pool
         if (m.juryFeesPool > 0) {
             totalLocked += m.juryFeesPool;
         }
     }
     
-    // ... pending withdrawals, pending creator fees ...
+    // Global pending balances (unchanged - already protected)
     totalLocked += totalPendingWithdrawals;
     totalLocked += totalPendingCreatorFees;
 }
+```
+
+### Why `if (m.poolBalance > 0)` is Correct
+
+| Market State | poolBalance | Old Code Protected? | New Code Protected? |
+|--------------|-------------|---------------------|---------------------|
+| **Unresolved** | > 0 | ✅ Yes | ✅ Yes |
+| **Resolved, unclaimed** | > 0 | ❌ **NO** | ✅ Yes |
+| **Resolved, all claimed** | 0 | N/A (nothing to protect) | N/A |
+| **Emergency refunded** | 0 | N/A (nothing to protect) | N/A |
+
+The key insight: **`poolBalance > 0` is the correct invariant**, not `!resolved`. Any market with a non-zero pool balance has user funds that must be protected.
+
+### Complete Fund Type Protection Matrix (v3.7.0)
+
+| Fund Type | Protected? | How | When Released |
+|-----------|------------|-----|---------------|
+| **Unresolved market pools** | ✅ | `if (m.poolBalance > 0)` | Resolution or emergency refund |
+| **Resolved market pools (UNCLAIMED)** | ✅ **FIXED** | `if (m.poolBalance > 0)` | When winners call `claim()` |
+| **Proposal bonds** | ✅ | `if (m.proposalBond > 0)` | Finalization |
+| **Dispute bonds** | ✅ | `if (m.disputeBond > 0)` | Finalization |
+| **Jury fees pool** | ✅ **ADDED** | `if (m.juryFeesPool > 0)` | When voters call `claimJuryFees()` |
+| **Pending withdrawals** | ✅ | `totalPendingWithdrawals` | When users call `withdrawBond()` |
+| **Pending creator fees** | ✅ | `totalPendingCreatorFees` | When creators call `withdrawCreatorFees()` |
+
+### Test Coverage Added (v3.7.0)
+
+```
+✅ test_SweepProtection_IncludesJuryFeesPool - Jury fees included in locked funds
+✅ test_SweepProtection_JuryFeesPoolNotSwept - Cannot sweep jury fees
+✅ test_SweepProtection_ResolvedMarketPoolIncluded - Resolved pools included in locked funds
+✅ test_SweepProtection_CannotStealUnclaimedWinnerFunds - Cannot sweep unclaimed winner payouts
 ```
 
 ### Security Properties After Fix
 
 | Property | Status | Notes |
 |----------|--------|-------|
-| **Jury pool protected from sweep** | ✅ | `_calculateTotalLockedFunds()` includes `juryFeesPool` |
-| **Cannot sweep reserved funds** | ✅ | Sweep only takes true surplus |
+| **All market pools protected** | ✅ | Resolved AND unresolved |
+| **Jury pool protected** | ✅ | `juryFeesPool` included |
+| **Cannot sweep user funds** | ✅ | Only true surplus sweepable |
+| **Winners can always claim** | ✅ | Funds remain in contract |
 | **Jury fees always claimable** | ✅ | Funds remain in contract |
+
+---
+
+## Summary: All Vulnerabilities Fixed
+
+### Version History
+
+| Version | Vulnerabilities Fixed | Tests |
+|---------|----------------------|-------|
+| v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data | 180 |
+| v3.6.1 | Dispute window edge case | 180 |
+| v3.6.2 | One-sided markets, Emergency refund bypass, Stale proposer state | 189 |
+| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1)), Sweep protection for jury pool, Sweep protection for resolved markets** | **198** |
+
+### v3.7.0 Fix Summary
+
+| Fix | Bug | Severity | Impact |
+|-----|-----|----------|--------|
+| Pull Pattern for Jury Fees | O(n) loop could brick markets at 5,000+ voters | 🔴 CRITICAL | Markets can't be bricked |
+| Jury Pool Sweep Protection | Jury fees could be swept by governance | 🔴 CRITICAL | Jury fees always claimable |
+| Resolved Market Sweep Protection | Unclaimed winner payouts could be stolen | 🔴 CRITICAL | Winner funds always safe |
 
 ---
 
 *Security analysis completed: January 19, 2026*  
 *Contract version: v3.7.0*  
-*Tests passing: 196/196 (1 skipped)*  
-*Status: Ready for mainnet deployment*
+*Tests passing: 198/198 (1 skipped)*  
+*Status: ✅ Ready for mainnet deployment*

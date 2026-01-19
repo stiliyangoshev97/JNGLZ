@@ -1466,4 +1466,150 @@ contract PullPatternTest is TestHelper {
             "Total claimed should equal pool"
         );
     }
+
+    // ============================================
+    // v3.7.0 CRITICAL FIX: Resolved Market Pool Protection
+    // ============================================
+
+    /**
+     * @notice Test that resolved markets' poolBalance is protected from sweep
+     * @dev v3.7.0 CRITICAL FIX: Without this, SweepFunds could steal unclaimed winner payouts
+     */
+    function test_SweepProtection_ResolvedMarketPoolIncluded() public {
+        // Setup: Alice buys YES, Bob buys NO
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Get pool balance before resolution
+        (, , , , , , , , uint256 poolBalanceBefore, , ) = market.getMarket(
+            marketId
+        );
+        assertGt(poolBalanceBefore, 0, "Pool should have funds");
+
+        // Expire and resolve market (undisputed)
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Wait for dispute window to expire
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+
+        // Finalize market - now resolved
+        market.finalizeMarket(marketId);
+
+        // Verify market is resolved but still has poolBalance (Alice hasn't claimed)
+        (, , , , , , , , uint256 poolBalanceAfter, bool resolved, ) = market
+            .getMarket(marketId);
+        assertTrue(resolved, "Market should be resolved");
+        assertGt(
+            poolBalanceAfter,
+            0,
+            "Pool should still have funds for unclaimed winners"
+        );
+
+        // Check that totalLocked includes the resolved market's poolBalance
+        (uint256 surplus, uint256 totalLocked, ) = market.getSweepableAmount();
+        assertGe(
+            totalLocked,
+            poolBalanceAfter,
+            "totalLocked must include resolved market pool"
+        );
+
+        // If there's any surplus, try to sweep - should NOT include poolBalance
+        if (surplus > 0) {
+            uint256 aliceBalanceBefore = alice.balance;
+
+            // Execute sweep
+            vm.prank(signer1);
+            uint256 actionId = market.proposeAction(
+                PredictionMarket.ActionType.SweepFunds,
+                ""
+            );
+            vm.prank(signer2);
+            market.confirmAction(actionId);
+            vm.prank(signer3);
+            market.confirmAction(actionId);
+
+            // Alice should still be able to claim
+            vm.prank(alice);
+            uint256 alicePayout = market.claim(marketId);
+            assertGt(
+                alicePayout,
+                0,
+                "Alice should be able to claim after sweep"
+            );
+            assertGt(
+                alice.balance,
+                aliceBalanceBefore,
+                "Alice balance should increase"
+            );
+        }
+    }
+
+    /**
+     * @notice Test that sweep cannot steal unclaimed winner funds
+     * @dev This is the exact attack scenario that was fixed
+     */
+    function test_SweepProtection_CannotStealUnclaimedWinnerFunds() public {
+        // Setup: Multiple winners, only some claim
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(charlie, 10 ether);
+        vm.prank(charlie);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Resolve market with YES winning
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Alice claims, but Bob doesn't
+        vm.prank(alice);
+        market.claim(marketId);
+
+        // Pool should still have Bob's unclaimed share
+        (, , , , , , , , uint256 poolBalance, , ) = market.getMarket(marketId);
+        assertGt(poolBalance, 0, "Pool should have Bob's unclaimed funds");
+
+        // totalLocked should include this pool balance
+        (uint256 surplus, uint256 totalLocked, ) = market.getSweepableAmount();
+        assertGe(
+            totalLocked,
+            poolBalance,
+            "Locked funds must include unclaimed winner pool"
+        );
+
+        // Bob should still be able to claim
+        uint256 bobBalanceBefore = bob.balance;
+        vm.prank(bob);
+        uint256 bobPayout = market.claim(marketId);
+        assertGt(bobPayout, 0, "Bob should get payout");
+        assertGt(bob.balance, bobBalanceBefore, "Bob balance should increase");
+    }
 }

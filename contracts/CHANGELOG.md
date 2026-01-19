@@ -57,6 +57,27 @@ function claimJuryFees(uint256 marketId) external nonReentrant returns (uint256 
 }
 ```
 
+#### 🚨 CRITICAL: SweepFunds Could Steal Unclaimed Winner Payouts
+Fixed a vulnerability where governance could accidentally sweep funds reserved for unclaimed winners.
+
+**Vulnerability Details:**
+- `_calculateTotalLockedFunds()` only included pool balance for UNRESOLVED markets
+- Resolved markets still have `poolBalance > 0` until all winners claim
+- SweepFunds could sweep these funds, leaving winners unable to claim
+
+**Fix Applied:**
+```solidity
+// OLD (VULNERABLE):
+if (!market.resolved) {
+    totalLocked += market.poolBalance;  // Only unresolved!
+}
+
+// NEW (FIXED):
+if (market.poolBalance > 0) {
+    totalLocked += market.poolBalance;  // ALL markets with funds
+}
+```
+
 ### Added
 
 #### New Storage Fields
@@ -92,7 +113,7 @@ The contract now uses Pull Pattern for ALL fund distributions:
 - `finalizeMarket()` now runs in O(1) time regardless of voter count
 - Markets cannot be bricked by large voter counts
 - Jury fees remain claimable indefinitely (no expiry)
-- **196 tests passing** (1 skipped is expected)
+- **198 tests passing** (1 skipped is expected)
 
 #### 🚨 CRITICAL FIX #2: Sweep Protection for Jury Fees Pool
 Fixed a vulnerability where `SweepFunds` governance action could sweep BNB reserved for jury fee claims.
