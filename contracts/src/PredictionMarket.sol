@@ -968,8 +968,9 @@ contract PredictionMarket is ReentrancyGuard {
             market.noVotes += voteWeight;
         }
 
-        // Track voter for jury fee distribution
-        marketVoters[marketId].push(msg.sender);
+        // Note: marketVoters mapping is no longer updated here (v3.7.0)
+        // Jury fees now use Pull Pattern - voters call claimJuryFees() directly
+        // This saves ~20K gas per vote by avoiding storage array push
 
         emit VoteCast(marketId, msg.sender, outcome, voteWeight);
     }
