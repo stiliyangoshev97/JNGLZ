@@ -2119,6 +2119,11 @@ contract PredictionMarket is ReentrancyGuard {
             if (market.disputeBond > 0) {
                 totalLocked += market.disputeBond;
             }
+
+            // v3.7.0: Include jury fees pool (Pull Pattern funds for winning voters)
+            if (market.juryFeesPool > 0) {
+                totalLocked += market.juryFeesPool;
+            }
         }
 
         // v3.4.1: Include pending withdrawals and creator fees (Pull Pattern funds)
