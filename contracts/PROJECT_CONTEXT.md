@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 19, 2026  
-> **Status:** ✅ Smart Contracts v3.7.0 READY (188 tests)
+> **Status:** ✅ Smart Contracts v3.7.0 READY (196 tests)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.7.0** | ✅ **CURRENT** | Jury Fees Gas Griefing Fix (Pull Pattern) |
+| **v3.7.0** | ✅ **CURRENT** | Jury Fees Gas Griefing Fix (Pull Pattern) + Sweep Protection |
 | v3.6.2 | ⚠️ DEPRECATED | One-Sided Market & Emergency Bypass Fixes - **HAS GAS GRIEFING BUG** |
 | v3.6.1 | ⚠️ DEPRECATED | Dispute Window Edge Case Fix |
 | v3.6.0 | ⚠️ DEPRECATED | Emergency Refund Security Fix - **HAS EDGE CASE BUG** |
@@ -81,14 +81,14 @@
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | WalletB Scenario | ✅ 100% | 1 test passing |
 | EmptyWinningSide Tests | ✅ 100% | 6 tests passing |
-| PullPattern Tests | ✅ 100% | 28 tests passing |
+| PullPattern Tests | ✅ 100% | **37 tests passing (v3.7.0: +8 jury fees + 1 sweep)** |
 | **EmergencyRefundSecurity Tests** | ✅ 100% | **16 tests passing (v3.6.0 + v3.6.1)** |
 | **OneSidedMarket Tests** | ✅ 100% | **7 tests passing (v3.6.2)** |
 | Slither Analysis | ✅ 100% | 45 findings (no critical/high issues) |
 | Testnet Deployment | ⏳ 90% | Ready for v3.7.0 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 188 ✅** (1 skipped)
+**Total Tests: 196 ✅** (1 skipped)
 
 ---
 

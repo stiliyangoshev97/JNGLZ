@@ -927,4 +927,543 @@ contract PullPatternTest is TestHelper {
 
         assertEq(market.getPendingWithdrawal(proposer), 0, "Should be 0");
     }
+
+    // ============================================
+    // v3.7.0 JURY FEES PULL PATTERN TESTS
+    // ============================================
+
+    function test_JuryFees_PoolCreatedOnDispute() public {
+        // Setup: Create market with trades on both sides
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 1 ether}(marketId, 0);
+
+        // Expire and propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Get proposal bond for dispute
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Bob votes NO
+        vm.prank(bob);
+        market.vote(marketId, false);
+
+        // Finalize - YES wins (alice has more shares)
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Check jury fees pool was created
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 juryFeesPool
+        ) = market.markets(marketId);
+        assertGt(juryFeesPool, 0, "Jury fees pool should be created");
+    }
+
+    function test_JuryFees_ClaimByWinningVoter() public {
+        // Setup: Create market with trades on both sides
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire and propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Dispute
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Both vote YES (alice wins)
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        vm.prank(bob);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Alice claims jury fees
+        uint256 aliceBalanceBefore = alice.balance;
+        vm.prank(alice);
+        uint256 claimed = market.claimJuryFees(marketId);
+
+        assertGt(claimed, 0, "Alice should claim jury fees");
+        assertEq(
+            alice.balance,
+            aliceBalanceBefore + claimed,
+            "Alice balance should increase"
+        );
+    }
+
+    function test_JuryFees_RevertIfNotVoted() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Only alice votes
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Charlie (never voted) tries to claim
+        vm.prank(charlie);
+        vm.expectRevert(PredictionMarket.DidNotVote.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfVotedForLoser() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES, Bob votes NO
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        vm.prank(bob);
+        market.vote(marketId, false);
+
+        // Finalize - YES wins
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Bob (voted for loser) tries to claim
+        vm.prank(bob);
+        vm.expectRevert(PredictionMarket.VotedForLosingOutcome.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfAlreadyClaimed() public {
+        // Setup market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // First claim succeeds
+        vm.prank(alice);
+        market.claimJuryFees(marketId);
+
+        // Second claim fails
+        vm.prank(alice);
+        vm.expectRevert(PredictionMarket.JuryFeesAlreadyClaimed.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    function test_JuryFees_RevertIfNoPool() public {
+        // Setup market with non-disputed resolution
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire and propose (no dispute)
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        // Finalize WITHOUT dispute (no jury fees pool created)
+        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Try to claim jury fees
+        vm.prank(alice);
+        vm.expectRevert(PredictionMarket.NoJuryFeesPool.selector);
+        market.claimJuryFees(marketId);
+    }
+
+    // ============================================
+    // v3.7.0 JURY FEES SWEEP PROTECTION TESTS
+    // ============================================
+
+    function test_SweepProtection_IncludesJuryFeesPool() public {
+        // Setup: Create market with trades on both sides
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
+
+        // Expire, propose, dispute, vote, finalize
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Alice votes YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        // Finalize - creates jury fees pool
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Get jury fees pool amount
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 juryFeesPool
+        ) = market.markets(marketId);
+        assertGt(juryFeesPool, 0, "Should have jury fees pool");
+
+        // Get sweepable amount - should account for jury fees pool
+        (uint256 surplus, uint256 totalLocked, ) = market.getSweepableAmount();
+
+        // The juryFeesPool should be included in totalLocked
+        // So surplus should NOT include the juryFeesPool
+        assertGe(
+            totalLocked,
+            juryFeesPool,
+            "totalLocked should include juryFeesPool"
+        );
+
+        // Attempt sweep via governance
+        vm.prank(signer1);
+        uint256 actionId = market.proposeAction(
+            PredictionMarket.ActionType.SweepFunds,
+            ""
+        );
+
+        vm.prank(signer2);
+        market.confirmAction(actionId);
+
+        vm.prank(signer3);
+        // If surplus == 0, this should revert
+        if (surplus == 0) {
+            vm.expectRevert(PredictionMarket.NothingToSweep.selector);
+            market.confirmAction(actionId);
+        } else {
+            // If there is surplus (from fees sent to treasury), sweep should work
+            // but should NOT touch juryFeesPool
+            uint256 treasuryBefore = treasury.balance;
+            market.confirmAction(actionId);
+            uint256 treasuryAfter = treasury.balance;
+
+            // Treasury should receive the surplus
+            assertEq(
+                treasuryAfter - treasuryBefore,
+                surplus,
+                "Treasury should receive surplus"
+            );
+        }
+
+        // Alice should still be able to claim her jury fees after sweep
+        uint256 aliceBalanceBefore = alice.balance;
+        vm.prank(alice);
+        uint256 claimed = market.claimJuryFees(marketId);
+        assertGt(claimed, 0, "Alice should still claim jury fees after sweep");
+        assertEq(
+            alice.balance,
+            aliceBalanceBefore + claimed,
+            "Alice balance should increase"
+        );
+    }
+
+    function test_SweepProtection_JuryFeesPoolNotSwept() public {
+        // This test ensures that even with a governance sweep, jury fees remain claimable
+
+        // Setup disputed market
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 2 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 1 ether}(marketId, 0);
+
+        // Go through dispute process
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+
+        (, , , uint256 proposalBond, ) = market.getProposal(marketId);
+        uint256 disputeBond = proposalBond * 2;
+        uint256 disputeBondWithFee = disputeBond +
+            (disputeBond * 30) /
+            (10000 - 30) +
+            1;
+
+        vm.deal(disputer, disputeBondWithFee);
+        vm.prank(disputer);
+        market.dispute{value: disputeBondWithFee}(marketId);
+
+        // Both vote YES
+        vm.prank(alice);
+        market.vote(marketId, true);
+
+        vm.prank(bob);
+        market.vote(marketId, true);
+
+        // Finalize
+        vm.warp(block.timestamp + VOTING_WINDOW + 1);
+        market.finalizeMarket(marketId);
+
+        // Get the jury fees pool
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 juryFeesPool
+        ) = market.markets(marketId);
+        assertGt(juryFeesPool, 0, "Should have jury fees pool");
+
+        // Even if we could sweep (hypothetically), the juryFeesPool should be protected
+        // The test verifies that getSweepableAmount correctly excludes juryFeesPool
+        (uint256 surplus, uint256 totalLocked, ) = market.getSweepableAmount();
+
+        // totalLocked should include the juryFeesPool
+        // This means if we sweep surplus, jury fees remain
+        assertTrue(
+            totalLocked >= juryFeesPool,
+            "Jury fees should be in locked funds"
+        );
+
+        // Both Alice and Bob should be able to claim their share of jury fees
+        vm.prank(alice);
+        uint256 aliceClaimed = market.claimJuryFees(marketId);
+        assertGt(aliceClaimed, 0, "Alice should claim");
+
+        vm.prank(bob);
+        uint256 bobClaimed = market.claimJuryFees(marketId);
+        assertGt(bobClaimed, 0, "Bob should claim");
+
+        // Total claimed should approximately equal the pool (minus rounding dust)
+        uint256 totalClaimed = aliceClaimed + bobClaimed;
+        assertApproxEqAbs(
+            totalClaimed,
+            juryFeesPool,
+            2,
+            "Total claimed should equal pool"
+        );
+    }
 }

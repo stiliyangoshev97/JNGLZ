@@ -16,9 +16,9 @@ Version 3.7.0 addresses all identified security vulnerabilities in the Predictio
 | v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data | 180 |
 | v3.6.1 | Dispute window edge case | 180 |
 | v3.6.2 | One-sided markets, Emergency refund bypass, Stale proposer state | 189 |
-| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1))** | **188** |
+| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1)), Sweep protection for jury pool** | **196** |
 
-**All 188 tests passing (1 skipped). Contract is ready for deployment.**
+**All 196 tests passing (1 skipped). Contract is ready for deployment.**
 
 ---
 
@@ -819,12 +819,79 @@ error NoJuryFeesPool();
 
 ```
 ✅ test_JuryFees_CreditedToPendingWithdrawals - Updated for claimJuryFees()
-✅ All 188 tests passing (1 skipped is expected)
+✅ test_JuryFees_PoolCreatedOnDispute - Pool created on dispute finalization
+✅ test_JuryFees_ClaimByWinningVoter - Winning voter can claim
+✅ test_JuryFees_RevertIfNotVoted - Non-voter cannot claim
+✅ test_JuryFees_RevertIfVotedForLoser - Losing voter cannot claim
+✅ test_JuryFees_RevertIfAlreadyClaimed - Double-claim prevented
+✅ test_JuryFees_RevertIfNoPool - No pool = revert
+✅ test_SweepProtection_IncludesJuryFeesPool - Sweep excludes jury pool
+✅ test_SweepProtection_JuryFeesPoolNotSwept - Governance cannot sweep jury fees
+✅ All 196 tests passing (1 skipped is expected)
 ```
+
+---
+
+## Part 8: Sweep Protection for Jury Fees Pool (FIXED in v3.7.0)
+
+**Discovered:** January 19, 2026 (during v3.7.0 development)  
+**Severity:** 🔴 CRITICAL  
+**Status:** ✅ FIXED in v3.7.0
+
+### Vulnerability Details
+
+When converting jury fees from Push to Pull Pattern, a critical oversight was identified:
+
+| Issue | Description | Impact | Severity |
+|-------|-------------|--------|----------|
+| **Sweep Protection Missing** | `_calculateTotalLockedFunds()` did NOT include `market.juryFeesPool` | Governance could sweep BNB reserved for jury fee claims | 🔴 CRITICAL |
+
+### Attack/Failure Scenario
+
+```
+1. Market finalizes with dispute, jury pool = 0.5 BNB
+2. Governance executes SweepFunds action
+3. _calculateTotalLockedFunds() returns X (NOT including 0.5 BNB jury pool)
+4. Sweep sends (balance - X) to treasury, including the 0.5 BNB jury pool
+5. Winning voters call claimJuryFees() → FAILS (funds already swept)
+6. Jury fees are lost, voters cannot claim
+```
+
+### Fix Applied
+
+```solidity
+function _calculateTotalLockedFunds() internal view returns (uint256 totalLocked) {
+    for (uint256 i = 0; i < marketCount; i++) {
+        Market storage m = markets[i];
+        
+        // ... pool balance ...
+        if (!m.resolved) {
+            totalLocked += m.poolBalance;
+        }
+        
+        // ✅ v3.7.0: Jury fees pool is locked (cannot be swept)
+        if (m.juryFeesPool > 0) {
+            totalLocked += m.juryFeesPool;
+        }
+    }
+    
+    // ... pending withdrawals, pending creator fees ...
+    totalLocked += totalPendingWithdrawals;
+    totalLocked += totalPendingCreatorFees;
+}
+```
+
+### Security Properties After Fix
+
+| Property | Status | Notes |
+|----------|--------|-------|
+| **Jury pool protected from sweep** | ✅ | `_calculateTotalLockedFunds()` includes `juryFeesPool` |
+| **Cannot sweep reserved funds** | ✅ | Sweep only takes true surplus |
+| **Jury fees always claimable** | ✅ | Funds remain in contract |
 
 ---
 
 *Security analysis completed: January 19, 2026*  
 *Contract version: v3.7.0*  
-*Tests passing: 188/188 (1 skipped)*  
+*Tests passing: 196/196 (1 skipped)*  
 *Status: Ready for mainnet deployment*

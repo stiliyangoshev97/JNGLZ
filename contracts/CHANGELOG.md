@@ -92,7 +92,27 @@ The contract now uses Pull Pattern for ALL fund distributions:
 - `finalizeMarket()` now runs in O(1) time regardless of voter count
 - Markets cannot be bricked by large voter counts
 - Jury fees remain claimable indefinitely (no expiry)
-- **188 tests passing** (1 skipped is expected)
+- **196 tests passing** (1 skipped is expected)
+
+#### 🚨 CRITICAL FIX #2: Sweep Protection for Jury Fees Pool
+Fixed a vulnerability where `SweepFunds` governance action could sweep BNB reserved for jury fee claims.
+
+**Vulnerability (during v3.7.0 development):**
+- `_calculateTotalLockedFunds()` did NOT include `market.juryFeesPool`
+- Governance could inadvertently sweep funds reserved for jury fee claims
+- Winning voters would be unable to claim their jury fees
+
+**Fix Applied:**
+```solidity
+function _calculateTotalLockedFunds() internal view returns (uint256 totalLocked) {
+    // ... pool balance, pending withdrawals, pending creator fees ...
+    
+    // ✅ v3.7.0: Jury fees pool is locked
+    if (market.juryFeesPool > 0) {
+        totalLocked += market.juryFeesPool;
+    }
+}
+```
 
 ---
 

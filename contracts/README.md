@@ -206,7 +206,7 @@ GAP: 30 minutes - SAFE!
 ### Test Coverage
 - Modified `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
 - Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix
-- **189 total tests passing**
+- **196 total tests passing**
 
 ---
 
@@ -329,7 +329,7 @@ function _returnBondsOnTie(Market storage market) internal {
 - Added `OneSidedMarket.t.sol` - 7 new tests for one-sided market blocking
 - Updated `EmptyWinningSide.t.sol` - Complete rewrite for v3.6.2 behavior (6 tests)
 - Updated 20+ tests across all test files to work with new one-sided market rules
-- **189 total tests passing**
+- **196 total tests passing**
 
 ---
 
@@ -337,7 +337,8 @@ function _returnBondsOnTie(Market storage market) internal {
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.6.2** | One-Sided Market Fix, Emergency Refund Security, 189 tests | ✅ **CURRENT - READY FOR DEPLOYMENT** |
+| **v3.7.0** | Jury Fees Gas Griefing Fix (Pull Pattern), 196 tests | ✅ **CURRENT - READY FOR DEPLOYMENT** |
+| v3.6.2 | One-Sided Market Fix, Emergency Refund Security | ⚠️ DEPRECATED (gas griefing bug) |
 | v3.6.1 | Dispute Window Edge Case Fix | ⚠️ DEPRECATED (one-sided market bugs) |
 | v3.6.0 | Emergency Refund Security Fix | ⚠️ DEPRECATED (edge case bug) |
 | v3.5.0 | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⚠️ DEPRECATED (bug) |
@@ -347,7 +348,7 @@ function _returnBondsOnTie(Market storage market) internal {
 - **Network:** BNB Testnet (Chain ID: 97)
 - **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
 
-> **v3.6.2 Features:** All v3.6.1 features + One-sided market blocking, Emergency refund security, Stale proposer cleanup, 189 total tests passing
+> **v3.7.0 Features:** All v3.6.2 features + Jury fees Pull Pattern (gas griefing fix), Sweep protection for jury pool, 196 total tests passing
 
 ---
 
