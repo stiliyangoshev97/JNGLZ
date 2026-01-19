@@ -1694,15 +1694,10 @@ contract BondingCurveEconomicsTest is TestHelper {
         );
 
         // Create action to set proposer reward to 100 bps (1%)
-        bytes memory data = abi.encode(uint256(100));
-
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetProposerReward,
-            data
-        );
+        uint256 actionId = market.proposeSetProposerReward(100);
 
-        // Confirm with signer2 and signer3 (need 3/5 multi-sig)
+        // Confirm with signer2 and signer3 (need 3/3 multi-sig)
         vm.prank(signer2);
         market.confirmAction(actionId);
 
@@ -1730,23 +1725,11 @@ contract BondingCurveEconomicsTest is TestHelper {
         uint256 maxReward = market.MAX_PROPOSER_REWARD_BPS();
         console.log("Max proposer reward bps:", maxReward);
 
+        // v3.8.0: Validation now happens at propose time
         // Try to set reward above max (201 bps when max is 200)
-        bytes memory data = abi.encode(uint256(201));
-
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetProposerReward,
-            data
-        );
-
-        // Confirm with signer2
-        vm.prank(signer2);
-        market.confirmAction(actionId);
-
-        // Confirm with signer3 - should revert on execution
-        vm.prank(signer3);
         vm.expectRevert(PredictionMarket.InvalidProposerReward.selector);
-        market.confirmAction(actionId);
+        market.proposeSetProposerReward(201);
     }
 
     /**
@@ -1756,13 +1739,8 @@ contract BondingCurveEconomicsTest is TestHelper {
         console.log("=== PROPOSER REWARD - DISABLE ===");
 
         // Set proposer reward to 0
-        bytes memory data = abi.encode(uint256(0));
-
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetProposerReward,
-            data
-        );
+        uint256 actionId = market.proposeSetProposerReward(0);
 
         vm.prank(signer2);
         market.confirmAction(actionId);

@@ -384,20 +384,11 @@ contract PredictionMarketTest is TestHelper {
     }
 
     function test_HeatLevel_InvalidValueReverts() public {
+        // v3.8.0: Validation now happens at propose time
         // Try to set heat level below minimum (1e18)
-        // The revert happens on the 3rd confirmation (execution)
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetHeatLevelCrack,
-            abi.encode(0.5e18)
-        );
-
-        vm.prank(signer2);
-        market.confirmAction(actionId);
-
-        vm.prank(signer3);
         vm.expectRevert(PredictionMarket.InvalidFee.selector);
-        market.confirmAction(actionId);
+        market.proposeSetHeatLevelCrack(0.5e18);
     }
 
     // ============================================

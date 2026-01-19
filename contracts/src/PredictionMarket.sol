@@ -1762,19 +1762,282 @@ contract PredictionMarket is ReentrancyGuard {
 
     // ============ MultiSig Governance ============
 
+    // -------- Propose Functions (v3.8.0: Individual functions for UX) --------
+
     /**
-     * @notice Propose a governance action (any signer can propose)
+     * @notice Propose to set platform fee
+     * @param newFee New platform fee in basis points (max 500 = 5%)
      */
-    function proposeAction(
-        ActionType actionType,
-        bytes calldata data
+    function proposeSetFee(
+        uint256 newFee
     ) external onlySigner returns (uint256 actionId) {
+        if (newFee > MAX_FEE_BPS) revert InvalidFee();
+        return _createAction(ActionType.SetFee, abi.encode(newFee));
+    }
+
+    /**
+     * @notice Propose to set minimum bet amount
+     * @param newMinBet New minimum bet (0.001 - 0.1 BNB)
+     */
+    function proposeSetMinBet(
+        uint256 newMinBet
+    ) external onlySigner returns (uint256 actionId) {
+        if (newMinBet < MIN_BET_LOWER || newMinBet > MIN_BET_UPPER)
+            revert InvalidMinBet();
+        return _createAction(ActionType.SetMinBet, abi.encode(newMinBet));
+    }
+
+    /**
+     * @notice Propose to set treasury address
+     * @param newTreasury New treasury address
+     */
+    function proposeSetTreasury(
+        address newTreasury
+    ) external onlySigner returns (uint256 actionId) {
+        if (newTreasury == address(0)) revert InvalidAddress();
+        return _createAction(ActionType.SetTreasury, abi.encode(newTreasury));
+    }
+
+    /**
+     * @notice Propose to pause the contract
+     */
+    function proposePause() external onlySigner returns (uint256 actionId) {
+        return _createAction(ActionType.Pause, "");
+    }
+
+    /**
+     * @notice Propose to unpause the contract
+     */
+    function proposeUnpause() external onlySigner returns (uint256 actionId) {
+        return _createAction(ActionType.Unpause, "");
+    }
+
+    /**
+     * @notice Propose to set creator fee
+     * @param newCreatorFee New creator fee in basis points (max 200 = 2%)
+     */
+    function proposeSetCreatorFee(
+        uint256 newCreatorFee
+    ) external onlySigner returns (uint256 actionId) {
+        if (newCreatorFee > MAX_CREATOR_FEE_BPS) revert InvalidFee();
+        return
+            _createAction(ActionType.SetCreatorFee, abi.encode(newCreatorFee));
+    }
+
+    /**
+     * @notice Propose to set resolution fee
+     * @param newResolutionFee New resolution fee in basis points (max 100 = 1%)
+     */
+    function proposeSetResolutionFee(
+        uint256 newResolutionFee
+    ) external onlySigner returns (uint256 actionId) {
+        if (newResolutionFee > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
+        return
+            _createAction(
+                ActionType.SetResolutionFee,
+                abi.encode(newResolutionFee)
+            );
+    }
+
+    /**
+     * @notice Propose to set minimum bond floor
+     * @param newMinBondFloor New minimum bond floor (0.005 - 0.1 BNB)
+     */
+    function proposeSetMinBondFloor(
+        uint256 newMinBondFloor
+    ) external onlySigner returns (uint256 actionId) {
+        if (
+            newMinBondFloor < MIN_BOND_FLOOR_LOWER ||
+            newMinBondFloor > MIN_BOND_FLOOR_UPPER
+        ) revert InvalidMinBondFloor();
+        return
+            _createAction(
+                ActionType.SetMinBondFloor,
+                abi.encode(newMinBondFloor)
+            );
+    }
+
+    /**
+     * @notice Propose to set dynamic bond percentage
+     * @param newDynamicBondBps New dynamic bond in basis points (50-500 = 0.5%-5%)
+     */
+    function proposeSetDynamicBondBps(
+        uint256 newDynamicBondBps
+    ) external onlySigner returns (uint256 actionId) {
+        if (
+            newDynamicBondBps < DYNAMIC_BOND_BPS_LOWER ||
+            newDynamicBondBps > DYNAMIC_BOND_BPS_UPPER
+        ) revert InvalidDynamicBondBps();
+        return
+            _createAction(
+                ActionType.SetDynamicBondBps,
+                abi.encode(newDynamicBondBps)
+            );
+    }
+
+    /**
+     * @notice Propose to set bond winner share
+     * @param newBondWinnerShare New bond winner share in basis points (2000-8000 = 20%-80%)
+     */
+    function proposeSetBondWinnerShare(
+        uint256 newBondWinnerShare
+    ) external onlySigner returns (uint256 actionId) {
+        if (
+            newBondWinnerShare < BOND_WINNER_SHARE_LOWER ||
+            newBondWinnerShare > BOND_WINNER_SHARE_UPPER
+        ) revert InvalidBondWinnerShare();
+        return
+            _createAction(
+                ActionType.SetBondWinnerShare,
+                abi.encode(newBondWinnerShare)
+            );
+    }
+
+    /**
+     * @notice Propose to set market creation fee
+     * @param newMarketCreationFee New market creation fee (max 0.1 BNB)
+     */
+    function proposeSetMarketCreationFee(
+        uint256 newMarketCreationFee
+    ) external onlySigner returns (uint256 actionId) {
+        if (newMarketCreationFee > MAX_MARKET_CREATION_FEE)
+            revert InvalidMarketCreationFee();
+        return
+            _createAction(
+                ActionType.SetMarketCreationFee,
+                abi.encode(newMarketCreationFee)
+            );
+    }
+
+    /**
+     * @notice Propose to set CRACK heat level virtual liquidity
+     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
+     */
+    function proposeSetHeatLevelCrack(
+        uint256 newHeatLevel
+    ) external onlySigner returns (uint256 actionId) {
+        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+            revert InvalidFee();
+        return
+            _createAction(
+                ActionType.SetHeatLevelCrack,
+                abi.encode(newHeatLevel)
+            );
+    }
+
+    /**
+     * @notice Propose to set HIGH heat level virtual liquidity
+     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
+     */
+    function proposeSetHeatLevelHigh(
+        uint256 newHeatLevel
+    ) external onlySigner returns (uint256 actionId) {
+        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+            revert InvalidFee();
+        return
+            _createAction(
+                ActionType.SetHeatLevelHigh,
+                abi.encode(newHeatLevel)
+            );
+    }
+
+    /**
+     * @notice Propose to set PRO heat level virtual liquidity
+     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
+     */
+    function proposeSetHeatLevelPro(
+        uint256 newHeatLevel
+    ) external onlySigner returns (uint256 actionId) {
+        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+            revert InvalidFee();
+        return
+            _createAction(ActionType.SetHeatLevelPro, abi.encode(newHeatLevel));
+    }
+
+    /**
+     * @notice Propose to set APEX heat level virtual liquidity
+     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
+     */
+    function proposeSetHeatLevelApex(
+        uint256 newHeatLevel
+    ) external onlySigner returns (uint256 actionId) {
+        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+            revert InvalidFee();
+        return
+            _createAction(
+                ActionType.SetHeatLevelApex,
+                abi.encode(newHeatLevel)
+            );
+    }
+
+    /**
+     * @notice Propose to set CORE heat level virtual liquidity
+     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
+     */
+    function proposeSetHeatLevelCore(
+        uint256 newHeatLevel
+    ) external onlySigner returns (uint256 actionId) {
+        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+            revert InvalidFee();
+        return
+            _createAction(
+                ActionType.SetHeatLevelCore,
+                abi.encode(newHeatLevel)
+            );
+    }
+
+    /**
+     * @notice Propose to set proposer reward percentage
+     * @param newProposerReward New proposer reward in basis points (max 200 = 2%)
+     */
+    function proposeSetProposerReward(
+        uint256 newProposerReward
+    ) external onlySigner returns (uint256 actionId) {
+        if (newProposerReward > MAX_PROPOSER_REWARD_BPS)
+            revert InvalidProposerReward();
+        return
+            _createAction(
+                ActionType.SetProposerReward,
+                abi.encode(newProposerReward)
+            );
+    }
+
+    /**
+     * @notice Propose to replace a signer (emergency - only needs 2-of-3)
+     * @param oldSigner The signer to replace
+     * @param newSigner The new signer address
+     */
+    function proposeReplaceSigner(
+        address oldSigner,
+        address newSigner
+    ) external onlySigner returns (uint256 actionId) {
+        if (newSigner == address(0)) revert InvalidAddress();
+        if (oldSigner == newSigner) revert InvalidSignerReplacement();
+        if (_isSigner(newSigner)) revert InvalidSignerReplacement();
+        if (!_isSigner(oldSigner)) revert SignerNotFound();
+        return
+            _createAction(
+                ActionType.ReplaceSigner,
+                abi.encode(oldSigner, newSigner)
+            );
+    }
+
+    // -------- Internal Action Creation --------
+
+    /**
+     * @notice Internal function to create and auto-approve an action
+     * @dev Proposer auto-approves. Action executes when 3rd signer confirms (2-of-3 for ReplaceSigner)
+     */
+    function _createAction(
+        ActionType actionType,
+        bytes memory data
+    ) internal returns (uint256 actionId) {
         actionId = actionNonce++;
 
         PendingAction storage action = pendingActions[actionId];
         action.actionType = actionType;
         action.data = data;
-        action.confirmations = 1;
+        action.confirmations = 1; // Auto-approve for proposer
         action.createdAt = block.timestamp;
         action.hasConfirmed[msg.sender] = true;
 
@@ -1782,9 +2045,12 @@ contract PredictionMarket is ReentrancyGuard {
         emit ActionConfirmed(actionId, msg.sender);
     }
 
+    // -------- Confirm & Execute --------
+
     /**
      * @notice Confirm a pending action
      * @dev ReplaceSigner requires 2-of-3, all other actions require 3-of-3
+     *      Auto-executes when required confirmations reached
      */
     function confirmAction(uint256 actionId) external onlySigner {
         PendingAction storage action = pendingActions[actionId];

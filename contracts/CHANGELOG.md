@@ -5,6 +5,71 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **GOVERNANCE UX OVERHAUL** - Individual propose functions for human-friendly governance
+
+### Changed
+
+#### 🎮 GOVERNANCE UX: Individual Propose Functions
+Replaced the generic `proposeAction(ActionType, bytes)` with 18 individual propose functions for dramatically better UX.
+
+**Problem Solved:**
+The old system required ABI-encoding parameters manually:
+```solidity
+// OLD: Nightmare to use in practice
+proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
+```
+
+**New System:**
+```solidity
+// NEW: Human-readable, type-safe, works directly in any wallet
+proposeSetMarketCreationFee(0.01 ether)
+```
+
+**New Propose Functions:**
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(uint256)` | Fee in BPS (max 500) | Platform fee |
+| `proposeSetMinBet(uint256)` | Wei amount (0.001-0.1 BNB) | Minimum bet |
+| `proposeSetTreasury(address)` | Treasury address | Treasury recipient |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume operations |
+| `proposeSetCreatorFee(uint256)` | Fee in BPS (max 200) | Creator fee |
+| `proposeSetResolutionFee(uint256)` | Fee in BPS (max 100) | Resolution fee |
+| `proposeSetMinBondFloor(uint256)` | Wei amount (0.005-0.1 BNB) | Min bond |
+| `proposeSetDynamicBondBps(uint256)` | BPS (50-500) | Dynamic bond % |
+| `proposeSetBondWinnerShare(uint256)` | BPS (2000-8000) | Winner's share |
+| `proposeSetMarketCreationFee(uint256)` | Wei amount (max 0.1 BNB) | Creation fee |
+| `proposeSetHeatLevelCrack(uint256)` | Virtual liquidity | CRACK tier |
+| `proposeSetHeatLevelHigh(uint256)` | Virtual liquidity | HIGH tier |
+| `proposeSetHeatLevelPro(uint256)` | Virtual liquidity | PRO tier |
+| `proposeSetHeatLevelApex(uint256)` | Virtual liquidity | APEX tier |
+| `proposeSetHeatLevelCore(uint256)` | Virtual liquidity | CORE tier |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new signer | Replace signer (2-of-3) |
+
+**Key Improvements:**
+- ✅ **Type-safe**: Solidity validates parameters at compile time
+- ✅ **Human-readable**: Function names describe exactly what they do
+- ✅ **Fail-fast**: Validation at propose time, not execution time
+- ✅ **Works in any wallet**: No external tooling needed
+- ✅ **Emergency-ready**: Can pause contract in seconds at 3AM
+
+**Workflow:**
+1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
+2. Signer2 calls `confirmAction(actionId)` → (2/3 confirmations)
+3. Signer3 calls `confirmAction(actionId)` → auto-executes (3/3)
+
+**Trade-offs:**
+- ~10-15KB more bytecode (one-time deployment cost)
+- Slightly higher deployment gas (~$30 more on BSC)
+- Worth it for: operational simplicity, emergency response time, reduced human error
+
+---
+
 ## [3.7.0] - 2026-01-19
 
 ### NOT YET DEPLOYED ⏳

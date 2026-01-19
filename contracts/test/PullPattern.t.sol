@@ -400,10 +400,7 @@ contract PullPatternTest is TestHelper {
 
         // Signer1 proposes to replace signer3
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         // Just 1 confirmation so far (proposer auto-confirms)
         (, , uint256 confirmations, , bool executed) = market.pendingActions(
@@ -429,10 +426,7 @@ contract PullPatternTest is TestHelper {
 
         // Signer1 proposes
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         // Try to execute with only 1 confirmation
         vm.prank(signer1);
@@ -444,10 +438,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer2);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer1, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer1, newSigner);
 
         vm.prank(signer3);
         market.confirmAction(actionId);
@@ -459,10 +450,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer2, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer2, newSigner);
 
         vm.prank(signer3);
         market.confirmAction(actionId);
@@ -471,59 +459,34 @@ contract PullPatternTest is TestHelper {
     }
 
     function test_ReplaceSigner_InvalidZeroAddress() public {
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, address(0))
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidAddress.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, address(0));
     }
 
     function test_ReplaceSigner_InvalidSameAddress() public {
-        // Try to replace signer with themselves
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, signer3)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidSignerReplacement.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, signer3);
     }
 
     function test_ReplaceSigner_SignerNotFound() public {
         address notASigner = makeAddr("notASigner");
         address newSigner = makeAddr("newSigner");
 
-        // Try to replace someone who isn't a signer
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(notASigner, newSigner)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.SignerNotFound.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(notASigner, newSigner);
     }
 
     function test_ReplaceSigner_PreventDuplicateSigner() public {
-        // Attempt to replace signer3 with signer1 (who is already a signer)
-        // This should revert with InvalidSignerReplacement because it would create duplicate signers
-
+        // v3.8.0: Validation now happens at propose time
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, signer1) // Replace signer3 with signer1 (already a signer!)
-        );
-
-        vm.prank(signer2);
         vm.expectRevert(PredictionMarket.InvalidSignerReplacement.selector);
-        market.confirmAction(actionId);
+        market.proposeReplaceSigner(signer3, signer1);
 
         // Verify all signers remain unchanged
         assertEq(
@@ -547,10 +510,7 @@ contract PullPatternTest is TestHelper {
         address newSigner = makeAddr("newSigner");
 
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.ReplaceSigner,
-            abi.encode(signer3, newSigner)
-        );
+        uint256 actionId = market.proposeReplaceSigner(signer3, newSigner);
 
         vm.expectEmit(true, true, true, true);
         emit PredictionMarket.SignerReplaced(signer3, newSigner, actionId);
@@ -562,10 +522,7 @@ contract PullPatternTest is TestHelper {
     function test_OtherActions_StillRequire3of3() public {
         // Test that SetFee still requires 3-of-3
         vm.prank(signer1);
-        uint256 actionId = market.proposeAction(
-            PredictionMarket.ActionType.SetFee,
-            abi.encode(200)
-        );
+        uint256 actionId = market.proposeSetFee(200);
 
         vm.prank(signer2);
         market.confirmAction(actionId);
