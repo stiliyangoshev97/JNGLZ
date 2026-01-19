@@ -206,10 +206,14 @@ contract PullPatternTest is TestHelper {
     // ============================================
 
     function test_BondWithdrawal_ProposerGetsBonus() public {
-        // Setup: Alice buys YES
+        // Setup: Alice buys YES, Bob buys NO (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Expire market
         vm.warp(block.timestamp + 1 days + 1);
@@ -244,10 +248,14 @@ contract PullPatternTest is TestHelper {
     }
 
     function test_WithdrawBond_Success() public {
-        // Setup: Create scenario where bond is credited
+        // Setup: Create scenario where bond is credited (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
@@ -321,16 +329,48 @@ contract PullPatternTest is TestHelper {
 
         vm.deal(proposer, bondWithFee);
         vm.prank(proposer);
-        vm.expectRevert(PredictionMarket.NoTradesToResolve.selector);
+        // v3.6.2: Empty market = one-sided market (both sides are 0), revert OneSidedMarket
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
         market.proposeOutcome{value: bondWithFee}(emptyMarketId, true);
     }
 
-    function test_NoTradesToResolve_AllowsIfOnesSideHasTrades() public {
-        // Market already has NO trades after setup, let's add some
+    function test_OneSidedMarket_BlocksProposal() public {
+        // v3.6.2: One-sided markets (only one side has trades) are blocked
+        // Market already has NO trades after setup, let's add only YES trades
 
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 0.1 ether}(marketId, 0);
+
+        // Verify it's one-sided
+        (, , , , , , uint256 yesSupply, uint256 noSupply, , , ) = market
+            .getMarket(marketId);
+        assertGt(yesSupply, 0, "YES supply should be > 0");
+        assertEq(noSupply, 0, "NO supply should be 0");
+
+        // Expire and try to propose
+        vm.warp(block.timestamp + 1 days + 1);
+        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+
+        uint256 bond = market.getRequiredBond(marketId);
+        uint256 bondWithFee = bond + (bond * 30) / (10000 - 30) + 1;
+
+        vm.deal(proposer, bondWithFee);
+        vm.prank(proposer);
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
+        market.proposeOutcome{value: bondWithFee}(marketId, true);
+    }
+
+    function test_NormalMarket_AllowsProposal() public {
+        // v3.6.2: Normal markets (both sides have trades) are allowed
+
+        vm.deal(alice, 10 ether);
+        vm.prank(alice);
+        market.buyYes{value: 0.1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.1 ether}(marketId, 0);
 
         // Expire and propose
         vm.warp(block.timestamp + 1 days + 1);
@@ -547,10 +587,14 @@ contract PullPatternTest is TestHelper {
     // ============================================
 
     function test_SweepProtection_IncludesPendingWithdrawals() public {
-        // Setup a scenario with pending withdrawals
+        // Setup a scenario with pending withdrawals (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
@@ -592,9 +636,14 @@ contract PullPatternTest is TestHelper {
 
     function test_SweepProtection_CannotSweepPendingFunds() public {
         // Create scenario with only pending withdrawals (market resolved)
+        // Need both sides for normal market
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
@@ -843,10 +892,14 @@ contract PullPatternTest is TestHelper {
     // ============================================
 
     function test_WithdrawBond_NonReentrant() public {
-        // Setup pending withdrawal
+        // Setup pending withdrawal (need both sides for normal market)
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);

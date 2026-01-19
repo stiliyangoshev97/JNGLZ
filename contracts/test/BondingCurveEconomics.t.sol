@@ -1286,6 +1286,9 @@ contract BondingCurveEconomicsTest is TestHelper {
 
         vm.prank(alice);
         uint256 aliceShares = market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Expire market
         expireMarket(marketId);
@@ -1293,29 +1296,21 @@ contract BondingCurveEconomicsTest is TestHelper {
         // Propose an outcome (creator priority window)
         proposeOutcomeFor(marketCreator, marketId, true);
 
-        // Warp past emergency deadline (24 hours after expiry)
+        // v3.6.2: Emergency refund is now blocked while proposal exists
+        // The paused() escape hatch allows emergency refund only when contract is paused
+        // Since contract is not paused, this should revert with ResolutionInProgress
         (, , , , , uint256 expiryTimestamp, , , , , ) = market.getMarket(
             marketId
         );
         vm.warp(expiryTimestamp + 24 hours + 1);
 
-        // Emergency refund should still work - proposal doesn't block it
-        (bool eligible, ) = market.canEmergencyRefund(marketId);
-        assertTrue(eligible, "Should be eligible for emergency refund");
-
-        uint256 aliceBalanceBefore = alice.balance;
         vm.prank(alice);
-        uint256 refund = market.emergencyRefund(marketId);
+        vm.expectRevert(PredictionMarket.ResolutionInProgress.selector);
+        market.emergencyRefund(marketId);
 
-        assertGt(refund, 0, "Alice should get refund");
-        assertEq(
-            alice.balance,
-            aliceBalanceBefore + refund,
-            "Alice balance should increase"
+        console.log(
+            "=== v3.6.2: EMERGENCY REFUND BLOCKED WITH ACTIVE PROPOSAL ==="
         );
-
-        console.log("=== EMERGENCY REFUND WITH PROPOSAL ===");
-        console.log("Alice refund:", refund);
     }
 
     /**
@@ -1326,6 +1321,9 @@ contract BondingCurveEconomicsTest is TestHelper {
 
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         // Resolve normally
         expireMarket(marketId);
@@ -1395,6 +1393,10 @@ contract BondingCurveEconomicsTest is TestHelper {
         uint256 aliceShares = market.buyYes{value: 5 ether}(marketId, 0);
         vm.prank(bob);
         uint256 bobShares = market.buyYes{value: 5 ether}(marketId, 0);
+
+        // v3.6.2: Need both sides for normal market
+        vm.prank(dave);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         console.log("Alice shares:", aliceShares);
         console.log("Bob shares:", bobShares);
@@ -1777,6 +1779,9 @@ contract BondingCurveEconomicsTest is TestHelper {
 
         vm.prank(alice);
         market.buyYes{value: 5 ether}(marketId, 0);
+        // v3.6.2: Need both sides for normal market
+        vm.prank(bob);
+        market.buyNo{value: 0.5 ether}(marketId, 0);
 
         expireMarket(marketId);
         skipCreatorPriority(marketId);

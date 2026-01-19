@@ -3,15 +3,15 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-180%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.6.1-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.6.2-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.6.1 Required
+## ⚠️ CRITICAL: v3.6.2 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -24,7 +24,8 @@
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), sweep protection |
 | v3.5.0 | ⚠️ DEPRECATED | **Emergency Refund Double-Spend Bug** |
 | v3.6.0 | ⚠️ DEPRECATED | **Dispute Window Edge Case Bug** |
-| **v3.6.1** | ✅ **CURRENT** | **Dispute Window Edge Case FIXED** |
+| v3.6.1 | ⚠️ DEPRECATED | **One-Sided Market & Emergency Refund Bypass Bugs** |
+| **v3.6.2** | ✅ **CURRENT** | **All Security Fixes Applied** |
 
 ---
 
@@ -150,174 +151,105 @@ GAP: 30 minutes - SAFE!
 ### Test Coverage
 - Modified `test_Dispute_RevertWhenDisputeWindowExpired` - Tests natural 30-min window
 - Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` - Verifies the fix
-- **180 total tests passing**
+- **189 total tests passing**
 
 ---
 
-## 🐛 PENDING: Bugs Identified for v3.6.2
+## ✅ FIXED: One-Sided Market & Emergency Refund Bugs (v3.6.2)
 
 **Discovered:** January 19, 2026  
-**Status:** 🔴 IDENTIFIED - Fix pending  
-**Target Version:** v3.6.2
+**Fixed:** January 19, 2026  
+**Severity:** HIGH → RESOLVED (in v3.6.2)
 
-### Bug Summary
+### Bug Summary (FIXED)
 
-| # | Bug Name | Severity | Description |
-|---|----------|----------|-------------|
-| 1 | **One-Sided Market Proposals** | 🟠 HIGH | Can propose on markets where one side has 0 holders |
-| 2 | **Emergency Refund Bypass** | 🟠 HIGH | Losers can avoid resolution by not finalizing, then taking emergency refund |
-| 3 | **Stale Proposer State** | 🟡 MEDIUM | Failed finalization doesn't clear `proposer`/`disputer`, blocking emergency refund |
+| # | Bug Name | Severity | Description | Status |
+|---|----------|----------|-------------|--------|
+| 1 | **One-Sided Market Proposals** | 🟠 HIGH | Could propose on markets where one side has 0 holders | ✅ FIXED |
+| 2 | **Emergency Refund Bypass** | 🟠 HIGH | Losers could avoid resolution by not finalizing, then taking emergency refund | ✅ FIXED |
+| 3 | **Stale Proposer State** | 🟡 MEDIUM | Failed finalization didn't clear `proposer`/`disputer`, blocking emergency refund | ✅ FIXED |
 
 ---
 
-### Bug 1: One-Sided Market Proposals
+### Bug 1: One-Sided Market Proposals (FIXED)
 
-**Problem:** `proposeOutcome()` only checks if BOTH sides are empty, not if ONE side is empty.
+**Problem:** `proposeOutcome()` only checked if BOTH sides were empty, not if ONE side was empty.
 
 ```solidity
-// Current check (v3.6.1):
+// OLD check (v3.6.1 - VULNERABLE):
 if (market.yesSupply == 0 && market.noSupply == 0) {
-    revert NoTradesToResolve();  // Only blocks if BOTH are zero
+    revert NoTradesToResolve();  // Only blocked if BOTH are zero
 }
-```
 
-**Attack Scenario:**
-```
-Market State: 100 YES holders, 0 NO holders (one-sided)
-
-1. Attacker proposes NO outcome (the empty side)
-2. Proposal accepted (bug: only checks if both zero)
-3. finalizeMarket() called
-4. winningSupply = noSupply = 0 → SAFETY CHECK triggers
-5. Bond returned, market not resolved
-6. Users must wait 24h for emergency refund (unnecessary delay)
-
-Alternative attack:
-1. Attacker proposes YES outcome (the side with holders)
-2. Market resolves with YES winning
-3. Everyone "wins" but just gets their own money back (minus fees)
-4. Pointless resolution - should have been emergency refund
-```
-
-**Fix:** Block proposals on one-sided markets entirely.
-```solidity
-// v3.6.2 Fix:
+// NEW check (v3.6.2 - FIXED):
 if (market.yesSupply == 0 || market.noSupply == 0) {
-    revert OneSidedMarket();  // Block if EITHER side is empty
+    revert OneSidedMarket();  // Now blocks if EITHER side is empty
 }
 ```
+
+**Why This Fix?** One-sided markets should use emergency refund, not resolution. There's no "losing side" to take money from, so resolution is pointless.
 
 ---
 
-### Bug 2: Emergency Refund Bypass (Finalization Avoidance)
+### Bug 2: Emergency Refund Bypass (FIXED)
 
-**Problem:** `emergencyRefund()` only checks `!market.resolved`, not whether a valid proposal exists.
+**Problem:** `emergencyRefund()` only checked `!market.resolved`, not whether a valid proposal existed.
 
 ```solidity
-// Current check (v3.6.1):
+// OLD check (v3.6.1 - VULNERABLE):
 function emergencyRefund(uint256 marketId) external {
     if (market.resolved) revert MarketAlreadyResolved();
-    // ❌ Does NOT check if proposal exists!
+    // ❌ Did NOT check if proposal exists!
 }
-```
 
-**Attack Scenario:**
-```
-T=0h      Market expires
-T=10h     Alice (holding losing side) proposes correct outcome
-T=10.5h   Dispute window ends, no dispute
-          Market is READY to finalize, but nobody calls it...
-
-T=24h     Emergency refund becomes available
-          - market.resolved = false ✓
-          - 24 hours passed ✓
-
-T=24h+    Bob (also losing side) calls emergencyRefund()
-          - Gets proportional refund instead of losing!
-          - Alice's valid proposal is ignored
-
-RESULT: Losers can avoid losing by simply not finalizing.
-```
-
-**Fix:** Block emergency refund if a valid proposal exists.
-```solidity
-// v3.6.2 Fix:
+// NEW check (v3.6.2 - FIXED):
 function emergencyRefund(uint256 marketId) external {
-    // Block if resolution in progress (unless contract paused for emergencies)
+    if (market.resolved) revert MarketAlreadyResolved();
+    // ✅ Block if resolution in progress (unless contract paused for emergencies)
     if (!paused && market.proposer != address(0)) {
         revert ResolutionInProgress();
     }
-    // ... rest of function
+    // ...
 }
 ```
 
+**Why This Fix?** Prevents losers from avoiding resolution by simply not calling `finalizeMarket()` and waiting for emergency refund.
+
 ---
 
-### Bug 3: Stale Proposer State After Failed Finalization
+### Bug 3: Stale Proposer State After Failed Finalization (FIXED)
 
-**Problem:** When `finalizeMarket()` fails legitimately (winning side has 0 holders, or vote tie), it returns bonds but doesn't clear `proposer`/`disputer`.
+**Problem:** When `finalizeMarket()` failed legitimately (winning side has 0 holders, or vote tie), it returned bonds but didn't clear `proposer`/`disputer`.
 
 ```solidity
-// Current behavior (v3.6.1):
+// OLD behavior (v3.6.1 - VULNERABLE):
 if (winningSupply == 0) {
     pendingWithdrawals[market.proposer] += bondAmount;  // Return bond ✓
     emit MarketResolutionFailed(...);
     return;  // ❌ proposer NOT cleared!
 }
-```
 
-**Problem Scenario:**
-```
-1. Market has 100 YES, 50 NO holders
-2. Someone proposes YES
-3. All YES holders sell their shares (yesSupply becomes 0)
-4. finalizeMarket() called → fails (winning side empty)
-5. Bond returned ✓
-6. market.proposer still set (not cleared) ✗
-
-If we implement Bug 2 fix without this fix:
-7. Emergency refund blocked (proposer != 0)
-8. Users STUCK forever!
-```
-
-**Fix:** Clear proposer/disputer when finalization legitimately fails.
-```solidity
-// v3.6.2 Fix in finalizeMarket():
+// NEW behavior (v3.6.2 - FIXED):
 if (winningSupply == 0) {
-    // ... return bond ...
-    market.proposer = address(0);  // ← ADD: Clear for emergency refund
+    pendingWithdrawals[market.proposer] += bondAmount;
+    market.proposer = address(0);  // ✅ Clear for emergency refund
     emit MarketResolutionFailed(...);
     return;
 }
 
-// v3.6.2 Fix in _returnBondsOnTie():
+// Also in _returnBondsOnTie():
 function _returnBondsOnTie(Market storage market) internal {
     // ... return bonds ...
-    market.proposer = address(0);  // ← ADD
-    market.disputer = address(0);  // ← ADD
+    market.proposer = address(0);  // ✅ Clear
+    market.disputer = address(0);  // ✅ Clear
 }
 ```
 
----
-
-### Fix Dependencies
-
-**⚠️ IMPORTANT:** These fixes must be implemented TOGETHER.
-
-| Fix | Depends On | Without Dependency |
-|-----|------------|-------------------|
-| Fix 1 (One-sided proposals) | None | Safe alone |
-| Fix 2 (Emergency refund check) | Fix 3 | Users get STUCK |
-| Fix 3 (Clear proposer on failure) | None | Safe alone |
-
-**Implementation Order:**
-1. Fix 1 - Block one-sided proposals
-2. Fix 3 - Clear proposer/disputer on failed finalization  
-3. Fix 2 - Block emergency refund if proposer exists
+**Why This Fix?** Without clearing proposer, users would be stuck forever if Bug 2 fix was applied (emergency refund blocked because `proposer != address(0)`).
 
 ---
 
-### Expected Behavior After v3.6.2
+### v3.6.2 Behavior Summary
 
 | Market Type | Proposal Allowed? | Resolution Path |
 |-------------|-------------------|-----------------|
@@ -332,7 +264,17 @@ function _returnBondsOnTie(Market storage market) internal {
 | Proposal exists, not finalized | ❌ No → Must finalize first |
 | Finalization failed (0 winners) | ✅ Yes (proposer cleared) |
 | Vote tie | ✅ Yes (proposer cleared) |
-| Contract paused | ✅ Yes (emergency escape) |
+| Contract paused | ✅ Yes (emergency escape hatch) |
+
+### New Error Codes (v3.6.2)
+- `OneSidedMarket()` - Reverts when trying to propose on a market where one side has 0 supply
+- `ResolutionInProgress()` - Reverts when trying to emergency refund while a valid proposal exists
+
+### Test Coverage (v3.6.2)
+- Added `OneSidedMarket.t.sol` - 7 new tests for one-sided market blocking
+- Updated `EmptyWinningSide.t.sol` - Complete rewrite for v3.6.2 behavior (6 tests)
+- Updated 20+ tests across all test files to work with new one-sided market rules
+- **189 total tests passing**
 
 ---
 
@@ -340,7 +282,8 @@ function _returnBondsOnTie(Market storage market) internal {
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v3.6.1** | Dispute Window Edge Case Fix, 180 tests | ✅ **READY FOR DEPLOYMENT** |
+| **v3.6.2** | One-Sided Market Fix, Emergency Refund Security, 189 tests | ✅ **CURRENT - READY FOR DEPLOYMENT** |
+| v3.6.1 | Dispute Window Edge Case Fix | ⚠️ DEPRECATED (one-sided market bugs) |
 | v3.6.0 | Emergency Refund Security Fix | ⚠️ DEPRECATED (edge case bug) |
 | v3.5.0 | 5 Heat Levels (10x liquidity), APEX & CORE tiers | ⚠️ DEPRECATED (bug) |
 
@@ -349,7 +292,7 @@ function _returnBondsOnTie(Market storage market) internal {
 - **Network:** BNB Testnet (Chain ID: 97)
 - **⚠️ WARNING:** Contains Emergency Refund vulnerability - DO NOT USE
 
-> **v3.6.1 Features:** All v3.6.0 features + Dispute window edge case fix, 180 total tests passing
+> **v3.6.2 Features:** All v3.6.1 features + One-sided market blocking, Emergency refund security, Stale proposer cleanup, 189 total tests passing
 
 ---
 
@@ -783,10 +726,10 @@ Timing example:
 Fair outcome: If the community can't decide, nobody gets punished.
 ```
 
-**🚫 What happens if a market has NO TRADES AT ALL?** ⭐ (SAFETY in v3.4.0)
+**🚫 What happens if a market has NO TRADES AT ALL?** ⭐ (v3.6.2)
 ```
 If a market expires with 0 YES shares AND 0 NO shares:
-  1. proposeOutcome() is BLOCKED with error "NoTradesToResolve"
+  1. proposeOutcome() is BLOCKED with error "OneSidedMarket"
   2. Nobody can propose, dispute, or resolve the market
   3. No emergency refund needed (pool is empty anyway)
 
@@ -796,37 +739,44 @@ Why block proposals on empty markets?
   - No funds at risk, no action needed
 ```
 
-**🛡️ What happens if winning side has NO holders?** ⭐ (SAFETY in v3.4.0)
+**🚫 What happens if a market is ONE-SIDED?** ⭐ (NEW in v3.6.2)
 ```
-If the outcome would resolve to a side with 0 shares:
-  1. Proposer gets their bond back (no penalty)
-  2. Disputer gets their bond back (if disputed)
-  3. Market is NOT resolved (stays in limbo)
-  4. Emergency refund available at: expiry + 24 hours
-  5. All traders can claim proportional refund
+If a market has trades on only ONE side (e.g., 100 YES shares, 0 NO shares):
+  1. proposeOutcome() is BLOCKED with error "OneSidedMarket"
+  2. Nobody can propose - market cannot be resolved normally
+  3. Emergency refund available at: expiry + 24 hours
+  4. All shareholders get proportional refund
 
-Example scenario:
-  - Only YES holders exist (all traders bought YES)
-  - Attacker proposes NO outcome with minimum bond
-  - Nobody disputes (why would YES holders dispute for NO?)
-  - 30 min passes → finalize() called
-  
-  WITHOUT safety check: Market resolves to NO, funds locked forever!
-  WITH safety check: Resolution blocked, bonds returned, emergency refund available.
-
-This prevents a griefing attack where someone can lock funds
-by proposing resolution to an empty side that nobody defends.
+Why block proposals on one-sided markets?
+  - No "losing side" to pay winners from
+  - Resolution is pointless (everyone "wins" but just gets their own money back minus fees)
+  - Emergency refund is the correct path for one-sided markets
 ```
 
-**📊 Edge Case Summary Table:**
-| Scenario | YES Supply | NO Supply | Can Propose? | Resolution |
-|----------|------------|-----------|--------------|------------|
-| Normal market | > 0 | > 0 | ✅ Yes | Normal |
-| One-sided (YES only) | > 0 | 0 | ✅ Yes | Only YES can win* |
-| One-sided (NO only) | 0 | > 0 | ✅ Yes | Only NO can win* |
-| Empty market | 0 | 0 | ❌ No | N/A (blocked) |
+**🛡️ What happens if winning side has NO holders?** ⭐ (v3.4.0 + v3.6.2)
+```
+This scenario is now PREVENTED at the proposal stage (v3.6.2).
+The v3.4.0 safety check in finalizeMarket() is kept as a backup but should never trigger.
 
-*If someone proposes the empty side wins, safety check blocks resolution and returns bonds.
+Edge case (shares sold after proposal):
+  - Market has YES and NO holders at proposal time
+  - Someone proposes YES wins
+  - All YES holders sell their shares before finalization
+  - finalizeMarket() called → safety check triggers
+  - Bond returned, market.proposer cleared (v3.6.2)
+  - Emergency refund available
+
+Note: v3.6.2 now CLEARS market.proposer when finalization fails,
+enabling emergency refund afterwards.
+```
+
+**📊 Edge Case Summary Table (v3.6.2):**
+| Scenario | YES Supply | NO Supply | Can Propose? | Resolution Path |
+|----------|------------|-----------|--------------|-----------------|
+| Normal market | > 0 | > 0 | ✅ Yes | Propose → Finalize → Claim |
+| One-sided (YES only) | > 0 | 0 | ❌ No | Emergency refund at 24h |
+| One-sided (NO only) | 0 | > 0 | ❌ No | Emergency refund at 24h |
+| Empty market | 0 | 0 | ❌ No | Nothing to refund |
 
 ---
 
@@ -1202,14 +1152,22 @@ WITHOUT safety check:
 ❌ 0 NO holders to distribute pool to
 ❌ 2 BNB locked forever!
 
-WITH safety check (v3.4.0+):
-✅ Resolution blocked
-✅ Charlie gets bond back (0.02 BNB)
+WITH v3.6.2 (one-sided market blocking):
+✅ Proposal BLOCKED immediately with OneSidedMarket()
+✅ No bond locked, no wasted gas
 ✅ Pool still has 2 BNB
 ✅ After 24h: Alice & Bob claim emergency refund
+
+WITH v3.4.0+ safety check (backup, should never trigger):
+✅ If somehow proposal passed, resolution blocked at finalization
+✅ Charlie gets bond back (0.02 BNB)
+✅ market.proposer cleared (v3.6.2)
+✅ After 24h: Emergency refund available
 ```
 
 **Key Points:**
+- v3.6.2 blocks one-sided markets at proposal time (primary defense)
+- v3.4.0 safety check in finalization is backup (should never trigger)
 - Bonds are returned, NOT slashed (no one is penalized)
 - Shareholders keep their funds safe
 - Emergency refund ensures no funds are ever locked
@@ -1217,7 +1175,44 @@ WITH safety check (v3.4.0+):
 
 ---
 
-### 1️⃣2️⃣.6️⃣ 2-HOUR PROPOSAL CUTOFF (Safety Mechanism v3.6.0+) ⭐
+### 1️⃣2️⃣.6️⃣ EMERGENCY REFUND SECURITY (v3.6.2) ⭐
+
+**The v3.6.2 Protection:**
+Emergency refund is now blocked if a valid proposal exists:
+
+```solidity
+function emergencyRefund(uint256 marketId) external {
+    // ... other checks ...
+    
+    // v3.6.2: Block if resolution in progress
+    if (!paused && market.proposer != address(0)) {
+        revert ResolutionInProgress();
+    }
+}
+```
+
+**Why This Matters:**
+Without this check, losers could avoid resolution by:
+1. Waiting for a correct proposal
+2. NOT calling finalizeMarket()
+3. Waiting for 24h emergency refund window
+4. Taking proportional refund instead of losing
+
+**The Escape Hatch:**
+If contract is paused, emergency refund is ALWAYS allowed. This ensures users can recover funds if something goes catastrophically wrong.
+
+**When Emergency Refund Works (v3.6.2):**
+| Condition | Emergency Refund? |
+|-----------|-------------------|
+| No proposal, 24h passed | ✅ Yes |
+| Proposal exists, not finalized | ❌ No → Finalize first |
+| Finalization failed (cleared proposer) | ✅ Yes |
+| Vote tie (cleared proposer) | ✅ Yes |
+| Contract paused | ✅ Yes (always) |
+
+---
+
+### 1️⃣2️⃣.7️⃣ 2-HOUR PROPOSAL CUTOFF (v3.6.0+) ⭐
 
 **The Problem:**
 Resolution and emergency refund could overlap, creating race conditions and double-spend opportunities.
@@ -1226,11 +1221,11 @@ Resolution and emergency refund could overlap, creating race conditions and doub
 New proposals are blocked 2 hours before emergency refund becomes available:
 
 ```
-Timeline (v3.6.1):
+Timeline (v3.6.2):
 ─────────────────────────────────────────────────────────────────────────
 Expiry                                                     Emergency Refund
   │                                                              │
-  │  0-22h: Proposals ALLOWED                                   │ 24h+
+  │  0-22h: Proposals ALLOWED (normal markets only)             │ 24h+
   │         Disputes ALLOWED (within 30min of any proposal)     │
   │                                                              │
   │  22-24h: PROPOSAL CUTOFF                                    │
@@ -1261,7 +1256,7 @@ v3.6.1 Fix:
 - 30-minute safety gap before T=24:00 emergency refund ✅
 ```
 
-**Worst-Case Timeline (v3.6.1):**
+**Worst-Case Timeline (v3.6.2):**
 ```
 T=21:59:59  Last possible proposal (cutoff at T=22:00:00)
 T=22:29:58  Last possible dispute (30min window)

@@ -5,6 +5,100 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.2] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **ALL SECURITY FIXES APPLIED** - Replaces v3.6.1
+
+### Fixed
+
+#### 🟠 HIGH: One-Sided Market Proposals
+Fixed a vulnerability where proposals could be made on markets with only one side having holders.
+
+**Vulnerability Details (v3.6.1):**
+- `proposeOutcome()` only checked if BOTH sides were empty (`&&`)
+- Allowed proposals on one-sided markets (e.g., 100 YES, 0 NO)
+- Could cause griefing (force users to wait 24h for emergency refund) or pointless resolution
+
+**Fix Applied:**
+```solidity
+// OLD (v3.6.1 - VULNERABLE):
+if (market.yesSupply == 0 && market.noSupply == 0) {
+    revert NoTradesToResolve();
+}
+
+// NEW (v3.6.2 - FIXED):
+if (market.yesSupply == 0 || market.noSupply == 0) {
+    revert OneSidedMarket();
+}
+```
+
+#### 🟠 HIGH: Emergency Refund Bypass
+Fixed a vulnerability where losers could avoid resolution by not calling `finalizeMarket()` and waiting for emergency refund.
+
+**Vulnerability Details (v3.6.1):**
+- `emergencyRefund()` only checked `!market.resolved`
+- Did NOT check if a valid proposal existed
+- Losers could avoid losing by simply waiting for emergency refund
+
+**Fix Applied:**
+```solidity
+function emergencyRefund(uint256 marketId) external {
+    // ... other checks ...
+    // ✅ NEW: Block if resolution in progress (unless contract paused)
+    if (!paused && market.proposer != address(0)) {
+        revert ResolutionInProgress();
+    }
+}
+```
+
+#### 🟡 MEDIUM: Stale Proposer State After Failed Finalization
+Fixed a bug where `proposer`/`disputer` weren't cleared when finalization legitimately failed.
+
+**Vulnerability Details (v3.6.1):**
+- When finalization failed (0 winners or vote tie), bonds were returned
+- But `market.proposer` was NOT cleared
+- Combined with emergency refund fix, would STUCK users forever
+
+**Fix Applied:**
+```solidity
+// In finalizeMarket() when winningSupply == 0:
+if (winningSupply == 0) {
+    pendingWithdrawals[market.proposer] += bondAmount;
+    market.proposer = address(0);  // ✅ ADDED
+    emit MarketResolutionFailed(...);
+    return;
+}
+
+// In _returnBondsOnTie():
+function _returnBondsOnTie(...) {
+    // ... return bonds ...
+    market.proposer = address(0);  // ✅ ADDED
+    market.disputer = address(0);  // ✅ ADDED
+}
+```
+
+### Added
+
+#### New Error Codes
+- `OneSidedMarket()` - Reverts when proposing on market with one side empty
+- `ResolutionInProgress()` - Reverts when emergency refund attempted with active proposal
+
+#### New Tests
+- `OneSidedMarket.t.sol` - 7 new tests for one-sided market blocking
+- Rewrote `EmptyWinningSide.t.sol` - 6 tests for v3.6.2 behavior
+- Updated 20+ tests across all files for new one-sided market rules
+
+### Security Notes
+- Resolution and emergency refund are now **truly mutually exclusive**
+- One-sided markets correctly use emergency refund path
+- Failed finalization properly resets market state for emergency refund
+- Paused contract allows emergency refund as escape hatch
+- **189 tests passing**
+
+---
+
 ## [3.6.1] - 2026-01-18
 
 ### NOT YET DEPLOYED ⏳

@@ -1,9 +1,23 @@
-# Security Analysis: v3.6.0 → v3.6.1 Emergency Refund & Dispute Window Fixes
+# Security Analysis: v3.6.0 → v3.6.2 Emergency Refund & Resolution Fixes
 
-**Date:** January 18, 2026  
-**Version:** v3.6.1 (includes v3.6.0 fixes)  
+**Date:** January 19, 2026  
+**Version:** v3.6.2 (includes v3.6.0 and v3.6.1 fixes)  
 **Analyst:** GitHub Copilot  
 **Status:** ✅ ALL VULNERABILITIES FIXED
+
+---
+
+## Executive Summary
+
+Version 3.6.2 addresses all identified security vulnerabilities in the PredictionMarket contract:
+
+| Version | Vulnerabilities Fixed | Tests |
+|---------|----------------------|-------|
+| v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data | 180 |
+| v3.6.1 | Dispute window edge case | 180 |
+| v3.6.2 | One-sided markets, Emergency refund bypass, Stale proposer state | 189 |
+
+**All 189 tests passing. Contract is ready for deployment.**
 
 ---
 
@@ -294,6 +308,153 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 
 ---
 
+## Part 4: v3.6.2 Security Fixes
+
+### 🟠 HIGH: One-Sided Market Proposals (FIXED in v3.6.2)
+
+**Discovered:** January 19, 2026  
+**Severity:** HIGH  
+**Status:** ✅ FIXED in v3.6.2
+
+#### Vulnerability Details
+
+`proposeOutcome()` only checked if BOTH sides were empty, not if ONE side was empty. This allowed:
+
+1. **Griefing Attack:** Proposing resolution on empty side → finalization fails → users wait 24h for refund
+2. **Pointless Resolution:** Proposing resolution on one-sided market → everyone "wins" but pays fees
+
+#### v3.6.2 Fix Applied
+
+```solidity
+// OLD (v3.6.1 - VULNERABLE):
+if (market.yesSupply == 0 && market.noSupply == 0) {
+    revert NoTradesToResolve();  // Only blocked if BOTH are zero
+}
+
+// NEW (v3.6.2 - FIXED):
+if (market.yesSupply == 0 || market.noSupply == 0) {
+    revert OneSidedMarket();  // Now blocks if EITHER side is empty
+}
+```
+
+#### Why This Fix Works
+
+One-sided markets should use emergency refund, not resolution:
+- No "losing side" exists to pay winners from
+- Resolution is pointless (winners just get their own money back minus fees)
+- Emergency refund is the correct path
+
+---
+
+### 🟠 HIGH: Emergency Refund Bypass (FIXED in v3.6.2)
+
+**Discovered:** January 19, 2026  
+**Severity:** HIGH  
+**Status:** ✅ FIXED in v3.6.2
+
+#### Vulnerability Details
+
+`emergencyRefund()` only checked `!market.resolved`, not whether a valid proposal existed. This allowed losers to avoid resolution by not calling `finalizeMarket()` and waiting for emergency refund.
+
+#### Attack Scenario (Pre-v3.6.2)
+
+```
+T=0h      Market expires (YES has 60 BNB, NO has 40 BNB)
+T=10h     Alice proposes YES wins (correct outcome)
+T=10.5h   Dispute window ends, no dispute
+          Market is READY to finalize...
+
+T=24h     Emergency refund becomes available
+          - market.resolved = false ✓
+          - 24 hours passed ✓
+
+T=24h+    Bob (NO holder, would lose 40 BNB) calls emergencyRefund()
+          - Gets proportional refund (~40 BNB back!)
+          - Should have lost everything
+
+RESULT: Losers avoid losing by simply not finalizing.
+```
+
+#### v3.6.2 Fix Applied
+
+```solidity
+// OLD (v3.6.1 - VULNERABLE):
+function emergencyRefund(uint256 marketId) external {
+    if (market.resolved) revert MarketAlreadyResolved();
+    // ❌ Did NOT check if proposal exists!
+}
+
+// NEW (v3.6.2 - FIXED):
+function emergencyRefund(uint256 marketId) external {
+    if (market.resolved) revert MarketAlreadyResolved();
+    // ✅ Block if resolution in progress (unless contract paused)
+    if (!paused && market.proposer != address(0)) {
+        revert ResolutionInProgress();
+    }
+    // ...
+}
+```
+
+#### Why This Fix Works
+
+- Resolution path and emergency refund are now mutually exclusive
+- If proposal exists → must finalize first
+- Escape hatch: `paused` state allows emergency refund even with proposal (for true emergencies)
+
+---
+
+### 🟡 MEDIUM: Stale Proposer State After Failed Finalization (FIXED in v3.6.2)
+
+**Discovered:** January 19, 2026  
+**Severity:** MEDIUM  
+**Status:** ✅ FIXED in v3.6.2
+
+#### Vulnerability Details
+
+When `finalizeMarket()` failed legitimately (winning side has 0 holders, or vote tie), it returned bonds but didn't clear `proposer`/`disputer`. Combined with Bug 2 fix, this would STUCK users forever.
+
+#### Problem Scenario (Without Fix 3)
+
+```
+1. Market has 100 YES, 50 NO holders
+2. Someone proposes YES
+3. All YES holders sell their shares (yesSupply becomes 0)
+4. finalizeMarket() called → fails (winning side empty)
+5. Bond returned ✓
+6. market.proposer still set (not cleared) ✗
+
+With Bug 2 fix (emergency refund check):
+7. Emergency refund blocked (proposer != address(0))
+8. Users STUCK forever!
+```
+
+#### v3.6.2 Fix Applied
+
+```solidity
+// In finalizeMarket() when winningSupply == 0:
+if (winningSupply == 0) {
+    pendingWithdrawals[market.proposer] += bondAmount;
+    market.proposer = address(0);  // ✅ ADDED: Clear for emergency refund
+    emit MarketResolutionFailed(marketId, "No holders on winning side");
+    return;
+}
+
+// In _returnBondsOnTie():
+function _returnBondsOnTie(Market storage market) internal {
+    // ... return bonds ...
+    market.proposer = address(0);  // ✅ ADDED
+    market.disputer = address(0);  // ✅ ADDED
+}
+```
+
+#### Why This Fix Works
+
+- Failed finalization now properly "resets" the market state
+- Emergency refund becomes available after legitimate finalization failure
+- No users can ever be stuck
+
+---
+
 ## Conclusion
 
 ### Vulnerabilities Fixed ✅
@@ -304,15 +465,9 @@ The v3.6.0 fixes **do not touch** any bonding curve or virtual liquidity code:
 | Race Condition (Proposals) | v3.6.0 | ✅ FIXED |
 | Stale Pool Data | v3.6.0 | ✅ FIXED |
 | Dispute Window Edge Case | v3.6.1 | ✅ FIXED |
-
-### Vulnerabilities Identified (Pending Fix) 🔴
-| Bug | Target Version | Status |
-|-----|----------------|--------|
-| One-Sided Market Proposals | v3.6.2 | 🔴 PENDING |
-| Emergency Refund Bypass | v3.6.2 | 🔴 PENDING |
-| Stale Proposer State | v3.6.2 | 🔴 PENDING |
-
-See README.md "PENDING: Bugs Identified for v3.6.2" section for full details.
+| One-Sided Market Proposals | v3.6.2 | ✅ FIXED |
+| Emergency Refund Bypass | v3.6.2 | ✅ FIXED |
+| Stale Proposer State | v3.6.2 | ✅ FIXED |
 
 ### Security Verified ✅
 | Component | Status |
@@ -320,15 +475,25 @@ See README.md "PENDING: Bugs Identified for v3.6.2" section for full details.
 | Bond/Fee claiming | ✅ SAFE |
 | Virtual liquidity | ✅ NOT AFFECTED |
 | Heat levels | ✅ NOT AFFECTED |
+| Resolution paths | ✅ MUTUALLY EXCLUSIVE |
+| Emergency refund | ✅ PROPERLY GATED |
 
-### Resolution Timeline (v3.6.1)
+### Resolution Timeline (v3.6.2)
 ```
-0-22h:  Proposals allowed, disputes allowed within 30min of proposal
+0-22h:  Proposals allowed (normal two-sided markets only)
+        Disputes allowed within 30min of proposal
 22-24h: NO new proposals, disputes STILL allowed within 30min window
-24h+:   Emergency refund available (only if no resolution occurred)
+24h+:   Emergency refund available (only if no valid proposal exists)
 ```
 
-**⚠️ Note:** Resolution and Emergency Refund paths are NOT fully mutually exclusive in v3.6.1. 
-The v3.6.2 fixes will ensure they are truly mutually exclusive.
+**Resolution and Emergency Refund are now truly mutually exclusive by design.**
 
-**All 180 tests passing.**
+### New Error Codes (v3.6.2)
+- `OneSidedMarket()` - Reverts when proposing on market with one side empty
+- `ResolutionInProgress()` - Reverts when emergency refund attempted with active proposal
+
+### Test Coverage
+- **189 total tests passing**
+- 7 new tests in `OneSidedMarket.t.sol`
+- 6 rewritten tests in `EmptyWinningSide.t.sol`
+- 20+ tests updated across all test files for v3.6.2 behavior

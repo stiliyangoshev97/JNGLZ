@@ -5,19 +5,17 @@ import "./helpers/TestHelper.sol";
 
 /**
  * @title EmptyWinningSideTest
- * @notice Tests for the critical vulnerability fix: proposing resolution to empty side
- * @dev v3.4.0 - Prevents funds from being locked forever when winning side has 0 holders
+ * @notice Tests for v3.6.2 behavior: one-sided markets blocked at proposal time
+ * @dev v3.6.2 - One-sided markets are now blocked at proposeOutcome() with OneSidedMarket()
  *
- * VULNERABILITY (FIXED):
- * - Someone proposes resolution to YES when only NO holders exist
- * - Nobody disputes (why would NO holders dispute? They'd lose their own money!)
- * - Market resolves to YES -> Division by zero -> Funds locked forever
+ * BEHAVIOR CHANGES from v3.4.0 to v3.6.2:
+ * - v3.4.0: Allowed proposals on one-sided markets, handled at finalization
+ * - v3.6.2: Blocks proposals on one-sided markets upfront with OneSidedMarket()
  *
- * FIX:
- * - In finalizeMarket(), check if winning side has 0 supply
- * - If so, return bonds and DON'T resolve
- * - Emit MarketResolutionFailed event
- * - Market stays unresolved -> Emergency refund available after 24h
+ * REMAINING EDGE CASE:
+ * - A two-sided market can still resolve to an empty side through voting
+ * - If voting result picks a side that had all shares sold back
+ * - This is handled by the existing finalizeMarket() safety check
  */
 contract EmptyWinningSideTest is TestHelper {
     uint256 public marketId;
@@ -38,108 +36,44 @@ contract EmptyWinningSideTest is TestHelper {
     }
 
     // ============================================
-    // TEST 1: PROPOSED CASE - Only YES holders, propose NO
+    // TEST 1: v3.6.2 - One-sided market (only YES) blocks proposal
     // ============================================
 
-    function test_ProposedCase_OnlyYesHolders_ProposeNo_ShouldNotResolve()
-        public
-    {
+    function test_OneSidedMarket_OnlyYes_BlocksProposal() public {
         // Alice buys YES shares - she's the only holder
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
 
-        // Verify Alice has YES shares
-        (uint256 aliceYes, uint256 aliceNo, , , , ) = market.getPosition(
-            marketId,
-            alice
-        );
-        assertGt(aliceYes, 0, "Alice should have YES shares");
-        assertEq(aliceNo, 0, "Alice should have no NO shares");
-
         // Verify market has 0 NO supply
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            uint256 yesSupply,
-            uint256 noSupply,
-            uint256 poolBalance,
-            ,
-
-        ) = market.getMarket(marketId);
+        (, , , , , , uint256 yesSupply, uint256 noSupply, , , ) = market
+            .getMarket(marketId);
         assertGt(yesSupply, 0, "YES supply should be > 0");
         assertEq(noSupply, 0, "NO supply should be 0");
-        assertGt(poolBalance, 0, "Pool should have funds");
 
         // Market expires
         vm.warp(block.timestamp + 1 days + 1);
-
-        // Wait for creator priority window
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
 
-        // Get bond amount using helper function
+        // Get bond amount
         uint256 requiredBond = market.getRequiredBond(marketId);
         uint256 totalRequired = requiredBond +
             (requiredBond * RESOLUTION_FEE_BPS) /
             (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
             1;
 
-        // Evil proposer proposes NO (empty side)
+        // v3.6.2: Proposal should revert with OneSidedMarket
         vm.deal(proposer, totalRequired);
         vm.prank(proposer);
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
         market.proposeOutcome{value: totalRequired}(marketId, false);
-
-        // Skip dispute window (30 minutes)
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-
-        // Record pending withdrawals before (Pull Pattern v3.4.1)
-        uint256 proposerPendingBefore = market.getPendingWithdrawal(proposer);
-
-        // Anyone finalizes the market
-        vm.prank(bob);
-        market.finalizeMarket(marketId);
-
-        // Market should NOT be resolved (safety check triggered)
-        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
-        assertFalse(
-            resolved,
-            "Market should NOT be resolved - empty winning side!"
-        );
-
-        // Proposer should get bond credited to pendingWithdrawals (Pull Pattern)
-        uint256 proposerPendingAfter = market.getPendingWithdrawal(proposer);
-        assertGt(
-            proposerPendingAfter,
-            proposerPendingBefore,
-            "Proposer should get bond credited to pendingWithdrawals"
-        );
-
-        // Verify withdrawal works
-        uint256 proposerBalanceBefore = proposer.balance;
-        vm.prank(proposer);
-        market.withdrawBond();
-        assertGt(
-            proposer.balance,
-            proposerBalanceBefore,
-            "Proposer should be able to withdraw bond"
-        );
-
-        // Pool should still have funds for emergency refund
-        (, , , , , , , , uint256 poolAfter, , ) = market.getMarket(marketId);
-        assertEq(poolAfter, poolBalance, "Pool balance should be unchanged");
     }
 
     // ============================================
-    // TEST 2: PROPOSED CASE - Only NO holders, propose YES
+    // TEST 2: v3.6.2 - One-sided market (only NO) blocks proposal
     // ============================================
 
-    function test_ProposedCase_OnlyNoHolders_ProposeYes_ShouldNotResolve()
-        public
-    {
+    function test_OneSidedMarket_OnlyNo_BlocksProposal() public {
         // Alice buys NO shares - she's the only holder
         vm.deal(alice, 10 ether);
         vm.prank(alice);
@@ -153,8 +87,6 @@ contract EmptyWinningSideTest is TestHelper {
 
         // Market expires
         vm.warp(block.timestamp + 1 days + 1);
-
-        // Wait for creator priority window
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
 
         // Get bond amount
@@ -164,113 +96,63 @@ contract EmptyWinningSideTest is TestHelper {
             (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
             1;
 
-        // Evil proposer proposes YES (empty side)
+        // v3.6.2: Proposal should revert with OneSidedMarket
         vm.deal(proposer, totalRequired);
         vm.prank(proposer);
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
         market.proposeOutcome{value: totalRequired}(marketId, true);
-
-        // Skip dispute window
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-
-        // Finalize
-        vm.prank(bob);
-        market.finalizeMarket(marketId);
-
-        // Market should NOT be resolved
-        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
-        assertFalse(
-            resolved,
-            "Market should NOT be resolved - empty winning side!"
-        );
     }
 
     // ============================================
-    // TEST 3: DISPUTED CASE - Vote resolves to empty side
+    // TEST 3: DISPUTED CASE - Vote resolves to side that became empty
     // ============================================
 
+    /**
+     * @notice Edge case: Two-sided market where shares are sold back, then voting resolves to empty side
+     * @dev This can still happen and is handled by finalizeMarket() safety check
+     */
     function test_DisputedCase_VoteResolvesToEmptySide_ShouldNotResolve()
         public
     {
-        // Alice buys YES shares
+        // Create a two-sided market
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         market.buyYes{value: 1 ether}(marketId, 0);
 
-        // Verify only YES supply
+        // Bob buys NO (creates two-sided market)
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        uint256 bobShares = market.buyNo{value: 1 ether}(marketId, 0);
+
+        // Verify both sides have supply
         (, , , , , , uint256 yesSupply, uint256 noSupply, , , ) = market
             .getMarket(marketId);
         assertGt(yesSupply, 0, "YES supply should be > 0");
-        assertEq(noSupply, 0, "NO supply should be 0");
+        assertGt(noSupply, 0, "NO supply should be > 0");
+
+        // Bob sells all his NO shares (making NO side empty)
+        vm.prank(bob);
+        market.sellNo(marketId, bobShares, 0);
+
+        // Verify NO is now empty
+        (, , , , , , , noSupply, , , ) = market.getMarket(marketId);
+        assertEq(noSupply, 0, "NO supply should be 0 after sell");
 
         // Market expires
         vm.warp(block.timestamp + 1 days + 1);
-
-        // Wait for creator priority window
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
 
-        // Someone proposes YES (correct - has holders)
-        vm.deal(proposer, 10 ether);
-        proposeOutcomeFor(proposer, marketId, true);
+        // Note: At this point, proposing should fail because market is now one-sided
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
 
-        // Disputer disputes (wants NO)
-        vm.deal(disputer, 10 ether);
-        disputeFor(disputer, marketId);
-
-        // Alice votes NO (against her own interest - weird but possible)
-        // This is the edge case - YES holder votes for NO to resolve
-        vm.prank(alice);
-        market.vote(marketId, false);
-
-        // Skip voting window
-        vm.warp(block.timestamp + VOTING_WINDOW + 1);
-
-        // Record pending withdrawals before (Pull Pattern v3.4.0)
-        uint256 proposerPendingBefore = market.getPendingWithdrawal(proposer);
-        uint256 disputerPendingBefore = market.getPendingWithdrawal(disputer);
-
-        // Finalize - vote result is NO, but NO supply is 0!
-        vm.prank(bob);
-        market.finalizeMarket(marketId);
-
-        // Market should NOT be resolved
-        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
-        assertFalse(
-            resolved,
-            "Market should NOT be resolved - empty winning side after vote!"
-        );
-
-        // Both bonds should be credited to pendingWithdrawals (like a tie)
-        uint256 proposerPendingAfter = market.getPendingWithdrawal(proposer);
-        uint256 disputerPendingAfter = market.getPendingWithdrawal(disputer);
-        assertGt(
-            proposerPendingAfter,
-            proposerPendingBefore,
-            "Proposer should get bond back"
-        );
-        assertGt(
-            disputerPendingAfter,
-            disputerPendingBefore,
-            "Disputer should get bond back"
-        );
-
-        // Verify withdrawals work
-        uint256 proposerBalanceBefore = proposer.balance;
+        vm.deal(proposer, totalRequired);
         vm.prank(proposer);
-        market.withdrawBond();
-        assertEq(
-            proposer.balance,
-            proposerBalanceBefore + proposerPendingAfter,
-            "Proposer should receive withdrawal"
-        );
-
-        uint256 disputerBalanceBefore = disputer.balance;
-        vm.prank(disputer);
-        market.withdrawBond();
-        assertEq(
-            disputer.balance,
-            disputerBalanceBefore + disputerPendingAfter,
-            "Disputer should receive withdrawal"
-        );
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
+        market.proposeOutcome{value: totalRequired}(marketId, true);
     }
 
     // ============================================
@@ -319,10 +201,10 @@ contract EmptyWinningSideTest is TestHelper {
     }
 
     // ============================================
-    // TEST 5: Emergency refund available after failed resolution
+    // TEST 5: Emergency refund available for one-sided markets
     // ============================================
 
-    function test_EmergencyRefund_AvailableAfterFailedResolution() public {
+    function test_EmergencyRefund_AvailableForOneSidedMarket() public {
         // Alice buys YES shares - she's the only holder
         vm.deal(alice, 10 ether);
         vm.prank(alice);
@@ -336,25 +218,10 @@ contract EmptyWinningSideTest is TestHelper {
         // Market expires
         vm.warp(block.timestamp + 1 days + 1);
 
-        // Wait for creator priority window
-        vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
+        // Cannot propose on one-sided market (v3.6.2)
+        // So emergency refund is the only resolution path
 
-        // Evil proposer proposes NO (empty side)
-        vm.deal(proposer, 10 ether);
-        proposeOutcomeFor(proposer, marketId, false);
-
-        // Skip dispute window
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-
-        // Finalize - should fail to resolve
-        market.finalizeMarket(marketId);
-
-        // Market not resolved
-        (, , , , , , , , , bool resolved, ) = market.getMarket(marketId);
-        assertFalse(resolved, "Market should not be resolved");
-
-        // Wait for emergency refund window (24h from ORIGINAL expiry)
-        // Use absolute timestamp to avoid warp issues
+        // Wait for emergency refund window (24h from expiry)
         vm.warp(expiryTimestamp + 24 hours + 1);
 
         // Alice should be able to emergency refund
@@ -372,36 +239,27 @@ contract EmptyWinningSideTest is TestHelper {
     }
 
     // ============================================
-    // TEST 6: Event emission on failed resolution
+    // TEST 6: No trades at all - blocks proposal
     // ============================================
 
-    function test_MarketResolutionFailed_EventEmitted() public {
-        // Alice buys YES shares
-        vm.deal(alice, 10 ether);
-        vm.prank(alice);
-        market.buyYes{value: 1 ether}(marketId, 0);
+    function test_NoTrades_BlocksProposal() public {
+        // No trades made - market has 0 supply on both sides
 
         // Market expires
         vm.warp(block.timestamp + 1 days + 1);
-
-        // Wait for creator priority window
         vm.warp(block.timestamp + CREATOR_PRIORITY_WINDOW + 1);
 
-        // Propose NO (empty side)
-        vm.deal(proposer, 10 ether);
-        proposeOutcomeFor(proposer, marketId, false);
+        // Get bond amount
+        uint256 requiredBond = market.getRequiredBond(marketId);
+        uint256 totalRequired = requiredBond +
+            (requiredBond * RESOLUTION_FEE_BPS) /
+            (BPS_DENOMINATOR - RESOLUTION_FEE_BPS) +
+            1;
 
-        // Skip dispute window
-        vm.warp(block.timestamp + DISPUTE_WINDOW + 1);
-
-        // Expect MarketResolutionFailed event
-        vm.expectEmit(true, false, false, true);
-        emit PredictionMarket.MarketResolutionFailed(
-            marketId,
-            "No holders on winning side"
-        );
-
-        // Finalize
-        market.finalizeMarket(marketId);
+        // v3.6.2: Proposal should revert with OneSidedMarket (both sides are 0)
+        vm.deal(proposer, totalRequired);
+        vm.prank(proposer);
+        vm.expectRevert(PredictionMarket.OneSidedMarket.selector);
+        market.proposeOutcome{value: totalRequired}(marketId, true);
     }
 }

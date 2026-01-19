@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
- * @custom:version 3.5.0 - Heat Level rebalance (5 tiers, 10x virtual liquidity increase)
+ * @custom:version 3.6.2 - One-sided market + emergency refund bypass fixes
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
@@ -402,6 +402,9 @@ contract PredictionMarket is ReentrancyGuard {
     // v3.6.0 errors (emergency refund vulnerability fix)
     error ProposalWindowClosed();
     error DisputeWindowClosed();
+    // v3.6.2 errors (one-sided market + emergency refund bypass fix)
+    error OneSidedMarket();
+    error ResolutionInProgress();
 
     // ============ Modifiers ============
 
@@ -820,9 +823,11 @@ contract PredictionMarket is ReentrancyGuard {
         if (status == MarketStatus.Active) revert MarketNotExpired();
         if (status != MarketStatus.Expired) revert AlreadyProposed();
 
-        // v3.4.0: Block proposals on empty markets (no trades = nothing to resolve)
-        if (market.yesSupply == 0 && market.noSupply == 0) {
-            revert NoTradesToResolve();
+        // v3.6.2 FIX: Block proposals on one-sided markets (either side has 0 holders)
+        // One-sided markets have no losers to pay winners - they should go to emergency refund
+        // This replaces the v3.4.0 check that only blocked when BOTH sides were zero
+        if (market.yesSupply == 0 || market.noSupply == 0) {
+            revert OneSidedMarket();
         }
 
         // v3.6.0 FIX: Block proposals when too close to emergency refund time
@@ -987,6 +992,8 @@ contract PredictionMarket is ReentrancyGuard {
                         "proposer_bond_empty_side"
                     );
                 }
+                // v3.6.2 FIX: Clear proposer so emergency refund is not blocked
+                market.proposer = address(0);
                 // Don't resolve - market stays unresolved, emergency refund available after 24h
                 emit MarketResolutionFailed(
                     marketId,
@@ -1090,6 +1097,7 @@ contract PredictionMarket is ReentrancyGuard {
     /**
      * @notice Internal function to return bonds when voting is a tie
      * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
+     *      v3.6.2: Also clears proposer/disputer so emergency refund is not blocked
      */
     function _returnBondsOnTie(Market storage market) internal {
         // Return proposer bond (Pull Pattern)
@@ -1117,6 +1125,10 @@ contract PredictionMarket is ReentrancyGuard {
                 "disputer_bond_tie"
             );
         }
+
+        // v3.6.2 FIX: Clear proposer/disputer so emergency refund is not blocked
+        market.proposer = address(0);
+        market.disputer = address(0);
     }
 
     /**
@@ -1275,6 +1287,7 @@ contract PredictionMarket is ReentrancyGuard {
     /**
      * @notice Emergency refund for stuck markets
      * @dev Available 24h after expiry if: no proposal, or voting resulted in tie
+     *      v3.6.2: Blocked if a proposal exists (must finalize first), unless contract is paused
      */
     function emergencyRefund(
         uint256 marketId
@@ -1288,6 +1301,13 @@ contract PredictionMarket is ReentrancyGuard {
 
         // Check market is not resolved
         if (market.resolved) revert MarketAlreadyResolved();
+
+        // v3.6.2 FIX: Block emergency refund if a proposal exists and contract is not paused
+        // This prevents losers from avoiding resolution by not calling finalizeMarket()
+        // Exception: If contract is paused (emergency), allow refund as escape hatch
+        if (!paused && market.proposer != address(0)) {
+            revert ResolutionInProgress();
+        }
 
         Position storage position = positions[marketId][msg.sender];
         if (position.emergencyRefunded) revert AlreadyEmergencyRefunded();
