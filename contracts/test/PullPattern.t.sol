@@ -679,7 +679,7 @@ contract PullPatternTest is TestHelper {
     }
 
     // ============================================
-    // JURY FEES DISTRIBUTION TEST
+    // JURY FEES DISTRIBUTION TEST (v3.7.0: Pull Pattern)
     // ============================================
 
     function test_JuryFees_CreditedToPendingWithdrawals() public {
@@ -737,33 +737,39 @@ contract PullPatternTest is TestHelper {
         // Wait for voting to end
         vm.warp(block.timestamp + VOTING_WINDOW + 1);
 
-        // Record pending before
-        uint256 alicePendingBefore = market.getPendingWithdrawal(alice);
-        uint256 charliePendingBefore = market.getPendingWithdrawal(charlie);
+        // Record balances before finalization
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 charlieBalanceBefore = charlie.balance;
 
         // Finalize
         market.finalizeMarket(marketId);
 
-        // Alice and Charlie should have jury fees credited (if YES won)
-        // But first check which side won
+        // Check which side won
         (, , , , , , , , , bool resolved, bool outcome) = market.getMarket(
             marketId
         );
 
         if (outcome == true) {
-            // YES won - Alice and Charlie should get jury fees
-            uint256 alicePendingAfter = market.getPendingWithdrawal(alice);
-            uint256 charliePendingAfter = market.getPendingWithdrawal(charlie);
+            // YES won - Alice and Charlie should be able to claim jury fees (v3.7.0 Pull Pattern)
+            vm.prank(alice);
+            uint256 aliceJuryFees = market.claimJuryFees(marketId);
 
-            assertGt(
-                alicePendingAfter,
-                alicePendingBefore,
-                "Alice should have jury fees"
+            vm.prank(charlie);
+            uint256 charlieJuryFees = market.claimJuryFees(marketId);
+
+            assertGt(aliceJuryFees, 0, "Alice should have jury fees");
+            assertGt(charlieJuryFees, 0, "Charlie should have jury fees");
+
+            // Verify they received the BNB
+            assertEq(
+                alice.balance,
+                aliceBalanceBefore + aliceJuryFees,
+                "Alice should receive jury fees"
             );
-            assertGt(
-                charliePendingAfter,
-                charliePendingBefore,
-                "Charlie should have jury fees"
+            assertEq(
+                charlie.balance,
+                charlieBalanceBefore + charlieJuryFees,
+                "Charlie should receive jury fees"
             );
         } else {
             // NO won - Bob should get jury fees (and be bond winner)

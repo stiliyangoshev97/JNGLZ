@@ -185,6 +185,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(marketId);
 
@@ -232,6 +233,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(marketId);
 
@@ -269,6 +271,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             uint256 virtualLiquidity,
             PredictionMarket.HeatLevel heatLevel,
+            ,
             ,
             ,
             ,
@@ -358,6 +361,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             uint256 virtualLiquidity,
+            ,
             ,
             ,
             ,
@@ -691,8 +695,31 @@ contract PredictionMarketTest is TestHelper {
         );
 
         // Get initial virtualLiquidity
-        (, , , , , , , , , uint256 initialVLiq, , , , , , , , , , , , ) = market
-            .markets(crackMarket);
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 initialVLiq,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = market.markets(crackMarket);
         assertEq(initialVLiq, 50e18, "Initial CRACK should be 50e18");
 
         // MultiSig changes CRACK default to 100e18
@@ -731,6 +758,7 @@ contract PredictionMarketTest is TestHelper {
             ,
             ,
             ,
+            ,
 
         ) = market.markets(crackMarket);
         assertEq(
@@ -745,7 +773,7 @@ contract PredictionMarketTest is TestHelper {
             7 days,
             PredictionMarket.HeatLevel.CRACK
         );
-        (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , ) = market
+        (, , , , , , , , , uint256 newVLiq, , , , , , , , , , , , , ) = market
             .markets(newMarket);
         assertEq(newVLiq, 100e18, "New market should have 100e18");
     }

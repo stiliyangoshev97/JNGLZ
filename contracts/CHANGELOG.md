@@ -5,6 +5,97 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-01-19
+
+### NOT YET DEPLOYED ⏳
+- Ready for deployment to BNB Testnet
+- **GAS GRIEFING FIX** - Replaces v3.6.2
+
+### Fixed
+
+#### 🚨 CRITICAL: Jury Fees Gas Griefing Vulnerability
+Fixed a gas griefing vulnerability where markets with >4,600 winning voters could permanently brick `finalizeMarket()`.
+
+**Vulnerability Details (v3.6.2 and earlier):**
+- `_distributeJuryFees()` had an O(n) loop through ALL winning voters
+- At ~4,600 voters, the loop would exceed the 30M gas limit
+- `finalizeMarket()` would revert, leaving the market stuck forever
+- Neither claims nor emergency refunds would work
+
+**Attack Scenario:**
+```
+1. Attacker creates/joins a market with clear outcome
+2. Creates 5,000+ wallets, each buys minimum shares
+3. All wallets vote for the winning side
+4. On finalization, _distributeJuryFees() loops through 5,000+ voters
+5. Gas exceeds 30M limit → finalizeMarket() reverts
+6. Market is STUCK - winners can never claim
+```
+
+**Fix Applied - Pull Pattern for Jury Fees:**
+```solidity
+// OLD (v3.6.2 - VULNERABLE): O(n) loop
+function _distributeJuryFees(...) internal {
+    for (uint256 i = 0; i < winningVoterCount; i++) {
+        address voter = winningVoters[i];
+        // ... calculate share ...
+        pendingWithdrawals[voter] += share;  // O(n) operations
+    }
+}
+
+// NEW (v3.7.0 - FIXED): O(1) storage
+function _distributeJuryFees(...) internal {
+    // ... treasury fallback if no winners ...
+    market.juryFeesPool = voterPool;  // Single storage write
+    emit JuryFeesPoolCreated(marketId, voterPool);
+}
+
+// NEW: Users claim their share
+function claimJuryFees(uint256 marketId) external nonReentrant returns (uint256 amount) {
+    // Calculate proportional share
+    // Transfer to voter
+}
+```
+
+### Added
+
+#### New Storage Fields
+- `Market.juryFeesPool` - Stores total jury fees for Pull Pattern claiming
+- `Position.juryFeesClaimed` - Tracks if voter has claimed their jury fees
+
+#### New Events
+- `JuryFeesPoolCreated(uint256 indexed marketId, uint256 amount)` - Emitted when jury fees pool is created
+- `JuryFeesClaimed(uint256 indexed marketId, address indexed voter, uint256 amount)` - Emitted when voter claims
+
+#### New Errors
+- `DidNotVote()` - User did not vote in this market
+- `VotedForLosingOutcome()` - User voted for the losing side
+- `JuryFeesAlreadyClaimed()` - User already claimed jury fees
+- `NoJuryFeesPool()` - No jury fees pool exists for this market
+
+#### New Functions
+- `claimJuryFees(uint256 marketId)` - Claim proportional share of jury fees pool
+
+### Changed
+
+#### Pull Pattern Completion
+The contract now uses Pull Pattern for ALL fund distributions:
+| What | v3.6.2 (Push) | v3.7.0 (Pull) |
+|------|---------------|---------------|
+| Winner claims | Pull | Pull (unchanged) |
+| Proposer bond | Pull | Pull (unchanged) |
+| Disputer bond | Pull | Pull (unchanged) |
+| Creator fees | Pull | Pull (unchanged) |
+| **Jury fees** | **Push (O(n) loop)** | **Pull (O(1))** ✅ |
+
+### Security Notes
+- `finalizeMarket()` now runs in O(1) time regardless of voter count
+- Markets cannot be bricked by large voter counts
+- Jury fees remain claimable indefinitely (no expiry)
+- **188 tests passing** (1 skipped is expected)
+
+---
+
 ## [3.6.2] - 2026-01-19
 
 ### NOT YET DEPLOYED ⏳

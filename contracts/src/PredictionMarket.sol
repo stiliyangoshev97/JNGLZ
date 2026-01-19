@@ -150,6 +150,7 @@ contract PredictionMarket is ReentrancyGuard {
         uint256 disputeBond;
         uint256 yesVotes; // Total vote weight for YES
         uint256 noVotes; // Total vote weight for NO
+        uint256 juryFeesPool; // v3.7.0: Total jury fees pool for Pull Pattern claiming
     }
 
     struct PendingAction {
@@ -168,6 +169,7 @@ contract PredictionMarket is ReentrancyGuard {
         bool emergencyRefunded;
         bool hasVoted;
         bool votedOutcome;
+        bool juryFeesClaimed; // v3.7.0: Track if jury fees have been claimed
     }
 
     // ============ State Variables ============
@@ -346,6 +348,16 @@ contract PredictionMarket is ReentrancyGuard {
 
     event CreatorFeesClaimed(address indexed creator, uint256 amount);
 
+    // ============ v3.7.0 Events (Jury Fees Pull Pattern) ============
+
+    event JuryFeesPoolCreated(uint256 indexed marketId, uint256 amount);
+
+    event JuryFeesClaimed(
+        uint256 indexed marketId,
+        address indexed voter,
+        uint256 amount
+    );
+
     // ============ Errors ============
 
     error NotSigner();
@@ -405,6 +417,11 @@ contract PredictionMarket is ReentrancyGuard {
     // v3.6.2 errors (one-sided market + emergency refund bypass fix)
     error OneSidedMarket();
     error ResolutionInProgress();
+    // v3.7.0 errors (jury fees Pull Pattern)
+    error DidNotVote();
+    error VotedForLosingOutcome();
+    error JuryFeesAlreadyClaimed();
+    error NoJuryFeesPool();
 
     // ============ Modifiers ============
 
@@ -1180,8 +1197,9 @@ contract PredictionMarket is ReentrancyGuard {
     }
 
     /**
-     * @notice Internal function to distribute jury fees to winning voters
-     * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
+     * @notice Internal function to store jury fees pool for later claiming
+     * @dev v3.7.0: Converted from Push to Pull Pattern - stores pool, voters claim individually
+     *      This fixes the gas griefing vulnerability where >4600 voters could block finalization
      */
     function _distributeJuryFees(
         uint256 marketId,
@@ -1200,26 +1218,57 @@ contract PredictionMarket is ReentrancyGuard {
             return;
         }
 
-        // Distribute proportionally to winning voters (Pull Pattern)
-        address[] storage voters = marketVoters[marketId];
-        for (uint256 i = 0; i < voters.length; i++) {
-            address voter = voters[i];
-            Position storage pos = positions[marketId][voter];
+        // v3.7.0: Store pool for Pull Pattern claiming - O(1) instead of O(n)
+        market.juryFeesPool = voterPool;
+        emit JuryFeesPoolCreated(marketId, voterPool);
+    }
 
-            // Only credit winning voters
-            if (pos.hasVoted && pos.votedOutcome == winningOutcome) {
-                uint256 voterWeight = pos.yesShares + pos.noShares;
-                uint256 voterShare = (voterPool * voterWeight) /
-                    totalWinningVotes;
-
-                if (voterShare > 0) {
-                    pendingWithdrawals[voter] += voterShare;
-                    totalPendingWithdrawals += voterShare;
-                    emit WithdrawalCredited(voter, voterShare, "jury_fee");
-                    emit JuryFeeDistributed(marketId, voter, voterShare);
-                }
-            }
-        }
+    /**
+     * @notice Claim jury fees from a disputed market (Pull Pattern)
+     * @param marketId The market to claim jury fees from
+     * @return amount The amount claimed
+     * @dev v3.7.0: Each winning voter claims their proportional share individually
+     *      This replaces the loop in _distributeJuryFees to prevent gas griefing
+     */
+    function claimJuryFees(
+        uint256 marketId
+    ) external nonReentrant returns (uint256 amount) {
+        Market storage market = markets[marketId];
+        
+        // Must be resolved
+        if (!market.resolved) revert MarketNotResolved();
+        
+        // Must have jury fees pool (only disputed markets have this)
+        if (market.juryFeesPool == 0) revert NoJuryFeesPool();
+        
+        Position storage position = positions[marketId][msg.sender];
+        
+        // Must have voted
+        if (!position.hasVoted) revert DidNotVote();
+        
+        // Must have voted for winning outcome
+        if (position.votedOutcome != market.outcome) revert VotedForLosingOutcome();
+        
+        // Must not have already claimed
+        if (position.juryFeesClaimed) revert JuryFeesAlreadyClaimed();
+        
+        // Calculate voter's share
+        uint256 totalWinningVotes = market.outcome
+            ? market.yesVotes
+            : market.noVotes;
+        uint256 voterWeight = position.yesShares + position.noShares;
+        amount = (market.juryFeesPool * voterWeight) / totalWinningVotes;
+        
+        if (amount == 0) revert NothingToClaim();
+        
+        // CEI: Update state before transfer
+        position.juryFeesClaimed = true;
+        
+        // Transfer to voter
+        (bool success, ) = msg.sender.call{value: amount}("");
+        if (!success) revert TransferFailed();
+        
+        emit JuryFeesClaimed(marketId, msg.sender, amount);
     }
 
     /**

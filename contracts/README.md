@@ -3,15 +3,15 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-188%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.6.2-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.7.0-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.6.2 Required
+## ⚠️ CRITICAL: v3.7.0 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -25,7 +25,62 @@
 | v3.5.0 | ⚠️ DEPRECATED | **Emergency Refund Double-Spend Bug** |
 | v3.6.0 | ⚠️ DEPRECATED | **Dispute Window Edge Case Bug** |
 | v3.6.1 | ⚠️ DEPRECATED | **One-Sided Market & Emergency Refund Bypass Bugs** |
-| **v3.6.2** | ✅ **CURRENT** | **All Security Fixes Applied** |
+| v3.6.2 | ⚠️ DEPRECATED | **Jury Fees Gas Griefing Bug (>4,600 voters bricks market)** |
+| **v3.7.0** | ✅ **CURRENT** | **All Security Fixes Applied** |
+
+---
+
+## ✅ FIXED: Jury Fees Gas Griefing (v3.7.0)
+
+**Discovered:** January 19, 2026  
+**Fixed:** January 19, 2026  
+**Severity:** CRITICAL (in v3.6.2) → RESOLVED (in v3.7.0)
+
+### Vulnerability Summary (v3.6.2 and earlier)
+
+| # | Problem | Impact | v3.7.0 Fix |
+|---|---------|--------|------------|
+| 1 | **Gas Griefing** | O(n) loop through voters in `_distributeJuryFees()` | Pull Pattern with `juryFeesPool` |
+| 2 | **Market Bricking** | >4,600 voters exceeds 30M gas limit | `claimJuryFees()` individual claims |
+| 3 | **Permanent Lock** | `finalizeMarket()` reverts, funds stuck forever | O(1) finalization |
+
+### v3.7.0 Fixes Applied
+
+```solidity
+// FIX: Pull Pattern for jury fees - O(1) storage
+function _distributeJuryFees(...) internal {
+    // ... treasury fallback if no winners ...
+    market.juryFeesPool = voterPool;  // Single storage write
+    emit JuryFeesPoolCreated(marketId, voterPool);
+}
+
+// FIX: Individual claim function
+function claimJuryFees(uint256 marketId) external nonReentrant returns (uint256 amount) {
+    Market storage market = markets[marketId];
+    Position storage position = positions[marketId][msg.sender];
+    
+    // Checks
+    if (!market.resolved) revert MarketNotResolved();
+    if (market.juryFeesPool == 0) revert NoJuryFeesPool();
+    if (!position.hasVoted) revert DidNotVote();
+    if (position.votedYes != market.outcome) revert VotedForLosingOutcome();
+    if (position.juryFeesClaimed) revert JuryFeesAlreadyClaimed();
+    
+    // Calculate proportional share
+    uint256 voterShares = market.outcome ? position.yesShares : position.noShares;
+    uint256 winningVoteWeight = market.outcome ? market.yesVoteWeight : market.noVoteWeight;
+    amount = (market.juryFeesPool * voterShares) / winningVoteWeight;
+    
+    // Effects
+    position.juryFeesClaimed = true;
+    
+    // Interactions
+    (bool success,) = msg.sender.call{value: amount}("");
+    if (!success) revert TransferFailed();
+    
+    emit JuryFeesClaimed(marketId, msg.sender, amount);
+}
+```
 
 ---
 
