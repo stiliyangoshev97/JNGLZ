@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 19, 2026  
-> **Status:** ✅ Smart Contracts v3.7.0 READY (196 tests)
+> **Status:** ✅ Smart Contracts v3.8.0 READY (191 tests)
 
 ---
 
@@ -10,7 +10,8 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.7.0** | ✅ **CURRENT** | Jury Fees Gas Griefing Fix (Pull Pattern) + Sweep Protection |
+| **v3.8.0** | ✅ **CURRENT** | Governance UX Overhaul - Individual Propose Functions |
+| v3.7.0 | ⚠️ DEPRECATED | Jury Fees Pull Pattern + SweepFunds REMOVED |
 | v3.6.2 | ⚠️ DEPRECATED | One-Sided Market & Emergency Bypass Fixes - **HAS GAS GRIEFING BUG** |
 | v3.6.1 | ⚠️ DEPRECATED | Dispute Window Edge Case Fix |
 | v3.6.0 | ⚠️ DEPRECATED | Emergency Refund Security Fix - **HAS EDGE CASE BUG** |
@@ -23,7 +24,7 @@
 - **Block:** 85135831
 - **BscScan:** https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
 - **Verified:** ✅ Yes
-- **⚠️ Note:** Pending v3.7.0 deployment
+- **⚠️ Note:** Pending v3.8.0 deployment
 
 ---
 
@@ -41,9 +42,9 @@
 - Dynamic bond pricing
 - **Pull Pattern** - griefing-proof distribution for ALL payouts (v3.4.0→v3.7.0)
 - **ReplaceSigner** - 2-of-3 emergency signer replacement (v3.4.1)
-- **Sweep Protection** - includes pending withdrawals (v3.4.1)
+- **NO SweepFunds** - admins CANNOT extract any funds (v3.7.0 - trust minimization)
+- **Individual Propose Functions** - type-safe governance (v3.8.0)
 - 3-of-3 MultiSig governance (2-of-3 for ReplaceSigner)
-- **SweepFunds** - recover surplus/dust BNB from contract
 
 ---
 
@@ -60,8 +61,10 @@
 | Street Consensus | ✅ 100% | Propose → Dispute → Vote → Finalize |
 | Proposer Reward | ✅ 100% | 0.5% of pool to incentivize resolution |
 | **Pull Pattern** | ✅ 100% | Griefing-proof distribution (v3.4.0→v3.7.0) |
+| **Jury Fees Pull Pattern** | ✅ 100% | Individual `claimJuryFees()` (v3.7.0) |
 | **ReplaceSigner** | ✅ 100% | 2-of-3 emergency replacement (v3.4.1) |
-| **Sweep Protection** | ✅ 100% | Includes pending funds (v3.4.1) |
+| **SweepFunds REMOVED** | ✅ 100% | Trust minimization - admins cannot extract funds (v3.7.0) |
+| **Individual Propose Functions** | ✅ 100% | Type-safe governance UX (v3.8.0) |
 | **Emergency Refund Security** | ✅ 100% | Double-spend fix, pool insolvency fix (v3.6.0) |
 | **Resolution Cutoff** | ✅ 100% | 2-hour buffer before emergency refund (v3.6.0) |
 | **Dispute Window Edge Case** | ✅ 100% | Removed cutoff check from dispute() (v3.6.1) |
@@ -71,24 +74,55 @@
 | Voter Jury Fee | ✅ 100% | 50% of loser's bond to voters (Pull Pattern) |
 | Dynamic Bond | ✅ 100% | max(0.005, pool * 1%) |
 | Image URL | ✅ 100% | Market thumbnail support |
-| SweepFunds | ✅ 100% | Governance can recover surplus BNB |
 | Unit Tests | ✅ 100% | 21 tests passing |
 | Fuzz Tests | ✅ 100% | 32 tests passing |
-| BondingCurveEconomics Tests | ✅ 100% | 32 tests passing (renamed from PumpDump) |
+| BondingCurveEconomics Tests | ✅ 100% | 32 tests passing |
 | Integration Tests | ✅ 100% | 16 tests passing |
 | ArbitrageProof Tests | ✅ 100% | 17 tests (1 skipped) |
 | InstantSell Tests | ✅ 100% | 8 tests passing |
 | Vulnerability Tests | ✅ 100% | 4 tests passing |
 | WalletB Scenario | ✅ 100% | 1 test passing |
 | EmptyWinningSide Tests | ✅ 100% | 6 tests passing |
-| PullPattern Tests | ✅ 100% | **37 tests passing (v3.7.0: +8 jury fees + 1 sweep)** |
-| **EmergencyRefundSecurity Tests** | ✅ 100% | **16 tests passing (v3.6.0 + v3.6.1)** |
-| **OneSidedMarket Tests** | ✅ 100% | **7 tests passing (v3.6.2)** |
-| Slither Analysis | ✅ 100% | 45 findings (no critical/high issues) |
-| Testnet Deployment | ⏳ 90% | Ready for v3.7.0 deployment |
+| PullPattern Tests | ✅ 100% | **32 tests passing (sweep tests removed in v3.7.0)** |
+| **EmergencyRefundSecurity Tests** | ✅ 100% | **16 tests passing** |
+| **OneSidedMarket Tests** | ✅ 100% | **7 tests passing** |
+| Slither Analysis | ✅ 100% | 43 findings (no critical/high issues) |
+| Testnet Deployment | ⏳ 90% | Ready for v3.8.0 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 196 ✅** (1 skipped)
+**Total Tests: 191 ✅** (1 skipped)
+
+---
+
+## 🎮 Governance System (v3.8.0)
+
+### Individual Propose Functions
+
+Instead of generic `proposeAction(ActionType, bytes)`, v3.8.0 has 18 typed functions:
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(uint256)` | BPS (max 500) | Platform fee |
+| `proposeSetMinBet(uint256)` | Wei | Minimum bet |
+| `proposeSetTreasury(address)` | Address | Treasury |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume |
+| `proposeSetCreatorFee(uint256)` | BPS (max 200) | Creator fee |
+| `proposeSetResolutionFee(uint256)` | BPS (max 100) | Resolution fee |
+| `proposeSetMinBondFloor(uint256)` | Wei | Min bond |
+| `proposeSetDynamicBondBps(uint256)` | BPS | Dynamic bond |
+| `proposeSetBondWinnerShare(uint256)` | BPS | Winner share |
+| `proposeSetMarketCreationFee(uint256)` | Wei | Creation fee |
+| `proposeSetHeatLevel*(uint256)` | Wei | Heat levels (5 functions) |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new | Replace signer |
+
+### Workflow
+```
+1. Signer1: proposePause()           → auto-approves (1/3)
+2. Signer2: confirmAction(actionId)  → (2/3)
+3. Signer3: confirmAction(actionId)  → auto-executes ✅
+```
 
 ---
 

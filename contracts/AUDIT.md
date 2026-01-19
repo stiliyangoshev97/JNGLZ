@@ -1,8 +1,8 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.6.1  
-**Audit Date:** January 18, 2026  
+**Version:** v3.8.0  
+**Audit Date:** January 19, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
 **Status:** ✅ READY FOR DEPLOYMENT
@@ -41,8 +41,10 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 - **10x Virtual Liquidity:** All tiers increased 10x for better price stability - **v3.5.0 NEW**
 - **Street Consensus Resolution:** Shareholder voting system for outcome determination
 - **Proposer Rewards:** 0.5% of pool paid to successful proposers
-- **Pull Pattern:** Griefing-resistant withdrawals for bonds, jury fees, and creator fees (v3.4.0)
-- **Sweep Protection:** Includes pending withdrawals in locked funds calculation (v3.4.1)
+- **Pull Pattern for Jury Fees:** Individual `claimJuryFees()` replaces O(n) loop - **v3.7.0 FIX**
+- **Pull Pattern:** Griefing-resistant withdrawals for bonds and creator fees (v3.4.0)
+- **NO SweepFunds:** Trust minimization - admins cannot extract any funds - **v3.7.0 REMOVED**
+- **Individual Propose Functions:** Type-safe governance UX - **v3.8.0 NEW**
 - **ReplaceSigner:** 2-of-3 emergency signer replacement (v3.4.1)
 - **3-of-3 MultiSig Governance:** All parameter changes require unanimous approval (except ReplaceSigner)
 - **Emergency Refund System:** 24-hour failsafe for unresolved markets
@@ -51,15 +53,113 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,077 |
-| Total Tests | **180** |
-| Test Suites | **11** |
-| Slither Findings | 45 (see breakdown below) |
+| Total Lines of Code | ~2,319 |
+| Total Tests | **191** |
+| Test Suites | **12** |
+| Slither Findings | 43 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
+
+---
+
+## Version 3.8.0 Changes (GOVERNANCE UX OVERHAUL)
+
+### Individual Propose Functions
+
+**Type:** Improvement  
+**Released:** January 19, 2026
+
+#### Problem Solved
+
+The old `proposeAction(ActionType, bytes)` required ABI-encoding parameters:
+```solidity
+// OLD: Error-prone, requires memorizing ActionType numbers
+proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
+```
+
+#### Solution (v3.8.0)
+
+Added 18 individual propose functions:
+```solidity
+// NEW: Type-safe, human-readable, fail-fast validation
+proposeSetMarketCreationFee(0.01 ether)
+proposePause()
+proposeReplaceSigner(oldSigner, newSigner)
+```
+
+#### All New Functions
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(uint256)` | BPS (max 500) | Platform fee |
+| `proposeSetMinBet(uint256)` | Wei | Min bet |
+| `proposeSetTreasury(address)` | Address | Treasury |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume |
+| `proposeSetCreatorFee(uint256)` | BPS (max 200) | Creator fee |
+| `proposeSetResolutionFee(uint256)` | BPS (max 100) | Resolution fee |
+| `proposeSetMinBondFloor(uint256)` | Wei | Min bond floor |
+| `proposeSetDynamicBondBps(uint256)` | BPS | Dynamic bond |
+| `proposeSetBondWinnerShare(uint256)` | BPS | Winner share |
+| `proposeSetMarketCreationFee(uint256)` | Wei | Creation fee |
+| `proposeSetHeatLevelCrack/High/Pro/Apex/Core(uint256)` | Wei | Heat levels |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new | Replace signer |
+
+#### Key Benefits
+- ✅ Type-safe - Solidity validates at compile time
+- ✅ Fail-fast - Invalid values rejected at propose time
+- ✅ Human-readable - No ActionType number memorization
+- ✅ Emergency-ready - Can pause in seconds
+
+---
+
+## Version 3.7.0 Changes (TRUST MINIMIZATION + GAS GRIEFING FIX)
+
+### SweepFunds Removed Entirely
+
+**Type:** Security Hardening  
+**Released:** January 19, 2026
+
+#### Rationale
+1. Found 2 critical bugs in `_calculateTotalLockedFunds()`
+2. Risk of catastrophic user fund loss far outweighs recovering dust
+3. Industry best practice (Uniswap, Aave don't have sweep functions)
+4. Maximum trust minimization achieved
+
+#### What Was Removed
+```solidity
+// REMOVED from ActionType enum:
+SweepFunds
+
+// REMOVED functions:
+function _calculateTotalLockedFunds() internal view
+function getSweepableAmount() external view
+```
+
+#### Trust Guarantees
+- ✅ Governance CANNOT extract any BNB from contract
+- ✅ All user funds 100% protected from admin actions
+- ✅ Even "dust" remains locked forever (deflationary)
+
+### Jury Fees Gas Griefing Fix
+
+**Severity:** CRITICAL (in v3.6.2) → RESOLVED  
+**Type:** Security Fix
+
+#### The Bug (v3.6.2)
+O(n) loop in `_distributeJuryFees()` - >4,600 voters exceeded 30M gas limit, bricking finalization.
+
+#### The Fix (v3.7.0)
+```solidity
+// O(1) storage instead of O(n) loop
+market.juryFeesPool = voterPool;
+
+// Individual claim function
+function claimJuryFees(uint256 marketId) external nonReentrant
+```
 
 ---
 

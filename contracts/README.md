@@ -3,15 +3,15 @@
 > Decentralized prediction markets on BNB Chain with **Street Consensus** resolution.  
 > **Fast. No oracles. Bettors decide.**
 
-[![Tests](https://img.shields.io/badge/tests-188%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-191%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.7.0-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.8.0-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.7.0 Required
+## ⚠️ CRITICAL: v3.8.0 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -26,7 +26,89 @@
 | v3.6.0 | ⚠️ DEPRECATED | **Dispute Window Edge Case Bug** |
 | v3.6.1 | ⚠️ DEPRECATED | **One-Sided Market & Emergency Refund Bypass Bugs** |
 | v3.6.2 | ⚠️ DEPRECATED | **Jury Fees Gas Griefing Bug (>4,600 voters bricks market)** |
-| **v3.7.0** | ✅ **CURRENT** | **All Security Fixes Applied** |
+| v3.7.0 | ⚠️ DEPRECATED | **SweepFunds removed, jury fees Pull Pattern** |
+| **v3.8.0** | ✅ **CURRENT** | **Governance UX Overhaul - Individual propose functions** |
+
+---
+
+## 🆕 v3.8.0: Governance UX Overhaul
+
+**Released:** January 19, 2026
+
+### Problem Solved
+
+The old governance system required ABI-encoding parameters manually:
+```solidity
+// OLD: Nightmare to use - had to remember action type numbers and encode bytes
+proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
+```
+
+### New System (v3.8.0)
+
+```solidity
+// NEW: Human-readable, type-safe, works directly in any wallet
+proposeSetMarketCreationFee(0.01 ether)
+```
+
+### All 18 Propose Functions
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(uint256)` | Fee in BPS (max 500) | Platform fee |
+| `proposeSetMinBet(uint256)` | Wei amount | Minimum bet (0.001-0.1 BNB) |
+| `proposeSetTreasury(address)` | Address | Treasury recipient |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume operations |
+| `proposeSetCreatorFee(uint256)` | Fee in BPS (max 200) | Creator fee |
+| `proposeSetResolutionFee(uint256)` | Fee in BPS (max 100) | Resolution fee |
+| `proposeSetMinBondFloor(uint256)` | Wei amount | Min bond (0.005-0.1 BNB) |
+| `proposeSetDynamicBondBps(uint256)` | BPS (50-500) | Dynamic bond % |
+| `proposeSetBondWinnerShare(uint256)` | BPS (2000-8000) | Winner's share |
+| `proposeSetMarketCreationFee(uint256)` | Wei amount (max 0.1 BNB) | Creation fee |
+| `proposeSetHeatLevelCrack(uint256)` | Virtual liquidity | CRACK tier |
+| `proposeSetHeatLevelHigh(uint256)` | Virtual liquidity | HIGH tier |
+| `proposeSetHeatLevelPro(uint256)` | Virtual liquidity | PRO tier |
+| `proposeSetHeatLevelApex(uint256)` | Virtual liquidity | APEX tier |
+| `proposeSetHeatLevelCore(uint256)` | Virtual liquidity | CORE tier |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new | Replace signer (2-of-3) |
+
+### Workflow
+
+```
+1. Signer1: proposePause()           → returns actionId, auto-approves (1/3)
+2. Signer2: confirmAction(actionId)  → (2/3 confirmations)  
+3. Signer3: confirmAction(actionId)  → auto-executes! ✅
+```
+
+### Key Benefits
+- ✅ **Type-safe** - Solidity validates at compile time
+- ✅ **Fail-fast** - Invalid values rejected at propose time, not execution
+- ✅ **Human-readable** - No memorizing ActionType enum numbers
+- ✅ **Works in any wallet** - MetaMask, Gnosis Safe, etc.
+- ✅ **Emergency-ready** - Pause contract in seconds at 3AM
+
+---
+
+## ✅ v3.7.0: Trust Minimization (Sweep Removal)
+
+**Released:** January 19, 2026
+
+### SweepFunds Removed Entirely
+
+After discovering 2 critical bugs in sweep protection logic, we made the decision to **remove sweep functionality entirely**.
+
+**Rationale:**
+1. **Risk/Reward**: Risk of catastrophic user fund loss far outweighs recovering ~1-2 BNB dust
+2. **Critical Bugs Found**: `_calculateTotalLockedFunds()` was missing jury fees pool and unclaimed winner funds
+3. **Industry Practice**: Uniswap, Aave, Compound don't have sweep functions
+4. **Trust Minimization**: "Code is law" - admins CANNOT extract any funds
+
+**Trust Guarantees:**
+- ✅ Governance CANNOT extract any BNB from contract
+- ✅ All user funds 100% protected from admin actions  
+- ✅ Even "dust" remains locked forever (deflationary)
+- ✅ Maximum trust minimization achieved
 
 ---
 

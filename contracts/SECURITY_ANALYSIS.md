@@ -1,7 +1,7 @@
-# Security Analysis: v3.6.0 → v3.7.0 Emergency Refund & Resolution Fixes
+# Security Analysis: PredictionMarket.sol v3.8.0
 
 **Date:** January 19, 2026  
-**Version:** v3.7.0 (includes v3.6.0, v3.6.1, v3.6.2 fixes + jury fees gas griefing fix)  
+**Version:** v3.8.0  
 **Analyst:** GitHub Copilot  
 **Status:** ✅ ALL VULNERABILITIES FIXED
 
@@ -9,20 +9,132 @@
 
 ## Executive Summary
 
-Version 3.7.0 addresses all identified security vulnerabilities in the PredictionMarket contract:
+Version 3.8.0 builds on all previous security fixes and adds governance UX improvements:
 
-| Version | Vulnerabilities Fixed | Tests |
-|---------|----------------------|-------|
-| v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data | 180 |
-| v3.6.1 | Dispute window edge case | 180 |
-| v3.6.2 | One-sided markets, Emergency refund bypass, Stale proposer state | 189 |
-| **v3.7.0** | **Jury fees gas griefing (O(n) → O(1)), Jury pool sweep protection, Resolved market sweep protection** | **198** |
+| Version | Changes | Tests |
+|---------|---------|-------|
+| v3.6.0 | Double-spend, Pool insolvency, Race condition, Stale pool data fixes | 180 |
+| v3.6.1 | Dispute window edge case fix | 180 |
+| v3.6.2 | One-sided markets, Emergency refund bypass fixes | 189 |
+| v3.7.0 | Jury fees Pull Pattern (O(n) → O(1)), **SweepFunds REMOVED** | 191 |
+| **v3.8.0** | **Individual propose functions for governance UX** | **191** |
 
-**All 198 tests passing (1 skipped). Contract is ready for deployment.**
+**All 191 tests passing. Contract is ready for deployment.**
+
+---
+
+## Part 0: v3.8.0 Security Considerations
+
+### Governance UX Overhaul - Security Analysis
+
+**Change:** Replaced generic `proposeAction(ActionType, bytes)` with 18 individual propose functions.
+
+#### Security Benefits
+
+| Aspect | Old System | New System (v3.8.0) |
+|--------|-----------|---------------------|
+| **Validation** | At execution time (after 3 confirmations) | At propose time (fail-fast) |
+| **Type Safety** | Manual ABI encoding (error-prone) | Solidity type checking |
+| **Human Error** | Easy to encode wrong type | Impossible with typed functions |
+| **Attack Surface** | Same | Same (no new attack vectors) |
+
+#### Validation Timing Change
+
+```solidity
+// OLD: Validation at execution time (3rd confirmation)
+proposeAction(ActionType.SetFee, abi.encode(600)) // > MAX_FEE_BPS
+// ... 2 more signers confirm ...
+// Revert on 3rd confirmation - action created but failed
+
+// NEW: Validation at propose time
+proposeSetFee(600) // Reverts immediately with InvalidFee()
+// No wasted gas on confirmations for invalid values
+```
+
+**Impact:** Positive - invalid proposals can't be created, saving gas and confusion.
+
+---
+
+## Part 0.5: v3.7.0 Trust Minimization
+
+### 🔒 SweepFunds Removed Entirely
+
+**Date:** January 19, 2026  
+**Type:** Trust Minimization  
+**Impact:** Governance CANNOT extract any funds from contract
+
+#### Why Removed
+
+| Issue | Description |
+|-------|-------------|
+| **Bug 1** | `_calculateTotalLockedFunds()` missing `juryFeesPool` |
+| **Bug 2** | Resolved markets' unclaimed winner funds not protected |
+| **Risk Assessment** | Catastrophic fund loss risk >> recovering ~1-2 BNB dust |
+
+#### What Was Removed
+
+```solidity
+// ActionType enum entry:
+SweepFunds  // REMOVED
+
+// Functions:
+function _calculateTotalLockedFunds() internal view  // REMOVED
+function getSweepableAmount() external view          // REMOVED
+
+// Execution block in _executeAction():
+} else if (action.actionType == ActionType.SweepFunds) { ... }  // REMOVED
+```
+
+#### Trust Guarantees (v3.7.0+)
+
+| Guarantee | Status |
+|-----------|--------|
+| Governance can extract user funds | ❌ IMPOSSIBLE |
+| Governance can extract dust | ❌ IMPOSSIBLE |
+| All user funds protected | ✅ 100% |
+| Admin rug-pull possible | ❌ IMPOSSIBLE |
 
 ---
 
 ## Part 1: Critical Vulnerabilities Found & Fixed
+
+### 🚨 CRITICAL: Jury Fees Gas Griefing (FIXED in v3.7.0)
+
+**Discovered:** January 19, 2026  
+**Severity:** CRITICAL  
+**Status:** ✅ FIXED in v3.7.0
+
+#### The Bug (v3.6.2)
+
+```solidity
+// O(n) loop through ALL voters
+for (uint256 i = 0; i < marketVoters[marketId].length; i++) {
+    address voter = marketVoters[marketId][i];
+    // ... calculate and transfer jury fees ...
+}
+```
+
+**Impact:** >4,600 voters exceeds 30M gas limit → `finalizeMarket()` reverts → market permanently bricked.
+
+#### The Fix (v3.7.0)
+
+```solidity
+// O(1) storage
+function _distributeJuryFees(...) internal {
+    market.juryFeesPool = voterPool;  // Single SSTORE
+    emit JuryFeesPoolCreated(marketId, voterPool);
+}
+
+// Individual claims
+function claimJuryFees(uint256 marketId) external nonReentrant {
+    // ... validation ...
+    uint256 amount = (market.juryFeesPool * voterWeight) / totalWinningVotes;
+    position.juryFeesClaimed = true;
+    // ... transfer ...
+}
+```
+
+---
 
 ### 🚨 CRITICAL: Emergency Refund Double-Spend Vulnerability (FIXED in v3.6.0)
 
