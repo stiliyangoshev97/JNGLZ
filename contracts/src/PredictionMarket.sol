@@ -119,7 +119,6 @@ contract PredictionMarket is ReentrancyGuard {
         SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
         SetHeatLevelApex, // v3.5.0: Set APEX level virtual liquidity
         SetHeatLevelCore, // v3.5.0: Set CORE level virtual liquidity
-        SweepFunds, // NEW: Sweep dust/surplus BNB to treasury
         SetProposerReward, // v3.3.0: Set proposer reward percentage
         ReplaceSigner // v3.4.1: Emergency signer replacement (2-of-3)
     }
@@ -318,12 +317,6 @@ contract PredictionMarket is ReentrancyGuard {
     event Paused(address indexed by);
     event Unpaused(address indexed by);
 
-    event FundsSwept(
-        uint256 amount,
-        uint256 totalLocked,
-        uint256 contractBalance
-    );
-
     event SignerReplaced(
         address indexed oldSigner,
         address indexed newSigner,
@@ -404,7 +397,6 @@ contract PredictionMarket is ReentrancyGuard {
     error InsufficientBond();
     error MarketStuck();
     error InsufficientCreationFee();
-    error NothingToSweep();
     // v3.4.0 errors
     error NoTradesToResolve();
     error NothingToWithdraw();
@@ -2045,21 +2037,6 @@ contract PredictionMarket is ReentrancyGuard {
                 newHeatLevelCore > MAX_HEAT_LEVEL
             ) revert InvalidFee();
             heatLevelCore = newHeatLevelCore;
-        } else if (action.actionType == ActionType.SweepFunds) {
-            // Calculate total locked funds across all markets
-            uint256 totalLocked = _calculateTotalLockedFunds();
-            uint256 contractBalance = address(this).balance;
-
-            // Only sweep if there's surplus
-            if (contractBalance <= totalLocked) revert NothingToSweep();
-
-            uint256 surplus = contractBalance - totalLocked;
-
-            // Send surplus to treasury
-            (bool success, ) = treasury.call{value: surplus}("");
-            if (!success) revert TransferFailed();
-
-            emit FundsSwept(surplus, totalLocked, contractBalance);
         } else if (action.actionType == ActionType.SetProposerReward) {
             uint256 newProposerReward = abi.decode(action.data, (uint256));
             if (newProposerReward > MAX_PROPOSER_REWARD_BPS)
@@ -2093,63 +2070,5 @@ contract PredictionMarket is ReentrancyGuard {
         }
 
         emit ActionExecuted(actionId, action.actionType);
-    }
-
-    /**
-     * @notice Calculate total BNB locked in unresolved markets and active bonds
-     * @dev Used by SweepFunds to ensure we never touch user funds
-     */
-    function _calculateTotalLockedFunds()
-        internal
-        view
-        returns (uint256 totalLocked)
-    {
-        for (uint256 i = 0; i < marketCount; i++) {
-            Market storage market = markets[i];
-
-            // v3.7.0 FIX: Include pool balance for ALL markets (resolved or not)
-            // Resolved markets still have poolBalance until all winners claim
-            // Without this, SweepFunds could steal unclaimed winner payouts
-            if (market.poolBalance > 0) {
-                totalLocked += market.poolBalance;
-            }
-
-            // Add active proposal bonds (not yet returned/distributed)
-            if (market.proposalBond > 0) {
-                totalLocked += market.proposalBond;
-            }
-
-            // Add active dispute bonds (not yet returned/distributed)
-            if (market.disputeBond > 0) {
-                totalLocked += market.disputeBond;
-            }
-
-            // v3.7.0: Include jury fees pool (Pull Pattern funds for winning voters)
-            if (market.juryFeesPool > 0) {
-                totalLocked += market.juryFeesPool;
-            }
-        }
-
-        // v3.4.1: Include pending withdrawals and creator fees (Pull Pattern funds)
-        totalLocked += totalPendingWithdrawals;
-        totalLocked += totalPendingCreatorFees;
-    }
-
-    /**
-     * @notice View function to check sweepable surplus
-     * @return surplus Amount that can be swept to treasury
-     * @return totalLocked Total funds locked in markets and bonds
-     * @return contractBalance Current contract BNB balance
-     */
-    function getSweepableAmount()
-        external
-        view
-        returns (uint256 surplus, uint256 totalLocked, uint256 contractBalance)
-    {
-        totalLocked = _calculateTotalLockedFunds();
-        contractBalance = address(this).balance;
-        surplus = contractBalance > totalLocked
-            ? contractBalance - totalLocked
-            : 0;
     }
 }

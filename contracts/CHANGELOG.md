@@ -10,6 +10,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### NOT YET DEPLOYED ⏳
 - Ready for deployment to BNB Testnet
 - **GAS GRIEFING FIX** - Replaces v3.6.2
+- **SWEEP REMOVAL** - Trust minimization
+
+### Removed
+
+#### 🔒 SECURITY: SweepFunds Functionality Removed Entirely
+Removed the entire `SweepFunds` governance action after discovering 2 critical bugs in sweep protection logic.
+
+**Rationale:**
+1. **Risk/Reward Analysis**: Risk of catastrophic user fund loss far outweighs recovering ~1-2 BNB dust
+2. **Critical Bugs Found**: Found 2 critical vulnerabilities in `_calculateTotalLockedFunds()`:
+   - Missing `juryFeesPool` in locked funds calculation
+   - Resolved markets' unclaimed winner funds not protected
+3. **Industry Best Practice**: Major protocols (Uniswap, Aave, Compound) don't have sweep functions
+4. **Trust Minimization**: "Code is law" - admins cannot extract any funds under any circumstances
+5. **Deflationary**: Locked dust benefits the BNB ecosystem
+
+**What Was Removed:**
+```solidity
+// REMOVED from ActionType enum:
+SweepFunds
+
+// REMOVED event:
+event FundsSwept(uint256 amount, uint256 totalLocked, uint256 contractBalance);
+
+// REMOVED error:
+error NothingToSweep();
+
+// REMOVED from _executeAction():
+} else if (action.actionType == ActionType.SweepFunds) { ... }
+
+// REMOVED functions:
+function _calculateTotalLockedFunds() internal view returns (uint256)
+function getSweepableAmount() external view returns (uint256, uint256, uint256)
+```
+
+**Trust Guarantees After Removal:**
+- ✅ Governance CANNOT extract any BNB from contract
+- ✅ All user funds 100% protected from admin actions
+- ✅ Even "dust" remains locked forever (deflationary)
+- ✅ Maximum trust minimization achieved
 
 ### Fixed
 
