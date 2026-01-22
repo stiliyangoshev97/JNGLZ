@@ -172,7 +172,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       return formatShares(previewBuyData as bigint);
     }
     if (action === 'sell' && previewSellData) {
-      return `${formatBNB(previewSellData as bigint)} BNB`;
+      // Use 6 decimals for sell estimates to show precise values
+      return `${formatBNB(previewSellData as bigint, 6)} BNB`;
     }
     return '0';
   }, [action, previewBuyData, previewSellData]);
@@ -445,7 +446,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                 {action === 'buy' && previewBuyData
                   ? formatShares(applySlippage(previewBuyData as bigint, slippageBps))
                   : action === 'sell' && previewSellData
-                  ? `${formatBNB(applySlippage(previewSellData as bigint, slippageBps))} BNB`
+                  ? `${formatBNB(applySlippage(previewSellData as bigint, slippageBps), 6)} BNB`
                   : '0'}
               </span>
             </div>
@@ -453,7 +454,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               <div className="flex justify-between text-xs mt-1">
                 <span className="text-text-muted">Fee (1.5%)</span>
                 <span className="font-mono text-text-secondary">
-                  {(parseFloat(amount) * 0.015).toFixed(4)} BNB
+                  {(parseFloat(amount) * 0.015).toFixed(6)} BNB
+                </span>
+              </div>
+            )}
+            {action === 'sell' && previewSellData && (
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-text-muted">Fee (1.5% included)</span>
+                <span className="font-mono text-text-secondary">
+                  ~{formatBNB((previewSellData as bigint) * 15n / 985n, 6)} BNB
                 </span>
               </div>
             )}
