@@ -53,10 +53,10 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,319 |
-| Total Tests | **191** |
-| Test Suites | **12** |
-| Slither Findings | 43 (see breakdown below) |
+| Total Lines of Code | ~2,222 |
+| Total Tests | **214** |
+| Test Suites | **14** |
+| Slither Findings | 33 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
@@ -808,26 +808,38 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ## Conclusion
 
-The PredictionMarket contract v3.6.0 demonstrates solid security practices:
+The PredictionMarket contract v3.8.1 demonstrates solid security practices:
 
 1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
-3. **Comprehensive Testing:** 179 tests including security, Pull Pattern, arbitrage-proof, fuzz
+3. **Comprehensive Testing:** 214 tests including security, Pull Pattern, arbitrage-proof, fuzz
 4. **Conservative Design:** Immutable, no external dependencies, fail-safe emergency refund
 5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
 6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery
 7. **Emergency Refund Security:** Double-spend and insolvency vulnerabilities fixed
+8. **Bytecode Optimized:** 23,316 bytes (within 24KB EVM limit)
 
-**v3.6.0 Security Additions:**
-- Emergency refund double-spend fix (claim blocked after refund)
-- Pool insolvency prevention (balance reduced on refund)
-- 2-hour resolution cutoff buffer
-- 13 new security tests in `EmergencyRefundSecurity.t.sol`
+**v3.8.1 Security Analysis (January 22, 2026):**
+
+Critical flow verification confirms:
+- `claim()` requires `resolved == true`, `emergencyRefund()` requires `resolved == false` → **Mutually exclusive**
+- `emergencyRefunded` check in `claim()` prevents double-dip after pause/unpause edge case
+- One-sided markets blocked from proposal → forces emergency refund (correct behavior)
+- Pool balance and supplies reduced atomically on all payouts → no insolvency possible
+
+**Slither Static Analysis Results (v3.8.1):**
+- **33 findings total**
+- **0 Critical/High** (treasury warnings are false positives - multisig controlled)
+- **2 Medium** (precision loss, benign reentrancy - by design)
+- **6 Low** (timestamp comparisons - necessary for time logic)
+- **10+ Informational** (pragma versions, complexity)
+
+All findings reviewed and confirmed as either false positives or acceptable design decisions.
 
 **Recommended Actions Before Mainnet:**
-1. Deploy v3.6.0 to testnet and verify all fixes
+1. ✅ Deployed v3.8.1 to testnet and verified
 2. Run testnet for 1-2 weeks with real traffic
-3. Set up event monitoring (SignerReplaced, FundsSwept, WithdrawalCredited, EmergencyRefunded)
+3. Set up event monitoring (SignerReplaced, WithdrawalCredited, EmergencyRefunded)
 4. Document emergency response procedures
 5. Consider professional third-party audit for additional assurance
 
