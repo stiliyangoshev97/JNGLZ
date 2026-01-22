@@ -561,3 +561,37 @@ export function useWithdrawCreatorFees() {
     reset,
   };
 }
+
+/**
+ * Claim jury fees from a disputed market (v3.7.0)
+ * 
+ * Contract: claimJuryFees(marketId)
+ * Pull Pattern - voters who voted for winning outcome must call this per-market
+ * 50% of loser's bond is distributed proportionally to winning voters
+ */
+export function useClaimJuryFees() {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const claimJuryFees = async (marketId: bigint) => {
+    writeContract({
+      address: PREDICTION_MARKET_ADDRESS,
+      abi: PREDICTION_MARKET_ABI,
+      functionName: 'claimJuryFees',
+      args: [marketId],
+    });
+  };
+
+  return {
+    claimJuryFees,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+}

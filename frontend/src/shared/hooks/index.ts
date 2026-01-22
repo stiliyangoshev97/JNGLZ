@@ -48,6 +48,8 @@ export {
   // Pull Pattern (v3.4.0)
   useWithdrawBond,
   useWithdrawCreatorFees,
+  // Jury Fees (v3.7.0)
+  useClaimJuryFees,
 } from './useContractWrites';
 
 // Smart Hooks

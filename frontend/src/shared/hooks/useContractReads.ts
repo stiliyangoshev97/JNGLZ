@@ -147,7 +147,7 @@ export function usePosition(marketId: bigint | undefined, userAddress: `0x${stri
   });
 
   // Parse the result tuple
-  const data = result.data as [bigint, bigint, boolean, boolean, boolean, boolean] | undefined;
+  const data = result.data as [bigint, bigint, boolean, boolean, boolean, boolean, boolean] | undefined;
 
   return {
     ...result,
@@ -158,7 +158,8 @@ export function usePosition(marketId: bigint | undefined, userAddress: `0x${stri
           claimed: data[2],
           emergencyRefunded: data[3],
           hasVoted: data[4],
-          votedForProposer: data[5],
+          votedOutcome: data[5],
+          juryFeesClaimed: data[6],
         }
       : undefined,
   };

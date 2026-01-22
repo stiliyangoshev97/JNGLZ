@@ -11,6 +11,7 @@ import { gql } from '@apollo/client';
 /**
  * Position fragment - common fields
  * Matches subgraph schema exactly
+ * v3.7.0: Added juryFeesClaimed, juryFeesClaimedAmount
  */
 export const POSITION_FRAGMENT = gql`
   fragment PositionFields on Position {
@@ -40,6 +41,8 @@ export const POSITION_FRAGMENT = gql`
       proposalTimestamp
       disputer
       disputeTimestamp
+      proposerVoteWeight
+      disputerVoteWeight
     }
     yesShares
     noShares
@@ -52,6 +55,8 @@ export const POSITION_FRAGMENT = gql`
     refundedAmount
     hasVoted
     votedForProposer
+    juryFeesClaimed
+    juryFeesClaimedAmount
   }
 `;
 
@@ -176,6 +181,34 @@ export const GET_TOP_NO_HOLDERS = gql`
       where: { 
         market: $marketId
         noShares_gt: "0"
+      }
+    ) {
+      ...PositionFields
+    }
+  }
+`;
+
+/**
+ * Get positions with claimable jury fees (v3.7.0)
+ * User voted, market resolved, jury fees not yet claimed
+ * Note: We filter by hasVoted=true and juryFeesClaimed=false
+ * The frontend will need to check if user voted for winning side
+ */
+export const GET_CLAIMABLE_JURY_FEES = gql`
+  ${POSITION_FRAGMENT}
+  query GetClaimableJuryFees($user: String!, $first: Int = 100) {
+    positions(
+      first: $first
+      orderBy: totalInvested
+      orderDirection: desc
+      where: { 
+        user: $user
+        hasVoted: true
+        juryFeesClaimed: false
+        market_: { 
+          resolved: true
+          disputer_not: null
+        }
       }
     ) {
       ...PositionFields

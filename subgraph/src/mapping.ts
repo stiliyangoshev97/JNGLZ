@@ -117,6 +117,7 @@ function getOrCreateUser(address: Address): User {
 /**
  * Get or create Position entity
  * v3.5.0: Added P/L tracking fields
+ * v3.7.0: Added juryFeesClaimed field
  */
 function getOrCreatePosition(marketId: string, userAddress: Address): Position {
   let id = marketId + "-" + userAddress.toHexString();
@@ -136,7 +137,8 @@ function getOrCreatePosition(marketId: string, userAddress: Address): Position {
     position.claimed = false;
     position.emergencyRefunded = false;
     position.hasVoted = false;
-    // votedForProposer, claimedAmount, refundedAmount, realizedPnL left unset (null) until set
+    position.juryFeesClaimed = false; // v3.7.0
+    // votedForProposer, claimedAmount, refundedAmount, realizedPnL, juryFeesClaimedAmount left unset (null) until set
     position.save();
   }
 
@@ -687,6 +689,15 @@ export function handleJuryFeesClaimed(event: JuryFeesClaimed): void {
   claim.txHash = event.transaction.hash;
   claim.blockNumber = event.block.number;
   claim.save();
+
+  // Update Position entity to track jury fees claimed
+  let positionId = marketId + "-" + event.params.voter.toHexString();
+  let position = Position.load(positionId);
+  if (position) {
+    position.juryFeesClaimed = true;
+    position.juryFeesClaimedAmount = feeAmount;
+    position.save();
+  }
 
   // Update jury fee earnings
   user.totalJuryFeesEarned = user.totalJuryFeesEarned.plus(feeAmount);

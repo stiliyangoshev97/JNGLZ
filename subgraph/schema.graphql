@@ -152,6 +152,9 @@ type Position @entity(immutable: false) {
   # Voting
   hasVoted: Boolean! # Has user voted?
   votedForProposer: Boolean # null if not voted
+  # Jury Fees (v3.7.0)
+  juryFeesClaimed: Boolean! # Has user claimed jury fees?
+  juryFeesClaimedAmount: BigDecimal # Amount of jury fees claimed
 }
 
 # ============================================
