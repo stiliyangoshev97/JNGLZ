@@ -282,7 +282,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
         {/* Direction Selection (YES/NO) */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setDirection('yes')}
+            onClick={() => { setDirection('yes'); setAmount(''); }}
             className={cn(
               'py-4 text-center font-bold text-xl uppercase border-2 transition-all',
               direction === 'yes'
@@ -296,7 +296,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
             </span>
           </button>
           <button
-            onClick={() => setDirection('no')}
+            onClick={() => { setDirection('no'); setAmount(''); }}
             className={cn(
               'py-4 text-center font-bold text-xl uppercase border-2 transition-all',
               direction === 'no'
@@ -367,52 +367,65 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
           </button>
         </div>
 
-        {/* Amount Input */}
-        <Input
-          type="text"
-          inputMode="decimal"
-          placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
-          value={amount}
-          onChange={(e) => {
-            // Replace comma with period for decimal input
-            const value = e.target.value.replace(',', '.');
-            // Only allow valid decimal numbers
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              setAmount(value);
-            }
-          }}
-          label={action === 'buy' ? 'AMOUNT (BNB)' : 'SHARES'}
-        />
+        {/* No shares to sell warning */}
+        {action === 'sell' && currentShares === 0n && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
+            <p className="text-text-secondary text-sm">
+              You don't have any {direction.toUpperCase()} shares to sell.
+            </p>
+          </div>
+        )}
 
-        {/* Quick amounts */}
-        <div className="flex gap-2">
-          {action === 'buy' ? (
-            BUY_PRESETS.map((val) => (
-              <button
-                key={val}
-                onClick={() => setAmount(val)}
-                className={cn(
-                  'flex-1 py-1 text-xs font-mono border transition-colors',
-                  amount === val
-                    ? 'border-cyber text-cyber bg-cyber/10'
-                    : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
-                )}
-              >
-                {val}
-              </button>
-            ))
-          ) : (
-            sellPresets.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => setAmount(formatEther(preset.shares))}
-                className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
-              >
-                {preset.label}
-              </button>
-            ))
-          )}
-        </div>
+        {/* Amount Input - hidden when trying to sell 0 shares */}
+        {!(action === 'sell' && currentShares === 0n) && (
+          <>
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
+              value={amount}
+              onChange={(e) => {
+                // Replace comma with period for decimal input
+                const value = e.target.value.replace(',', '.');
+                // Only allow valid decimal numbers
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setAmount(value);
+                }
+              }}
+              label={action === 'buy' ? 'AMOUNT (BNB)' : 'SHARES'}
+            />
+
+            {/* Quick amounts */}
+            <div className="flex gap-2">
+              {action === 'buy' ? (
+                BUY_PRESETS.map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => setAmount(val)}
+                    className={cn(
+                      'flex-1 py-1 text-xs font-mono border transition-colors',
+                      amount === val
+                        ? 'border-cyber text-cyber bg-cyber/10'
+                        : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
+                    )}
+                  >
+                    {val}
+                  </button>
+                ))
+              ) : (
+                sellPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setAmount(formatEther(preset.shares))}
+                    className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
+                  >
+                    {preset.label}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
         {/* Estimate */}
         {amount && parseFloat(amount) > 0 && (
