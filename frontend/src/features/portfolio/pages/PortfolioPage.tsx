@@ -14,7 +14,7 @@ import { useAccount } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS } from '@/shared/api';
+import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS, GET_CLAIMABLE_JURY_FEES } from '@/shared/api';
 import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse, GetUserEarningsResponse } from '@/shared/api';
 import { PositionCard } from '../components';
 import { Card } from '@/shared/components/ui/Card';
@@ -27,7 +27,7 @@ import { cn } from '@/shared/utils/cn';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
-import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees } from '@/shared/hooks';
+import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees, useClaimJuryFees } from '@/shared/hooks';
 import { formatEther } from 'viem';
 import { formatBNB } from '@/shared/utils/format';
 
@@ -43,6 +43,7 @@ interface PositionWithMarket {
     status: string;
     resolved: boolean;
     outcome?: boolean | null;
+    proposedOutcome?: boolean | null;
     expiryTimestamp: string;
     imageUrl?: string;
     yesShares?: string;
@@ -55,6 +56,8 @@ interface PositionWithMarket {
     disputer?: string;
     disputeTimestamp?: string;
     heatLevel?: number;
+    proposerVoteWeight?: string;
+    disputerVoteWeight?: string;
   };
   yesShares: string;
   noShares: string;
@@ -64,6 +67,9 @@ interface PositionWithMarket {
   emergencyRefunded?: boolean;
   refundedAmount?: string;
   hasVoted?: boolean;
+  votedForProposer?: boolean;
+  juryFeesClaimed?: boolean;
+  juryFeesClaimedAmount?: string;
 }
 
 // Time constants (match contract)
@@ -299,6 +305,36 @@ export function PortfolioPage() {
   const { pendingBonds, pendingCreatorFees, refetch: refetchPending } = usePendingWithdrawals(address);
   const { withdrawBond, isPending: isWithdrawingBond, isSuccess: bondWithdrawn, reset: resetBondWithdraw } = useWithdrawBond();
   const { withdrawCreatorFees, isPending: isWithdrawingFees, isSuccess: feesWithdrawn, reset: resetFeesWithdraw } = useWithdrawCreatorFees();
+  
+  // Jury Fees claiming (v3.7.0) - per-market claim
+  const { claimJuryFees, isPending: isClaimingJuryFees, isSuccess: juryFeesClaimed, reset: resetJuryFeesClaim } = useClaimJuryFees();
+  const [claimingMarketId, setClaimingMarketId] = useState<string | null>(null);
+  
+  // Query for positions with claimable jury fees
+  const { data: claimableJuryFeesData, refetch: refetchClaimableJuryFees } = useQuery<{ positions: PositionWithMarket[] }>(GET_CLAIMABLE_JURY_FEES, {
+    variables: { user: address?.toLowerCase() },
+    skip: !address,
+    notifyOnNetworkStatusChange: false,
+  });
+  
+  // Calculate claimable jury fees positions
+  // User voted for the winning side if: votedForProposer AND proposer won, OR !votedForProposer AND disputer won
+  const claimableJuryFeesPositions = useMemo(() => {
+    if (!claimableJuryFeesData?.positions) return [];
+    return claimableJuryFeesData.positions.filter(pos => {
+      if (!pos.market.resolved || !pos.hasVoted || pos.juryFeesClaimed) return false;
+      // Determine if user voted for the winning side
+      // proposedOutcome was what the proposer proposed
+      // If proposer won, outcome === proposedOutcome
+      // votedForProposer: true = voted for proposer's outcome
+      const proposerWon = pos.market.outcome === pos.market.proposedOutcome;
+      const userVotedForWinner = pos.votedForProposer ? proposerWon : !proposerWon;
+      return userVotedForWinner;
+    });
+  }, [claimableJuryFeesData?.positions]);
+  
+  const hasClaimableJuryFees = claimableJuryFeesPositions.length > 0;
+  
   const queryClient = useQueryClient();
 
   // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
@@ -318,6 +354,24 @@ export function PortfolioPage() {
       return () => clearTimeout(timer);
     }
   }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
+
+  // Refetch jury fees after successful claim (v3.7.0)
+  useEffect(() => {
+    if (juryFeesClaimed) {
+      // Refetch claimable jury fees list
+      refetchClaimableJuryFees();
+      // Refetch earnings to update totals
+      refetchEarnings();
+      // Invalidate balance queries so Header updates
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+      // Reset state
+      const timer = setTimeout(() => {
+        resetJuryFeesClaim();
+        setClaimingMarketId(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, queryClient, resetJuryFeesClaim]);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
@@ -821,6 +875,64 @@ export function PortfolioPage() {
                     {isWithdrawingFees ? 'WITHDRAWING...' : `CLAIM FEES (${pendingFeesFormatted.toFixed(4)})`}
                   </Button>
                 )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Claimable Jury Fees Banner (v3.7.0) - Per-market jury fee claims */}
+      {isConnected && hasClaimableJuryFees && (
+        <section className="bg-yes/5 border-b border-yes/30 py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-yes font-bold">⚖️ JURY FEES AVAILABLE</p>
+                  <p className="text-sm text-text-secondary">
+                    You voted correctly in {claimableJuryFeesPositions.length} disputed market{claimableJuryFeesPositions.length > 1 ? 's' : ''}. Claim your share of the loser's bond!
+                  </p>
+                </div>
+              </div>
+              
+              {/* List of claimable jury fees */}
+              <div className="space-y-2">
+                {claimableJuryFeesPositions.map((pos) => {
+                  const marketId = pos.market.marketId || pos.market.id;
+                  const isClaiming = isClaimingJuryFees && claimingMarketId === marketId;
+                  
+                  // Estimate jury fee: user's share of 50% of loser's bond
+                  // voterPool = loserBond / 2 (50% goes to voters)
+                  // userShare = voterPool * (userShares / totalWinningVotes)
+                  const userShares = BigInt(pos.yesShares || '0') + BigInt(pos.noShares || '0');
+                  const proposerVotes = BigInt(pos.market.proposerVoteWeight || '0');
+                  const disputerVotes = BigInt(pos.market.disputerVoteWeight || '0');
+                  const proposerWon = pos.market.outcome === pos.market.proposedOutcome;
+                  const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
+                  
+                  return (
+                    <div key={pos.id} className="flex items-center justify-between p-3 bg-dark-800 border border-dark-600 rounded">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{pos.market.question}</p>
+                        <p className="text-xs text-text-muted">
+                          Your votes: {formatBNB(userShares)} • Total winning votes: {formatBNB(totalWinningVotes)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="yes"
+                        size="sm"
+                        onClick={() => {
+                          setClaimingMarketId(marketId);
+                          claimJuryFees(BigInt(marketId));
+                        }}
+                        disabled={isClaiming}
+                        className="ml-4 whitespace-nowrap"
+                      >
+                        {isClaiming ? 'CLAIMING...' : 'CLAIM JURY FEE'}
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1425,13 +1537,13 @@ function StatBox({
   return (
     <div 
       className={cn(
-        'text-center px-4 py-2',
+        'text-center px-3 py-2',
         highlight && 'border border-cyber bg-cyber/10'
       )}
     >
-      <p className="text-xs text-text-muted font-mono">{label}</p>
+      <p className="text-[10px] md:text-xs text-text-muted font-mono whitespace-nowrap">{label}</p>
       <p className={cn(
-        'text-xl font-bold font-mono',
+        'text-base md:text-lg font-bold font-mono whitespace-nowrap',
         color === 'yes' && 'text-yes',
         color === 'no' && 'text-no',
         color === 'neutral' && 'text-text-secondary',

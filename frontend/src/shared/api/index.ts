@@ -42,6 +42,7 @@ export {
   GET_MARKET_POSITIONS,
   GET_TOP_YES_HOLDERS,
   GET_TOP_NO_HOLDERS,
+  GET_CLAIMABLE_JURY_FEES,
 } from './positions.queries';
 
 // Stats queries

@@ -37,7 +37,7 @@ export function TradeHistory({
   }
 
   return (
-    <div className="divide-y divide-dark-700">
+    <div>
       {displayTrades.map((trade) => (
         <TradeRow key={trade.id} trade={trade} />
       ))}
@@ -67,7 +67,8 @@ function TradeRow({ trade }: TradeRowProps) {
     <div 
       className={cn(
         'px-4 py-3 flex items-center gap-3 transition-colors',
-        'hover:bg-dark-800/50'
+        'hover:bg-dark-800/50',
+        'border-b border-dark-700 last:border-b-0'
       )}
     >
       {/* Trade type indicator */}
@@ -233,8 +234,8 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
       });
     });
 
-    // Sort by absolute P/L (biggest winners/losers first)
-    return pnls.sort((a, b) => Math.abs(b.realizedPnlBNB) - Math.abs(a.realizedPnlBNB));
+    // Sort by P/L descending (winners first, then losers)
+    return pnls.sort((a, b) => b.realizedPnlBNB - a.realizedPnlBNB);
   }, [trades]);
 
   if (walletPnls.length === 0) {

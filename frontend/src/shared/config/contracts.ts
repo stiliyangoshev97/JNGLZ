@@ -11,7 +11,7 @@ import { env } from './env';
 
 /**
  * PredictionMarket Contract Address
- * v3.4.1 - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
+ * v3.8.1 - Latest Deployment
  */
 export const PREDICTION_MARKET_ADDRESS = env.CONTRACT_ADDRESS as `0x${string}`;
 
@@ -70,7 +70,7 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'claimed', type: 'bool' },
       { name: 'emergencyRefunded', type: 'bool' },
       { name: 'hasVoted', type: 'bool' },
-      { name: 'votedForProposer', type: 'bool' },
+      { name: 'votedOutcome', type: 'bool' },
     ],
   },
   {
@@ -137,6 +137,13 @@ export const PREDICTION_MARKET_ABI = [
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    name: 'paused',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
+  },
 
   // ===== WRITE FUNCTIONS =====
   {
@@ -164,10 +171,13 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'imageUrl', type: 'string' },
       { name: 'expiryTimestamp', type: 'uint256' },
       { name: 'heatLevel', type: 'uint8' },
-      { name: 'isYes', type: 'bool' },
+      { name: 'buyYesSide', type: 'bool' },
       { name: 'minSharesOut', type: 'uint256' },
     ],
-    outputs: [{ name: 'marketId', type: 'uint256' }],
+    outputs: [
+      { name: 'marketId', type: 'uint256' },
+      { name: 'sharesOut', type: 'uint256' },
+    ],
   },
   {
     name: 'buyYes',
@@ -236,7 +246,7 @@ export const PREDICTION_MARKET_ABI = [
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'marketId', type: 'uint256' },
-      { name: 'supportProposer', type: 'bool' },
+      { name: 'outcome', type: 'bool' },
     ],
     outputs: [],
   },
@@ -278,6 +288,13 @@ export const PREDICTION_MARKET_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
   {
+    name: 'getRequiredDisputeBond',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'marketId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
     name: 'withdrawBond',
     type: 'function',
     stateMutability: 'nonpayable',
@@ -289,6 +306,13 @@ export const PREDICTION_MARKET_ABI = [
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [],
+    outputs: [{ name: 'amount', type: 'uint256' }],
+  },
+  {
+    name: 'claimJuryFees',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'marketId', type: 'uint256' }],
     outputs: [{ name: 'amount', type: 'uint256' }],
   },
 

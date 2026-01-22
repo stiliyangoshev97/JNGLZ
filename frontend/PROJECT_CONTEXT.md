@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 19, 2026  
-> **Version:** 0.7.30
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX)
+> **Last Updated:** January 22, 2026  
+> **Version:** 0.7.32
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix)
 
 ---
 
@@ -26,21 +26,21 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.6.1) | `0x96662c54622304804065210F16483C5f2F3b6a75` |
+| PredictionMarket (v3.8.1) | `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75 |
+| BscScan | https://testnet.bscscan.com/address/0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5 |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Studio URL (v3.6.1) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1` |
-| Version | v3.6.1 (Contract v3.6.1 - Emergency Refund Fix + Dispute Window Fix) |
+| Studio URL (v3.8.1) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.8.1` |
+| Version | v3.8.1 (Latest Deployment) |
 | Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet (v3.6.1)
-VITE_CONTRACT_ADDRESS=0x96662c54622304804065210F16483C5f2F3b6a75
+# BNB Testnet (v3.8.1)
+VITE_CONTRACT_ADDRESS=0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5
 VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
 VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_CHAIN_ID=97

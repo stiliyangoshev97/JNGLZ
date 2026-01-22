@@ -8,9 +8,9 @@ dataSources:
     name: PredictionMarket
     network: chapel # BNB Testnet (BSC Testnet)
     source:
-      address: "0x96662c54622304804065210F16483C5f2F3b6a75"
+      address: "0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5"
       abi: PredictionMarket
-      startBlock: 85135831
+      startBlock: 85941857
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -24,12 +24,14 @@ dataSources:
         - Claim
         - EmergencyRefund
         - GlobalStats
-        - FundsSweep
         - ProposerReward
         - WithdrawalCredit
         - WithdrawalClaim
         - CreatorFeeCredit
         - CreatorFeeClaim
+        - JuryFeesPool
+        - JuryFeesClaim
+        - MarketResolutionFailure
       abis:
         - name: PredictionMarket
           file: ./abis/PredictionMarket.json
@@ -61,16 +63,20 @@ dataSources:
         # Bond Distribution (optional - for analytics)
         - event: BondDistributed(indexed uint256,indexed address,uint256,uint256)
           handler: handleBondDistributed
-        - event: JuryFeeDistributed(indexed uint256,indexed address,uint256)
-          handler: handleJuryFeeDistributed
 
         # Proposer Rewards (v3.3.0 - new ProposerRewardPaid)
         - event: ProposerRewardPaid(indexed uint256,indexed address,uint256)
           handler: handleProposerRewardPaid
 
-        # Governance (v3.1.0 - new SweepFunds)
-        - event: FundsSwept(uint256,uint256,uint256)
-          handler: handleFundsSwept
+        # Jury Fees Pull Pattern (v3.7.0 - replaces JuryFeeDistributed)
+        - event: JuryFeesPoolCreated(indexed uint256,uint256)
+          handler: handleJuryFeesPoolCreated
+        - event: JuryFeesClaimed(indexed uint256,indexed address,uint256)
+          handler: handleJuryFeesClaimed
+
+        # Market Resolution Failed (v3.7.0 - optional analytics)
+        - event: MarketResolutionFailed(indexed uint256,string)
+          handler: handleMarketResolutionFailed
 
         # Pull Pattern Events (v3.4.0)
         - event: WithdrawalCredited(indexed address,uint256,string)

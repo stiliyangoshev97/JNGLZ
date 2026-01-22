@@ -54,7 +54,7 @@ jobs:
           VITE_WALLETCONNECT_PROJECT_ID: "test-project-id"
           VITE_CHAIN_ID: "97"
           VITE_ENABLE_TESTNET: "true"
-          VITE_CONTRACT_ADDRESS: "0x96662c54622304804065210F16483C5f2F3b6a75"
+          VITE_CONTRACT_ADDRESS: "0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5"
           VITE_SUBGRAPH_URL: "https://gateway.thegraph.com/api/subgraphs/id/test"
           VITE_GRAPH_API_KEY: "test-api-key"
 

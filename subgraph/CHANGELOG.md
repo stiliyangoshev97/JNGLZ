@@ -2,6 +2,49 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.8.2] - 2026-01-22
+
+### Changed - Contract v3.8.1 Full Integration
+
+#### New Events Added
+- **JuryFeesPoolCreated**: Tracks when jury fees pool is created for a market
+- **JuryFeesClaimed**: Tracks individual jury fee claims per user per market
+- **MarketResolutionFailed**: Tracks when market resolution fails (empty winning side, tie)
+
+#### Removed Events
+- **FundsSwept**: Removed (no longer in contract)
+- **JuryFeeDistributed**: Removed (replaced by per-market claiming)
+
+#### New Entities
+- **JuryFeesPool**: Tracks jury fees pool per market
+- **JuryFeesClaim**: Records individual jury fee claims
+- **MarketResolutionFailure**: Records resolution failure events
+
+#### Schema Updates
+- **Position Entity**: Added `juryFeesClaimed` (Boolean!) and `juryFeesClaimedAmount` (BigDecimal)
+- **GlobalStats**: Added `totalJuryFeesPooled` and `totalJuryFeesClaimed`
+- **Removed**: `FundsSweep` entity and `totalSwept` from GlobalStats
+
+#### Handler Updates
+- Added `handleJuryFeesPoolCreated`: Creates JuryFeesPool entity
+- Added `handleJuryFeesClaimed`: Updates Position with claimed status, creates claim record
+- Added `handleMarketResolutionFailed`: Records resolution failures
+- Updated `getOrCreatePosition`: Initializes `juryFeesClaimed = false`
+
+### Deployed
+- **Version**: `v3.8.2`
+- **Endpoint**: `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.8.2`
+
+---
+
+## [3.8.1] - 2026-01-22
+
+### Changed - Contract v3.8.1 Integration
+- **Contract Address**: `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` (v3.8.1)
+- **Start Block**: `85941857` (v3.8.1 deployment block)
+
+---
+
 ## [3.6.2] - 2026-01-18
 
 ### Added - Bond Earnings Tracking

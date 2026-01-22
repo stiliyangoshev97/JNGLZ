@@ -27,6 +27,7 @@ import {
   useRequiredBond,
   usePosition,
   useProposerRewardBps,
+  useContractPaused,
 } from '@/shared/hooks';
 import { formatBNB, formatShares } from '@/shared/utils/format';
 import { cn } from '@/shared/utils/cn';
@@ -66,6 +67,10 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Get proposer reward percentage (default 50 bps = 0.5%)
   const { data: proposerRewardBps } = useProposerRewardBps();
   const rewardBps = (proposerRewardBps as bigint) || 50n;
+  
+  // Check if contract is paused (emergency mode)
+  // When paused, emergency refund is allowed even with active proposals
+  const { isPaused: contractPaused } = useContractPaused();
   
   // Calculate estimated proposer reward (0.5% of pool balance)
   const poolBalance = BigInt(market.poolBalance || '0');
@@ -156,7 +161,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Emergency refund time (24h after expiry)
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   
-  // Resolution cutoff time (2h before emergency refund) - blocks proposals AND disputes to prevent double-spend race condition
+  // Resolution cutoff time (2h before emergency refund) - blocks PROPOSALS ONLY
+  // Disputes are NOT blocked by cutoff - they're allowed anytime within their 30-min window (v3.6.1)
+  // This ensures legitimate disputes on late proposals aren't unfairly blocked
   const resolutionCutoffTime = emergencyRefundTime - PROPOSAL_CUTOFF_BUFFER;
   const isInResolutionCutoff = isExpired && !isResolved && now >= resolutionCutoffTime && now < emergencyRefundTime;
   
@@ -184,18 +191,28 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   const isTie = hasDispute && now > votingWindowEnd && !isResolved && 
     proposerVotes === disputerVotes && (proposerVotes > 0n || disputerVotes > 0n);
   
-  // canFinalize: only if proposed side has shareholders AND not a tie
+  // canFinalize: only if proposed side has shareholders AND not a tie (normal finalization)
   const canFinalize = hasProposal && !isResolved && proposedWinningSideHasShares && !isTie && (
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
   
+  // canFinalizeTie: for ties, finalizeMarket() MUST be called to return bonds and clear proposer
+  // This enables emergency refund afterward (contract clears market.proposer on tie)
+  const canFinalizeTie = isTie && hasProposal;
+  
   // Can only claim if resolved AND user has shares on the WINNING side
   const canClaim = isResolved && winningShares > 0n && !hasClaimed;
   
-  // Emergency refund: 24h after expiry, market not resolved, user has shares, hasn't refunded
-  // NOTE: Contract allows emergency refund even if there IS a proposal (as long as not resolved)
-  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded;
+  // Emergency refund logic:
+  // Contract requirement: 24h after expiry, market not resolved, user has shares, hasn't refunded
+  // BUT: If contract is NOT paused and there's a proposal, refund is BLOCKED (must finalize first)
+  // Exception: If contract IS paused (emergency mode), refund is ALWAYS allowed (escape hatch)
+  const hasProposer = !!market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
+  const emergencyRefundBlockedByProposal = !contractPaused && hasProposer;
+  
+  // Can emergency refund: basic conditions + not blocked by active proposal (unless paused)
+  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded && !emergencyRefundBlockedByProposal;
   
   // Show "waiting for emergency refund" when market stuck but 24h not passed yet
   const isWaitingForEmergencyRefund = isExpired && !isResolved && now <= emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded;
@@ -208,6 +225,10 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
+  
+  // canFinalizeResolutionFailed: when winning side is empty, finalize returns bond and clears proposer
+  // This is needed to enable emergency refund (otherwise proposal blocks it)
+  const canFinalizeResolutionFailed = resolutionMayHaveFailed && hasProposer && !isTie;
 
   // Don't show panel if market is active
   if (!isExpired && !isResolved) {
@@ -233,8 +254,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   };
 
   const handleVote = async (supportProposer: boolean) => {
-    if (!canTrade) return;
-    await vote({ marketId, supportProposer });
+    if (!canTrade || market.proposedOutcome === null || market.proposedOutcome === undefined) return;
+    // Convert supportProposer to actual outcome
+    // supportProposer=true means vote for proposer's outcome
+    // supportProposer=false means vote for opposite (disputer's position)
+    const outcome = supportProposer ? market.proposedOutcome : !market.proposedOutcome;
+    await vote({ marketId, outcome });
   };
 
   const handleFinalize = async () => {
@@ -285,6 +310,29 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Contract Paused Banner - Emergency Mode */}
+        {contractPaused && (
+          <div className="p-3 bg-yellow-500/10 border border-yellow-500/50 text-sm">
+            <p className="text-yellow-500 font-bold mb-1">⚠️ CONTRACT PAUSED - EMERGENCY MODE</p>
+            <p className="text-text-secondary text-xs">
+              The contract is in emergency mode. Trading is disabled, but emergency refunds are available as an escape hatch.
+            </p>
+          </div>
+        )}
+
+        {/* Emergency Refund Blocked by Proposal (only when not paused) */}
+        {!contractPaused && emergencyRefundBlockedByProposal && now > emergencyRefundTime && !isResolved && totalShares > 0n && !hasEmergencyRefunded && (
+          <div className="p-3 bg-dark-800 border border-no/50 text-sm">
+            <p className="text-no font-bold mb-2">EMERGENCY REFUND BLOCKED</p>
+            <p className="text-text-secondary text-xs mb-2">
+              A resolution proposal exists. You must finalize the market first before emergency refund is available.
+            </p>
+            <p className="text-text-muted text-xs">
+              Call <span className="text-cyber font-mono">Finalize</span> to complete the resolution process.
+            </p>
+          </div>
+        )}
+
         {/* Empty Market Message */}
         {isEmptyMarket && !isResolved && (
           <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
@@ -324,7 +372,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Resolution Failed Warning */}
+        {/* Resolution Failed Warning + Finalize Button */}
         {resolutionMayHaveFailed && !canEmergencyRefund && !isTie && (
           <div className="p-3 bg-dark-800 border border-no/50 text-sm">
             <p className="text-no font-bold mb-2">RESOLUTION BLOCKED</p>
@@ -332,13 +380,40 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               The proposed outcome ({market.proposedOutcome ? 'YES' : 'NO'}) has no shareholders. 
               The market cannot resolve to an empty side.
             </p>
-            <p className="text-text-muted text-xs">
-              Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
-            </p>
+            
+            {/* Finalize Button - clears proposal and enables emergency refund */}
+            {canFinalizeResolutionFailed && (
+              <div className="mt-3 pt-3 border-t border-no/30">
+                <p className="text-text-muted text-xs mb-2">
+                  Click below to process — this returns the proposer's bond and enables emergency refunds.
+                </p>
+                <Button
+                  variant="cyber"
+                  onClick={handleFinalize}
+                  disabled={isFinalizing || isConfirmingFinalize}
+                  className="w-full"
+                >
+                  {isFinalizing || isConfirmingFinalize ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner size="sm" variant="cyber" />
+                      PROCESSING...
+                    </span>
+                  ) : (
+                    'FINALIZE (RETURN BOND & ENABLE REFUND)'
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {!canFinalizeResolutionFailed && (
+              <p className="text-text-muted text-xs">
+                Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
+              </p>
+            )}
           </div>
         )}
 
-        {/* Tie Warning */}
+        {/* Tie Warning + Finalize Tie Button */}
         {isTie && !canEmergencyRefund && (
           <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
             <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING ENDED IN TIE</p>
@@ -351,9 +426,36 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               <p className="text-yes">✓ Disputer bond returned (no penalty)</p>
               <p className="text-cyber">⏳ Emergency refund available for all traders</p>
             </div>
-            <p className="text-text-muted text-xs">
-              Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
-            </p>
+            
+            {/* Finalize Tie Button - MUST be called to return bonds and enable refund */}
+            {canFinalizeTie && (
+              <div className="mt-3 pt-3 border-t border-yellow-500/30">
+                <p className="text-text-muted text-xs mb-2">
+                  Click below to process the tie — this returns all bonds and enables emergency refunds.
+                </p>
+                <Button
+                  variant="cyber"
+                  onClick={handleFinalize}
+                  disabled={isFinalizing || isConfirmingFinalize}
+                  className="w-full"
+                >
+                  {isFinalizing || isConfirmingFinalize ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner size="sm" variant="cyber" />
+                      PROCESSING TIE...
+                    </span>
+                  ) : (
+                    'FINALIZE TIE (RETURN BONDS)'
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {!canFinalizeTie && (
+              <p className="text-text-muted text-xs">
+                Emergency refund available in: <span className="text-cyber font-mono">{formatTimeLeft(emergencyRefundTime)}</span>
+              </p>
+            )}
           </div>
         )}
 
@@ -732,7 +834,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {canClaim && (
           <div className="space-y-3">
             <div className="p-3 bg-yes/10 border border-yes text-sm">
-              <p className="text-yes font-bold mb-1">🎉 YOU WON!</p>
+              <p className="text-yes font-bold mb-1">YOU WON!</p>
               <p className="text-text-secondary text-xs">
                 You have {formatShares(winningShares)} winning shares
               </p>

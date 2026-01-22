@@ -6,22 +6,22 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 | Metric | Value |
 |--------|-------|
-| Status | ✅ Deployed (v3.6.1) |
+| Status | ✅ Deployed (v3.8.2) |
 | Network | BNB Testnet (Chapel) |
-| Contract | `0x96662c54622304804065210F16483C5f2F3b6a75` |
-| Start Block | 85135831 |
-| Entities | 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep) |
+| Contract | `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` |
+| Start Block | 85941857 |
+| Entities | 11 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, JuryFeesPool, JuryFeesClaim, MarketResolutionFailure) |
 
 ## 🔗 GraphQL Endpoint
 
 **Production:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.8.2
 ```
 
 **Studio:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.6.1
+https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.8.2
 ```
 
 **Studio Dashboard:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
@@ -210,11 +210,14 @@ subgraph/
 | **Market** | Prediction market data, resolution status, voting results |
 | **Trade** | Individual buy/sell transactions |
 | **User** | Trader profiles with stats |
-| **Position** | User's holdings per market |
+| **Position** | User's holdings per market (includes `juryFeesClaimed` status) |
 | **Vote** | Voting records for disputed markets |
 | **Claim** | Payout claim records |
 | **EmergencyRefund** | Emergency refund records |
 | **GlobalStats** | Platform-wide statistics (singleton) |
+| **JuryFeesPool** | Jury fees pool per market |
+| **JuryFeesClaim** | Individual jury fee claim records |
+| **MarketResolutionFailure** | Resolution failure events (tie, empty winning side) |
 
 ## 📝 Events Indexed
 
@@ -227,13 +230,15 @@ subgraph/
 - `Claimed` - Payout claims
 - `EmergencyRefunded` - Emergency refunds
 - `BondDistributed` - Bond distribution details
-- `JuryFeeDistributed` - Voter rewards
+- `JuryFeesPoolCreated` - Jury fees pool creation (v3.8.1+)
+- `JuryFeesClaimed` - Individual jury fee claims (v3.8.1+)
+- `MarketResolutionFailed` - Resolution failures (v3.8.1+)
 
 ## 🌐 Subgraph URLs
 
 | Network | URL |
 |---------|-----|
-| BNB Testnet | `https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/0.0.2` |
+| BNB Testnet | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.8.2` |
 | BNB Mainnet | TBD |
 
 ## 📚 Resources
