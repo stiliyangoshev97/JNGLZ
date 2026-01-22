@@ -12,11 +12,12 @@ import {
   ProposalDisputed,
   VoteCast,
   MarketResolved,
+  MarketResolutionFailed,
   Claimed,
   EmergencyRefunded,
   BondDistributed,
-  JuryFeeDistributed,
-  FundsSwept,
+  JuryFeesPoolCreated,
+  JuryFeesClaimed,
   ProposerRewardPaid,
   WithdrawalCredited,
   WithdrawalClaimed,
@@ -33,7 +34,9 @@ import {
   Claim,
   EmergencyRefund,
   GlobalStats,
-  FundsSweep,
+  JuryFeesPool,
+  JuryFeesClaim,
+  MarketResolutionFailure,
   ProposerReward,
   WithdrawalCredit,
   WithdrawalClaim,
@@ -157,7 +160,8 @@ function getOrCreateGlobalStats(): GlobalStats {
     stats.totalClaimed = ZERO_BD;
     stats.totalRefunded = ZERO_BD;
     stats.disputedMarkets = ZERO_BI;
-    stats.totalSwept = ZERO_BD; // v3.1.0
+    stats.totalJuryFeesPooled = ZERO_BD; // v3.7.0
+    stats.totalJuryFeesClaimed = ZERO_BD; // v3.7.0
     stats.save();
   }
 
@@ -636,42 +640,81 @@ export function handleBondDistributed(event: BondDistributed): void {
 }
 
 /**
- * Handle JuryFeeDistributed event (v3.5.0 - P/L tracking)
- * Tracks individual voter rewards for leaderboard
+ * Handle JuryFeesPoolCreated event (v3.7.0)
+ * Creates JuryFeesPool entity when jury fee pool is created for a market
  */
-export function handleJuryFeeDistributed(event: JuryFeeDistributed): void {
-  let feeAmount = toBigDecimal(event.params.amount);
-  
-  // Get or create user (the voter who received the fee)
-  let user = getOrCreateUser(event.params.voter);
-  
-  // Update jury fee earnings
-  user.totalJuryFeesEarned = user.totalJuryFeesEarned.plus(feeAmount);
-  user.save();
-}
-
-/**
- * Handle FundsSwept event (v3.1.0)
- * Creates FundsSweep entity and updates GlobalStats
- */
-export function handleFundsSwept(event: FundsSwept): void {
-  let sweepId =
+export function handleJuryFeesPoolCreated(event: JuryFeesPoolCreated): void {
+  let poolId =
     event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let marketId = event.params.marketId.toString();
+  let poolAmount = toBigDecimal(event.params.amount);
 
-  // Create FundsSweep entity
-  let sweep = new FundsSweep(sweepId);
-  sweep.amount = toBigDecimal(event.params.amount);
-  sweep.totalLocked = toBigDecimal(event.params.totalLocked);
-  sweep.contractBalance = toBigDecimal(event.params.contractBalance);
-  sweep.timestamp = event.block.timestamp;
-  sweep.txHash = event.transaction.hash;
-  sweep.blockNumber = event.block.number;
-  sweep.save();
+  // Create JuryFeesPool entity
+  let pool = new JuryFeesPool(poolId);
+  pool.market = marketId;
+  pool.amount = poolAmount;
+  pool.timestamp = event.block.timestamp;
+  pool.txHash = event.transaction.hash;
+  pool.blockNumber = event.block.number;
+  pool.save();
 
   // Update global stats
   let stats = getOrCreateGlobalStats();
-  stats.totalSwept = stats.totalSwept.plus(sweep.amount);
+  stats.totalJuryFeesPooled = stats.totalJuryFeesPooled.plus(poolAmount);
   stats.save();
+}
+
+/**
+ * Handle JuryFeesClaimed event (v3.7.0)
+ * Tracks individual voter jury fee claims (replaces JuryFeeDistributed)
+ */
+export function handleJuryFeesClaimed(event: JuryFeesClaimed): void {
+  let claimId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let marketId = event.params.marketId.toString();
+  let feeAmount = toBigDecimal(event.params.amount);
+
+  // Get or create user (the voter who received the fee)
+  let user = getOrCreateUser(event.params.voter);
+
+  // Create JuryFeesClaim entity
+  let claim = new JuryFeesClaim(claimId);
+  claim.market = marketId;
+  claim.voter = user.id;
+  claim.voterAddress = event.params.voter;
+  claim.amount = feeAmount;
+  claim.timestamp = event.block.timestamp;
+  claim.txHash = event.transaction.hash;
+  claim.blockNumber = event.block.number;
+  claim.save();
+
+  // Update jury fee earnings
+  user.totalJuryFeesEarned = user.totalJuryFeesEarned.plus(feeAmount);
+  user.save();
+
+  // Update global stats
+  let stats = getOrCreateGlobalStats();
+  stats.totalJuryFeesClaimed = stats.totalJuryFeesClaimed.plus(feeAmount);
+  stats.save();
+}
+
+/**
+ * Handle MarketResolutionFailed event (v3.7.0)
+ * Creates MarketResolutionFailure entity when resolution fails
+ */
+export function handleMarketResolutionFailed(event: MarketResolutionFailed): void {
+  let failureId =
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
+  let marketId = event.params.marketId.toString();
+
+  // Create MarketResolutionFailure entity
+  let failure = new MarketResolutionFailure(failureId);
+  failure.market = marketId;
+  failure.reason = event.params.reason;
+  failure.timestamp = event.block.timestamp;
+  failure.txHash = event.transaction.hash;
+  failure.blockNumber = event.block.number;
+  failure.save();
 }
 
 /**

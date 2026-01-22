@@ -1,18 +1,18 @@
 # ============================================
 # JNGLZ.FUN - Deployed Contracts
 # ============================================
-# Last Updated: January 18, 2026
+# Last Updated: January 22, 2026
 # ============================================
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
 
-### PredictionMarket Contract (v3.6.1 - Security Fix) ✅ LIVE
-- **Address**: 0x96662c54622304804065210F16483C5f2F3b6a75
-- **BscScan**: https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
+### PredictionMarket Contract (v3.8.1) ✅ LIVE
+- **Address**: 0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5
+- **BscScan**: https://testnet.bscscan.com/address/0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5
 - **Verified**: ✅ Yes
-- **Deployed**: January 18, 2026
-- **Block**: 85135831
+- **Deployed**: January 22, 2026
+- **Block**: 85941857
 - **Transaction**: 0x31e69508b1c38a43c033a32eb65a436c19eded7c420ffedecc33e72e5578c16d
 - **Features**: 
   - ✅ Dispute Window Edge Case Fix (v3.6.1)

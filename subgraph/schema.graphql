@@ -221,19 +221,49 @@ type GlobalStats @entity(immutable: false) {
   totalClaimed: BigDecimal! # Total payouts claimed
   totalRefunded: BigDecimal! # Total emergency refunds
   disputedMarkets: BigInt! # Markets that were disputed
-  # Governance Stats (v3.1.0)
-  totalSwept: BigDecimal! # Total BNB swept by MultiSig
+  # Jury Fees Stats (v3.7.0)
+  totalJuryFeesPooled: BigDecimal! # Total jury fees pooled
+  totalJuryFeesClaimed: BigDecimal! # Total jury fees claimed
 }
 
 # ============================================
-# FundsSweep Entity - MultiSig sweep records (v3.1.0)
+# JuryFeesPool Entity - Jury fee pools per market (v3.7.0)
 # ============================================
-type FundsSweep @entity(immutable: true) {
+type JuryFeesPool @entity(immutable: true) {
   id: ID! # txHash-logIndex
-  # Sweep Details
-  amount: BigDecimal! # Amount swept in BNB
-  totalLocked: BigDecimal! # Total locked funds at time of sweep
-  contractBalance: BigDecimal! # Contract balance at time of sweep
+  market: Market! # Related market
+  # Pool Details
+  amount: BigDecimal! # Amount pooled for jury fees
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# JuryFeesClaim Entity - Jury fee claims (v3.7.0)
+# ============================================
+type JuryFeesClaim @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  voter: User! # Voter who claimed
+  voterAddress: Bytes! # Voter address (for filtering)
+  # Claim Details
+  amount: BigDecimal! # Amount claimed in BNB
+  # Transaction Info
+  timestamp: BigInt! # Block timestamp
+  txHash: Bytes! # Transaction hash
+  blockNumber: BigInt! # Block number
+}
+
+# ============================================
+# MarketResolutionFailure Entity - Failed resolution records (v3.7.0)
+# ============================================
+type MarketResolutionFailure @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  market: Market! # Related market
+  # Failure Details
+  reason: String! # Reason for failure
   # Transaction Info
   timestamp: BigInt! # Block timestamp
   txHash: Bytes! # Transaction hash

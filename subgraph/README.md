@@ -6,10 +6,10 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 | Metric | Value |
 |--------|-------|
-| Status | ✅ Deployed (v3.6.1) |
+| Status | ✅ Deployed (v3.8.1) |
 | Network | BNB Testnet (Chapel) |
-| Contract | `0x96662c54622304804065210F16483C5f2F3b6a75` |
-| Start Block | 85135831 |
+| Contract | `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` |
+| Start Block | 85941857 |
 | Entities | 9 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, FundsSweep) |
 
 ## 🔗 GraphQL Endpoint

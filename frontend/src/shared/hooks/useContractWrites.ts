@@ -356,7 +356,8 @@ export function useDispute() {
 /**
  * Vote on disputed outcome
  * 
- * Contract: vote(marketId, supportProposer)
+ * Contract: vote(marketId, outcome)
+ * outcome = true means YES wins, false means NO wins
  * Weight = YES + NO shares owned
  * 1 hour voting window
  */
@@ -369,13 +370,13 @@ export function useVote() {
 
   const vote = async (params: {
     marketId: bigint;
-    supportProposer: boolean; // true = agree with proposer, false = agree with disputer
+    outcome: boolean; // true = YES wins, false = NO wins
   }) => {
     writeContract({
       address: PREDICTION_MARKET_ADDRESS,
       abi: PREDICTION_MARKET_ABI,
       functionName: 'vote',
-      args: [params.marketId, params.supportProposer],
+      args: [params.marketId, params.outcome],
     });
   };
 

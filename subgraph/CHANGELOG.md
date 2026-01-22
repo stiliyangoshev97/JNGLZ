@@ -2,6 +2,14 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.8.1] - 2026-01-22
+
+### Changed - Contract v3.8.1 Integration
+- **Contract Address**: `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` (v3.8.1)
+- **Start Block**: `85941857` (v3.8.1 deployment block)
+
+---
+
 ## [3.6.2] - 2026-01-18
 
 ### Added - Bond Earnings Tracking

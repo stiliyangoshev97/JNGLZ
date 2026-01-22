@@ -233,8 +233,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   };
 
   const handleVote = async (supportProposer: boolean) => {
-    if (!canTrade) return;
-    await vote({ marketId, supportProposer });
+    if (!canTrade || market.proposedOutcome === null || market.proposedOutcome === undefined) return;
+    // Convert supportProposer to actual outcome
+    // supportProposer=true means vote for proposer's outcome
+    // supportProposer=false means vote for opposite (disputer's position)
+    const outcome = supportProposer ? market.proposedOutcome : !market.proposedOutcome;
+    await vote({ marketId, outcome });
   };
 
   const handleFinalize = async () => {
