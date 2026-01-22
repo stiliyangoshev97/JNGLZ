@@ -108,8 +108,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const currentShares = direction === 'yes' ? userYesShares : userNoShares;
 
   // Get max sellable shares from contract (respects pool liquidity limits)
-  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes } = useMaxSellableShares(marketId, userYesShares, true);
-  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo } = useMaxSellableShares(marketId, userNoShares, false);
+  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
+  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
   
   const maxSellableShares = direction === 'yes' ? maxSellableYes : maxSellableNo;
   const maxSellBnbOut = direction === 'yes' ? maxSellBnbYes : maxSellBnbNo;
@@ -152,6 +152,9 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       setAmount('');
       // Refetch position after successful trade
       refetchPosition();
+      // Refetch max sellable shares (pool liquidity may have changed)
+      refetchMaxSellableYes();
+      refetchMaxSellableNo();
       // Refetch user's BNB balance (local)
       refetchBalance();
       // Invalidate ALL balance queries so Header/other components update too
@@ -164,7 +167,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       resetSellYes();
       resetSellNo();
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient, showToast]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchMaxSellableYes, refetchMaxSellableNo, refetchBalance, queryClient, showToast]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
