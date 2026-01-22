@@ -161,7 +161,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Emergency refund time (24h after expiry)
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   
-  // Resolution cutoff time (2h before emergency refund) - blocks proposals AND disputes to prevent double-spend race condition
+  // Resolution cutoff time (2h before emergency refund) - blocks PROPOSALS ONLY
+  // Disputes are NOT blocked by cutoff - they're allowed anytime within their 30-min window (v3.6.1)
+  // This ensures legitimate disputes on late proposals aren't unfairly blocked
   const resolutionCutoffTime = emergencyRefundTime - PROPOSAL_CUTOFF_BUFFER;
   const isInResolutionCutoff = isExpired && !isResolved && now >= resolutionCutoffTime && now < emergencyRefundTime;
   
