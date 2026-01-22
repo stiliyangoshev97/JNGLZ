@@ -1,19 +1,19 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.8.0  
-**Audit Date:** January 19, 2026  
+**Version:** v3.8.1  
+**Audit Date:** January 22, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
-**Status:** ✅ READY FOR DEPLOYMENT
+**Status:** ✅ DEPLOYED
 
-### Current Deployment (v3.5.0 - DEPRECATED)
-- **Address:** `0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`
+### Current Deployment (v3.8.1)
+- **Address:** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 84281825
-- **BscScan:** https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8
+- **Block:** 85941857
+- **BscScan:** https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5
 - **Verified:** ✅ Yes
-- **⚠️ WARNING:** Contains Emergency Refund Double-Spend vulnerability - DO NOT USE
+- **Contract Size:** 23,316 bytes (1,260 bytes margin under 24KB limit)
 
 ### Parameters Configured
 - `platformFeeBps`: 100 (1%)
@@ -53,10 +53,10 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,319 |
-| Total Tests | **191** |
-| Test Suites | **12** |
-| Slither Findings | 43 (see breakdown below) |
+| Total Lines of Code | ~2,222 |
+| Total Tests | **214** |
+| Test Suites | **14** |
+| Slither Findings | 33 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
@@ -65,54 +65,96 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 ---
 
+## Version 3.8.1 Changes (CONTRACT SIZE OPTIMIZATION)
+
+### Consolidated Governance Functions
+
+**Type:** Optimization  
+**Released:** January 22, 2026
+
+#### Problem Solved
+
+v3.8.0 had 18 individual propose functions which exceeded the EVM bytecode limit:
+- v3.8.0: 26,340 bytes (OVER LIMIT - couldn't deploy!)
+- **v3.8.1: 23,316 bytes ✅** (1,260 bytes margin)
+
+#### Solution (v3.8.1)
+
+Consolidated 9 functions into 2 using enums:
+
+**Fee Functions (4 → 1):**
+```solidity
+// OLD (v3.8.0)
+proposeSetFee(newValue)
+proposeSetCreatorFee(newValue)
+proposeSetResolutionFee(newValue)
+proposeSetMarketCreationFee(newValue)
+
+// NEW (v3.8.1) - Combined with FeeType enum
+proposeSetFee(FeeType feeType, uint256 newValue)
+```
+
+**Heat Level Functions (5 → 1):**
+```solidity
+// OLD (v3.8.0)
+proposeSetHeatLevelCrack(newValue)
+proposeSetHeatLevelHigh(newValue)
+proposeSetHeatLevelPro(newValue)
+proposeSetHeatLevelApex(newValue)
+proposeSetHeatLevelCore(newValue)
+
+// NEW (v3.8.1) - Combined with HeatLevel enum
+proposeSetHeatLevel(HeatLevel level, uint256 newValue)
+```
+
+#### New Enums Added
+
+```solidity
+enum FeeType {
+    Platform,      // 0 - Platform fee (max 5%)
+    Creator,       // 1 - Creator fee (max 2%)
+    Resolution,    // 2 - Resolution fee (max 1%)
+    MarketCreation // 3 - Market creation fee (max 0.1 BNB)
+}
+```
+
+#### Updated ActionType Enum
+
+```solidity
+enum ActionType {
+    SetFee,           // Combined fee setting
+    SetMinBet,
+    SetTreasury,
+    Pause,
+    Unpause,
+    SetMinBondFloor,
+    SetDynamicBondBps,
+    SetBondWinnerShare,
+    SetHeatLevel,     // Combined heat level setting
+    SetProposerReward,
+    ReplaceSigner
+}
+```
+
+#### Security Analysis
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Double validation | ✅ Safe | Both propose and execute validate inputs |
+| Invalid enum values | ✅ Safe | Solidity 0.8.24 reverts on invalid enum |
+| Access control | ✅ Safe | `onlySigner` modifier on all propose functions |
+| Missing case handlers | ✅ Safe | All enum values have handlers |
+| Reentrancy | ✅ Safe | No external calls before state changes |
+
+---
+
 ## Version 3.8.0 Changes (GOVERNANCE UX OVERHAUL)
 
 ### Individual Propose Functions
 
 **Type:** Improvement  
-**Released:** January 19, 2026
-
-#### Problem Solved
-
-The old `proposeAction(ActionType, bytes)` required ABI-encoding parameters:
-```solidity
-// OLD: Error-prone, requires memorizing ActionType numbers
-proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
-```
-
-#### Solution (v3.8.0)
-
-Added 18 individual propose functions:
-```solidity
-// NEW: Type-safe, human-readable, fail-fast validation
-proposeSetMarketCreationFee(0.01 ether)
-proposePause()
-proposeReplaceSigner(oldSigner, newSigner)
-```
-
-#### All New Functions
-| Function | Parameters | Description |
-|----------|------------|-------------|
-| `proposeSetFee(uint256)` | BPS (max 500) | Platform fee |
-| `proposeSetMinBet(uint256)` | Wei | Min bet |
-| `proposeSetTreasury(address)` | Address | Treasury |
-| `proposePause()` | None | Emergency pause |
-| `proposeUnpause()` | None | Resume |
-| `proposeSetCreatorFee(uint256)` | BPS (max 200) | Creator fee |
-| `proposeSetResolutionFee(uint256)` | BPS (max 100) | Resolution fee |
-| `proposeSetMinBondFloor(uint256)` | Wei | Min bond floor |
-| `proposeSetDynamicBondBps(uint256)` | BPS | Dynamic bond |
-| `proposeSetBondWinnerShare(uint256)` | BPS | Winner share |
-| `proposeSetMarketCreationFee(uint256)` | Wei | Creation fee |
-| `proposeSetHeatLevelCrack/High/Pro/Apex/Core(uint256)` | Wei | Heat levels |
-| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
-| `proposeReplaceSigner(address, address)` | Old, new | Replace signer |
-
-#### Key Benefits
-- ✅ Type-safe - Solidity validates at compile time
-- ✅ Fail-fast - Invalid values rejected at propose time
-- ✅ Human-readable - No ActionType number memorization
-- ✅ Emergency-ready - Can pause in seconds
+**Released:** January 19, 2026  
+**Status:** ❌ NOT DEPLOYED (exceeded bytecode limit)
 
 ---
 
@@ -766,26 +808,38 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 
 ## Conclusion
 
-The PredictionMarket contract v3.6.0 demonstrates solid security practices:
+The PredictionMarket contract v3.8.1 demonstrates solid security practices:
 
 1. **Defense in Depth:** Multiple layers (ReentrancyGuard, MultiSig, time delays, Pull Pattern)
 2. **Economic Security:** Bond system + Proposer rewards align incentives
-3. **Comprehensive Testing:** 179 tests including security, Pull Pattern, arbitrage-proof, fuzz
+3. **Comprehensive Testing:** 214 tests including security, Pull Pattern, arbitrage-proof, fuzz
 4. **Conservative Design:** Immutable, no external dependencies, fail-safe emergency refund
 5. **Griefing Resistant:** Pull Pattern prevents malicious wallets from blocking operations
 6. **Recovery Mechanism:** 2-of-3 ReplaceSigner for emergency signer recovery
 7. **Emergency Refund Security:** Double-spend and insolvency vulnerabilities fixed
+8. **Bytecode Optimized:** 23,316 bytes (within 24KB EVM limit)
 
-**v3.6.0 Security Additions:**
-- Emergency refund double-spend fix (claim blocked after refund)
-- Pool insolvency prevention (balance reduced on refund)
-- 2-hour resolution cutoff buffer
-- 13 new security tests in `EmergencyRefundSecurity.t.sol`
+**v3.8.1 Security Analysis (January 22, 2026):**
+
+Critical flow verification confirms:
+- `claim()` requires `resolved == true`, `emergencyRefund()` requires `resolved == false` → **Mutually exclusive**
+- `emergencyRefunded` check in `claim()` prevents double-dip after pause/unpause edge case
+- One-sided markets blocked from proposal → forces emergency refund (correct behavior)
+- Pool balance and supplies reduced atomically on all payouts → no insolvency possible
+
+**Slither Static Analysis Results (v3.8.1):**
+- **33 findings total**
+- **0 Critical/High** (treasury warnings are false positives - multisig controlled)
+- **2 Medium** (precision loss, benign reentrancy - by design)
+- **6 Low** (timestamp comparisons - necessary for time logic)
+- **10+ Informational** (pragma versions, complexity)
+
+All findings reviewed and confirmed as either false positives or acceptable design decisions.
 
 **Recommended Actions Before Mainnet:**
-1. Deploy v3.6.0 to testnet and verify all fixes
+1. ✅ Deployed v3.8.1 to testnet and verified
 2. Run testnet for 1-2 weeks with real traffic
-3. Set up event monitoring (SignerReplaced, FundsSwept, WithdrawalCredited, EmergencyRefunded)
+3. Set up event monitoring (SignerReplaced, WithdrawalCredited, EmergencyRefunded)
 4. Document emergency response procedures
 5. Consider professional third-party audit for additional assurance
 

@@ -386,12 +386,12 @@ contract PredictionMarketFuzzTest is TestHelper {
     // ============================================
 
     function testFuzz_MultiSig_SetFee_ValidRange(uint256 newFee) public {
-        // Fee should be between 0 and MAX_FEE_BPS (500 = 5%)
+        // Platform fee should be between 0 and MAX_FEE_BPS (500 = 5%)
         newFee = bound(newFee, 0, 500);
 
         executeMultiSigAction(
             PredictionMarket.ActionType.SetFee,
-            abi.encode(newFee)
+            abi.encode(PredictionMarket.FeeType.Platform, newFee)
         );
 
         assertEq(market.platformFeeBps(), newFee);
@@ -414,8 +414,8 @@ contract PredictionMarketFuzzTest is TestHelper {
         newFee = bound(newFee, 0, 200);
 
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetCreatorFee,
-            abi.encode(newFee)
+            PredictionMarket.ActionType.SetFee,
+            abi.encode(PredictionMarket.FeeType.Creator, newFee)
         );
 
         assertEq(market.creatorFeeBps(), newFee);
@@ -428,8 +428,8 @@ contract PredictionMarketFuzzTest is TestHelper {
         newFee = bound(newFee, 0, 100);
 
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetResolutionFee,
-            abi.encode(newFee)
+            PredictionMarket.ActionType.SetFee,
+            abi.encode(PredictionMarket.FeeType.Resolution, newFee)
         );
 
         assertEq(market.resolutionFeeBps(), newFee);
@@ -484,8 +484,8 @@ contract PredictionMarketFuzzTest is TestHelper {
         newFee = bound(newFee, 0, 0.1 ether);
 
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(newFee)
+            PredictionMarket.ActionType.SetFee,
+            abi.encode(PredictionMarket.FeeType.MarketCreation, newFee)
         );
 
         assertEq(market.marketCreationFee(), newFee);
@@ -497,8 +497,8 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         // Set creation fee via MultiSig
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
+            PredictionMarket.ActionType.SetFee,
+            abi.encode(PredictionMarket.FeeType.MarketCreation, creationFee)
         );
 
         uint256 treasuryBalanceBefore = treasury.balance;
@@ -537,8 +537,8 @@ contract PredictionMarketFuzzTest is TestHelper {
 
         // Set creation fee via MultiSig
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetMarketCreationFee,
-            abi.encode(creationFee)
+            PredictionMarket.ActionType.SetFee,
+            abi.encode(PredictionMarket.FeeType.MarketCreation, creationFee)
         );
 
         uint256 totalSent = creationFee + betAmount;

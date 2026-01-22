@@ -1,7 +1,7 @@
 # 📖 PredictionMarket Contracts - RUNBOOK
 
 > Commands and procedures for development, testing, and deployment.  
-> **Version:** 2.0 (Street Consensus)
+> **Version:** 3.8.1 (Optimized Governance)
 
 ---
 
@@ -193,7 +193,7 @@ forge verify-contract $CONTRACT_ADDRESS src/PredictionMarket.sol:PredictionMarke
 ## 🌐 Mainnet Deployment (BNB Chain)
 
 ### Pre-deployment Checklist
-- [ ] All 116 tests passing
+- [ ] All 214 tests passing
 - [ ] Code audited
 - [ ] MultiSig signers confirmed and keys secured
 - [ ] Treasury address confirmed
@@ -223,16 +223,37 @@ forge script script/Deploy.s.sol:DeployPredictionMarket \
 
 ---
 
-## 🔐 MultiSig Governance
+## 🔐 MultiSig Governance (v3.8.1)
 
-### Propose Action (any signer)
+> **Note:** v3.8.1 consolidated fee and heat level functions for bytecode optimization.  
+> See [GOVERNANCE.md](./GOVERNANCE.md) for comprehensive BscScan usage guide.
+
+### Direct Governance Functions (Recommended)
+
+The contract provides direct signer-callable functions. These are easier than raw `proposeAction()` calls:
+
 ```bash
-# Example: Set platform fee to 2% (200 bps)
-cast send $MARKET_ADDRESS "proposeAction(uint8,bytes)" \
-  0 \  # ActionType.SetFee
-  $(cast abi-encode "uint256" 200) \
+# Set any fee type (0=Platform, 1=Creator, 2=Resolution, 3=MarketCreation)
+cast send $MARKET_ADDRESS "proposeSetFee(uint8,uint256)" \
+  0 250 \  # Platform fee to 2.5%
   --rpc-url $RPC_URL \
   --private-key $SIGNER1_KEY
+
+# Set any heat level (0=Low, 1=Medium, 2=High, 3=Ultra)
+cast send $MARKET_ADDRESS "proposeSetHeatLevel(uint8,uint256)" \
+  0 3600 \  # Low heat level to 1 hour
+  --rpc-url $RPC_URL \
+  --private-key $SIGNER1_KEY
+
+# Set treasury address
+cast send $MARKET_ADDRESS "proposeSetTreasury(address)" \
+  0xNEW_TREASURY_ADDRESS \
+  --rpc-url $RPC_URL \
+  --private-key $SIGNER1_KEY
+
+# Pause/Unpause
+cast send $MARKET_ADDRESS "proposePause()" --rpc-url $RPC_URL --private-key $SIGNER1_KEY
+cast send $MARKET_ADDRESS "proposeUnpause()" --rpc-url $RPC_URL --private-key $SIGNER1_KEY
 ```
 
 ### Confirm Action (other signers)
@@ -248,20 +269,39 @@ cast send $MARKET_ADDRESS "confirmAction(uint256)" \
   --private-key $SIGNER3_KEY
 ```
 
-### Action Types
+### Action Types (v3.8.1)
 
-| Type | Enum Value | Data Encoding | Description |
-|------|------------|---------------|-------------|
-| SetFee | 0 | `abi.encode(uint256)` | Platform fee (0-500 bps) |
+| Type | Enum | Data Encoding | Description |
+|------|------|---------------|-------------|
+| SetFee | 0 | `abi.encode(FeeType, uint256)` | Combined fee setter |
 | SetMinBet | 1 | `abi.encode(uint256)` | Minimum bet amount |
 | SetTreasury | 2 | `abi.encode(address)` | Treasury address |
-| SetCreatorFee | 3 | `abi.encode(uint256)` | Creator fee (0-200 bps) |
-| SetResolutionFee | 4 | `abi.encode(uint256)` | Resolution fee (0-100 bps) |
+| Pause | 3 | `""` (empty) | Pause contract |
+| Unpause | 4 | `""` (empty) | Unpause contract |
 | SetMinBondFloor | 5 | `abi.encode(uint256)` | Min bond (0.01-0.1 BNB) |
 | SetDynamicBondBps | 6 | `abi.encode(uint256)` | Bond % of pool (50-500 bps) |
 | SetBondWinnerShare | 7 | `abi.encode(uint256)` | Winner share (2000-8000 bps) |
-| Pause | 8 | `""` (empty) | Pause contract |
-| Unpause | 9 | `""` (empty) | Unpause contract |
+| SetHeatLevel | 8 | `abi.encode(HeatLevel, uint256)` | Combined heat level setter |
+| SetProposerReward | 9 | `abi.encode(uint256)` | Proposer reward bps |
+| ReplaceSigner | 10 | `abi.encode(address, address)` | Replace multisig signer |
+
+### FeeType Enum (for SetFee)
+
+| FeeType | Value | Valid Range |
+|---------|-------|-------------|
+| Platform | 0 | 0-500 bps (0-5%) |
+| Creator | 1 | 0-200 bps (0-2%) |
+| Resolution | 2 | 0-100 bps (0-1%) |
+| MarketCreation | 3 | 0-0.1 BNB |
+
+### HeatLevel Enum (for SetHeatLevel)
+
+| HeatLevel | Value | Default Duration |
+|-----------|-------|-----------------|
+| Low | 0 | 1 hour (3600s) |
+| Medium | 1 | 30 min (1800s) |
+| High | 2 | 15 min (900s) |
+| Ultra | 3 | 5 min (300s) |
 
 ---
 
@@ -322,7 +362,7 @@ cast run $TX_HASH --rpc-url $RPC_URL -vvvv
 ### Pause Contract (requires 3/3 MultiSig)
 ```bash
 # Signer 1 proposes pause
-cast send $MARKET_ADDRESS "proposeAction(uint8,bytes)" 8 "" \
+cast send $MARKET_ADDRESS "proposePause()" \
   --rpc-url $RPC_URL --private-key $SIGNER1_KEY
 
 # Signer 2 confirms
@@ -335,7 +375,7 @@ cast send $MARKET_ADDRESS "confirmAction(uint256)" $ACTION_ID \
 ```
 
 ### Unpause Contract
-Same as pause but with ActionType 9 (Unpause).
+Same as pause but use `proposeUnpause()`.
 
 ---
 
@@ -388,12 +428,13 @@ cast send $MARKET "claim(uint256)" $ID
 ```
 contracts/
 ├── src/
-│   └── PredictionMarket.sol    # Main contract
+│   └── PredictionMarket.sol    # Main contract (v3.8.1)
 ├── test/
-│   ├── PredictionMarket.t.sol       # Unit tests (52)
-│   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests (29)
-│   ├── PumpDump.t.sol               # Economics tests (31)
-│   ├── VulnerabilityCheck.t.sol     # Security tests (4)
+│   ├── PredictionMarket.t.sol       # Unit tests
+│   ├── PredictionMarket.fuzz.t.sol  # Fuzz tests  
+│   ├── PumpDump.t.sol               # Economics tests
+│   ├── PullPattern.t.sol            # Pull pattern tests
+│   ├── VulnerabilityCheck.t.sol     # Security tests
 │   └── helpers/
 │       └── TestHelper.sol           # Test utilities & mocks
 ├── script/
@@ -401,7 +442,11 @@ contracts/
 ├── lib/                             # Dependencies (forge-std, openzeppelin)
 ├── foundry.toml                     # Foundry config
 ├── remappings.txt                   # Import remappings
-└── RUNBOOK.md                       # This file
+├── RUNBOOK.md                       # This file
+├── GOVERNANCE.md                    # BscScan governance guide
+├── CHANGELOG.md                     # Version history
+├── AUDIT.md                         # Security analysis
+└── PROJECT_CONTEXT.md               # Project overview
 ```
 
 ---

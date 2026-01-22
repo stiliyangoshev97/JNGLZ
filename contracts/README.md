@@ -6,12 +6,20 @@
 [![Tests](https://img.shields.io/badge/tests-214%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Testnet](https://img.shields.io/badge/BNB%20Testnet-ready-yellow)]()
-[![Version](https://img.shields.io/badge/version-v3.8.0-blue)]()
+[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-green)]()
+[![Version](https://img.shields.io/badge/version-v3.8.1-blue)]()
 
 ---
 
-## ⚠️ CRITICAL: v3.8.0 Required
+## 🚀 Current Deployment
+
+| Network | Address | Status |
+|---------|---------|--------|
+| **BNB Testnet** | [`0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`](https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5) | ✅ Verified |
+
+---
+
+## ⚠️ CRITICAL: v3.8.1 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -27,49 +35,68 @@
 | v3.6.1 | ⚠️ DEPRECATED | **One-Sided Market & Emergency Refund Bypass Bugs** |
 | v3.6.2 | ⚠️ DEPRECATED | **Jury Fees Gas Griefing Bug (>4,600 voters bricks market)** |
 | v3.7.0 | ⚠️ DEPRECATED | **SweepFunds removed, jury fees Pull Pattern** |
-| **v3.8.0** | ✅ **CURRENT** | **Governance UX Overhaul - Individual propose functions** |
+| v3.8.0 | ❌ NOT DEPLOYED | **Contract size exceeded EVM limit (26,340 > 24,576 bytes)** |
+| **v3.8.1** | ✅ **DEPLOYED** | **Contract size optimization - consolidated governance functions** |
 
 ---
 
-## 🆕 v3.8.0: Governance UX Overhaul
+## 🆕 v3.8.1: Contract Size Optimization
 
-**Released:** January 19, 2026
+**Released:** January 22, 2026
 
 ### Problem Solved
 
-The old governance system required ABI-encoding parameters manually:
+v3.8.0 had 18 individual propose functions which exceeded the EVM bytecode limit:
+- v3.8.0: 26,340 bytes (OVER LIMIT - couldn't deploy!)
+- **v3.8.1: 23,316 bytes ✅** (1,260 bytes margin)
+
+### Consolidated Functions
+
+**Fees:** 4 functions → 1
 ```solidity
-// OLD: Nightmare to use - had to remember action type numbers and encode bytes
-proposeAction(ActionType.SetMarketCreationFee, abi.encode(0.01 ether))
+// OLD (v3.8.0)
+proposeSetFee(newValue)
+proposeSetCreatorFee(newValue)
+proposeSetResolutionFee(newValue)
+proposeSetMarketCreationFee(newValue)
+
+// NEW (v3.8.1) - Combined with FeeType enum
+proposeSetFee(FeeType.Platform, newValue)      // feeType = 0
+proposeSetFee(FeeType.Creator, newValue)       // feeType = 1
+proposeSetFee(FeeType.Resolution, newValue)    // feeType = 2
+proposeSetFee(FeeType.MarketCreation, newValue) // feeType = 3
 ```
 
-### New System (v3.8.0)
-
+**Heat Levels:** 5 functions → 1
 ```solidity
-// NEW: Human-readable, type-safe, works directly in any wallet
-proposeSetMarketCreationFee(0.01 ether)
+// OLD (v3.8.0)
+proposeSetHeatLevelCrack(newValue)
+proposeSetHeatLevelHigh(newValue)
+proposeSetHeatLevelPro(newValue)
+proposeSetHeatLevelApex(newValue)
+proposeSetHeatLevelCore(newValue)
+
+// NEW (v3.8.1) - Combined with HeatLevel enum
+proposeSetHeatLevel(HeatLevel.CRACK, newValue)  // level = 0
+proposeSetHeatLevel(HeatLevel.HIGH, newValue)   // level = 1
+proposeSetHeatLevel(HeatLevel.PRO, newValue)    // level = 2
+proposeSetHeatLevel(HeatLevel.APEX, newValue)   // level = 3
+proposeSetHeatLevel(HeatLevel.CORE, newValue)   // level = 4
 ```
 
-### All 18 Propose Functions
+### All 11 Propose Functions (v3.8.1)
 
 | Function | Parameters | Description |
 |----------|------------|-------------|
-| `proposeSetFee(uint256)` | Fee in BPS (max 500) | Platform fee |
+| `proposeSetFee(FeeType, uint256)` | Type (0-3) + value | Combined fee setting |
 | `proposeSetMinBet(uint256)` | Wei amount | Minimum bet (0.001-0.1 BNB) |
 | `proposeSetTreasury(address)` | Address | Treasury recipient |
 | `proposePause()` | None | Emergency pause |
 | `proposeUnpause()` | None | Resume operations |
-| `proposeSetCreatorFee(uint256)` | Fee in BPS (max 200) | Creator fee |
-| `proposeSetResolutionFee(uint256)` | Fee in BPS (max 100) | Resolution fee |
 | `proposeSetMinBondFloor(uint256)` | Wei amount | Min bond (0.005-0.1 BNB) |
 | `proposeSetDynamicBondBps(uint256)` | BPS (50-500) | Dynamic bond % |
 | `proposeSetBondWinnerShare(uint256)` | BPS (2000-8000) | Winner's share |
-| `proposeSetMarketCreationFee(uint256)` | Wei amount (max 0.1 BNB) | Creation fee |
-| `proposeSetHeatLevelCrack(uint256)` | Virtual liquidity | CRACK tier |
-| `proposeSetHeatLevelHigh(uint256)` | Virtual liquidity | HIGH tier |
-| `proposeSetHeatLevelPro(uint256)` | Virtual liquidity | PRO tier |
-| `proposeSetHeatLevelApex(uint256)` | Virtual liquidity | APEX tier |
-| `proposeSetHeatLevelCore(uint256)` | Virtual liquidity | CORE tier |
+| `proposeSetHeatLevel(HeatLevel, uint256)` | Level (0-4) + value | Combined heat level |
 | `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
 | `proposeReplaceSigner(address, address)` | Old, new | Replace signer (2-of-3) |
 
@@ -80,6 +107,8 @@ proposeSetMarketCreationFee(0.01 ether)
 2. Signer2: confirmAction(actionId)  → (2/3 confirmations)  
 3. Signer3: confirmAction(actionId)  → auto-executes! ✅
 ```
+
+📋 **See [GOVERNANCE.md](GOVERNANCE.md) for detailed BscScan usage guide.**
 
 ### Key Benefits
 - ✅ **Type-safe** - Solidity validates at compile time

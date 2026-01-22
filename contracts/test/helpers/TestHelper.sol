@@ -257,14 +257,19 @@ contract TestHelper is Test {
 
     /**
      * @notice Internal helper to call the correct propose function based on action type
-     * @dev v3.8.0: Routes to individual propose functions
+     * @dev v3.8.1: Updated for combined fee and heat level functions
      */
     function _proposeByType(
         PredictionMarket.ActionType actionType,
         bytes memory data
     ) internal returns (uint256 actionId) {
         if (actionType == PredictionMarket.ActionType.SetFee) {
-            return market.proposeSetFee(abi.decode(data, (uint256)));
+            // v3.8.1: Combined fee setting - data should be (FeeType, uint256)
+            (PredictionMarket.FeeType feeType, uint256 value) = abi.decode(
+                data,
+                (PredictionMarket.FeeType, uint256)
+            );
+            return market.proposeSetFee(feeType, value);
         } else if (actionType == PredictionMarket.ActionType.SetMinBet) {
             return market.proposeSetMinBet(abi.decode(data, (uint256)));
         } else if (actionType == PredictionMarket.ActionType.SetTreasury) {
@@ -273,10 +278,6 @@ contract TestHelper is Test {
             return market.proposePause();
         } else if (actionType == PredictionMarket.ActionType.Unpause) {
             return market.proposeUnpause();
-        } else if (actionType == PredictionMarket.ActionType.SetCreatorFee) {
-            return market.proposeSetCreatorFee(abi.decode(data, (uint256)));
-        } else if (actionType == PredictionMarket.ActionType.SetResolutionFee) {
-            return market.proposeSetResolutionFee(abi.decode(data, (uint256)));
         } else if (actionType == PredictionMarket.ActionType.SetMinBondFloor) {
             return market.proposeSetMinBondFloor(abi.decode(data, (uint256)));
         } else if (
@@ -288,23 +289,13 @@ contract TestHelper is Test {
         ) {
             return
                 market.proposeSetBondWinnerShare(abi.decode(data, (uint256)));
-        } else if (
-            actionType == PredictionMarket.ActionType.SetMarketCreationFee
-        ) {
-            return
-                market.proposeSetMarketCreationFee(abi.decode(data, (uint256)));
-        } else if (
-            actionType == PredictionMarket.ActionType.SetHeatLevelCrack
-        ) {
-            return market.proposeSetHeatLevelCrack(abi.decode(data, (uint256)));
-        } else if (actionType == PredictionMarket.ActionType.SetHeatLevelHigh) {
-            return market.proposeSetHeatLevelHigh(abi.decode(data, (uint256)));
-        } else if (actionType == PredictionMarket.ActionType.SetHeatLevelPro) {
-            return market.proposeSetHeatLevelPro(abi.decode(data, (uint256)));
-        } else if (actionType == PredictionMarket.ActionType.SetHeatLevelApex) {
-            return market.proposeSetHeatLevelApex(abi.decode(data, (uint256)));
-        } else if (actionType == PredictionMarket.ActionType.SetHeatLevelCore) {
-            return market.proposeSetHeatLevelCore(abi.decode(data, (uint256)));
+        } else if (actionType == PredictionMarket.ActionType.SetHeatLevel) {
+            // v3.8.1: Combined heat level setting - data should be (HeatLevel, uint256)
+            (PredictionMarket.HeatLevel level, uint256 value) = abi.decode(
+                data,
+                (PredictionMarket.HeatLevel, uint256)
+            );
+            return market.proposeSetHeatLevel(level, value);
         } else if (
             actionType == PredictionMarket.ActionType.SetProposerReward
         ) {

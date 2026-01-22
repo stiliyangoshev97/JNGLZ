@@ -102,23 +102,24 @@ contract PredictionMarket is ReentrancyGuard {
         CORE // 🌌 Deep Space - 10000 virtual liquidity - maximum depth
     }
 
+    // v3.8.1: Fee types for combined proposeSetFee function
+    enum FeeType {
+        Platform, // Platform fee (max 5%)
+        Creator, // Creator fee (max 2%)
+        Resolution, // Resolution fee (max 1%)
+        MarketCreation // Market creation fee (max 0.1 BNB)
+    }
+
     enum ActionType {
-        SetFee,
+        SetFee, // v3.8.1: Combined fee setting (Platform, Creator, Resolution, MarketCreation)
         SetMinBet,
         SetTreasury,
         Pause,
         Unpause,
-        SetCreatorFee,
-        SetResolutionFee,
         SetMinBondFloor,
         SetDynamicBondBps,
         SetBondWinnerShare,
-        SetMarketCreationFee,
-        SetHeatLevelCrack, // NEW: Set CRACK level virtual liquidity
-        SetHeatLevelHigh, // NEW: Set HIGH level virtual liquidity
-        SetHeatLevelPro, // NEW: Set PRO level virtual liquidity
-        SetHeatLevelApex, // v3.5.0: Set APEX level virtual liquidity
-        SetHeatLevelCore, // v3.5.0: Set CORE level virtual liquidity
+        SetHeatLevel, // v3.8.1: Combined heat level setting (CRACK, HIGH, PRO, APEX, CORE)
         SetProposerReward, // v3.3.0: Set proposer reward percentage
         ReplaceSigner // v3.4.1: Emergency signer replacement (2-of-3)
     }
@@ -1762,17 +1763,30 @@ contract PredictionMarket is ReentrancyGuard {
 
     // ============ MultiSig Governance ============
 
-    // -------- Propose Functions (v3.8.0: Individual functions for UX) --------
+    // -------- Propose Functions (v3.8.1: Consolidated for contract size) --------
 
     /**
-     * @notice Propose to set platform fee
-     * @param newFee New platform fee in basis points (max 500 = 5%)
+     * @notice Propose to set a fee parameter
+     * @param feeType The type of fee to set (Platform=0, Creator=1, Resolution=2, MarketCreation=3)
+     * @param newValue The new fee value (BPS for Platform/Creator/Resolution, wei for MarketCreation)
+     * @dev Platform: max 500 (5%), Creator: max 200 (2%), Resolution: max 100 (1%), MarketCreation: max 0.1 BNB
      */
     function proposeSetFee(
-        uint256 newFee
+        FeeType feeType,
+        uint256 newValue
     ) external onlySigner returns (uint256 actionId) {
-        if (newFee > MAX_FEE_BPS) revert InvalidFee();
-        return _createAction(ActionType.SetFee, abi.encode(newFee));
+        // Validate based on fee type
+        if (feeType == FeeType.Platform) {
+            if (newValue > MAX_FEE_BPS) revert InvalidFee();
+        } else if (feeType == FeeType.Creator) {
+            if (newValue > MAX_CREATOR_FEE_BPS) revert InvalidFee();
+        } else if (feeType == FeeType.Resolution) {
+            if (newValue > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
+        } else if (feeType == FeeType.MarketCreation) {
+            if (newValue > MAX_MARKET_CREATION_FEE)
+                revert InvalidMarketCreationFee();
+        }
+        return _createAction(ActionType.SetFee, abi.encode(feeType, newValue));
     }
 
     /**
@@ -1816,28 +1830,6 @@ contract PredictionMarket is ReentrancyGuard {
      * @notice Propose to set creator fee
      * @param newCreatorFee New creator fee in basis points (max 200 = 2%)
      */
-    function proposeSetCreatorFee(
-        uint256 newCreatorFee
-    ) external onlySigner returns (uint256 actionId) {
-        if (newCreatorFee > MAX_CREATOR_FEE_BPS) revert InvalidFee();
-        return
-            _createAction(ActionType.SetCreatorFee, abi.encode(newCreatorFee));
-    }
-
-    /**
-     * @notice Propose to set resolution fee
-     * @param newResolutionFee New resolution fee in basis points (max 100 = 1%)
-     */
-    function proposeSetResolutionFee(
-        uint256 newResolutionFee
-    ) external onlySigner returns (uint256 actionId) {
-        if (newResolutionFee > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
-        return
-            _createAction(
-                ActionType.SetResolutionFee,
-                abi.encode(newResolutionFee)
-            );
-    }
 
     /**
      * @notice Propose to set minimum bond floor
@@ -1894,96 +1886,18 @@ contract PredictionMarket is ReentrancyGuard {
     }
 
     /**
-     * @notice Propose to set market creation fee
-     * @param newMarketCreationFee New market creation fee (max 0.1 BNB)
+     * @notice Propose to set heat level virtual liquidity
+     * @param level The heat level to set (CRACK=0, HIGH=1, PRO=2, APEX=3, CORE=4)
+     * @param newValue New virtual liquidity (1e18 - 15000e18)
      */
-    function proposeSetMarketCreationFee(
-        uint256 newMarketCreationFee
+    function proposeSetHeatLevel(
+        HeatLevel level,
+        uint256 newValue
     ) external onlySigner returns (uint256 actionId) {
-        if (newMarketCreationFee > MAX_MARKET_CREATION_FEE)
-            revert InvalidMarketCreationFee();
-        return
-            _createAction(
-                ActionType.SetMarketCreationFee,
-                abi.encode(newMarketCreationFee)
-            );
-    }
-
-    /**
-     * @notice Propose to set CRACK heat level virtual liquidity
-     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
-     */
-    function proposeSetHeatLevelCrack(
-        uint256 newHeatLevel
-    ) external onlySigner returns (uint256 actionId) {
-        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
+        if (newValue < MIN_HEAT_LEVEL || newValue > MAX_HEAT_LEVEL)
             revert InvalidFee();
         return
-            _createAction(
-                ActionType.SetHeatLevelCrack,
-                abi.encode(newHeatLevel)
-            );
-    }
-
-    /**
-     * @notice Propose to set HIGH heat level virtual liquidity
-     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
-     */
-    function proposeSetHeatLevelHigh(
-        uint256 newHeatLevel
-    ) external onlySigner returns (uint256 actionId) {
-        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
-            revert InvalidFee();
-        return
-            _createAction(
-                ActionType.SetHeatLevelHigh,
-                abi.encode(newHeatLevel)
-            );
-    }
-
-    /**
-     * @notice Propose to set PRO heat level virtual liquidity
-     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
-     */
-    function proposeSetHeatLevelPro(
-        uint256 newHeatLevel
-    ) external onlySigner returns (uint256 actionId) {
-        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
-            revert InvalidFee();
-        return
-            _createAction(ActionType.SetHeatLevelPro, abi.encode(newHeatLevel));
-    }
-
-    /**
-     * @notice Propose to set APEX heat level virtual liquidity
-     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
-     */
-    function proposeSetHeatLevelApex(
-        uint256 newHeatLevel
-    ) external onlySigner returns (uint256 actionId) {
-        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
-            revert InvalidFee();
-        return
-            _createAction(
-                ActionType.SetHeatLevelApex,
-                abi.encode(newHeatLevel)
-            );
-    }
-
-    /**
-     * @notice Propose to set CORE heat level virtual liquidity
-     * @param newHeatLevel New virtual liquidity (1e18 - 15000e18)
-     */
-    function proposeSetHeatLevelCore(
-        uint256 newHeatLevel
-    ) external onlySigner returns (uint256 actionId) {
-        if (newHeatLevel < MIN_HEAT_LEVEL || newHeatLevel > MAX_HEAT_LEVEL)
-            revert InvalidFee();
-        return
-            _createAction(
-                ActionType.SetHeatLevelCore,
-                abi.encode(newHeatLevel)
-            );
+            _createAction(ActionType.SetHeatLevel, abi.encode(level, newValue));
     }
 
     /**
@@ -2196,9 +2110,25 @@ contract PredictionMarket is ReentrancyGuard {
         action.executed = true;
 
         if (action.actionType == ActionType.SetFee) {
-            uint256 newFee = abi.decode(action.data, (uint256));
-            if (newFee > MAX_FEE_BPS) revert InvalidFee();
-            platformFeeBps = newFee;
+            // v3.8.1: Combined fee setting with FeeType
+            (FeeType feeType, uint256 newFee) = abi.decode(
+                action.data,
+                (FeeType, uint256)
+            );
+            if (feeType == FeeType.Platform) {
+                if (newFee > MAX_FEE_BPS) revert InvalidFee();
+                platformFeeBps = newFee;
+            } else if (feeType == FeeType.Creator) {
+                if (newFee > MAX_CREATOR_FEE_BPS) revert InvalidFee();
+                creatorFeeBps = newFee;
+            } else if (feeType == FeeType.Resolution) {
+                if (newFee > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
+                resolutionFeeBps = newFee;
+            } else if (feeType == FeeType.MarketCreation) {
+                if (newFee > MAX_MARKET_CREATION_FEE)
+                    revert InvalidMarketCreationFee();
+                marketCreationFee = newFee;
+            }
         } else if (action.actionType == ActionType.SetMinBet) {
             uint256 newMinBet = abi.decode(action.data, (uint256));
             if (newMinBet < MIN_BET_LOWER || newMinBet > MIN_BET_UPPER)
@@ -2214,14 +2144,6 @@ contract PredictionMarket is ReentrancyGuard {
         } else if (action.actionType == ActionType.Unpause) {
             paused = false;
             emit Unpaused(msg.sender);
-        } else if (action.actionType == ActionType.SetCreatorFee) {
-            uint256 newCreatorFee = abi.decode(action.data, (uint256));
-            if (newCreatorFee > MAX_CREATOR_FEE_BPS) revert InvalidFee();
-            creatorFeeBps = newCreatorFee;
-        } else if (action.actionType == ActionType.SetResolutionFee) {
-            uint256 newResolutionFee = abi.decode(action.data, (uint256));
-            if (newResolutionFee > MAX_RESOLUTION_FEE_BPS) revert InvalidFee();
-            resolutionFeeBps = newResolutionFee;
         } else if (action.actionType == ActionType.SetMinBondFloor) {
             uint256 newMinBondFloor = abi.decode(action.data, (uint256));
             if (
@@ -2243,46 +2165,25 @@ contract PredictionMarket is ReentrancyGuard {
                 newBondWinnerShare > BOND_WINNER_SHARE_UPPER
             ) revert InvalidBondWinnerShare();
             bondWinnerShareBps = newBondWinnerShare;
-        } else if (action.actionType == ActionType.SetMarketCreationFee) {
-            uint256 newMarketCreationFee = abi.decode(action.data, (uint256));
-            if (newMarketCreationFee > MAX_MARKET_CREATION_FEE)
-                revert InvalidMarketCreationFee();
-            marketCreationFee = newMarketCreationFee;
-        } else if (action.actionType == ActionType.SetHeatLevelCrack) {
-            uint256 newHeatLevelCrack = abi.decode(action.data, (uint256));
-            if (
-                newHeatLevelCrack < MIN_HEAT_LEVEL ||
-                newHeatLevelCrack > MAX_HEAT_LEVEL
-            ) revert InvalidFee();
-            heatLevelCrack = newHeatLevelCrack;
-        } else if (action.actionType == ActionType.SetHeatLevelHigh) {
-            uint256 newHeatLevelHigh = abi.decode(action.data, (uint256));
-            if (
-                newHeatLevelHigh < MIN_HEAT_LEVEL ||
-                newHeatLevelHigh > MAX_HEAT_LEVEL
-            ) revert InvalidFee();
-            heatLevelHigh = newHeatLevelHigh;
-        } else if (action.actionType == ActionType.SetHeatLevelPro) {
-            uint256 newHeatLevelPro = abi.decode(action.data, (uint256));
-            if (
-                newHeatLevelPro < MIN_HEAT_LEVEL ||
-                newHeatLevelPro > MAX_HEAT_LEVEL
-            ) revert InvalidFee();
-            heatLevelPro = newHeatLevelPro;
-        } else if (action.actionType == ActionType.SetHeatLevelApex) {
-            uint256 newHeatLevelApex = abi.decode(action.data, (uint256));
-            if (
-                newHeatLevelApex < MIN_HEAT_LEVEL ||
-                newHeatLevelApex > MAX_HEAT_LEVEL
-            ) revert InvalidFee();
-            heatLevelApex = newHeatLevelApex;
-        } else if (action.actionType == ActionType.SetHeatLevelCore) {
-            uint256 newHeatLevelCore = abi.decode(action.data, (uint256));
-            if (
-                newHeatLevelCore < MIN_HEAT_LEVEL ||
-                newHeatLevelCore > MAX_HEAT_LEVEL
-            ) revert InvalidFee();
-            heatLevelCore = newHeatLevelCore;
+        } else if (action.actionType == ActionType.SetHeatLevel) {
+            // v3.8.1: Combined heat level setting
+            (HeatLevel level, uint256 newValue) = abi.decode(
+                action.data,
+                (HeatLevel, uint256)
+            );
+            if (newValue < MIN_HEAT_LEVEL || newValue > MAX_HEAT_LEVEL)
+                revert InvalidFee();
+            if (level == HeatLevel.CRACK) {
+                heatLevelCrack = newValue;
+            } else if (level == HeatLevel.HIGH) {
+                heatLevelHigh = newValue;
+            } else if (level == HeatLevel.PRO) {
+                heatLevelPro = newValue;
+            } else if (level == HeatLevel.APEX) {
+                heatLevelApex = newValue;
+            } else if (level == HeatLevel.CORE) {
+                heatLevelCore = newValue;
+            }
         } else if (action.actionType == ActionType.SetProposerReward) {
             uint256 newProposerReward = abi.decode(action.data, (uint256));
             if (newProposerReward > MAX_PROPOSER_REWARD_BPS)
