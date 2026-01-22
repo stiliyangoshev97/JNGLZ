@@ -905,7 +905,272 @@ export function HowToPlayPage() {
             </div>
           </section>
 
-          {/* ===== HOW WINNINGS ARE DISTRIBUTED ===== */}
+          {/* ===== ONE-SIDED MARKETS ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-warning pl-4 mb-6">
+              ONE-SIDED MARKETS
+            </h2>
+            
+            <div className="bg-warning/10 border-2 border-warning p-6 mb-6">
+              <p className="text-warning font-black text-lg mb-4">WHAT IS A ONE-SIDED MARKET?</p>
+              
+              <div className="space-y-4 text-sm">
+                <p className="text-text-secondary">
+                  A <strong className="text-warning">one-sided market</strong> occurs when only one outcome has holders. For example:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-text-secondary">
+                  <li>Everyone bought <span className="text-yes">YES</span> shares, nobody holds <span className="text-no">NO</span></li>
+                  <li>Everyone bought <span className="text-no">NO</span> shares, nobody holds <span className="text-yes">YES</span></li>
+                  <li>Everyone sold all their shares (both sides empty)</li>
+                </ul>
+                
+                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
+                  <p className="text-white font-bold mb-2">Why is this a problem?</p>
+                  <p className="text-text-secondary">
+                    If only YES holders exist and YES wins → who pays them? There are no losers to fund the winners!
+                    The pool has BNB from YES buyers, but there's no "other side" to lose their stake.
+                  </p>
+                </div>
+
+                <div className="bg-no/10 p-4 border border-no mt-4">
+                  <p className="text-no font-bold mb-2">⚠️ ONE-SIDED MARKETS CANNOT BE RESOLVED</p>
+                  <p className="text-text-secondary">
+                    The smart contract <strong className="text-white">blocks proposals</strong> on one-sided markets. 
+                    Nobody can propose an outcome because there's no fair way to resolve it.
+                  </p>
+                  <p className="text-text-secondary mt-2">
+                    <strong className="text-cyber">Solution:</strong> Wait 24 hours after expiry and claim your <strong className="text-white">emergency refund</strong>. 
+                    You'll get back your proportional share of the pool.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== EMERGENCY REFUND ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-no pl-4 mb-6">
+              EMERGENCY REFUND
+            </h2>
+            
+            <div className="bg-no/10 border-2 border-no p-6 mb-6">
+              <p className="text-no font-black text-lg mb-4">WHEN MARKETS CAN'T BE RESOLVED</p>
+              
+              <div className="space-y-4 text-sm">
+                <p className="text-text-secondary">
+                  Sometimes a market cannot be resolved normally. In these cases, an <strong className="text-no">emergency refund</strong> becomes 
+                  available <strong className="text-white">24 hours after market expiry</strong>.
+                </p>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600">
+                  <p className="text-white font-bold mb-3">Emergency Refund Triggers:</p>
+                  <ol className="list-decimal list-inside space-y-3 text-text-secondary">
+                    <li>
+                      <strong className="text-warning">No Proposal Submitted</strong>
+                      <p className="ml-6 text-xs text-text-muted mt-1">
+                        24+ hours passed after expiry and nobody proposed an outcome. Market is stuck.
+                      </p>
+                    </li>
+                    <li>
+                      <strong className="text-warning">One-Sided Market</strong>
+                      <p className="ml-6 text-xs text-text-muted mt-1">
+                        Only YES or only NO holders exist. Proposals are blocked, emergency refund is the only option.
+                      </p>
+                    </li>
+                    <li>
+                      <strong className="text-warning">Voting Tie (50/50)</strong>
+                      <p className="ml-6 text-xs text-text-muted mt-1">
+                        Dispute vote ended in exact tie. Both bonds returned, market stays unresolved.
+                      </p>
+                    </li>
+                    <li>
+                      <strong className="text-warning">Contract Paused (Emergency)</strong>
+                      <p className="ml-6 text-xs text-text-muted mt-1">
+                        If admins pause the contract due to a critical issue, emergency refunds become available as an escape hatch.
+                      </p>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="bg-cyber/10 p-4 border border-cyber mt-4">
+                  <p className="text-cyber font-bold mb-2">HOW EMERGENCY REFUND WORKS</p>
+                  <div className="font-mono text-xs bg-dark-900/50 p-3 mb-3">
+                    Your Refund = (Your Total Shares / All Shares) × Pool Balance
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-text-secondary text-xs">
+                    <li>Your total shares = YES shares + NO shares combined</li>
+                    <li>Refund is <strong className="text-white">proportional</strong> to your position</li>
+                    <li>Fees already taken are <strong className="text-no">not refunded</strong></li>
+                    <li>You can only claim emergency refund <strong className="text-white">once per market</strong></li>
+                  </ul>
+                </div>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
+                  <p className="text-white font-bold mb-2">Example:</p>
+                  <div className="text-text-secondary space-y-2 text-xs">
+                    <p>Market expired 24+ hours ago with no proposal. Pool has <span className="text-cyber">5 BNB</span>.</p>
+                    <p>Total shares in market: <span className="text-white">500 YES + 300 NO = 800 total</span></p>
+                    <div className="mt-3 space-y-1">
+                      <p>• Alice holds <span className="text-yes">200 YES</span> → Refund: 5 × (200/800) = <span className="text-cyber">1.25 BNB</span></p>
+                      <p>• Bob holds <span className="text-yes">100 YES</span> + <span className="text-no">100 NO</span> → Refund: 5 × (200/800) = <span className="text-cyber">1.25 BNB</span></p>
+                      <p>• Carol holds <span className="text-no">200 NO</span> → Refund: 5 × (200/800) = <span className="text-cyber">1.25 BNB</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== FINALIZATION ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-yes pl-4 mb-6">
+              FINALIZATION PROCESS
+            </h2>
+            
+            <div className="bg-yes/10 border-2 border-yes p-6 mb-6">
+              <p className="text-yes font-black text-lg mb-4">HOW MARKETS GET FINALIZED</p>
+              
+              <div className="space-y-4 text-sm">
+                <p className="text-text-secondary">
+                  After a proposal is submitted (and optionally disputed/voted), someone must call <strong className="text-white">Finalize</strong> to 
+                  officially resolve the market and enable claims.
+                </p>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600">
+                  <p className="text-white font-bold mb-3">Finalization Scenarios:</p>
+                  
+                  <div className="space-y-4">
+                    {/* Scenario 1: No Dispute */}
+                    <div className="p-3 bg-dark-800 border-l-4 border-yes">
+                      <p className="text-yes font-bold text-xs mb-1">SCENARIO 1: No Dispute</p>
+                      <p className="text-text-secondary text-xs">
+                        Proposal submitted → 30 minutes pass with no dispute → <strong className="text-white">Anyone can finalize</strong>
+                      </p>
+                      <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
+                        <li>Market resolves to the proposed outcome</li>
+                        <li>Proposer gets bond back + 0.5% reward</li>
+                        <li>Winners can now claim their payouts</li>
+                      </ul>
+                    </div>
+
+                    {/* Scenario 2: Disputed - Proposer Wins */}
+                    <div className="p-3 bg-dark-800 border-l-4 border-cyber">
+                      <p className="text-cyber font-bold text-xs mb-1">SCENARIO 2: Disputed → Proposer Wins Vote</p>
+                      <p className="text-text-secondary text-xs">
+                        Proposal disputed → 1-hour voting → Proposer gets more votes → <strong className="text-white">Anyone can finalize</strong>
+                      </p>
+                      <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
+                        <li>Market resolves to <strong>original proposal</strong></li>
+                        <li>Proposer gets bond + 50% of disputer's bond + 0.5% reward</li>
+                        <li>Disputer loses entire bond</li>
+                        <li>Winning voters split 50% of disputer's bond</li>
+                      </ul>
+                    </div>
+
+                    {/* Scenario 3: Disputed - Disputer Wins */}
+                    <div className="p-3 bg-dark-800 border-l-4 border-no">
+                      <p className="text-no font-bold text-xs mb-1">SCENARIO 3: Disputed → Disputer Wins Vote</p>
+                      <p className="text-text-secondary text-xs">
+                        Proposal disputed → 1-hour voting → Disputer gets more votes → <strong className="text-white">Anyone can finalize</strong>
+                      </p>
+                      <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
+                        <li>Market resolves to <strong>OPPOSITE</strong> of original proposal</li>
+                        <li>Disputer gets bond + 50% of proposer's bond</li>
+                        <li>Proposer loses entire bond (no reward)</li>
+                        <li>Winning voters split 50% of proposer's bond</li>
+                      </ul>
+                    </div>
+
+                    {/* Scenario 4: Tie Vote */}
+                    <div className="p-3 bg-dark-800 border-l-4 border-warning">
+                      <p className="text-warning font-bold text-xs mb-1">SCENARIO 4: Voting Tie (50/50)</p>
+                      <p className="text-text-secondary text-xs">
+                        Exact same votes on both sides → <strong className="text-white">Market NOT resolved</strong>
+                      </p>
+                      <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
+                        <li>Both proposer and disputer get bonds returned</li>
+                        <li>No jury fees distributed</li>
+                        <li>Emergency refund becomes available after 24h from expiry</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-cyber/10 p-4 border border-cyber mt-4">
+                  <p className="text-cyber font-bold mb-2">WHO CAN FINALIZE?</p>
+                  <p className="text-text-secondary text-xs">
+                    <strong className="text-white">Anyone</strong> can call finalize once the conditions are met (dispute window passed, or voting ended). 
+                    The finalizer doesn't receive any special reward — it's a public service to complete the market.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== POOL LIQUIDITY & SELLING ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-purple-500 pl-4 mb-6">
+              POOL LIQUIDITY & SELLING
+            </h2>
+            
+            <div className="bg-purple-500/10 border-2 border-purple-500 p-6 mb-6">
+              <p className="text-purple-400 font-black text-lg mb-4">UNDERSTANDING SELL LIMITS</p>
+              
+              <div className="space-y-4 text-sm">
+                <p className="text-text-secondary">
+                  JNGLZ uses an <strong className="text-purple-400">Automated Market Maker (AMM)</strong> for instant trading. 
+                  When you sell shares, you receive BNB <strong className="text-white">from the pool</strong>. 
+                  But what if the pool doesn't have enough BNB?
+                </p>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600">
+                  <p className="text-white font-bold mb-2">The Pool Balance Rule</p>
+                  <p className="text-text-secondary text-xs">
+                    You can only sell shares if the pool has enough BNB to pay you. 
+                    The <strong className="text-warning">maximum you can sell</strong> is limited by the current pool balance.
+                  </p>
+                </div>
+
+                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
+                  <p className="text-white font-bold mb-2">When Does This Happen?</p>
+                  <p className="text-text-secondary text-xs mb-3">
+                    In low-liquidity markets (few traders), partial sells can drain the pool:
+                  </p>
+                  <div className="bg-dark-800 p-3 text-xs font-mono space-y-2">
+                    <p className="text-text-muted">Example scenario:</p>
+                    <p>1. You buy 0.1 BNB → Pool has ~0.098 BNB, you get 20 shares</p>
+                    <p>2. You sell 10 shares → You get ~0.053 BNB, pool has ~0.045 BNB left</p>
+                    <p>3. You try to sell remaining 10 shares...</p>
+                    <p className="text-warning">   ⚠️ But 10 shares are "worth" ~0.05 BNB, pool only has 0.045!</p>
+                    <p className="text-cyber">   → You can only sell ~8.8 shares (what the pool can afford)</p>
+                  </div>
+                </div>
+
+                <div className="bg-yes/10 p-4 border border-yes mt-4">
+                  <p className="text-yes font-bold mb-2">✓ THIS IS NORMAL AMM BEHAVIOR</p>
+                  <p className="text-text-secondary text-xs">
+                    This is not a bug — it's how constant-product AMMs work. In active markets with multiple traders, 
+                    the pool stays healthy. This limitation mainly affects:
+                  </p>
+                  <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
+                    <li>Very new markets with few trades</li>
+                    <li>Single traders who buy large, sell partial, then try to sell more</li>
+                  </ul>
+                </div>
+
+                <div className="bg-cyber/10 p-4 border border-cyber mt-4">
+                  <p className="text-cyber font-bold mb-2">SOLUTIONS</p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-1">
+                    <li><strong className="text-white">Wait for others to trade</strong> — any buy (YES or NO) adds BNB to the pool</li>
+                    <li><strong className="text-white">Sell all at once</strong> — if you buy and immediately sell ALL shares, it usually works</li>
+                    <li><strong className="text-white">Hold until resolution</strong> — if your side wins, you claim from the full pool</li>
+                    <li><strong className="text-white">Emergency refund</strong> — if market becomes one-sided (no buyers on opposite side), 
+                      you can claim a proportional refund 24h after expiry</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-yes pl-4 mb-6">
               HOW WINNINGS ARE DISTRIBUTED

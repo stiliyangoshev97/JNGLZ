@@ -179,15 +179,20 @@ export function SlippageSettings({ onSlippageChange, className }: SlippageSettin
             {/* Custom Input */}
             <div className="flex items-center gap-2">
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 min="0"
                 max="50"
-                step="0.1"
                 placeholder="Custom"
                 value={customInput}
-                onChange={(e) => handleCustomChange(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(',', '.');
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    handleCustomChange(value);
+                  }
+                }}
                 className={cn(
-                  'flex-1 px-2 py-1.5 text-xs font-mono',
+                  'w-20 px-2 py-1.5 text-xs font-mono text-center',
                   'bg-dark-900 border border-dark-600',
                   'focus:outline-none focus:border-cyber',
                   isCustom && 'border-cyber'

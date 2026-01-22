@@ -120,18 +120,29 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
     return maxSellableShares < currentShares;
   }, [currentShares, maxSellableShares]);
 
-  // Check if selling all shares
+  // Check if selling ALL shares (true full position exit)
   const isSellAll = useMemo(() => {
     if (action !== 'sell' || !amount || currentShares === 0n) return false;
     try {
       const sharesToSell = parseEther(amount);
-      // Use maxSellableShares if pool is limited
-      const effectiveMax = maxSellableShares !== undefined ? maxSellableShares : currentShares;
-      return sharesToSell >= effectiveMax;
+      // Only true when selling entire position (not just pool max)
+      return sharesToSell >= currentShares;
     } catch {
       return false;
     }
-  }, [action, amount, currentShares, maxSellableShares]);
+  }, [action, amount, currentShares]);
+
+  // Check if selling pool maximum (when pool-limited and selling max possible)
+  const isSellingPoolMax = useMemo(() => {
+    if (action !== 'sell' || !amount || !isPoolLimited || maxSellableShares === undefined) return false;
+    try {
+      const sharesToSell = parseEther(amount);
+      // True when selling the pool max but NOT the full position
+      return sharesToSell >= maxSellableShares && sharesToSell < currentShares;
+    } catch {
+      return false;
+    }
+  }, [action, amount, isPoolLimited, maxSellableShares, currentShares]);
 
   // Reset form on success
   useEffect(() => {
@@ -415,9 +426,9 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               </span>
             </div>
             {/* Minimum output with slippage */}
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-text-muted">Min. after slippage ({slippagePercent}%)</span>
-              <span className="font-mono text-text-secondary">
+            <div className="flex justify-between text-xs mt-1 gap-2">
+              <span className="text-text-muted whitespace-nowrap">Min. after slippage ({slippagePercent}%)</span>
+              <span className="font-mono text-text-secondary text-right flex-shrink-0">
                 {action === 'buy' && previewBuyData
                   ? formatShares(applySlippage(previewBuyData as bigint, slippageBps))
                   : action === 'sell' && previewSellData
@@ -436,15 +447,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
           </div>
         )}
 
-        {/* Sell All Warning */}
+        {/* Sell All Warning - true full position exit */}
         {isSellAll && (
           <div className="p-3 bg-warning/10 border border-warning text-sm">
             <div className="flex gap-2">
               <span className="text-warning">⚠️</span>
               <div>
-                <p className="text-warning font-bold text-xs mb-1">SELLING ALL SHARES</p>
+                <p className="text-warning font-bold text-xs mb-1">EXITING FULL POSITION</p>
                 <p className="text-text-secondary text-xs">
-                  You will exit your position and receive BNB now.
+                  You will sell all your shares and receive BNB now.
                   You will NOT receive any payout when the market resolves.
                 </p>
               </div>
@@ -452,17 +463,17 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
           </div>
         )}
 
-        {/* Pool Limited Info - explain remaining shares */}
-        {action === 'sell' && isPoolLimited && !isSellAll && (
+        {/* Selling Pool Maximum - when pool limits but user is selling max possible */}
+        {isSellingPoolMax && (
           <div className="p-3 bg-cyber/10 border border-cyber text-sm">
             <div className="flex gap-2">
-              <span className="text-cyber">💡</span>
+              <span className="text-cyber">⚠️</span>
               <div>
-                <p className="text-cyber font-bold text-xs mb-1">PARTIAL SELL DUE TO POOL LIQUIDITY</p>
+                <p className="text-cyber font-bold text-xs mb-1">SELLING MAXIMUM POSSIBLE</p>
                 <p className="text-text-secondary text-xs">
-                  You can sell up to {maxSellableShares ? formatShares(maxSellableShares) : '0'} shares now. 
-                  Your remaining shares stay in the market - if {direction.toUpperCase()} wins, 
-                  you'll receive the full payout for those shares!
+                  Pool liquidity limits this sale to {maxSellableShares ? formatShares(maxSellableShares) : '0'} shares.
+                  You'll keep {currentShares && maxSellableShares ? formatShares(currentShares - maxSellableShares) : '0'} shares - 
+                  if {direction.toUpperCase()} wins, you'll receive the full payout for those!
                 </p>
               </div>
             </div>
