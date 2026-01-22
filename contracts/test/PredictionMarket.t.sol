@@ -329,8 +329,8 @@ contract PredictionMarketTest is TestHelper {
 
         // Update CRACK heat level via MultiSig
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetHeatLevelCrack,
-            abi.encode(newCrackValue)
+            PredictionMarket.ActionType.SetHeatLevel,
+            abi.encode(PredictionMarket.HeatLevel.CRACK, newCrackValue)
         );
 
         assertEq(
@@ -384,11 +384,11 @@ contract PredictionMarketTest is TestHelper {
     }
 
     function test_HeatLevel_InvalidValueReverts() public {
-        // v3.8.0: Validation now happens at propose time
+        // v3.8.1: Validation now happens at propose time with combined function
         // Try to set heat level below minimum (1e18)
         vm.prank(signer1);
         vm.expectRevert(PredictionMarket.InvalidFee.selector);
-        market.proposeSetHeatLevelCrack(0.5e18);
+        market.proposeSetHeatLevel(PredictionMarket.HeatLevel.CRACK, 0.5e18);
     }
 
     // ============================================
@@ -715,8 +715,8 @@ contract PredictionMarketTest is TestHelper {
 
         // MultiSig changes CRACK default to 100e18
         executeMultiSigAction(
-            PredictionMarket.ActionType.SetHeatLevelCrack,
-            abi.encode(100e18)
+            PredictionMarket.ActionType.SetHeatLevel,
+            abi.encode(PredictionMarket.HeatLevel.CRACK, 100e18)
         );
 
         // Verify global default changed

@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 22, 2026  
-> **Status:** ✅ Smart Contracts v3.8.0 READY (214 tests)
+> **Status:** ✅ Smart Contracts v3.8.1 DEPLOYED (214 tests)
 
 ---
 
@@ -10,7 +10,8 @@
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.8.0** | ✅ **CURRENT** | Governance UX Overhaul - Individual Propose Functions |
+| **v3.8.1** | ✅ **DEPLOYED** | Contract Size Optimization - Consolidated Governance Functions |
+| v3.8.0 | ❌ NOT DEPLOYED | Contract exceeded EVM size limit (26,340 > 24,576 bytes) |
 | v3.7.0 | ⚠️ DEPRECATED | Jury Fees Pull Pattern + SweepFunds REMOVED |
 | v3.6.2 | ⚠️ DEPRECATED | One-Sided Market & Emergency Bypass Fixes - **HAS GAS GRIEFING BUG** |
 | v3.6.1 | ⚠️ DEPRECATED | Dispute Window Edge Case Fix |
@@ -18,13 +19,13 @@
 | v3.5.0 | ⚠️ DEPRECATED | 5 Heat Levels (10x liquidity) - **HAS CRITICAL BUG** |
 | v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Current Deployment (v3.6.1 - TO BE REPLACED)
-- **Address:** `0x96662c54622304804065210F16483C5f2F3b6a75`
+### Current Deployment (v3.8.1)
+- **Address:** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 85135831
-- **BscScan:** https://testnet.bscscan.com/address/0x96662c54622304804065210f16483c5f2f3b6a75
+- **Block:** 85941857
+- **BscScan:** https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5
 - **Verified:** ✅ Yes
-- **⚠️ Note:** Pending v3.8.0 deployment
+- **Contract Size:** 23,316 bytes (1,260 bytes margin under 24KB limit)
 
 ---
 
@@ -96,28 +97,46 @@
 
 ---
 
-## 🎮 Governance System (v3.8.0)
+## 🎮 Governance System (v3.8.1)
 
-### Individual Propose Functions
+### Consolidated Propose Functions
 
-Instead of generic `proposeAction(ActionType, bytes)`, v3.8.0 has 18 typed functions:
+v3.8.1 consolidates governance functions to fit within the EVM bytecode limit (24KB).
 
 | Function | Parameters | Description |
 |----------|------------|-------------|
-| `proposeSetFee(uint256)` | BPS (max 500) | Platform fee |
+| `proposeSetFee(FeeType, uint256)` | Type (0-3) + value | Combined fee setting |
 | `proposeSetMinBet(uint256)` | Wei | Minimum bet |
 | `proposeSetTreasury(address)` | Address | Treasury |
 | `proposePause()` | None | Emergency pause |
 | `proposeUnpause()` | None | Resume |
-| `proposeSetCreatorFee(uint256)` | BPS (max 200) | Creator fee |
-| `proposeSetResolutionFee(uint256)` | BPS (max 100) | Resolution fee |
 | `proposeSetMinBondFloor(uint256)` | Wei | Min bond |
 | `proposeSetDynamicBondBps(uint256)` | BPS | Dynamic bond |
 | `proposeSetBondWinnerShare(uint256)` | BPS | Winner share |
-| `proposeSetMarketCreationFee(uint256)` | Wei | Creation fee |
-| `proposeSetHeatLevel*(uint256)` | Wei | Heat levels (5 functions) |
+| `proposeSetHeatLevel(HeatLevel, uint256)` | Level (0-4) + value | Combined heat level |
 | `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
-| `proposeReplaceSigner(address, address)` | Old, new | Replace signer |
+| `proposeReplaceSigner(address, address)` | Old, new | Replace signer (2-of-3) |
+
+### FeeType Enum
+```solidity
+enum FeeType {
+    Platform,      // 0 - Platform fee (max 5%)
+    Creator,       // 1 - Creator fee (max 2%)
+    Resolution,    // 2 - Resolution fee (max 1%)
+    MarketCreation // 3 - Market creation fee (max 0.1 BNB)
+}
+```
+
+### HeatLevel Enum
+```solidity
+enum HeatLevel {
+    CRACK,  // 0 - ☢️ Degen Flash
+    HIGH,   // 1 - 🔥 Street Fight (DEFAULT)
+    PRO,    // 2 - 🧊 Whale Pond
+    APEX,   // 3 - 🏛️ Institution
+    CORE    // 4 - 🌌 Deep Space
+}
+```
 
 ### Workflow
 ```
@@ -125,6 +144,8 @@ Instead of generic `proposeAction(ActionType, bytes)`, v3.8.0 has 18 typed funct
 2. Signer2: confirmAction(actionId)  → (2/3)
 3. Signer3: confirmAction(actionId)  → auto-executes ✅
 ```
+
+📋 See `GOVERNANCE.md` for detailed BscScan usage guide.
 
 ---
 

@@ -5,7 +5,117 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.1] - 2026-01-22
+
+### DEPLOYED ✅
+- **Address:** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Block:** 85941857
+- **BscScan:** https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5
+- **Verified:** ✅ Yes
+- **Contract Size:** 23,316 bytes (under 24KB limit!)
+
+### Changed
+
+#### 🔧 CONTRACT SIZE OPTIMIZATION: Consolidated Governance Functions
+The v3.8.0 contract with 18 individual propose functions exceeded the EVM bytecode limit (24,576 bytes). 
+v3.8.1 consolidates these functions to reduce bytecode size while maintaining usability.
+
+**Problem Solved:**
+- v3.8.0 contract size: 26,340 bytes (OVER LIMIT - couldn't deploy!)
+- v3.8.1 contract size: 23,316 bytes ✅ (1,260 bytes margin)
+
+**Consolidated Functions:**
+
+| Old Functions (v3.8.0) | New Function (v3.8.1) |
+|------------------------|----------------------|
+| `proposeSetFee(uint256)` | `proposeSetFee(FeeType, uint256)` |
+| `proposeSetCreatorFee(uint256)` | `proposeSetFee(FeeType.Creator, value)` |
+| `proposeSetResolutionFee(uint256)` | `proposeSetFee(FeeType.Resolution, value)` |
+| `proposeSetMarketCreationFee(uint256)` | `proposeSetFee(FeeType.MarketCreation, value)` |
+
+| Old Functions (v3.8.0) | New Function (v3.8.1) |
+|------------------------|----------------------|
+| `proposeSetHeatLevelCrack(uint256)` | `proposeSetHeatLevel(HeatLevel.CRACK, value)` |
+| `proposeSetHeatLevelHigh(uint256)` | `proposeSetHeatLevel(HeatLevel.HIGH, value)` |
+| `proposeSetHeatLevelPro(uint256)` | `proposeSetHeatLevel(HeatLevel.PRO, value)` |
+| `proposeSetHeatLevelApex(uint256)` | `proposeSetHeatLevel(HeatLevel.APEX, value)` |
+| `proposeSetHeatLevelCore(uint256)` | `proposeSetHeatLevel(HeatLevel.CORE, value)` |
+
+### Added
+
+#### 📋 New Enums for Combined Functions
+
+**FeeType enum:**
+```solidity
+enum FeeType {
+    Platform,      // Platform fee (max 5%)
+    Creator,       // Creator fee (max 2%)
+    Resolution,    // Resolution fee (max 1%)
+    MarketCreation // Market creation fee (max 0.1 BNB)
+}
+```
+
+**Usage Example (BscScan):**
+```
+proposeSetFee(0, 150)  // Set Platform fee to 1.5%
+proposeSetFee(1, 100)  // Set Creator fee to 1%
+proposeSetFee(3, 10000000000000000)  // Set Market Creation fee to 0.01 BNB
+```
+
+**HeatLevel enum (already existed, now used in governance):**
+```
+proposeSetHeatLevel(0, 100000000000000000000)  // Set CRACK to 100
+proposeSetHeatLevel(1, 300000000000000000000)  // Set HIGH to 300
+```
+
+### Updated ActionType Enum
+
+```solidity
+enum ActionType {
+    SetFee,           // Combined fee setting (Platform, Creator, Resolution, MarketCreation)
+    SetMinBet,
+    SetTreasury,
+    Pause,
+    Unpause,
+    SetMinBondFloor,
+    SetDynamicBondBps,
+    SetBondWinnerShare,
+    SetHeatLevel,     // Combined heat level setting (CRACK, HIGH, PRO, APEX, CORE)
+    SetProposerReward,
+    ReplaceSigner
+}
+```
+
+### Documentation
+
+- ✅ Added `GOVERNANCE.md` - Comprehensive guide for using governance functions via BscScan
+- ✅ Wei conversion cheat sheets
+- ✅ Emergency procedures documentation
+
+### Remaining Functions (11 total)
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `proposeSetFee(FeeType, uint256)` | Type + value | Combined fee setting |
+| `proposeSetMinBet(uint256)` | Wei amount | Minimum bet (0.001-0.1 BNB) |
+| `proposeSetTreasury(address)` | Address | Treasury recipient |
+| `proposePause()` | None | Emergency pause |
+| `proposeUnpause()` | None | Resume operations |
+| `proposeSetMinBondFloor(uint256)` | Wei amount | Min bond (0.005-0.1 BNB) |
+| `proposeSetDynamicBondBps(uint256)` | BPS (50-500) | Dynamic bond % |
+| `proposeSetBondWinnerShare(uint256)` | BPS (2000-8000) | Winner's share |
+| `proposeSetHeatLevel(HeatLevel, uint256)` | Level + value | Combined heat level |
+| `proposeSetProposerReward(uint256)` | BPS (max 200) | Proposer reward |
+| `proposeReplaceSigner(address, address)` | Old, new | Replace signer (2-of-3) |
+
+---
+
 ## [3.8.0] - 2026-01-19
+
+### NOT DEPLOYED ❌
+- Contract size exceeded EVM limit (26,340 > 24,576 bytes)
+- Superseded by v3.8.1
 
 ### NOT YET DEPLOYED ⏳
 - Ready for deployment to BNB Testnet

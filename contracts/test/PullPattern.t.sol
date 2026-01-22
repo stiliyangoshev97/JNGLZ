@@ -522,7 +522,10 @@ contract PullPatternTest is TestHelper {
     function test_OtherActions_StillRequire3of3() public {
         // Test that SetFee still requires 3-of-3
         vm.prank(signer1);
-        uint256 actionId = market.proposeSetFee(200);
+        uint256 actionId = market.proposeSetFee(
+            PredictionMarket.FeeType.Platform,
+            200
+        );
 
         vm.prank(signer2);
         market.confirmAction(actionId);
