@@ -138,6 +138,13 @@ export const PREDICTION_MARKET_ABI = [
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    name: 'paused',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
+  },
 
   // ===== WRITE FUNCTIONS =====
   {

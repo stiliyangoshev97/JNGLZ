@@ -36,6 +36,24 @@ export function useProposerRewardBps() {
 }
 
 /**
+ * Check if the contract is paused (emergency mode)
+ * When paused, emergency refunds are allowed even with active proposals
+ */
+export function useContractPaused() {
+  const result = useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: 'paused',
+  });
+
+  return {
+    isPaused: result.data as boolean | undefined,
+    isLoading: result.isLoading,
+    refetch: result.refetch,
+  };
+}
+
+/**
  * Get YES price for a market
  */
 export function useYesPrice(marketId: bigint | undefined) {

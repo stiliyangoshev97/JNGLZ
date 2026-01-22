@@ -17,6 +17,7 @@ export {
 export {
   useMarketCreationFee,
   useProposerRewardBps,
+  useContractPaused,
   useYesPrice,
   useNoPrice,
   useMarketPrices,
