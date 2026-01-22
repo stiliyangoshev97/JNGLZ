@@ -2300,6 +2300,22 @@ Street Consensus is a **decentralized resolution mechanism** where the bettors t
 | ❌ Disputed, disputer wins | Loses bond | Bond + 50% of proposer | 50% of proposer bond | **Disputer rewarded** |
 | ⚖️ Tie (0 vs 0 votes) | Gets bond back | Gets bond back | N/A | **Market resets** |
 
+### When Can `finalizeMarket()` Be Called?
+
+The `finalizeMarket()` function can only be called after the appropriate waiting periods have passed. This table shows exactly when finalization is allowed:
+
+| Market Status | Can Finalize? | Error if Called | Explanation |
+|---------------|---------------|-----------------|-------------|
+| `Active` | ❌ No | `MarketNotResolved()` | Market still trading, not expired |
+| `Expired` | ❌ No | `MarketNotResolved()` | No proposal submitted yet |
+| `Proposed` (during 30-min dispute window) | ❌ No | `DisputeWindowExpired()` | Must wait for dispute window to end |
+| `Proposed` (after 30-min dispute window) | ✅ **Yes** | — | Dispute window ended, no dispute filed |
+| `Disputed` (during 1-hour voting window) | ❌ No | `VotingNotEnded()` | Must wait for voting to complete |
+| `Disputed` (after 1-hour voting window) | ✅ **Yes** | — | Voting complete, can tally results |
+| `Resolved` | ❌ No | `MarketNotResolved()` | Already finalized |
+
+**Key insight:** You cannot finalize during the proposal's dispute window (30 min) OR during the voting window (1 hour). Both waiting periods must complete before finalization is allowed.
+
 ---
 
 ## 📚 Contract Functions
