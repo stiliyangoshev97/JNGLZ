@@ -71,7 +71,6 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'emergencyRefunded', type: 'bool' },
       { name: 'hasVoted', type: 'bool' },
       { name: 'votedOutcome', type: 'bool' },
-      { name: 'juryFeesClaimed', type: 'bool' },
     ],
   },
   {

@@ -834,7 +834,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {canClaim && (
           <div className="space-y-3">
             <div className="p-3 bg-yes/10 border border-yes text-sm">
-              <p className="text-yes font-bold mb-1">🎉 YOU WON!</p>
+              <p className="text-yes font-bold mb-1">YOU WON!</p>
               <p className="text-text-secondary text-xs">
                 You have {formatShares(winningShares)} winning shares
               </p>

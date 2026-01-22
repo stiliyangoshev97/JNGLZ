@@ -1537,13 +1537,13 @@ function StatBox({
   return (
     <div 
       className={cn(
-        'text-center px-4 py-2',
+        'text-center px-3 py-2',
         highlight && 'border border-cyber bg-cyber/10'
       )}
     >
-      <p className="text-xs text-text-muted font-mono">{label}</p>
+      <p className="text-[10px] md:text-xs text-text-muted font-mono whitespace-nowrap">{label}</p>
       <p className={cn(
-        'text-xl font-bold font-mono',
+        'text-base md:text-lg font-bold font-mono whitespace-nowrap',
         color === 'yes' && 'text-yes',
         color === 'no' && 'text-no',
         color === 'neutral' && 'text-text-secondary',

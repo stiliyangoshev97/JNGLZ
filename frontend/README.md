@@ -409,4 +409,4 @@ src/
 
 ## 📈 Version
 
-**Current:** 0.7.8 (Fee Transparency + Resolution Economics)
+**Current:** 0.7.31 (Contract v3.8.1 Integration + Jury Fees Claiming)

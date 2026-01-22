@@ -2,6 +2,87 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.32] - 2026-01-22
+
+### Fixed - Critical ABI Mismatch (Sell Button Not Working)
+
+#### Position Hook Fix
+- **Fixed** users unable to see their shares in TradePanel
+- **Fixed** SELL button not accessible due to position data being undefined
+- **Root cause**: Frontend ABI expected 7 return values from `getPosition`, but deployed contract returns 6
+- The 7th value (`juryFeesClaimed`) exists in the Position struct but was never added to the `getPosition` view function
+- **Solution**: Reverted frontend ABI to match deployed contract (6 values)
+
+#### Technical Changes
+- `contracts.ts`: Removed `juryFeesClaimed` from `getPosition` outputs (6 values, not 7)
+- `useContractReads.ts`: Updated `usePosition` hook to parse 6-value tuple
+- Jury fees claimed status is tracked via subgraph from `JuryFeesClaimed` event instead
+
+### Important Note
+- The smart contract was NOT modified - it's deployed and immutable
+- Only frontend files were updated to match the deployed contract's ABI
+
+## [0.7.31] - 2026-01-22
+
+### Added - Contract v3.8.1 Integration & Resolution Improvements
+
+#### Contract Pause State Detection
+- **New hook**: `useContractPaused` - Reads `paused` state from contract
+- Emergency refund now works as **escape hatch** when contract is paused
+- Added `paused` view function to ABI in `contracts.ts`
+
+#### Per-Market Jury Fees Claiming (v3.7.0)
+- **New "JURY FEES AVAILABLE" banner** in Portfolio page
+- Shows claimable jury fees for each market where user voted for winning side
+- Per-market claim buttons with loading states
+- Auto-refresh after successful claims
+- Added `GET_CLAIMABLE_JURY_FEES` GraphQL query
+
+#### Tie & Resolution-Failed Finalization
+- **New "FINALIZE TIE" button** - For ties, `finalizeMarket()` must be called to return bonds
+- **New "FINALIZE (RETURN BOND)" button** - For resolution-failed scenarios (empty winning side)
+- Both scenarios require finalization to clear proposer and enable emergency refund
+- Added `canFinalizeTie` and `canFinalizeResolutionFailed` conditions
+
+### Fixed
+
+#### Resolution Panel Fixes
+- **Fixed** voting logic: UI `supportProposer` now correctly converts to contract `outcome` parameter
+- **Fixed** comment about 2-hour cutoff: clarified that only PROPOSALS are blocked, not disputes
+- **Removed** party emoji (🎉) from "YOU WON!" message
+
+#### Trade History UX
+- **Fixed** white border flash when new trades appear
+- Changed from `divide-y` container to `border-b` on individual rows
+- Border now renders as part of trade row, eliminating flash
+
+#### P/L Sorting
+- **Fixed** Realized P/L now sorted by profit descending (winners first, losers last)
+- Changed from absolute value sorting to actual value sorting
+
+### Changed
+
+#### Portfolio Statistics
+- **Reduced** stat box text size for better fit on single row
+- Label: `text-[10px] md:text-xs` (was `text-xs`)
+- Value: `text-base md:text-lg` (was `text-xl`)
+- Added `whitespace-nowrap` to prevent wrapping
+- Reduced padding from `px-4` to `px-3`
+
+#### ABI Updates (v3.8.1)
+- `getPosition` output: Added 7th value `juryFeesClaimed` (bool)
+- `vote` parameter: Changed from `supportProposer` to `outcome`
+- Added `claimJuryFees(marketId)` function
+- Added `getRequiredDisputeBond` function
+
+### Technical Details
+- Updated `usePosition` hook to parse 7 return values including `juryFeesClaimed`
+- Added `useClaimJuryFees` hook in `useContractWrites.ts`
+- Updated `POSITION_FRAGMENT` with jury fees fields
+- All polling verified working correctly (Predator Polling Engine v2 intact)
+
+---
+
 ## [0.7.30] - 2026-01-19
 
 ### Added - Explore Before Connect UX
