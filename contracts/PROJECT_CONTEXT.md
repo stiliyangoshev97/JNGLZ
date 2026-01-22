@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 19, 2026  
-> **Status:** ✅ Smart Contracts v3.8.0 READY (191 tests)
+> **Last Updated:** January 22, 2026  
+> **Status:** ✅ Smart Contracts v3.8.0 READY (214 tests)
 
 ---
 
@@ -86,11 +86,13 @@
 | PullPattern Tests | ✅ 100% | **32 tests passing (sweep tests removed in v3.7.0)** |
 | **EmergencyRefundSecurity Tests** | ✅ 100% | **16 tests passing** |
 | **OneSidedMarket Tests** | ✅ 100% | **7 tests passing** |
+| **PausedEmergencyRefund Tests** | ✅ 100% | **14 tests passing (escape hatch verification)** |
+| FinalizeSecurityCheck Tests | ✅ 100% | **9 tests passing** |
 | Slither Analysis | ✅ 100% | 43 findings (no critical/high issues) |
 | Testnet Deployment | ⏳ 90% | Ready for v3.8.0 deployment |
 
 **Overall Progress: 100%** ✅
-**Total Tests: 191 ✅** (1 skipped)
+**Total Tests: 214 ✅** (1 skipped)
 
 ---
 
@@ -395,6 +397,30 @@ event ActionExecuted(actionId, actionType);
 - [x] **Constructor duplicate check** - no duplicate signers at deploy (v3.4.1)
 - [x] **Runtime duplicate check** - ReplaceSigner prevents duplicates (v3.4.1)
 - [x] **Sweep protection** - includes totalPendingWithdrawals/Fees (v3.4.1)
+- [x] **Paused escape hatch** - emergency refund works even with active proposal when paused (v3.6.2)
+
+---
+
+## 🛑 Pause State Behavior (v3.8.0)
+
+When contract is **paused** via MultiSig:
+
+| Action | When NOT Paused | When Paused |
+|--------|-----------------|-------------|
+| `buyYes` / `buyNo` | ✅ Works (if market active) | ❌ BLOCKED |
+| `sellYes` / `sellNo` | ✅ Works (if market active) | ❌ BLOCKED |
+| `createMarket` | ✅ Works | ❌ BLOCKED |
+| `proposeOutcome` | ✅ Works | ❌ BLOCKED |
+| `dispute` | ✅ Works | ❌ BLOCKED |
+| `vote` | ✅ Works | ❌ BLOCKED |
+| `claim` | ✅ Works | ✅ **WORKS** (winners can always claim) |
+| `emergencyRefund` (no proposal) | ✅ Works (after 24h) | ✅ **WORKS** |
+| `emergencyRefund` (proposal exists) | ❌ BLOCKED | ✅ **WORKS (escape hatch!)** |
+| `withdrawBond` | ✅ Works | ✅ **WORKS** |
+| `withdrawCreatorFees` | ✅ Works | ✅ **WORKS** |
+| `claimJuryFees` | ✅ Works | ✅ **WORKS** |
+
+**Key Escape Hatch:** When paused + proposal exists, emergency refund is ALLOWED to let users recover funds if something goes wrong.
 
 ---
 

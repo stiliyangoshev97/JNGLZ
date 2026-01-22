@@ -68,6 +68,38 @@ proposeSetMarketCreationFee(0.01 ether)
 - Slightly higher deployment gas (~$30 more on BSC)
 - Worth it for: operational simplicity, emergency response time, reduced human error
 
+### Added
+
+#### 🧪 TEST: Paused Emergency Refund Tests (14 new tests)
+Added comprehensive test coverage for the "escape hatch" functionality when contract is paused.
+
+**New Test File:** `test/PausedEmergencyRefund.t.sol`
+
+| Test | Description |
+|------|-------------|
+| `test_BuyYes_RevertWhenPaused` | Trading blocked when paused |
+| `test_BuyNo_RevertWhenPaused` | Trading blocked when paused |
+| `test_SellYes_RevertWhenPaused` | Selling blocked when paused |
+| `test_SellNo_RevertWhenPaused` | Selling blocked when paused |
+| `test_EmergencyRefund_WorksWhenPaused_NoProposal` | Basic refund when paused |
+| `test_EmergencyRefund_WorksWhenPaused_WithProposal` | **ESCAPE HATCH** - refund works despite active proposal |
+| `test_EmergencyRefund_WorksWhenPaused_WithDispute` | Escape hatch works even in disputed state |
+| `test_Unpause_RestoresTrading` | Trading resumes after unpause |
+| `test_Unpause_RestoresEmergencyRefundBlocking` | Normal rules restored after unpause |
+| `test_WithdrawCreatorFees_WorksWhenPaused` | Creator fees always withdrawable |
+| `test_WithdrawBond_WorksWhenPaused` | Bonds always withdrawable |
+| `test_Claim_WorksWhenPaused` | Winners can always claim |
+| `test_MultipleUsers_EmergencyRefund_WhenPaused` | All users can refund when paused |
+| `test_EmergencyRefund_Still_Requires24h_WhenPaused` | 24h delay still enforced when paused |
+
+**Key Behavior Verified:**
+- When **NOT paused** + proposal exists → Emergency refund **BLOCKED** ❌
+- When **paused** + proposal exists → Emergency refund **ALLOWED** ✅ (escape hatch)
+- 24-hour delay still required even when paused
+- All withdrawal functions work when paused (claim, withdrawBond, withdrawCreatorFees)
+
+**Total Tests:** 214 passing (up from 200)
+
 ---
 
 ## [3.7.0] - 2026-01-19
