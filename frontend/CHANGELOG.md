@@ -2,6 +2,19 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.34] - 2026-01-23
+
+### Fixed - Stale Max Sellable Shares After Trades
+
+#### Cross-Direction Sell Bug
+- **Fixed** transaction failures when switching between YES/NO after partial sells
+- After selling NO shares, switching to YES tab would use stale max sellable data
+- Pool liquidity changes affect both sides, but data wasn't being refreshed
+- Now refetches `useMaxSellableShares` for BOTH YES and NO after any successful trade
+- No more page refresh needed when trading between directions
+
+---
+
 ## [0.7.33] - 2026-01-23
 
 ### Fixed - TradePanel UX & Documentation Improvements
