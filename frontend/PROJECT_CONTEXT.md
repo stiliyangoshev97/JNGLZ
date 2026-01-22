@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 22, 2026  
-> **Version:** 0.7.32
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix)
+> **Last Updated:** January 23, 2026  
+> **Version:** 0.7.33
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul)
 
 ---
 
@@ -287,36 +287,28 @@ import { ApolloProvider } from '@apollo/client/react';
 
 ---
 
-## 🆕 Recent Changes (v0.7.10 - v0.7.12)
+## 🆕 Recent Changes (v0.7.31 - v0.7.33)
 
-### v0.7.12 - Portfolio P/L & UI Fixes
-- **P/L Display**: Only shows for CLOSED positions (fully exited OR market resolved)
-  - Open positions show `"— (position open)"` placeholder
-  - Portfolio summary only sums P/L from closed positions
-- **Pending Withdrawals**: Banner disappears immediately after claiming (reset mutation state)
-- **Market Created**: Success screen uses logo.png instead of party emoji
-- **P/L Container**: Fixed height mismatch between open/closed position cards
+### v0.7.33 - TradePanel UX & Documentation Overhaul
+- **Sell Messages**: Fixed misleading partial sell warnings
+  - "EXITING FULL POSITION" - selling entire position
+  - "SELLING MAXIMUM POSSIBLE" - pool-limited sales
+- **Direction Switch**: Clears amount, shows "no shares to sell" message when applicable
+- **Slippage Input**: Fixed multi-digit value truncation (50→5 bug)
+- **Decimal Precision**: Increased sell estimates to 6 decimals for accuracy
+- **Fee Display**: Added "Fee (1.5% included)" line for sell transactions
+- **How To Play**: Added 4 new sections (One-Sided Markets, Emergency Refund, Finalization, Pool Liquidity)
 
-### v0.7.11 - Chart Cleanup & Realized P/L Tab
-- **Price Chart**: Thinner lines (1.5px), smaller dots (1.5r), removed glow/animations
-- **Realized P/L Tab**: Only shows traders who fully exited (0 YES and 0 NO shares)
+### v0.7.32 - ABI Mismatch Fix
+- **Fixed** users unable to see their shares in TradePanel
+- **Fixed** SELL button not accessible due to position data being undefined
+- **Root cause**: Frontend ABI expected 7 return values from `getPosition`, but deployed contract returns 6
 
-### v0.7.10 - CRITICAL: Probability Calculations Fix
-- **Root Cause**: `calculateYesPercent()` used hardcoded `VIRTUAL_LIQUIDITY = 100e18`
-- **Problem**: Markets have different heat levels: CRACK=5e18, HIGH=20e18, PRO=50e18
-- **Fix**: Now passes market's actual `virtualLiquidity` to all calculations
-- **Updated Files**: MarketCard, PositionCard, MarketDetailPage, PriceChart
-
-### v0.7.8 - Fee Transparency
-- 0.3% resolution fee clearly marked as "on winning claims only"
-- Claim payout estimates show NET amount after fee
+### v0.7.31 - Contract v3.8.1 Integration
+- **New hook**: `useContractPaused` - Reads contract pause state for emergency refunds
+- **Jury Fees**: Per-market claiming UI in Portfolio
+- **Tie Finalization**: New button for ties requiring manual finalization
 
 ---
 
 ## 📚 Resources
-
-- [Wagmi Documentation](https://wagmi.sh/)
-- [RainbowKit Documentation](https://www.rainbowkit.com/docs)
-- [Apollo Client](https://www.apollographql.com/docs/react/)
-- [Tailwind CSS](https://tailwindcss.com/docs)
-- [The Graph](https://thegraph.com/docs/)
