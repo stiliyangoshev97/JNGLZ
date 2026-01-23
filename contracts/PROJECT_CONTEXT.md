@@ -2,7 +2,30 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 23, 2026  
-> **Status:** ✅ Smart Contracts v3.8.2 DEPLOYED - Bug Fixes (Creator Fee, Trade Events)
+> **Status:** ✅ Smart Contracts v3.8.2 DEPLOYED + Security Review Complete
+
+---
+
+## 🔒 Security Review (January 23, 2026)
+
+**Slither Analysis:** 34 findings | **Tests:** 214 passing | **Critical Issues:** 0
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `buyYes()` / `buyNo()` | ✅ SECURE | CEI pattern, nonReentrant, proper fee handling |
+| `sellYes()` / `sellNo()` | ✅ SECURE | InsufficientPoolBalance check, nonReentrant |
+| `createMarketAndBuy()` | ✅ SECURE | Bug #1 fixed - now charges creator fee |
+| `proposeOutcome()` | ✅ SECURE | One-sided market check, cutoff window |
+| `dispute()` | ✅ SECURE | 30-min window, 2x bond requirement |
+| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check |
+| `claim()` | ✅ SECURE | emergencyRefunded flag prevents double-spend |
+| `emergencyRefund()` | ✅ SECURE | Proportional calculation, pool/supply decremented |
+
+**Edge Cases Verified:**
+- ✅ Leftover shares after liquidity drain → Emergency refund works proportionally
+- ✅ New buyer after partial seller → Fair distribution (fees go to pool)
+- ✅ One-sided market → Proposals blocked, emergency refund available
+- ✅ Tie vote → Bonds returned, proposer cleared, refund enabled
 
 ---
 

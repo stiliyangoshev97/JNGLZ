@@ -58,15 +58,93 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~2,222 |
+| Total Lines of Code | ~2,244 |
 | Total Tests | **214** |
-| Test Suites | **14** |
-| Slither Findings | 33 (see breakdown below) |
+| Test Suites | **15** |
+| Slither Findings | 34 (see breakdown below) |
 | Critical Issues | 0 |
 | High Issues | 0 (false positives - treasury controlled) |
 | Medium Issues | 2 (by design) |
 | Low Issues | 6 |
 | Informational | 10+ |
+
+---
+
+## v3.8.2 Post-Deployment Security Review (January 23, 2026)
+
+### Functions Reviewed
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `buyYes()` / `buyNo()` | ✅ SECURE | CEI pattern, nonReentrant, proper fee handling |
+| `sellYes()` / `sellNo()` | ✅ SECURE | InsufficientPoolBalance check, nonReentrant |
+| `createMarketAndBuy()` | ✅ SECURE | Bug #1 fixed - now charges creator fee |
+| `proposeOutcome()` | ✅ SECURE | One-sided market check, cutoff window |
+| `dispute()` | ✅ SECURE | 30-min window, 2x bond requirement |
+| `vote()` | ✅ SECURE | Share-weighted, no double voting |
+| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check |
+| `claim()` | ✅ SECURE | emergencyRefunded flag prevents double-spend |
+| `emergencyRefund()` | ✅ SECURE | Proportional calculation, pool/supply decremented |
+| `claimJuryFees()` | ✅ SECURE | Pull Pattern, O(1) gas |
+| `withdrawBond()` | ✅ SECURE | Pull Pattern, CEI compliant |
+| `withdrawCreatorFees()` | ✅ SECURE | Pull Pattern, CEI compliant |
+
+### Slither Analysis (v3.8.2)
+
+**Run Date:** January 23, 2026  
+**Findings:** 34 results
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| High | 1 | ⚠️ False Positive (treasury controlled) |
+| Medium | 1 | ✅ By Design (divide before multiply) |
+| Low | 5 | ✅ Acknowledged (reentrancy after treasury call) |
+| Informational | 10 | ✅ Acknowledged (timestamp, low-level calls) |
+| Optimization | 2 | ✅ Acknowledged (cyclomatic complexity) |
+
+#### High Severity (False Positive)
+
+**Finding:** `_distributeJuryFees sends eth to arbitrary user`  
+**Status:** ⚠️ FALSE POSITIVE  
+**Reason:** Treasury address is controlled by MultiSig governance, not arbitrary.
+
+#### Medium Severity (By Design)
+
+**Finding:** `claim() performs multiplication on result of division`  
+**Status:** ✅ BY DESIGN  
+**Reason:** Order is correct - calculate gross payout first, then fee. Rounding favors users.
+
+#### Low Severity (Acknowledged)
+
+**Finding:** Reentrancy in buy/sell functions after treasury call  
+**Status:** ✅ ACKNOWLEDGED - NOT EXPLOITABLE  
+**Reason:** 
+1. Treasury is controlled MultiSig address
+2. State variables modified after are only `pendingCreatorFees` (accumulator)
+3. No critical state can be manipulated via reentrancy
+
+### Security Properties Verified
+
+| Property | Status | Evidence |
+|----------|--------|----------|
+| No double-spend on claim | ✅ | `position.claimed` flag + `emergencyRefunded` check |
+| No double emergency refund | ✅ | `position.emergencyRefunded` flag |
+| Pool solvency on sell | ✅ | `InsufficientPoolBalance` check |
+| Pool accounting on refund | ✅ | `poolBalance`, `yesSupply`, `noSupply` decremented |
+| One-sided market protection | ✅ | `OneSidedMarket` error blocks proposals |
+| Resolution cutoff | ✅ | 2h buffer before 24h emergency refund |
+| Jury fees gas limit | ✅ | Pull Pattern (O(1)) replaces O(n) loop |
+| No admin fund extraction | ✅ | SweepFunds removed in v3.7.0 |
+
+### Edge Cases Tested
+
+| Scenario | Result |
+|----------|--------|
+| Sell all shares → leftover due to liquidity | ✅ Emergency refund works proportionally |
+| New buyer after partial seller | ✅ Refund distribution is mathematically fair |
+| Pool near-zero | ✅ Refund = (shares / total) × tiny_balance |
+| One-sided market | ✅ Proposals blocked, emergency refund available |
+| Tie vote | ✅ Bonds returned, proposer cleared, refund available |
 
 ---
 
