@@ -92,12 +92,17 @@ export function formatBNB(value: bigint | string | undefined, decimals = 4): str
   if (typeof value === 'string') {
     const num = parseFloat(value);
     if (isNaN(num)) return '0';
+    // Clamp negative values to 0 (can happen from subgraph rounding errors)
+    if (num < 0) return (0).toFixed(decimals);
     return num.toFixed(decimals);
   }
   
   // Handle BigInt (wei units - needs division by 1e18)
+  // Note: BigInt can't be negative if from uint256, but handle string parsing edge cases
   const formatted = formatUnits(value, 18);
   const num = parseFloat(formatted);
+  // Clamp negative values to 0
+  if (num < 0) return (0).toFixed(decimals);
   return num.toFixed(decimals);
 }
 
@@ -114,12 +119,16 @@ export function formatBNBValue(value: bigint | string | undefined, decimals = 4)
   if (typeof value === 'string') {
     const num = parseFloat(value);
     if (isNaN(num)) return '0';
+    // Clamp negative values to 0 (can happen from subgraph rounding errors)
+    if (num < 0) return (0).toFixed(decimals);
     return num.toFixed(decimals);
   }
   
   // Handle BigInt
   const formatted = formatUnits(value, 18);
   const num = parseFloat(formatted);
+  // Clamp negative values to 0
+  if (num < 0) return (0).toFixed(decimals);
   return num.toFixed(decimals);
 }
 

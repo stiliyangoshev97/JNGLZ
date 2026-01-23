@@ -2,6 +2,23 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.36] - 2026-01-24
+
+### Fixed - Negative Zero Pool Balance Display
+
+#### The Issue
+When pool balance was drained to zero through partial sells, it could display as `-0.0000 BNB` instead of `0.0000 BNB`.
+
+#### Root Cause
+Subgraph rounding errors during gross BNB calculation for sells could cause slightly negative pool balance values.
+
+#### The Fix (Defense in Depth)
+- **Primary fix:** Subgraph v4.0.1 now clamps pool balance to 0 instead of going negative
+- **Frontend safeguard:** `formatBNB()` and `formatBNBValue()` now clamp negative values to 0
+- Ensures clean `0.0000` display even if subgraph returns negative values
+
+---
+
 ## [0.7.35] - 2026-01-23
 
 ### Added - Creator Priority Window UI

@@ -325,7 +325,15 @@ export function handleTrade(event: TradeEvent): void {
     // Pool loses grossBnbOut, but event emits bnbOut (net after fee)
     // grossBnbOut = bnbOut * 10000 / (10000 - 150) = bnbOut * 10000 / 9850
     let grossBnbOut = event.params.bnbAmount.times(BPS_DENOMINATOR).div(BPS_DENOMINATOR.minus(TOTAL_FEE_BPS));
-    market.poolBalance = market.poolBalance.minus(grossBnbOut);
+    
+    // v4.0.1 FIX: Clamp pool balance to 0 to prevent negative values from rounding errors
+    // Due to integer division differences between Solidity and AssemblyScript, 
+    // accumulated rounding can cause poolBalance to go slightly negative after many partial sells
+    if (grossBnbOut.gt(market.poolBalance)) {
+      market.poolBalance = ZERO_BI;
+    } else {
+      market.poolBalance = market.poolBalance.minus(grossBnbOut);
+    }
   }
 
   market.save();

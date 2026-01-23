@@ -2,6 +2,36 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [4.0.1] - 2026-01-24
+
+### Fixed - Negative Pool Balance Display Bug 🐛
+
+#### The Issue
+When users performed many partial sells, the pool balance could display as `-0.0000 BNB` instead of `0.0000 BNB`.
+
+#### Root Cause
+In the SELL handling, the subgraph reverse-calculates `grossBnbOut` from the net BNB emitted by the contract:
+```typescript
+let grossBnbOut = bnbAmount * 10000 / 9850;
+market.poolBalance -= grossBnbOut;
+```
+
+Due to integer division differences between Solidity (contract) and AssemblyScript (subgraph), small rounding discrepancies accumulated over many partial sells, causing `poolBalance` to go slightly negative.
+
+#### The Fix
+Added a clamp check before subtracting from pool balance:
+```typescript
+if (grossBnbOut.gt(market.poolBalance)) {
+  market.poolBalance = ZERO_BI;  // Clamp to 0
+} else {
+  market.poolBalance = market.poolBalance.minus(grossBnbOut);
+}
+```
+
+**Impact:** Pool balance will now correctly display as `0.0000 BNB` (not `-0.0000 BNB`) when fully drained.
+
+---
+
 ## [4.0.0] - 2026-01-23
 
 ### 🚀 New Contract Deployment
