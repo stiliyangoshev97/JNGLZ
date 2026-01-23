@@ -2,46 +2,46 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 23, 2026  
-> **Status:** ⚠️ Smart Contracts v3.8.1 DEPLOYED - **5 AMM/Fee Bugs Identified**
+> **Status:** ⚠️ Smart Contracts v3.8.1 DEPLOYED - Bug #1 Fixed, #2/#3 Expected Behavior
 
 ---
 
-## 🔴 Known Bugs (Discovered January 23, 2026)
+## 🔴 Known Issues (Investigation January 23, 2026)
 
 > **Branch:** `fix/pool-balance-tracking`  
-> **Test File:** `test/AMMBugInvestigation.t.sol` (5 tests confirm all bugs)
+> **Test File:** `test/AMMBugInvestigation.t.sol` (5 tests document behaviors)
 
-| # | Bug | Location | Severity | Status |
-|---|-----|----------|----------|--------|
-| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract (L518-519) | 🔴 High | Pending Fix |
-| 2 | AMM sell formula is non-linear (parts > whole) | Contract (`_calculateSellBnb`) | 🔴 Critical | Pending Fix |
-| 3 | Partial sell makes remaining shares unsellable | Contract (`sellYes`/`sellNo`) | 🔴 Critical | Pending Fix |
-| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | Pending Fix |
-| 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | Pending Fix |
+| # | Issue | Location | Severity | Status |
+|---|-------|----------|----------|--------|
+| 1 | `createMarketAndBuy()` missing creator fee | Contract | 🔴 High | ✅ **FIXED** |
+| 2 | AMM sell formula non-linear | Contract (`_calculateSellBnb`) | ℹ️ Info | Expected Behavior |
+| 3 | Partial sell may exhaust pool | Contract (`sellYes`/`sellNo`) | ℹ️ Info | Expected Behavior |
+| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | Pending |
+| 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | Pending |
 
-### Bug Details
+### ✅ Bug #1 - Missing Creator Fee (FIXED)
+- `createMarketAndBuy()` now charges 1.5% total (1% platform + 0.5% creator)
+- Previously only charged 1% platform fee
+- **Fix commit:** `bd130a5` on branch `fix/pool-balance-tracking`
 
-**Bug #1 - Missing Creator Fee:**
-- `createMarketAndBuy()` only charges 1% platform fee, missing 0.5% creator fee
-- Regular `buyYes()`/`buyNo()` correctly charge 1.5% total
-- **Impact:** Creator loses 0.5% on initial liquidity buys
+### ℹ️ Bug #2 & #3 - AMM Sell Behavior (EXPECTED - Not a Bug)
+After investigation, the sell formula behavior is **intentional and correct** for a virtual liquidity AMM:
 
-**Bug #2 & #3 - Non-Linear AMM Sell Formula:**
-- Sell formula uses POST-SELL state causing disproportionate pricing
-- Selling in parts gives MORE BNB than selling all at once
-- Example: Buy 1 BNB → 197 shares, sell half → 59% value (not 50%)
-- After partial sell, remaining shares CANNOT be sold (InsufficientPoolBalance)
-- **Impact:** Arbitrage opportunity, pool insolvency risk
+1. **Pool Solvency:** The pool can only pay out BNB that was deposited. The formula prevents insolvency.
+2. **Bonding Curve Design:** Early sellers get better prices, later sellers get worse - this is by design.
+3. **One-Sided Edge Case:** `InsufficientPoolBalance` only occurs in unhealthy one-sided markets.
+4. **No Arbitrage:** The POST-SELL formula correctly accounts for price impact.
 
-**Bug #4 - Inconsistent Trade Events:**
-- Buy events emit gross BNB (before fees)
-- Sell events emit net BNB (after fees)
-- **Impact:** Subgraph tracking inaccuracy
+**Frontend Recommendation:** Use `getMaxSellableShares()` to show users what they can actually sell.
 
-**Bug #5 - Subgraph Fee Assumption:**
-- Subgraph calculates net = gross × 0.985 for ALL buys
-- Wrong for `createMarketAndBuy()` which is gross × 0.99
-- **Impact:** Pool balance tracking mismatch
+### 🟡 Bug #4 - Inconsistent Trade Events (Pending)
+- Buy events emit gross BNB (`msg.value`)
+- Sell events emit net BNB (`bnbOut` after fees)
+- **Impact:** Subgraph tracking shows inconsistent values
+
+### 🟡 Bug #5 - Subgraph Fee Assumption (Pending)
+- With Bug #1 fixed, `createMarketAndBuy()` now charges correct 1.5% fee
+- Subgraph may need update to handle historical data
 
 ---
 

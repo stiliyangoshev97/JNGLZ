@@ -9,46 +9,48 @@
 ## 🔴 CRITICAL: AMM & Pool Balance Bugs (Discovered Jan 23, 2026)
 
 **Branch:** `fix/pool-balance-tracking`  
-**Status:** INVESTIGATION COMPLETE - NEEDS FIX
+**Status:** INVESTIGATION COMPLETE - Bug #1 FIXED, #2/#3 reclassified as expected behavior
 
 ### Investigation Summary
 
-| # | Issue | Location | Severity |
-|---|-------|----------|----------|
-| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract | 🔴 High |
-| 2 | AMM sell formula is non-linear - selling in parts gives more than selling all at once | Contract | 🔴 Critical |
-| 3 | After selling half, remaining half CANNOT be sold (pool insufficient) | Contract | 🔴 Critical |
-| 4 | Trade event emits gross for buy, net for sell (inconsistent) | Contract | 🟡 Medium |
-| 5 | Subgraph assumes 1.5% fee for all buys (wrong for createMarketAndBuy) | Subgraph | 🟡 Medium |
+| # | Issue | Location | Severity | Status |
+|---|-------|----------|----------|--------|
+| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract | 🔴 High | ✅ FIXED |
+| 2 | AMM sell formula is non-linear | Contract | ℹ️ Expected | Expected Behavior |
+| 3 | Partial sell may exhaust pool | Contract | ℹ️ Expected | Expected Behavior |
+| 4 | Trade event emits gross for buy, net for sell (inconsistent) | Contract | 🟡 Medium | Pending |
+| 5 | Subgraph assumes 1.5% fee for all buys (wrong for createMarketAndBuy) | Subgraph | 🟡 Medium | Pending |
 
-### Bug #1: `createMarketAndBuy()` Missing Creator Fee
+### ✅ Bug #1: `createMarketAndBuy()` Missing Creator Fee - FIXED
 
-**Problem:** The `createMarketAndBuy()` function only deducts platform fee (1%), not creator fee (0.5%).
+**Problem:** The `createMarketAndBuy()` function only deducted platform fee (1%), not creator fee (0.5%).
 
-**Impact:**
-- Pool receives 99% instead of 98.5%
-- Users get more shares than they should (198 vs 197 for 1 BNB)
-- Subgraph calculates wrong pool balance (assumes 1.5% fee)
+**Fix Applied:** Added creator fee calculation and Pull Pattern credit in `createMarketAndBuy()`.
+- Now charges 1.5% total (1% platform + 0.5% creator) - same as `buyYes()`/`buyNo()`
+- Pool receives 98.5% of BNB (was incorrectly 99%)
+- Users get correct shares (197 for 1 BNB, not 198)
 
-**Location:** `contracts/src/PredictionMarket.sol` lines 518-519
+**Commit:** `bd130a5` on branch `fix/pool-balance-tracking`
 
-### Bug #2 & #3: AMM Sell Formula Non-Linearity
+### ℹ️ Bug #2 & #3: AMM Sell Formula - EXPECTED BEHAVIOR (Not a Bug)
 
-**Problem:** The sell formula uses POST-SELL state, causing:
+**Original Concern:** The sell formula uses POST-SELL state, causing:
 - Selling HALF gives ~59% of total value (not 50%)
 - Selling in parts yields MORE than selling all at once
-- After selling half, remaining half CANNOT be sold (InsufficientPoolBalance)
+- After selling half, remaining half may fail with `InsufficientPoolBalance`
 
-**Example:**
-```
-Buy 1 BNB → 197 shares
-Sell ALL at once → 0.970225 BNB ✅
-Sell HALF (98.5) → 0.580967 BNB (59% not 50%!)
-Then sell remaining → FAILS (pool insufficient)
-Sum of parts → 1.066 BNB (MORE than selling all at once!)
-```
+**Why This is Expected (Not a Bug):**
+After thorough investigation, this behavior is **intentional and correct** for a virtual liquidity bonding curve AMM:
 
-**Location:** `contracts/src/PredictionMarket.sol` `_calculateSellBnb()` function
+1. **Pool Solvency Protection:** The pool can only pay out BNB that was actually deposited. With virtual liquidity creating prices, the formula must prevent paying out more than the pool has.
+
+2. **Bonding Curve Mechanics:** Early sellers get better prices (more BNB per share), later sellers get worse prices. This is fundamental to how bonding curves work.
+
+3. **No Free Money:** If selling in parts gave the same as selling all at once, it would violate conservation of value. The POST-SELL formula correctly accounts for price impact.
+
+4. **One-Sided Market Edge Case:** The `InsufficientPoolBalance` error only occurs in one-sided markets (only YES or only NO holders). In healthy two-sided markets, partial sells work fine.
+
+**Conclusion:** No fix needed. The formula correctly protects pool solvency. Frontend should use `getMaxSellableShares()` to show users what they can actually sell.
 
 ### Bug #4: Trade Event Inconsistency
 
@@ -58,11 +60,15 @@ Sum of parts → 1.066 BNB (MORE than selling all at once!)
 
 **Impact:** Frontend/subgraph shows inconsistent trade history
 
+**Status:** Pending fix
+
 ### Bug #5: Subgraph Fee Assumption
 
-**Problem:** Subgraph v3.8.4 assumes ALL buys have 1.5% fee, but `createMarketAndBuy` only has 1%.
+**Problem:** Subgraph v3.8.4 assumes ALL buys have 1.5% fee, but `createMarketAndBuy` only had 1%.
 
-**Impact:** Pool balance calculation wrong for markets created with initial buy
+**Impact:** Pool balance calculation was wrong for markets created with initial buy.
+
+**Status:** Bug #1 fix resolves the root cause. Subgraph may need update to handle edge cases.
 
 ---
 

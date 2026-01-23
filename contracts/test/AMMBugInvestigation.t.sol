@@ -93,11 +93,10 @@ contract AMMBugInvestigation is Test {
             // expiryTimestamp
             // yesSupply
             // noSupply
-            uint256 poolBalance, // resolved
+            uint256 poolBalance, // resolved // outcome
             ,
 
-        ) = // outcome
-            marketContract.getMarket(marketId);
+        ) = marketContract.getMarket(marketId);
         assertEq(
             poolBalance,
             0.985 ether,

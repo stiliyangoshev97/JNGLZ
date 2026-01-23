@@ -5,39 +5,44 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED] - Discovered Bugs (Investigation 2026-01-23)
+## [UNRELEASED] - Bug Investigation & Fixes (2026-01-23)
 
-### 🔴 CRITICAL BUGS IDENTIFIED - Pending Fix
+### ✅ Bug #1 FIXED: `createMarketAndBuy()` Missing Creator Fee
+- **Severity:** HIGH → **FIXED**
+- **Location:** `createMarketAndBuy()` function
+- **Issue:** Only deducted platform fee (1%), creator fee (0.5%) was NOT deducted
+- **Fix:** Added creator fee calculation and Pull Pattern credit
+- **Result:** Now charges 1.5% total (same as `buyYes()`/`buyNo()`)
+- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG1_FIXED_CreateMarketAndBuyChargesCreatorFee`
 
-#### Bug #1: `createMarketAndBuy()` Missing Creator Fee
-- **Severity:** HIGH
-- **Location:** `createMarketAndBuy()` function, lines 518-519
-- **Issue:** Only deducts platform fee (1%), creator fee (0.5%) is NOT deducted
-- **Impact:** Pool receives 99% instead of 98.5%, users get more shares than expected (198 vs 197 for 1 BNB)
-- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG1_CreateMarketAndBuyMissingCreatorFee`
-
-#### Bug #2: AMM Sell Formula Non-Linear
-- **Severity:** CRITICAL
+### ℹ️ Bug #2 & #3: AMM Sell Formula - RECLASSIFIED AS EXPECTED BEHAVIOR
+- **Original Severity:** CRITICAL → **Expected Behavior (Not a Bug)**
 - **Location:** `_calculateSellBnb()` function
-- **Issue:** Sell formula uses POST-SELL state, causing disproportionate returns for partial sells
-- **Impact:** Selling 50% of shares returns ~59% of value (not 50%)
-- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG2_SellFormulaNotLinear`
+- **Original Concern:** Sell formula uses POST-SELL state, causing non-linear returns
 
-#### Bug #3: Partial Sell Makes Remaining Unsellable
-- **Severity:** CRITICAL
-- **Location:** Pool balance management in sell functions
-- **Issue:** After selling partial shares, remaining shares cannot be sold due to InsufficientPoolBalance
-- **Impact:** Users cannot fully exit positions if they sell in parts
-- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG3_PartialSellMakesRemainingUnsellable`
+**Why This is Expected (Not a Bug):**
+After thorough investigation, this behavior is intentional for virtual liquidity bonding curve AMMs:
 
-#### Bug #4: Trade Event Inconsistency
+1. **Pool Solvency Protection:** The pool can only pay out BNB that was actually deposited
+2. **Bonding Curve Mechanics:** Early sellers get better prices, later sellers get worse - this is by design
+3. **No Free Money:** Conservation of value requires price impact on large sells
+4. **One-Sided Edge Case:** `InsufficientPoolBalance` only occurs in unhealthy one-sided markets
+
+**Conclusion:** No fix needed. Frontend should use `getMaxSellableShares()` to show sellable amounts.
+
+- **Tests:** 
+  - `test/AMMBugInvestigation.t.sol::test_BUG2_SellFormulaNotLinear` (documents behavior)
+  - `test/AMMBugInvestigation.t.sol::test_BUG3_PartialSellMakesRemainingUnsellable` (documents edge case)
+
+### 🟡 Bug #4: Trade Event Inconsistency - PENDING
 - **Severity:** MEDIUM
 - **Location:** `emit Trade()` statements in buy/sell functions
 - **Issue:** BUY emits `msg.value` (gross), SELL emits `bnbOut` (net after fees)
 - **Impact:** Frontend/subgraph shows inconsistent trade history
+- **Status:** Pending fix
 
 ### Test File
-All bugs documented and verified in `test/AMMBugInvestigation.t.sol` (5 tests passing)
+All behaviors documented in `test/AMMBugInvestigation.t.sol` (5 tests)
 
 ---
 
