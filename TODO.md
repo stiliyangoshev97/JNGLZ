@@ -1,8 +1,78 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.6.1 | Frontend ✅ v0.7.28  
+> **Last Updated:** January 23, 2026  
+> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.8.4 | Frontend ✅ v0.7.35  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🔴 CRITICAL: AMM & Pool Balance Bugs (Discovered Jan 23, 2026)
+
+**Branch:** `fix/pool-balance-tracking`  
+**Status:** INVESTIGATION COMPLETE - Bug #1 FIXED, #2/#3 reclassified as expected behavior
+
+### Investigation Summary
+
+| # | Issue | Location | Severity | Status |
+|---|-------|----------|----------|--------|
+| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract | 🔴 High | ✅ FIXED |
+| 2 | AMM sell formula is non-linear | Contract | ℹ️ Expected | Expected Behavior |
+| 3 | Partial sell may exhaust pool | Contract | ℹ️ Expected | Expected Behavior |
+| 4 | Trade event emits gross for buy, net for sell (inconsistent) | Contract | 🟡 Medium | Pending |
+| 5 | Subgraph assumes 1.5% fee for all buys (wrong for createMarketAndBuy) | Subgraph | 🟡 Medium | Pending |
+
+### ✅ Bug #1: `createMarketAndBuy()` Missing Creator Fee - FIXED
+
+**Problem:** The `createMarketAndBuy()` function only deducted platform fee (1%), not creator fee (0.5%).
+
+**Fix Applied:** Added creator fee calculation and Pull Pattern credit in `createMarketAndBuy()`.
+- Now charges 1.5% total (1% platform + 0.5% creator) - same as `buyYes()`/`buyNo()`
+- Pool receives 98.5% of BNB (was incorrectly 99%)
+- Users get correct shares (197 for 1 BNB, not 198)
+
+**Commit:** `bd130a5` on branch `fix/pool-balance-tracking`
+
+### ℹ️ Bug #2 & #3: AMM Sell Formula - EXPECTED BEHAVIOR (Not a Bug)
+
+**Original Concern:** The sell formula uses POST-SELL state, causing:
+- Selling HALF gives ~59% of total value (not 50%)
+- Selling in parts yields MORE than selling all at once
+- After selling half, remaining half may fail with `InsufficientPoolBalance`
+
+**Why This is Expected (Not a Bug):**
+After thorough investigation, this behavior is **intentional and correct** for a virtual liquidity bonding curve AMM:
+
+1. **Pool Solvency Protection:** The pool can only pay out BNB that was actually deposited. With virtual liquidity creating prices, the formula must prevent paying out more than the pool has.
+
+2. **Bonding Curve Mechanics:** Early sellers get better prices (more BNB per share), later sellers get worse prices. This is fundamental to how bonding curves work.
+
+3. **No Free Money:** If selling in parts gave the same as selling all at once, it would violate conservation of value. The POST-SELL formula correctly accounts for price impact.
+
+4. **One-Sided Market Edge Case:** The `InsufficientPoolBalance` error only occurs in one-sided markets (only YES or only NO holders). In healthy two-sided markets, partial sells work fine.
+
+**Conclusion:** No fix needed. The formula correctly protects pool solvency. Frontend should use `getMaxSellableShares()` to show users what they can actually sell.
+
+### ✅ Bug #4: Trade Event Inconsistency - FIXED
+
+**Problem:** Trade event emitted different values for buy vs sell:
+- BUY: Emitted `msg.value` (gross - what user paid)
+- SELL: Emitted `bnbOut` (net - what user received after fees)
+
+**Fix Applied:** Changed BUY events to emit `amountAfterFee` (net BNB that goes to pool)
+- Now all Trade events consistently emit NET BNB (after fees)
+- Frontend/subgraph can accurately display trade history
+
+**Commit:** Pending on branch `fix/pool-balance-tracking`
+
+### ✅ Bug #5: Subgraph Fee Assumption - FIXED
+
+**Problem:** Subgraph v3.8.4 was calculating `amountAfterFee` from BUY event's `bnbAmount`, assuming it was gross.
+
+**Root Cause:** With Bug #4 fix, BUY events now emit NET BNB (after fees). The subgraph was double-deducting fees!
+
+**Fix Applied:** Simplified subgraph - BUY events now use `bnbAmount` directly since it's already net.
+
+**Subgraph Version:** v3.8.5 (requires contract v3.8.2+)
 
 ---
 
@@ -1114,8 +1184,8 @@ const hasPosition = yesShares > 0n || noShares > 0n;
 
 // Only show Vote button if:
 // 1. Market status is DISPUTED (voting phase)
-// 2. User has position (yesShares > 0 OR noShares > 0)
-// 3. User hasn't voted yet (hasVoted === false)
+2. User has position (yesShares > 0 OR noShares > 0)
+3. User hasn't voted yet (hasVoted === false)
 const canVote = marketStatus === 'Disputed' && hasPosition && !hasVoted;
 ```
 

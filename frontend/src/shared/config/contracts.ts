@@ -11,7 +11,7 @@ import { env } from './env';
 
 /**
  * PredictionMarket Contract Address
- * v3.8.1 - Latest Deployment
+ * v3.8.2 - Bug Fixes Deployment
  */
 export const PREDICTION_MARKET_ADDRESS = env.CONTRACT_ADDRESS as `0x${string}`;
 

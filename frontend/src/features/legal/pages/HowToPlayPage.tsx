@@ -1114,58 +1114,56 @@ export function HowToPlayPage() {
             </h2>
             
             <div className="bg-purple-500/10 border-2 border-purple-500 p-6 mb-6">
-              <p className="text-purple-400 font-black text-lg mb-4">UNDERSTANDING SELL LIMITS</p>
+              <p className="text-purple-400 font-black text-lg mb-4">HOW SELLING WORKS</p>
               
               <div className="space-y-4 text-sm">
                 <p className="text-text-secondary">
                   JNGLZ uses an <strong className="text-purple-400">Automated Market Maker (AMM)</strong> for instant trading. 
                   When you sell shares, you receive BNB <strong className="text-white">from the pool</strong>. 
-                  But what if the pool doesn't have enough BNB?
+                  The AMM ensures you can always exit your position.
                 </p>
 
-                <div className="bg-dark-900/50 p-4 border border-dark-600">
-                  <p className="text-white font-bold mb-2">The Pool Balance Rule</p>
+                <div className="bg-yes/10 p-4 border border-yes">
+                  <p className="text-yes font-bold mb-2">✓ YOU CAN ALWAYS SELL ALL YOUR SHARES</p>
                   <p className="text-text-secondary text-xs">
-                    You can only sell shares if the pool has enough BNB to pay you. 
-                    The <strong className="text-warning">maximum you can sell</strong> is limited by the current pool balance.
+                    If you're the only trader or trading in a quiet market, you can sell your entire position. 
+                    The AMM math ensures the pool always has enough BNB to pay you for your shares.
                   </p>
                 </div>
 
                 <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
-                  <p className="text-white font-bold mb-2">When Does This Happen?</p>
+                  <p className="text-white font-bold mb-2">Price Slippage on Sells</p>
                   <p className="text-text-secondary text-xs mb-3">
-                    In low-liquidity markets (few traders), partial sells can drain the pool:
+                    Like any AMM (Uniswap, PancakeSwap), selling pushes the price DOWN. The more you sell, the worse your average price:
                   </p>
                   <div className="bg-dark-800 p-3 text-xs font-mono space-y-2">
-                    <p className="text-text-muted">Example scenario:</p>
-                    <p>1. You buy 0.1 BNB → Pool has ~0.098 BNB, you get 20 shares</p>
-                    <p>2. You sell 10 shares → You get ~0.053 BNB, pool has ~0.045 BNB left</p>
-                    <p>3. You try to sell remaining 10 shares...</p>
-                    <p className="text-warning">   ⚠️ But 10 shares are "worth" ~0.05 BNB, pool only has 0.045!</p>
-                    <p className="text-cyber">   → You can only sell ~8.8 shares (what the pool can afford)</p>
+                    <p className="text-text-muted">Example: You hold 100 shares worth 0.006 BNB each</p>
+                    <p>• Sell 10 shares → ~0.0059 BNB/share (small impact)</p>
+                    <p>• Sell 50 shares → ~0.0055 BNB/share (medium impact)</p>
+                    <p>• Sell all 100 → ~0.0050 BNB/share (larger impact)</p>
+                    <p className="text-cyber mt-2">Lower heat levels (DEGEN FLASH) = more slippage per share</p>
                   </div>
                 </div>
 
-                <div className="bg-yes/10 p-4 border border-yes mt-4">
-                  <p className="text-yes font-bold mb-2">✓ THIS IS NORMAL AMM BEHAVIOR</p>
+                <div className="bg-warning/10 p-4 border border-warning mt-4">
+                  <p className="text-warning font-bold mb-2">⚠️ EARLY SELLERS GET BETTER PRICES</p>
                   <p className="text-text-secondary text-xs">
-                    This is not a bug — it's how constant-product AMMs work. In active markets with multiple traders, 
-                    the pool stays healthy. This limitation mainly affects:
+                    In multi-trader scenarios, sellers compete for pool liquidity. The first to sell gets 
+                    the best price, later sellers get progressively worse prices as the pool drains.
+                    This is standard AMM behavior — same as Uniswap.
                   </p>
-                  <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
-                    <li>Very new markets with few trades</li>
-                    <li>Single traders who buy large, sell partial, then try to sell more</li>
-                  </ul>
                 </div>
 
                 <div className="bg-cyber/10 p-4 border border-cyber mt-4">
-                  <p className="text-cyber font-bold mb-2">SOLUTIONS</p>
-                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-1">
-                    <li><strong className="text-white">Wait for others to trade</strong> — any buy (YES or NO) adds BNB to the pool</li>
-                    <li><strong className="text-white">Sell all at once</strong> — if you buy and immediately sell ALL shares, it usually works</li>
-                    <li><strong className="text-white">Hold until resolution</strong> — if your side wins, you claim from the full pool</li>
-                    <li><strong className="text-white">Emergency refund</strong> — if market becomes one-sided (no buyers on opposite side), 
-                      you can claim a proportional refund 24h after expiry</li>
+                  <p className="text-cyber font-bold mb-2">POOL SOLVENCY PROTECTION</p>
+                  <p className="text-text-secondary text-xs mb-2">
+                    The contract includes an <strong className="text-white">InsufficientPoolBalance</strong> safety check. 
+                    If somehow the pool can't afford your payout, the transaction reverts safely.
+                  </p>
+                  <ul className="list-disc list-inside text-text-muted text-xs space-y-1">
+                    <li><strong className="text-white">Wait for others to buy</strong> — any buy (YES or NO) adds BNB to the pool</li>
+                    <li><strong className="text-white">Hold until resolution</strong> — if your side wins, claim from the full pool</li>
+                    <li><strong className="text-white">Emergency refund</strong> — proportional refund available 24h after expiry</li>
                   </ul>
                 </div>
               </div>

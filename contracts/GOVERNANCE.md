@@ -4,7 +4,9 @@
 
 All governance actions require **3-of-3 multisig approval** (except `ReplaceSigner` which needs 2-of-3).
 
-**Contract Address (BNB Testnet):** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
+**Contract Address (BNB Testnet):** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+
+**Version:** v3.8.2 (January 23, 2026)
 
 **Signers:**
 | Signer | Address |
@@ -13,7 +15,7 @@ All governance actions require **3-of-3 multisig approval** (except `ReplaceSign
 | Signer 2 | `0xC119B9152afcC5f40C019aABd78A312d37C63926` |
 | Signer 3 | `0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1` |
 
-**BscScan Contract Page:** https://testnet.bscscan.com/address/0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5#writeContract
+**BscScan Contract Page:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30#writeContract
 
 ---
 

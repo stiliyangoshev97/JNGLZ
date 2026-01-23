@@ -7,7 +7,7 @@
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-green)]()
-[![Version](https://img.shields.io/badge/version-v3.8.1-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.8.2-blue)]()
 
 ---
 
@@ -15,11 +15,11 @@
 
 | Network | Address | Status |
 |---------|---------|--------|
-| **BNB Testnet** | [`0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`](https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5) | ✅ Verified |
+| **BNB Testnet** | [`0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`](https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30) | ✅ Verified |
 
 ---
 
-## ⚠️ CRITICAL: v3.8.1 Required
+## ⚠️ CRITICAL: v3.8.2 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -36,19 +36,19 @@
 | v3.6.2 | ⚠️ DEPRECATED | **Jury Fees Gas Griefing Bug (>4,600 voters bricks market)** |
 | v3.7.0 | ⚠️ DEPRECATED | **SweepFunds removed, jury fees Pull Pattern** |
 | v3.8.0 | ❌ NOT DEPLOYED | **Contract size exceeded EVM limit (26,340 > 24,576 bytes)** |
-| **v3.8.1** | ✅ **DEPLOYED** | **Contract size optimization - consolidated governance functions** |
+| v3.8.1 | ⚠️ DEPRECATED | **Missing creator fee in createMarketAndBuy(), inconsistent Trade events** |
+| **v3.8.2** | ✅ **DEPLOYED** | **Bug fixes: creator fee, Trade event consistency** |
 
 ---
 
-## 🆕 v3.8.1: Contract Size Optimization
+## 🆕 v3.8.2: Bug Fixes Deployment
 
-**Released:** January 22, 2026
+**Released:** January 23, 2026
 
-### Problem Solved
+### Bugs Fixed
 
-v3.8.0 had 18 individual propose functions which exceeded the EVM bytecode limit:
-- v3.8.0: 26,340 bytes (OVER LIMIT - couldn't deploy!)
-- **v3.8.1: 23,316 bytes ✅** (1,260 bytes margin)
+1. **Bug #1: Missing Creator Fee** - `createMarketAndBuy()` now charges 1.5% total (was only 1%)
+2. **Bug #4: Trade Event Consistency** - All Trade events now emit NET BNB (after fees)
 
 ### Consolidated Functions
 

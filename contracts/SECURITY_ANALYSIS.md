@@ -1,7 +1,7 @@
-# Security Analysis: PredictionMarket.sol v3.8.0
+# Security Analysis: PredictionMarket.sol v3.8.2
 
-**Date:** January 19, 2026  
-**Version:** v3.8.0  
+**Date:** January 23, 2026  
+**Version:** v3.8.2  
 **Analyst:** GitHub Copilot  
 **Status:** ✅ ALL VULNERABILITIES FIXED
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Version 3.8.0 builds on all previous security fixes and adds governance UX improvements:
+Version 3.8.2 fixes fee calculation and event emission bugs discovered during pool balance investigation:
 
 | Version | Changes | Tests |
 |---------|---------|-------|
@@ -17,39 +17,65 @@ Version 3.8.0 builds on all previous security fixes and adds governance UX impro
 | v3.6.1 | Dispute window edge case fix | 180 |
 | v3.6.2 | One-sided markets, Emergency refund bypass fixes | 189 |
 | v3.7.0 | Jury fees Pull Pattern (O(n) → O(1)), **SweepFunds REMOVED** | 191 |
-| **v3.8.0** | **Individual propose functions for governance UX** | **191** |
+| v3.8.0 | Individual propose functions for governance UX | 191 |
+| v3.8.1 | Contract size optimization - consolidated governance | 214 |
+| **v3.8.2** | **Bug fixes: creator fee in createMarketAndBuy, Trade event consistency** | **214** |
 
-**All 191 tests passing. Contract is ready for deployment.**
+**All 214 tests passing. Contract deployed to BNB Testnet.**
+
+### v3.8.2 Bug Fixes
+
+| Bug | Severity | Issue | Fix |
+|-----|----------|-------|-----|
+| #1 | 🔴 HIGH | `createMarketAndBuy()` missing creator fee | Added creator fee calculation + Pull Pattern credit |
+| #4 | 🟡 MEDIUM | BUY events emit gross, SELL emit net | All Trade events now emit NET BNB |
+
+### Current Deployment
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Network:** BNB Testnet (Chain ID: 97)
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 
 ---
 
-## Part 0: v3.8.0 Security Considerations
+## Part 0: v3.8.2 Security Considerations
+
+### Bug #1: Missing Creator Fee in createMarketAndBuy()
+
+**Issue:** The `createMarketAndBuy()` function only deducted platform fee (1%), not creator fee (0.5%).
+
+**Security Impact:** Creator would receive fewer fees than expected over time. Not a fund loss for users, but an economic bug.
+
+**Fix Applied:**
+```solidity
+// Added in createMarketAndBuy():
+uint256 platformFee = (betAmount * platformFeeBps) / BPS_DENOMINATOR;
+uint256 creatorFee = (betAmount * creatorFeeBps) / BPS_DENOMINATOR;
+uint256 totalFee = platformFee + creatorFee;
+uint256 amountAfterFee = betAmount - totalFee;
+
+// Credit creator fee via Pull Pattern
+if (creatorFee > 0) {
+    pendingCreatorFees[msg.sender] += creatorFee;
+    totalPendingCreatorFees += creatorFee;
+    emit CreatorFeesCredited(msg.sender, marketId, creatorFee);
+}
+```
+
+### Bug #4: Inconsistent Trade Event Emission
+
+**Issue:** BUY events emitted `msg.value` (gross), SELL emitted `bnbOut` (net after fees).
+
+**Security Impact:** No fund loss, but subgraph/frontend tracking was incorrect.
+
+**Fix Applied:** All Trade events now emit NET BNB (`amountAfterFee` for BUY, `bnbOut` for SELL).
+
+---
+
+## Part 1: v3.8.0 Security Considerations
 
 ### Governance UX Overhaul - Security Analysis
 
 **Change:** Replaced generic `proposeAction(ActionType, bytes)` with 18 individual propose functions.
-
-#### Security Benefits
-
-| Aspect | Old System | New System (v3.8.0) |
-|--------|-----------|---------------------|
-| **Validation** | At execution time (after 3 confirmations) | At propose time (fail-fast) |
-| **Type Safety** | Manual ABI encoding (error-prone) | Solidity type checking |
-| **Human Error** | Easy to encode wrong type | Impossible with typed functions |
-| **Attack Surface** | Same | Same (no new attack vectors) |
-
-#### Validation Timing Change
-
-```solidity
-// OLD: Validation at execution time (3rd confirmation)
-proposeAction(ActionType.SetFee, abi.encode(600)) // > MAX_FEE_BPS
-// ... 2 more signers confirm ...
-// Revert on 3rd confirmation - action created but failed
-
-// NEW: Validation at propose time
-proposeSetFee(600) // Reverts immediately with InvalidFee()
-// No wasted gas on confirmations for invalid values
-```
 
 **Impact:** Positive - invalid proposals can't be created, saving gas and confusion.
 

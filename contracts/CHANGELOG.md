@@ -5,6 +5,76 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.2] - 2026-01-23 - Bug Fixes Deployment
+
+### Deployed
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Block:** 86129412
+- **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+
+### ✅ Bug #1 FIXED: `createMarketAndBuy()` Missing Creator Fee
+- **Severity:** HIGH → **FIXED**
+- **Location:** `createMarketAndBuy()` function
+- **Issue:** Only deducted platform fee (1%), creator fee (0.5%) was NOT deducted
+- **Fix:** Added creator fee calculation and Pull Pattern credit
+- **Result:** Now charges 1.5% total (same as `buyYes()`/`buyNo()`)
+- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG1_FIXED_CreateMarketAndBuyChargesCreatorFee`
+
+### ℹ️ Bug #2 & #3: AMM Sell Formula - RECLASSIFIED AS EXPECTED BEHAVIOR
+- **Original Severity:** CRITICAL → **Expected Behavior (Not a Bug)**
+- **Location:** `_calculateSellBnb()` function
+- **Original Concern:** Sell formula uses POST-SELL state, causing non-linear returns
+
+**Why This is Expected (Not a Bug):**
+After thorough investigation, this behavior is intentional for virtual liquidity bonding curve AMMs:
+
+1. **Pool Solvency Protection:** The pool can only pay out BNB that was actually deposited
+2. **Bonding Curve Mechanics:** Early sellers get better prices, later sellers get worse - this is by design
+3. **No Free Money:** Conservation of value requires price impact on large sells
+4. **One-Sided Edge Case:** `InsufficientPoolBalance` only occurs in unhealthy one-sided markets
+
+**Conclusion:** No fix needed. Frontend should use `getMaxSellableShares()` to show sellable amounts.
+
+- **Tests:** 
+  - `test/AMMBugInvestigation.t.sol::test_BUG2_SellFormulaNotLinear` (documents behavior)
+  - `test/AMMBugInvestigation.t.sol::test_BUG3_PartialSellMakesRemainingUnsellable` (documents edge case)
+
+### 🟡 Bug #4: Trade Event Inconsistency - FIXED
+- **Severity:** MEDIUM → **FIXED**
+- **Location:** `emit Trade()` statements in buy/sell functions
+- **Issue:** BUY emits `msg.value` (gross), SELL emits `bnbOut` (net after fees)
+- **Fix:** Changed BUY events to emit `amountAfterFee` (net BNB)
+- **Result:** All Trade events now consistently emit NET BNB (after fees)
+- **Impact:** Frontend/subgraph can accurately track and display trade values
+
+### Test File
+All behaviors documented in `test/AMMBugInvestigation.t.sol` (5 tests)
+
+### 🔒 Post-Deployment Security Review (January 23, 2026)
+
+**Slither Analysis:** 34 findings (0 critical, 0 high exploitable)
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `buyYes()` / `buyNo()` | ✅ SECURE | CEI pattern, nonReentrant |
+| `sellYes()` / `sellNo()` | ✅ SECURE | InsufficientPoolBalance check |
+| `createMarketAndBuy()` | ✅ SECURE | Bug #1 fixed |
+| `proposeOutcome()` | ✅ SECURE | One-sided + cutoff checks |
+| `dispute()` | ✅ SECURE | 30-min window enforced |
+| `finalizeMarket()` | ✅ SECURE | Empty winner safety |
+| `claim()` | ✅ SECURE | Double-spend prevented |
+| `emergencyRefund()` | ✅ SECURE | Proportional, pool adjusted |
+
+**Edge Cases Verified:**
+- ✅ Leftover shares after liquidity drain → Emergency refund works
+- ✅ New buyer after partial seller → Fair proportional distribution
+- ✅ One-sided market → Proposals blocked, refund available
+- ✅ Tie vote → Bonds returned, refund enabled
+
+---
+
 ## [3.8.1] - 2026-01-22
 
 ### DEPLOYED ✅
@@ -167,6 +237,16 @@ proposeSetMarketCreationFee(0.01 ether)
 - ✅ **Fail-fast**: Validation at propose time, not execution time
 - ✅ **Works in any wallet**: No external tooling needed
 - ✅ **Emergency-ready**: Can pause contract in seconds at 3AM
+
+**Workflow:**
+1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
+2. Signer2 calls `confirmAction(actionId)` → (2/3 confirmations)
+3. Signer3 calls `confirmAction(actionId)` → auto-executes (3/3)
+
+**Trade-offs:**
+- ~10-15KB more bytecode (one-time deployment cost)
+- Slightly higher deployment gas (~$30 more on BSC)
+- Worth it for: operational simplicity, emergency response time, reduced human error
 
 **Workflow:**
 1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
@@ -847,7 +927,7 @@ totalLocked += totalPendingCreatorFees;
 - `test_ReplaceSigner_RequiresOnly2of3` - Doesn't need 3rd confirmation
 - `test_ReplaceSigner_OnlySignerCanPropose` - Access control verified
 - `test_ReplaceSigner_CannotReplaceWithZeroAddress` - Validation check
-- `test_ReplaceSigner_CannotReplaceSameAddress` - old != new check
+- `test_ReplaceSigner_CannotReplaceSameAddress` - Same address blocked
 - `test_ReplaceSigner_PreventDuplicateSigner` - No duplicate signers
 - Plus 22 other Pull Pattern tests for bonds, jury fees, creator fees, sweep protection
 

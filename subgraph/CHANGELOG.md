@@ -2,6 +2,99 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [4.0.0] - 2026-01-23
+
+### 🚀 New Contract Deployment
+- **Contract Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Start Block:** 86129412
+- **Network:** BNB Testnet (Chapel)
+
+### Contract Bug Fixes Included (v3.8.2)
+1. **Bug #1 FIXED:** `createMarketAndBuy()` now charges creator fee (was missing 0.5%)
+2. **Bug #4 FIXED:** Trade events now emit NET BNB consistently (both BUY and SELL)
+
+### Subgraph Changes
+- Updated contract address in `subgraph.yaml`
+- Updated start block to new deployment block
+- Pool balance tracking now correctly uses net BNB from events
+
+---
+
+## [3.8.5] - 2026-01-23
+
+### Changed - Simplified Pool Balance Tracking 🎯
+
+#### Contract Bug #4 Fix Impact
+Contract v3.8.2 fixed Trade event consistency - BUY events now emit NET BNB (after fees), same as SELL events.
+
+#### Previous Subgraph Logic (v3.8.4)
+```typescript
+// BUY: Event emitted msg.value (gross), so we calculated net
+let amountAfterFee = bnbAmount * 9850 / 10000;
+market.poolBalance += amountAfterFee;
+```
+
+#### New Subgraph Logic (v3.8.5)
+```typescript
+// BUY: Event now emits amountAfterFee directly - use it as-is
+market.poolBalance += bnbAmount;
+```
+
+**Impact:** Simpler code, no fee calculation needed for BUY operations.
+
+**Requires:** Contract v3.8.2+ which emits net BNB for buys.
+
+---
+
+## [3.8.4] - 2026-01-23
+
+### Fixed - Critical poolBalance Tracking Bug 🐛
+
+#### The Problem
+Frontend was displaying pool balances **higher than the actual contract balance on BSCScan**. Investigation revealed the subgraph was overcounting poolBalance by **1.5% on every buy transaction**.
+
+#### Root Cause
+The `handleTrade` function was incorrectly calculating pool balance changes:
+
+| Action | Event Emits | Subgraph Was Adding | Contract Actually Does |
+|--------|-------------|---------------------|------------------------|
+| **BUY** | `msg.value` (100%) | `+= bnbAmount` ❌ | `+= amountAfterFee` (98.5%) |
+| **SELL** | `bnbOut` (net) | `-= bnbAmount` ❌ | `-= grossBnbOut` (100%) |
+
+The 1.5% fee (1% platform + 0.5% creator) was not being accounted for.
+
+#### The Fix
+Added fee constants and corrected pool balance calculations in `mapping.ts`:
+
+```typescript
+// Fee constants
+const TOTAL_FEE_BPS = BigInt.fromI32(150); // 1.5%
+const BPS_DENOMINATOR = BigInt.fromI32(10000);
+
+// BUY: Pool receives 98.5% of bnbAmount
+let amountAfterFee = bnbAmount * 9850 / 10000;
+market.poolBalance += amountAfterFee;
+
+// SELL: Pool loses grossBnbOut (inverse of net)
+let grossBnbOut = bnbOut * 10000 / 9850;
+market.poolBalance -= grossBnbOut;
+```
+
+### Added - Pool Balance Tracking for Claims & Refunds
+
+Pool balance now properly decreases when:
+- **Claims** (`handleClaimed`): Subtracts claim amount from pool
+- **Emergency Refunds** (`handleEmergencyRefunded`): Subtracts refund amount from pool
+
+This ensures pool balance goes to 0 after all claims/refunds are processed.
+
+#### Impact
+- All historical poolBalance data was inflated by ~1.5% per buy
+- This accumulated over time, causing significant discrepancies
+- **Requires full reindex** to correct historical data
+
+---
+
 ## [3.8.2] - 2026-01-22
 
 ### Changed - Contract v3.8.1 Full Integration

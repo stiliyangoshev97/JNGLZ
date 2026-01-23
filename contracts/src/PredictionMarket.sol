@@ -515,8 +515,11 @@ contract PredictionMarket is ReentrancyGuard {
 
         Market storage market = markets[marketId];
 
-        uint256 fee = (betAmount * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 amountAfterFee = betAmount - fee;
+        // Calculate both platform fee AND creator fee (Bug #1 fix: was missing creator fee)
+        uint256 platformFee = (betAmount * platformFeeBps) / BPS_DENOMINATOR;
+        uint256 creatorFee = (betAmount * creatorFeeBps) / BPS_DENOMINATOR;
+        uint256 totalFee = platformFee + creatorFee;
+        uint256 amountAfterFee = betAmount - totalFee;
 
         sharesOut = _calculateBuyShares(
             market.yesSupply,
@@ -536,20 +539,30 @@ contract PredictionMarket is ReentrancyGuard {
         }
         market.poolBalance += amountAfterFee;
 
-        // Send creation fee + platform fee to treasury
-        uint256 treasuryAmount = marketCreationFee + fee;
+        // Send creation fee + platform fee to treasury (Bug #1 fix: renamed from 'fee' to 'platformFee')
+        uint256 treasuryAmount = marketCreationFee + platformFee;
         if (treasuryAmount > 0) {
             (bool success, ) = treasury.call{value: treasuryAmount}("");
             if (!success) revert TransferFailed();
         }
 
+        // Creator fee: Pull pattern (Bug #1 fix: was missing entirely)
+        // Note: In createMarketAndBuy, the creator IS msg.sender, so they pay fee to themselves
+        // This is consistent with regular buyYes/buyNo behavior
+        if (creatorFee > 0) {
+            pendingCreatorFees[market.creator] += creatorFee;
+            totalPendingCreatorFees += creatorFee;
+            emit CreatorFeesCredited(market.creator, marketId, creatorFee);
+        }
+
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
         emit Trade(
             marketId,
             msg.sender,
             buyYesSide,
             true,
             sharesOut,
-            msg.value
+            amountAfterFee
         );
     }
 
@@ -646,7 +659,8 @@ contract PredictionMarket is ReentrancyGuard {
             emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
-        emit Trade(marketId, msg.sender, true, true, sharesOut, msg.value);
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
+        emit Trade(marketId, msg.sender, true, true, sharesOut, amountAfterFee);
     }
 
     /**
@@ -693,7 +707,15 @@ contract PredictionMarket is ReentrancyGuard {
             emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
-        emit Trade(marketId, msg.sender, false, true, sharesOut, msg.value);
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
+        emit Trade(
+            marketId,
+            msg.sender,
+            false,
+            true,
+            sharesOut,
+            amountAfterFee
+        );
     }
 
     /**

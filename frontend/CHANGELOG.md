@@ -2,6 +2,21 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.35] - 2026-01-23
+
+### Added - Creator Priority Window UI
+
+#### ResolutionPanel Enhancement
+- **Added** informational message for non-creators during the 10-minute creator priority window
+- When a market expires, the creator has exclusive rights to propose the outcome for the first 10 minutes
+- Non-creators now see:
+  - "CREATOR PRIORITY WINDOW" header with countdown timer
+  - Explanation that creator has exclusive proposal rights
+  - Time remaining until they can propose
+- Improves UX by explaining why users can't propose immediately after market expiry
+
+---
+
 ## [0.7.34] - 2026-01-23
 
 ### Fixed - Stale Max Sellable Shares After Trades
