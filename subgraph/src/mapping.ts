@@ -587,6 +587,24 @@ export function handleClaimed(event: Claimed): void {
   
   user.save();
 
+  // Update market pool balance
+  // Claims drain the pool - subtract the claimed amount
+  let market = Market.load(marketId);
+  if (market != null) {
+    // The event emits the net amount after 0.3% resolution fee
+    // But pool loses the gross amount (bnbOut + fee)
+    // grossPayout = claimAmount * 10000 / 9970 (inverse of 0.3% fee)
+    // However, for simplicity and since resolution fee is small, we use the event amount
+    // The pool is being drained anyway on resolution
+    let claimAmountWei = event.params.amount;
+    if (market.poolBalance.gt(claimAmountWei)) {
+      market.poolBalance = market.poolBalance.minus(claimAmountWei);
+    } else {
+      market.poolBalance = ZERO_BI;
+    }
+    market.save();
+  }
+
   // Update global stats
   let stats = getOrCreateGlobalStats();
   stats.totalClaimed = stats.totalClaimed.plus(claimAmount);
@@ -626,6 +644,19 @@ export function handleEmergencyRefunded(event: EmergencyRefunded): void {
   position.emergencyRefunded = true;
   position.refundedAmount = refundAmount;
   position.save();
+
+  // Update market pool balance
+  // Emergency refunds drain the pool - subtract the refunded amount
+  let market = Market.load(marketId);
+  if (market != null) {
+    let refundAmountWei = event.params.amount;
+    if (market.poolBalance.gt(refundAmountWei)) {
+      market.poolBalance = market.poolBalance.minus(refundAmountWei);
+    } else {
+      market.poolBalance = ZERO_BI;
+    }
+    market.save();
+  }
 
   // Update global stats
   let stats = getOrCreateGlobalStats();

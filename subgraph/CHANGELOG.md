@@ -36,6 +36,14 @@ let grossBnbOut = bnbOut * 10000 / 9850;
 market.poolBalance -= grossBnbOut;
 ```
 
+### Added - Pool Balance Tracking for Claims & Refunds
+
+Pool balance now properly decreases when:
+- **Claims** (`handleClaimed`): Subtracts claim amount from pool
+- **Emergency Refunds** (`handleEmergencyRefunded`): Subtracts refund amount from pool
+
+This ensures pool balance goes to 0 after all claims/refunds are processed.
+
 #### Impact
 - All historical poolBalance data was inflated by ~1.5% per buy
 - This accumulated over time, causing significant discrepancies
