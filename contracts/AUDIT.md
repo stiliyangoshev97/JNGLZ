@@ -338,7 +338,7 @@ Worst case timeline:
 #### Test Changes
 - Renamed `test_Dispute_RevertInCutoffWindow` → `test_Dispute_RevertWhenDisputeWindowExpired`
 - Added `test_Dispute_AllowedAfterCutoff_IfWithinDisputeWindow` to verify the fix
-- **180 tests now passing**
+- **214 tests now passing**
 
 ---
 
@@ -830,7 +830,7 @@ fee = (grossPayout * resolutionFeeBps) / BPS_DENOMINATOR;
 ## Pre-Deployment Checklist
 
 ### Smart Contract
-- [x] All 180 tests passing (179 pass + 1 expected skip)
+- [x] All 214 tests passing (213 pass + 1 expected skip)
 - [x] Slither analysis completed (45 findings - no critical/high issues)
 - [x] ReentrancyGuard applied to all state-changing external functions
 - [x] Constructor validates no duplicate signers
