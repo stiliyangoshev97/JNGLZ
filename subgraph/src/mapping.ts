@@ -52,6 +52,10 @@ const ZERO_BI = BigInt.fromI32(0);
 const ONE_BI = BigInt.fromI32(1);
 const ZERO_BD = BigDecimal.fromString("0");
 
+// Fee constants (must match contract: platformFeeBps=100 + creatorFeeBps=50 = 150 bps = 1.5%)
+const TOTAL_FEE_BPS = BigInt.fromI32(150); // 1.5% total fee
+const BPS_DENOMINATOR = BigInt.fromI32(10000);
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -298,14 +302,20 @@ export function handleTrade(event: TradeEvent): void {
   market.totalVolume = market.totalVolume.plus(trade.bnbAmount);
   market.totalTrades = market.totalTrades.plus(ONE_BI);
 
-  // Update share supplies
+  // Update share supplies and pool balance
+  // IMPORTANT: Fee calculation must match contract (1.5% total fee)
+  // BUY: event emits msg.value (100%), pool receives amountAfterFee (98.5%)
+  // SELL: event emits bnbOut (net after fee), pool loses grossBnbOut (100%)
   if (event.params.isBuy) {
     if (event.params.isYes) {
       market.yesShares = market.yesShares.plus(event.params.shares);
     } else {
       market.noShares = market.noShares.plus(event.params.shares);
     }
-    market.poolBalance = market.poolBalance.plus(event.params.bnbAmount);
+    // Pool receives bnbAmount minus 1.5% fee
+    // amountAfterFee = bnbAmount * (10000 - 150) / 10000 = bnbAmount * 9850 / 10000
+    let amountAfterFee = event.params.bnbAmount.times(BPS_DENOMINATOR.minus(TOTAL_FEE_BPS)).div(BPS_DENOMINATOR);
+    market.poolBalance = market.poolBalance.plus(amountAfterFee);
   } else {
     // Sell
     if (event.params.isYes) {
@@ -313,7 +323,10 @@ export function handleTrade(event: TradeEvent): void {
     } else {
       market.noShares = market.noShares.minus(event.params.shares);
     }
-    market.poolBalance = market.poolBalance.minus(event.params.bnbAmount);
+    // Pool loses grossBnbOut, but event emits bnbOut (net after fee)
+    // grossBnbOut = bnbOut * 10000 / (10000 - 150) = bnbOut * 10000 / 9850
+    let grossBnbOut = event.params.bnbAmount.times(BPS_DENOMINATOR).div(BPS_DENOMINATOR.minus(TOTAL_FEE_BPS));
+    market.poolBalance = market.poolBalance.minus(grossBnbOut);
   }
 
   market.save();

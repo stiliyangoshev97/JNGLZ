@@ -2,6 +2,47 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.8.3] - 2026-01-23
+
+### Fixed - Critical poolBalance Tracking Bug 🐛
+
+#### The Problem
+Frontend was displaying pool balances **higher than the actual contract balance on BSCScan**. Investigation revealed the subgraph was overcounting poolBalance by **1.5% on every buy transaction**.
+
+#### Root Cause
+The `handleTrade` function was incorrectly calculating pool balance changes:
+
+| Action | Event Emits | Subgraph Was Adding | Contract Actually Does |
+|--------|-------------|---------------------|------------------------|
+| **BUY** | `msg.value` (100%) | `+= bnbAmount` ❌ | `+= amountAfterFee` (98.5%) |
+| **SELL** | `bnbOut` (net) | `-= bnbAmount` ❌ | `-= grossBnbOut` (100%) |
+
+The 1.5% fee (1% platform + 0.5% creator) was not being accounted for.
+
+#### The Fix
+Added fee constants and corrected pool balance calculations in `mapping.ts`:
+
+```typescript
+// Fee constants
+const TOTAL_FEE_BPS = BigInt.fromI32(150); // 1.5%
+const BPS_DENOMINATOR = BigInt.fromI32(10000);
+
+// BUY: Pool receives 98.5% of bnbAmount
+let amountAfterFee = bnbAmount * 9850 / 10000;
+market.poolBalance += amountAfterFee;
+
+// SELL: Pool loses grossBnbOut (inverse of net)
+let grossBnbOut = bnbOut * 10000 / 9850;
+market.poolBalance -= grossBnbOut;
+```
+
+#### Impact
+- All historical poolBalance data was inflated by ~1.5% per buy
+- This accumulated over time, causing significant discrepancies
+- **Requires full reindex** to correct historical data
+
+---
+
 ## [3.8.2] - 2026-01-22
 
 ### Changed - Contract v3.8.1 Full Integration
