@@ -2,7 +2,7 @@
 
 All notable changes to the subgraph will be documented here.
 
-## [3.8.3] - 2026-01-23
+## [3.8.4] - 2026-01-23
 
 ### Fixed - Critical poolBalance Tracking Bug 🐛
 
