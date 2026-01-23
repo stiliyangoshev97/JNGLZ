@@ -33,11 +33,12 @@ contract AMMBugInvestigation is Test {
     }
 
     // ============================================
-    // BUG #1: createMarketAndBuy missing creator fee
+    // BUG #1: createMarketAndBuy missing creator fee - FIXED!
     // ============================================
 
-    function test_BUG1_CreateMarketAndBuyMissingCreatorFee() public {
+    function test_BUG1_FIXED_CreateMarketAndBuyChargesCreatorFee() public {
         uint256 treasuryBefore = treasury.balance;
+        uint256 userBefore = user.balance;
 
         vm.prank(user);
         (uint256 marketId, uint256 shares) = marketContract.createMarketAndBuy{
@@ -55,15 +56,53 @@ contract AMMBugInvestigation is Test {
 
         uint256 feeCollected = treasury.balance - treasuryBefore;
 
-        // BUG: Only platform fee (1%) collected, creator fee (0.5%) missing!
+        // FIXED: Platform fee (1%) goes to treasury
         assertEq(
             feeCollected,
             0.01 ether,
-            "Only platform fee collected, creator fee missing"
+            "Platform fee (1%) sent to treasury"
         );
 
-        // User got 198 shares instead of 197 (more shares due to more BNB in pool)
-        assertGt(shares, 197e18, "User got more shares than expected");
+        // FIXED: Creator fee (0.5%) credited via Pull Pattern
+        // In createMarketAndBuy, creator = msg.sender, so they pay themselves
+        uint256 pendingCreatorFee = marketContract.getPendingCreatorFees(user);
+        assertEq(
+            pendingCreatorFee,
+            0.005 ether,
+            "Creator fee (0.5%) credited to creator"
+        );
+
+        // FIXED: User gets 197 shares (not 198) - correct with 1.5% fee
+        assertEq(shares, 197e18, "User gets correct shares with 1.5% fee");
+
+        // Verify pool balance is correct: 1 BNB - 1.5% fee = 0.985 BNB
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            // question
+            // evidenceLink
+            // resolutionRules
+            // imageUrl
+            // creator
+            // expiryTimestamp
+            // yesSupply
+            // noSupply
+            uint256 poolBalance, // resolved
+            ,
+
+        ) = // outcome
+            marketContract.getMarket(marketId);
+        assertEq(
+            poolBalance,
+            0.985 ether,
+            "Pool has correct balance after 1.5% fee"
+        );
     }
 
     // ============================================
