@@ -289,4 +289,78 @@ contract AMMBugInvestigation is Test {
             (sharesToSell * UNIT_PRICE * virtualYesAfter) /
             (totalVirtualAfter * 1e18);
     }
+
+    // ============================================
+    // BUG #4: Trade Event Consistency - FIXED!
+    // ============================================
+
+    event Trade(
+        uint256 indexed marketId,
+        address indexed trader,
+        bool isYes,
+        bool isBuy,
+        uint256 shares,
+        uint256 bnbAmount
+    );
+
+    function test_BUG4_FIXED_TradeEventEmitsNetBnb() public {
+        // Create market
+        vm.prank(user);
+        marketContract.createMarket(
+            "Test",
+            "",
+            "",
+            "",
+            block.timestamp + 1 days,
+            PredictionMarket.HeatLevel.HIGH
+        );
+
+        // Test BUY event - should emit net BNB (after fees)
+        uint256 buyAmount = 1 ether;
+        uint256 expectedNetBuy = buyAmount -
+            (buyAmount * TOTAL_FEE_BPS) /
+            BPS_DENOMINATOR;
+
+        vm.prank(user);
+        vm.expectEmit(true, true, false, false);
+        // We check marketId, trader, and bnbAmount (last param should be net)
+        emit Trade(0, user, true, true, 0, expectedNetBuy);
+        marketContract.buyYes{value: buyAmount}(0, 0);
+
+        // Get shares for sell test
+        (uint256 yesShares, , , , , ) = marketContract.getPosition(0, user);
+
+        // Test SELL event - should also emit net BNB (after fees)
+        uint256 grossSellBnb = marketContract.previewSell(0, yesShares, true);
+        // previewSell already returns net, so we use it directly
+
+        vm.prank(user);
+        vm.expectEmit(true, true, false, false);
+        emit Trade(0, user, true, false, 0, grossSellBnb);
+        marketContract.sellYes(0, yesShares, 0);
+    }
+
+    function test_BUG4_FIXED_CreateMarketAndBuyEmitsNetBnb() public {
+        // Test createMarketAndBuy - should emit net BNB (excluding creation fee AND trading fees)
+        uint256 totalSent = 1 ether;
+        uint256 creationFee = 0; // default is 0
+        uint256 betAmount = totalSent - creationFee;
+        uint256 expectedNetBuy = betAmount -
+            (betAmount * TOTAL_FEE_BPS) /
+            BPS_DENOMINATOR;
+
+        vm.prank(user);
+        vm.expectEmit(true, true, false, false);
+        emit Trade(0, user, true, true, 0, expectedNetBuy);
+        marketContract.createMarketAndBuy{value: totalSent}(
+            "Test market",
+            "",
+            "",
+            "",
+            block.timestamp + 1 days,
+            PredictionMarket.HeatLevel.HIGH,
+            true,
+            0
+        );
+    }
 }

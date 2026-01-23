@@ -16,7 +16,7 @@
 | 1 | `createMarketAndBuy()` missing creator fee | Contract | 🔴 High | ✅ **FIXED** |
 | 2 | AMM sell formula non-linear | Contract (`_calculateSellBnb`) | ℹ️ Info | Expected Behavior |
 | 3 | Partial sell may exhaust pool | Contract (`sellYes`/`sellNo`) | ℹ️ Info | Expected Behavior |
-| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | Pending |
+| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | ✅ **FIXED** |
 | 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | Pending |
 
 ### ✅ Bug #1 - Missing Creator Fee (FIXED)

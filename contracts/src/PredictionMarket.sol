@@ -555,13 +555,14 @@ contract PredictionMarket is ReentrancyGuard {
             emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
         emit Trade(
             marketId,
             msg.sender,
             buyYesSide,
             true,
             sharesOut,
-            msg.value
+            amountAfterFee
         );
     }
 
@@ -658,7 +659,8 @@ contract PredictionMarket is ReentrancyGuard {
             emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
-        emit Trade(marketId, msg.sender, true, true, sharesOut, msg.value);
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
+        emit Trade(marketId, msg.sender, true, true, sharesOut, amountAfterFee);
     }
 
     /**
@@ -705,7 +707,15 @@ contract PredictionMarket is ReentrancyGuard {
             emit CreatorFeesCredited(market.creator, marketId, creatorFee);
         }
 
-        emit Trade(marketId, msg.sender, false, true, sharesOut, msg.value);
+        // v3.8.2: Emit net BNB (after fees) for consistency with sell events
+        emit Trade(
+            marketId,
+            msg.sender,
+            false,
+            true,
+            sharesOut,
+            amountAfterFee
+        );
     }
 
     /**

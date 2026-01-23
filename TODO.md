@@ -52,15 +52,17 @@ After thorough investigation, this behavior is **intentional and correct** for a
 
 **Conclusion:** No fix needed. The formula correctly protects pool solvency. Frontend should use `getMaxSellableShares()` to show users what they can actually sell.
 
-### Bug #4: Trade Event Inconsistency
+### ✅ Bug #4: Trade Event Inconsistency - FIXED
 
-**Problem:** Trade event emits different values for buy vs sell:
-- BUY: Emits `msg.value` (gross - what user paid)
-- SELL: Emits `bnbOut` (net - what user received after fees)
+**Problem:** Trade event emitted different values for buy vs sell:
+- BUY: Emitted `msg.value` (gross - what user paid)
+- SELL: Emitted `bnbOut` (net - what user received after fees)
 
-**Impact:** Frontend/subgraph shows inconsistent trade history
+**Fix Applied:** Changed BUY events to emit `amountAfterFee` (net BNB that goes to pool)
+- Now all Trade events consistently emit NET BNB (after fees)
+- Frontend/subgraph can accurately display trade history
 
-**Status:** Pending fix
+**Commit:** Pending on branch `fix/pool-balance-tracking`
 
 ### Bug #5: Subgraph Fee Assumption
 

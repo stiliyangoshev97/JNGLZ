@@ -34,12 +34,13 @@ After thorough investigation, this behavior is intentional for virtual liquidity
   - `test/AMMBugInvestigation.t.sol::test_BUG2_SellFormulaNotLinear` (documents behavior)
   - `test/AMMBugInvestigation.t.sol::test_BUG3_PartialSellMakesRemainingUnsellable` (documents edge case)
 
-### 🟡 Bug #4: Trade Event Inconsistency - PENDING
-- **Severity:** MEDIUM
+### 🟡 Bug #4: Trade Event Inconsistency - FIXED
+- **Severity:** MEDIUM → **FIXED**
 - **Location:** `emit Trade()` statements in buy/sell functions
 - **Issue:** BUY emits `msg.value` (gross), SELL emits `bnbOut` (net after fees)
-- **Impact:** Frontend/subgraph shows inconsistent trade history
-- **Status:** Pending fix
+- **Fix:** Changed BUY events to emit `amountAfterFee` (net BNB)
+- **Result:** All Trade events now consistently emit NET BNB (after fees)
+- **Impact:** Frontend/subgraph can accurately track and display trade values
 
 ### Test File
 All behaviors documented in `test/AMMBugInvestigation.t.sol` (5 tests)
