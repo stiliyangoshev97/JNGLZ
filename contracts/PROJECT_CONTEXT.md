@@ -1,8 +1,47 @@
 # 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 22, 2026  
-> **Status:** ✅ Smart Contracts v3.8.1 DEPLOYED (214 tests)
+> **Last Updated:** January 23, 2026  
+> **Status:** ⚠️ Smart Contracts v3.8.1 DEPLOYED - **5 AMM/Fee Bugs Identified**
+
+---
+
+## 🔴 Known Bugs (Discovered January 23, 2026)
+
+> **Branch:** `fix/pool-balance-tracking`  
+> **Test File:** `test/AMMBugInvestigation.t.sol` (5 tests confirm all bugs)
+
+| # | Bug | Location | Severity | Status |
+|---|-----|----------|----------|--------|
+| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract (L518-519) | 🔴 High | Pending Fix |
+| 2 | AMM sell formula is non-linear (parts > whole) | Contract (`_calculateSellBnb`) | 🔴 Critical | Pending Fix |
+| 3 | Partial sell makes remaining shares unsellable | Contract (`sellYes`/`sellNo`) | 🔴 Critical | Pending Fix |
+| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | Pending Fix |
+| 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | Pending Fix |
+
+### Bug Details
+
+**Bug #1 - Missing Creator Fee:**
+- `createMarketAndBuy()` only charges 1% platform fee, missing 0.5% creator fee
+- Regular `buyYes()`/`buyNo()` correctly charge 1.5% total
+- **Impact:** Creator loses 0.5% on initial liquidity buys
+
+**Bug #2 & #3 - Non-Linear AMM Sell Formula:**
+- Sell formula uses POST-SELL state causing disproportionate pricing
+- Selling in parts gives MORE BNB than selling all at once
+- Example: Buy 1 BNB → 197 shares, sell half → 59% value (not 50%)
+- After partial sell, remaining shares CANNOT be sold (InsufficientPoolBalance)
+- **Impact:** Arbitrage opportunity, pool insolvency risk
+
+**Bug #4 - Inconsistent Trade Events:**
+- Buy events emit gross BNB (before fees)
+- Sell events emit net BNB (after fees)
+- **Impact:** Subgraph tracking inaccuracy
+
+**Bug #5 - Subgraph Fee Assumption:**
+- Subgraph calculates net = gross × 0.985 for ALL buys
+- Wrong for `createMarketAndBuy()` which is gross × 0.99
+- **Impact:** Pool balance tracking mismatch
 
 ---
 

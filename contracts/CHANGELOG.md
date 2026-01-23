@@ -5,6 +5,42 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED] - Discovered Bugs (Investigation 2026-01-23)
+
+### 🔴 CRITICAL BUGS IDENTIFIED - Pending Fix
+
+#### Bug #1: `createMarketAndBuy()` Missing Creator Fee
+- **Severity:** HIGH
+- **Location:** `createMarketAndBuy()` function, lines 518-519
+- **Issue:** Only deducts platform fee (1%), creator fee (0.5%) is NOT deducted
+- **Impact:** Pool receives 99% instead of 98.5%, users get more shares than expected (198 vs 197 for 1 BNB)
+- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG1_CreateMarketAndBuyMissingCreatorFee`
+
+#### Bug #2: AMM Sell Formula Non-Linear
+- **Severity:** CRITICAL
+- **Location:** `_calculateSellBnb()` function
+- **Issue:** Sell formula uses POST-SELL state, causing disproportionate returns for partial sells
+- **Impact:** Selling 50% of shares returns ~59% of value (not 50%)
+- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG2_SellFormulaNotLinear`
+
+#### Bug #3: Partial Sell Makes Remaining Unsellable
+- **Severity:** CRITICAL
+- **Location:** Pool balance management in sell functions
+- **Issue:** After selling partial shares, remaining shares cannot be sold due to InsufficientPoolBalance
+- **Impact:** Users cannot fully exit positions if they sell in parts
+- **Test:** `test/AMMBugInvestigation.t.sol::test_BUG3_PartialSellMakesRemainingUnsellable`
+
+#### Bug #4: Trade Event Inconsistency
+- **Severity:** MEDIUM
+- **Location:** `emit Trade()` statements in buy/sell functions
+- **Issue:** BUY emits `msg.value` (gross), SELL emits `bnbOut` (net after fees)
+- **Impact:** Frontend/subgraph shows inconsistent trade history
+
+### Test File
+All bugs documented and verified in `test/AMMBugInvestigation.t.sol` (5 tests passing)
+
+---
+
 ## [3.8.1] - 2026-01-22
 
 ### DEPLOYED ✅
@@ -167,6 +203,16 @@ proposeSetMarketCreationFee(0.01 ether)
 - ✅ **Fail-fast**: Validation at propose time, not execution time
 - ✅ **Works in any wallet**: No external tooling needed
 - ✅ **Emergency-ready**: Can pause contract in seconds at 3AM
+
+**Workflow:**
+1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
+2. Signer2 calls `confirmAction(actionId)` → (2/3 confirmations)
+3. Signer3 calls `confirmAction(actionId)` → auto-executes (3/3)
+
+**Trade-offs:**
+- ~10-15KB more bytecode (one-time deployment cost)
+- Slightly higher deployment gas (~$30 more on BSC)
+- Worth it for: operational simplicity, emergency response time, reduced human error
 
 **Workflow:**
 1. Signer1 calls `proposePause()` → auto-approves (1/3 confirmations)
@@ -847,7 +893,7 @@ totalLocked += totalPendingCreatorFees;
 - `test_ReplaceSigner_RequiresOnly2of3` - Doesn't need 3rd confirmation
 - `test_ReplaceSigner_OnlySignerCanPropose` - Access control verified
 - `test_ReplaceSigner_CannotReplaceWithZeroAddress` - Validation check
-- `test_ReplaceSigner_CannotReplaceSameAddress` - old != new check
+- `test_ReplaceSigner_CannotReplaceSameAddress` - Same address blocked
 - `test_ReplaceSigner_PreventDuplicateSigner` - No duplicate signers
 - Plus 22 other Pull Pattern tests for bonds, jury fees, creator fees, sweep protection
 

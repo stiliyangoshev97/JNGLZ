@@ -1,8 +1,68 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 18, 2026  
-> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.6.1 | Frontend ✅ v0.7.28  
+> **Last Updated:** January 23, 2026  
+> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.8.4 | Frontend ✅ v0.7.35  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🔴 CRITICAL: AMM & Pool Balance Bugs (Discovered Jan 23, 2026)
+
+**Branch:** `fix/pool-balance-tracking`  
+**Status:** INVESTIGATION COMPLETE - NEEDS FIX
+
+### Investigation Summary
+
+| # | Issue | Location | Severity |
+|---|-------|----------|----------|
+| 1 | `createMarketAndBuy()` doesn't charge creator fee | Contract | 🔴 High |
+| 2 | AMM sell formula is non-linear - selling in parts gives more than selling all at once | Contract | 🔴 Critical |
+| 3 | After selling half, remaining half CANNOT be sold (pool insufficient) | Contract | 🔴 Critical |
+| 4 | Trade event emits gross for buy, net for sell (inconsistent) | Contract | 🟡 Medium |
+| 5 | Subgraph assumes 1.5% fee for all buys (wrong for createMarketAndBuy) | Subgraph | 🟡 Medium |
+
+### Bug #1: `createMarketAndBuy()` Missing Creator Fee
+
+**Problem:** The `createMarketAndBuy()` function only deducts platform fee (1%), not creator fee (0.5%).
+
+**Impact:**
+- Pool receives 99% instead of 98.5%
+- Users get more shares than they should (198 vs 197 for 1 BNB)
+- Subgraph calculates wrong pool balance (assumes 1.5% fee)
+
+**Location:** `contracts/src/PredictionMarket.sol` lines 518-519
+
+### Bug #2 & #3: AMM Sell Formula Non-Linearity
+
+**Problem:** The sell formula uses POST-SELL state, causing:
+- Selling HALF gives ~59% of total value (not 50%)
+- Selling in parts yields MORE than selling all at once
+- After selling half, remaining half CANNOT be sold (InsufficientPoolBalance)
+
+**Example:**
+```
+Buy 1 BNB → 197 shares
+Sell ALL at once → 0.970225 BNB ✅
+Sell HALF (98.5) → 0.580967 BNB (59% not 50%!)
+Then sell remaining → FAILS (pool insufficient)
+Sum of parts → 1.066 BNB (MORE than selling all at once!)
+```
+
+**Location:** `contracts/src/PredictionMarket.sol` `_calculateSellBnb()` function
+
+### Bug #4: Trade Event Inconsistency
+
+**Problem:** Trade event emits different values for buy vs sell:
+- BUY: Emits `msg.value` (gross - what user paid)
+- SELL: Emits `bnbOut` (net - what user received after fees)
+
+**Impact:** Frontend/subgraph shows inconsistent trade history
+
+### Bug #5: Subgraph Fee Assumption
+
+**Problem:** Subgraph v3.8.4 assumes ALL buys have 1.5% fee, but `createMarketAndBuy` only has 1%.
+
+**Impact:** Pool balance calculation wrong for markets created with initial buy
 
 ---
 
@@ -1114,8 +1174,8 @@ const hasPosition = yesShares > 0n || noShares > 0n;
 
 // Only show Vote button if:
 // 1. Market status is DISPUTED (voting phase)
-// 2. User has position (yesShares > 0 OR noShares > 0)
-// 3. User hasn't voted yet (hasVoted === false)
+2. User has position (yesShares > 0 OR noShares > 0)
+3. User hasn't voted yet (hasVoted === false)
 const canVote = marketStatus === 'Disputed' && hasPosition && !hasVoted;
 ```
 
