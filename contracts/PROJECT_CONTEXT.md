@@ -2,27 +2,26 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 23, 2026  
-> **Status:** ⚠️ Smart Contracts v3.8.1 DEPLOYED - Bug #1 Fixed, #2/#3 Expected Behavior
+> **Status:** ✅ Smart Contracts v3.8.2 DEPLOYED - Bug Fixes (Creator Fee, Trade Events)
 
 ---
 
-## 🔴 Known Issues (Investigation January 23, 2026)
+## ✅ Resolved Issues (January 23, 2026)
 
 > **Branch:** `fix/pool-balance-tracking`  
-> **Test File:** `test/AMMBugInvestigation.t.sol` (5 tests document behaviors)
+> **Test File:** `test/AMMBugInvestigation.t.sol` (7 tests document behaviors)
 
 | # | Issue | Location | Severity | Status |
 |---|-------|----------|----------|--------|
-| 1 | `createMarketAndBuy()` missing creator fee | Contract | 🔴 High | ✅ **FIXED** |
+| 1 | `createMarketAndBuy()` missing creator fee | Contract | 🔴 High | ✅ **FIXED in v3.8.2** |
 | 2 | AMM sell formula non-linear | Contract (`_calculateSellBnb`) | ℹ️ Info | Expected Behavior |
 | 3 | Partial sell may exhaust pool | Contract (`sellYes`/`sellNo`) | ℹ️ Info | Expected Behavior |
-| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | ✅ **FIXED** |
-| 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | ✅ **FIXED** |
+| 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | ✅ **FIXED in v3.8.2** |
+| 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | ✅ **FIXED in v4.0.0** |
 
-### ✅ Bug #1 - Missing Creator Fee (FIXED)
+### ✅ Bug #1 - Missing Creator Fee (FIXED in v3.8.2)
 - `createMarketAndBuy()` now charges 1.5% total (1% platform + 0.5% creator)
 - Previously only charged 1% platform fee
-- **Fix commit:** `bd130a5` on branch `fix/pool-balance-tracking`
 
 ### ℹ️ Bug #2 & #3 - AMM Sell Behavior (EXPECTED - Not a Bug)
 After investigation, the sell formula behavior is **intentional and correct** for a virtual liquidity AMM:
@@ -34,14 +33,14 @@ After investigation, the sell formula behavior is **intentional and correct** fo
 
 **Frontend Recommendation:** Use `getMaxSellableShares()` to show users what they can actually sell.
 
-### 🟡 Bug #4 - Inconsistent Trade Events (Pending)
-- Buy events emit gross BNB (`msg.value`)
-- Sell events emit net BNB (`bnbOut` after fees)
-- **Impact:** Subgraph tracking shows inconsistent values
+### ✅ Bug #4 - Inconsistent Trade Events (FIXED in v3.8.2)
+- BUY events now emit `amountAfterFee` (net BNB, what goes to pool)
+- SELL events emit `bnbOut` (net BNB, what user receives)
+- **Result:** All Trade events consistently emit NET BNB after fees
 
-### 🟡 Bug #5 - Subgraph Fee Assumption (Pending)
-- With Bug #1 fixed, `createMarketAndBuy()` now charges correct 1.5% fee
-- Subgraph may need update to handle historical data
+### ✅ Bug #5 - Subgraph Fee Assumption (FIXED in v4.0.0)
+- Subgraph updated to use `bnbAmount` directly for BUY (now net)
+- Pool balance tracking is now accurate
 
 ---
 
@@ -49,20 +48,18 @@ After investigation, the sell formula behavior is **intentional and correct** fo
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.8.1** | ✅ **DEPLOYED** | Contract Size Optimization - Consolidated Governance Functions |
+| **v3.8.2** | ✅ **DEPLOYED** | Bug Fixes: Creator Fee in createMarketAndBuy, Trade Event Consistency |
+| v3.8.1 | ⚠️ DEPRECATED | Contract Size Optimization - Consolidated Governance Functions |
 | v3.8.0 | ❌ NOT DEPLOYED | Contract exceeded EVM size limit (26,340 > 24,576 bytes) |
 | v3.7.0 | ⚠️ DEPRECATED | Jury Fees Pull Pattern + SweepFunds REMOVED |
 | v3.6.2 | ⚠️ DEPRECATED | One-Sided Market & Emergency Bypass Fixes - **HAS GAS GRIEFING BUG** |
-| v3.6.1 | ⚠️ DEPRECATED | Dispute Window Edge Case Fix |
-| v3.6.0 | ⚠️ DEPRECATED | Emergency Refund Security Fix - **HAS EDGE CASE BUG** |
-| v3.5.0 | ⚠️ DEPRECATED | 5 Heat Levels (10x liquidity) - **HAS CRITICAL BUG** |
-| v3.4.1 | ⚠️ DEPRECATED | ReplaceSigner (2-of-3), Sweep Protection, Pull Pattern |
 
-### Current Deployment (v3.8.1)
-- **Address:** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
+### Current Deployment (v3.8.2)
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 85941857
-- **BscScan:** https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5
+- **Block:** 86129412
+- **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 - **Verified:** ✅ Yes
 - **Contract Size:** 23,316 bytes (1,260 bytes margin under 24KB limit)
 

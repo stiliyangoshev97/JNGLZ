@@ -2,7 +2,25 @@
 
 All notable changes to the subgraph will be documented here.
 
-## [3.8.5] - 2026-01-23 (UNRELEASED)
+## [4.0.0] - 2026-01-23
+
+### 🚀 New Contract Deployment
+- **Contract Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Start Block:** 86129412
+- **Network:** BNB Testnet (Chapel)
+
+### Contract Bug Fixes Included (v3.8.2)
+1. **Bug #1 FIXED:** `createMarketAndBuy()` now charges creator fee (was missing 0.5%)
+2. **Bug #4 FIXED:** Trade events now emit NET BNB consistently (both BUY and SELL)
+
+### Subgraph Changes
+- Updated contract address in `subgraph.yaml`
+- Updated start block to new deployment block
+- Pool balance tracking now correctly uses net BNB from events
+
+---
+
+## [3.8.5] - 2026-01-23
 
 ### Changed - Simplified Pool Balance Tracking 🎯
 

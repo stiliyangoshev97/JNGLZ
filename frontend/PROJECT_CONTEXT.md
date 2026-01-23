@@ -26,21 +26,21 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.8.1) | `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5` |
+| PredictionMarket (v3.8.2) | `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5 |
+| BscScan | https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30 |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Studio URL (v3.8.1) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.8.1` |
-| Version | v3.8.1 (Latest Deployment) |
+| Studio URL (v4.0.0) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v4.0.0` |
+| Version | v4.0.0 (Latest Deployment - Contract v3.8.2) |
 | Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet (v3.8.1)
-VITE_CONTRACT_ADDRESS=0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5
+# BNB Testnet (v3.8.2)
+VITE_CONTRACT_ADDRESS=0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
 VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_CHAIN_ID=97

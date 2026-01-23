@@ -1,19 +1,24 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.8.1  
-**Audit Date:** January 22, 2026  
+**Version:** v3.8.2  
+**Audit Date:** January 23, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
 **Status:** ✅ DEPLOYED
 
-### Current Deployment (v3.8.1)
-- **Address:** `0x3ad26B78DB90a3Fbb5aBc6CF1dB9673DA537cBD5`
+### Current Deployment (v3.8.2)
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 85941857
-- **BscScan:** https://testnet.bscscan.com/address/0x3ad26b78db90a3fbb5abc6cf1db9673da537cbd5
+- **Block:** 86129412
+- **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 - **Verified:** ✅ Yes
 - **Contract Size:** 23,316 bytes (1,260 bytes margin under 24KB limit)
+
+### v3.8.2 Bug Fixes
+- **Bug #1 FIXED:** `createMarketAndBuy()` now charges 1.5% fee (was only 1%)
+- **Bug #4 FIXED:** Trade events now consistently emit NET BNB (after fees)
 
 ### Parameters Configured
 - `platformFeeBps`: 100 (1%)

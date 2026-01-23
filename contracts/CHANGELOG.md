@@ -5,7 +5,14 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED] - Bug Investigation & Fixes (2026-01-23)
+## [3.8.2] - 2026-01-23 - Bug Fixes Deployment
+
+### Deployed
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Block:** 86129412
+- **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 
 ### ✅ Bug #1 FIXED: `createMarketAndBuy()` Missing Creator Fee
 - **Severity:** HIGH → **FIXED**
