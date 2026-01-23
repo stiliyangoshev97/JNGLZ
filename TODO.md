@@ -1,8 +1,49 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 23, 2026  
-> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v3.8.4 | Frontend ✅ v0.7.35  
+> **Last Updated:** January 24, 2026  
+> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v4.0.1 | Frontend ✅ v0.7.37  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🟡 KNOWN ISSUE: Leaderboard tradingPnL Calculation
+
+**Discovered:** January 24, 2026  
+**Status:** Known limitation - requires subgraph architecture change  
+**Severity:** LOW (visual only, not exploitable)
+
+### The Issue
+
+The subgraph's `tradingPnL` calculation is:
+```typescript
+user.tradingPnL = user.totalSold - user.totalBought
+```
+
+This is **inaccurate** because it includes partial sells from positions that are still open. A user who:
+1. Buys 1 BNB worth of shares
+2. Sells 0.5 BNB worth (partial exit)
+3. Still holds valuable shares
+
+Will show `-0.5 BNB tradingPnL` on the leaderboard even though they still hold shares worth potentially more than 0.5 BNB.
+
+### Why It's Hard to Fix
+
+To calculate accurate tradingPnL, the subgraph would need to:
+1. Track P/L per position per side (YES/NO separately)
+2. Only count P/L when position is fully exited (0 shares remaining)
+3. This is exactly what we do in the frontend's `calculateMarketRealizedPnl()` function
+
+### Mitigations
+
+1. **Frontend PositionCard:** Already fixed (v0.7.37) - shows accurate P/L only when fully exited
+2. **Leaderboard:** Shows subgraph's approximation - may be slightly off for active traders
+3. **Long-term fix:** Subgraph v5.0 could add per-position-side tracking
+
+### Impact
+
+- Traders with open positions may appear lower on leaderboard than they should
+- Once all positions are closed, the P/L becomes accurate
+- Not exploitable - just a visual approximation issue
 
 ---
 
