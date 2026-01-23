@@ -92,12 +92,12 @@ type User @entity(immutable: false) {
   totalClaimed: BigDecimal! # Total winnings claimed
   totalRefunded: BigDecimal! # Total emergency refunds
   # ============================================
-  # P/L TRACKING FOR LEADERBOARD (v3.5.0)
+  # P/L TRACKING FOR LEADERBOARD (v3.5.0, fixed v4.0.2)
   # ============================================
-  # Trading P/L (buy/sell)
+  # Trading P/L (buy/sell) - v4.0.2: Only counts fully exited positions
   totalBought: BigDecimal! # Total BNB spent buying shares
   totalSold: BigDecimal! # Total BNB received from selling
-  tradingPnL: BigDecimal! # totalSold - totalBought (realized trading P/L)
+  tradingPnL: BigDecimal! # Sum of tradingPnLRealized from fully exited positions
   # Resolution P/L (claims from resolved markets)
   totalInvestedInResolved: BigDecimal! # BNB invested in markets that resolved
   totalClaimedFromResolved: BigDecimal! # BNB claimed from resolved markets (wins)
@@ -142,6 +142,9 @@ type Position @entity(immutable: false) {
   averageNoPrice: BigDecimal! # Avg price paid for NO
   # Net cost basis (for resolution P/L)
   netCostBasis: BigDecimal! # totalInvested - totalReturned (what's "at risk")
+  # Trading P/L (v4.0.2 - only realized when fully exited)
+  fullyExited: Boolean! # Position fully exited (0 YES and 0 NO shares via trading)
+  tradingPnLRealized: BigDecimal! # P/L realized when fully exited (totalReturned - totalInvested)
   # Claim Status
   claimed: Boolean! # Has user claimed?
   claimedAmount: BigDecimal # Amount claimed (if claimed)

@@ -2,6 +2,49 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.37] - 2026-01-24
+
+### Fixed - P/L Display Bug for Partial Sells
+
+#### The Issue
+P/L was being displayed for positions even when the user still held shares (only partial sells). This showed inaccurate "realized" P/L when the position wasn't actually fully exited.
+
+#### Root Cause
+The `calculateMarketRealizedPnl()` function was showing P/L as soon as ANY sells occurred, without checking if the position was fully closed.
+
+#### The Fix
+- **Updated** `calculateMarketRealizedPnl()` to accept `currentYesShares` and `currentNoShares` parameters
+- **Added** `isFullyExited` boolean return value (true only when both YES and NO shares are 0)
+- **P/L now only shows** when position is fully exited (0 remaining shares on that side)
+- **Trading P/L breakdown** also uses `isFullyExited` for consistent display
+- Until fully exited, P/L displays as "— (position open)" to indicate unrealized state
+
+#### Behavior Change
+| Before | After |
+|--------|-------|
+| Partial sell → Shows P/L immediately | Partial sell → Shows "— (position open)" |
+| Full exit → Shows P/L | Full exit → Shows P/L ✓ |
+| Market resolved → Shows resolution P/L | Market resolved → Shows resolution P/L ✓ |
+
+---
+
+## [0.7.36] - 2026-01-24
+
+### Fixed - Negative Zero Pool Balance Display
+
+#### The Issue
+When pool balance was drained to zero through partial sells, it could display as `-0.0000 BNB` instead of `0.0000 BNB`.
+
+#### Root Cause
+Subgraph rounding errors during gross BNB calculation for sells could cause slightly negative pool balance values.
+
+#### The Fix (Defense in Depth)
+- **Primary fix:** Subgraph v4.0.1 now clamps pool balance to 0 instead of going negative
+- **Frontend safeguard:** `formatBNB()` and `formatBNBValue()` now clamp negative values to 0
+- Ensures clean `0.0000` display even if subgraph returns negative values
+
+---
+
 ## [0.7.35] - 2026-01-23
 
 ### Added - Creator Priority Window UI

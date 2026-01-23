@@ -2,6 +2,75 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [4.0.2] - 2026-01-24
+
+### Fixed - Trading P/L Accuracy for Leaderboard 🎯
+
+#### The Issue
+Trading P/L was calculated as `totalSold - totalBought` globally, which included partial sells from positions the user still held. This showed incorrect P/L on the leaderboard - users appeared to have losses even when they still held valuable shares.
+
+**Example of the bug:**
+- User buys 1 BNB of YES shares
+- User sells 0.3 BNB worth
+- Old P/L: `-0.7 BNB` ❌ (but user still holds shares!)
+
+#### Root Cause
+The subgraph was calculating `tradingPnL` as a simple global sum instead of tracking per-position P/L that's only "realized" when the position is fully exited.
+
+#### The Fix
+1. Added `fullyExited` flag to Position entity
+2. Added `tradingPnLRealized` to Position entity  
+3. `tradingPnL` now only includes P/L from positions where user has **0 shares on both YES and NO sides**
+4. If user buys back into a fully-exited position, the previously counted P/L is reversed
+
+**Schema changes:**
+```graphql
+type Position {
+  # ...
+  fullyExited: Boolean!           # Position fully exited (0 YES and 0 NO shares)
+  tradingPnLRealized: BigDecimal! # P/L realized when fully exited
+}
+
+type User {
+  # ...
+  tradingPnL: BigDecimal!  # Now: Sum of tradingPnLRealized from fully exited positions only
+}
+```
+
+**Impact:** Leaderboard now shows accurate P/L. Portfolio page and leaderboard will match.
+
+---
+
+## [4.0.1] - 2026-01-24
+
+### Fixed - Negative Pool Balance Display Bug 🐛
+
+#### The Issue
+When users performed many partial sells, the pool balance could display as `-0.0000 BNB` instead of `0.0000 BNB`.
+
+#### Root Cause
+In the SELL handling, the subgraph reverse-calculates `grossBnbOut` from the net BNB emitted by the contract:
+```typescript
+let grossBnbOut = bnbAmount * 10000 / 9850;
+market.poolBalance -= grossBnbOut;
+```
+
+Due to integer division differences between Solidity (contract) and AssemblyScript (subgraph), small rounding discrepancies accumulated over many partial sells, causing `poolBalance` to go slightly negative.
+
+#### The Fix
+Added a clamp check before subtracting from pool balance:
+```typescript
+if (grossBnbOut.gt(market.poolBalance)) {
+  market.poolBalance = ZERO_BI;  // Clamp to 0
+} else {
+  market.poolBalance = market.poolBalance.minus(grossBnbOut);
+}
+```
+
+**Impact:** Pool balance will now correctly display as `0.0000 BNB` (not `-0.0000 BNB`) when fully drained.
+
+---
+
 ## [4.0.0] - 2026-01-23
 
 ### 🚀 New Contract Deployment

@@ -139,6 +139,8 @@ function getOrCreatePosition(marketId: string, userAddress: Address): Position {
     position.averageYesPrice = ZERO_BD;
     position.averageNoPrice = ZERO_BD;
     position.netCostBasis = ZERO_BD;
+    position.fullyExited = false; // v4.0.2
+    position.tradingPnLRealized = ZERO_BD; // v4.0.2
     position.claimed = false;
     position.emergencyRefunded = false;
     position.hasVoted = false;
@@ -325,7 +327,15 @@ export function handleTrade(event: TradeEvent): void {
     // Pool loses grossBnbOut, but event emits bnbOut (net after fee)
     // grossBnbOut = bnbOut * 10000 / (10000 - 150) = bnbOut * 10000 / 9850
     let grossBnbOut = event.params.bnbAmount.times(BPS_DENOMINATOR).div(BPS_DENOMINATOR.minus(TOTAL_FEE_BPS));
-    market.poolBalance = market.poolBalance.minus(grossBnbOut);
+    
+    // v4.0.1 FIX: Clamp pool balance to 0 to prevent negative values from rounding errors
+    // Due to integer division differences between Solidity and AssemblyScript, 
+    // accumulated rounding can cause poolBalance to go slightly negative after many partial sells
+    if (grossBnbOut.gt(market.poolBalance)) {
+      market.poolBalance = ZERO_BI;
+    } else {
+      market.poolBalance = market.poolBalance.minus(grossBnbOut);
+    }
   }
 
   market.save();
@@ -334,16 +344,14 @@ export function handleTrade(event: TradeEvent): void {
   user.totalTrades = user.totalTrades.plus(ONE_BI);
   user.totalVolume = user.totalVolume.plus(trade.bnbAmount);
   
-  // P/L Tracking (v3.5.0)
+  // P/L Tracking (v3.5.0) - track raw totals for reference
   if (event.params.isBuy) {
     user.totalBought = user.totalBought.plus(trade.bnbAmount);
   } else {
     user.totalSold = user.totalSold.plus(trade.bnbAmount);
   }
-  // Update trading P/L (realized from sells)
-  user.tradingPnL = user.totalSold.minus(user.totalBought);
-  // Update total P/L
-  user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+  // NOTE: tradingPnL is now updated per-position when fully exited (see below)
+  // user.totalPnL is also updated there
   
   user.save();
 
@@ -377,6 +385,17 @@ export function handleTrade(event: TradeEvent): void {
       }
     }
     position.totalInvested = position.totalInvested.plus(trade.bnbAmount);
+    
+    // v4.0.2: If user buys back after fully exiting, reset the flag
+    if (position.fullyExited) {
+      // User is re-entering this position - reverse the previously counted P/L
+      user.tradingPnL = user.tradingPnL.minus(position.tradingPnLRealized);
+      user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+      user.save();
+      
+      position.fullyExited = false;
+      position.tradingPnLRealized = ZERO_BD;
+    }
   } else {
     // Sell - reduce shares and track returns
     if (event.params.isYes) {
@@ -386,6 +405,18 @@ export function handleTrade(event: TradeEvent): void {
     }
     // Track total returned from sells (v3.5.0)
     position.totalReturned = position.totalReturned.plus(trade.bnbAmount);
+    
+    // v4.0.2: Check if position is now fully exited (0 shares on BOTH sides)
+    if (position.yesShares.equals(ZERO_BI) && position.noShares.equals(ZERO_BI) && !position.fullyExited) {
+      // Position fully exited via trading - realize the P/L
+      position.fullyExited = true;
+      position.tradingPnLRealized = position.totalReturned.minus(position.totalInvested);
+      
+      // Update user's trading P/L with this position's realized P/L
+      user.tradingPnL = user.tradingPnL.plus(position.tradingPnLRealized);
+      user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+      user.save();
+    }
   }
   
   // Update net cost basis (what's still "at risk")
