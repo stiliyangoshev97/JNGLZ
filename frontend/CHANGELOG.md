@@ -2,6 +2,70 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.34] - 2026-01-23
+
+### Fixed - Stale Max Sellable Shares After Trades
+
+#### Cross-Direction Sell Bug
+- **Fixed** transaction failures when switching between YES/NO after partial sells
+- After selling NO shares, switching to YES tab would use stale max sellable data
+- Pool liquidity changes affect both sides, but data wasn't being refreshed
+- Now refetches `useMaxSellableShares` for BOTH YES and NO after any successful trade
+- No more page refresh needed when trading between directions
+
+---
+
+## [0.7.33] - 2026-01-23
+
+### Fixed - TradePanel UX & Documentation Improvements
+
+#### Sell Message Accuracy
+- **Fixed** misleading "PARTIAL SELL DUE TO POOL LIQUIDITY" message
+- Message was showing when user manually chose partial sells, not just when pool-limited
+- Now correctly distinguishes between:
+  - **"EXITING FULL POSITION"** - When selling your entire position
+  - **"SELLING MAXIMUM POSSIBLE"** - When pool liquidity limits your sale
+
+#### Prevent Selling Shares You Don't Have
+- **Fixed** UX bug allowing users to attempt selling shares in opposite direction
+- Example: If you have YES shares, you could go to NO tab and try to sell
+- Now clears amount when switching between YES/NO directions
+- Shows "You don't have any [YES/NO] shares to sell" message
+- Hides input and preset buttons when no shares to sell
+- Prevents failed transactions from bad UX
+
+#### Slippage Settings Display
+- **Fixed** custom slippage input truncating multi-digit values
+- "50" was displaying as "5", "95" as "9"
+- Changed from `type="number"` to `type="text"` with `inputMode="decimal"`
+- Added fixed width and proper validation
+
+#### Decimal Precision for Sells
+- **Increased** sell estimate precision from 4 to 6 decimal places
+- Shows actual values for: Est. Return, Min. after slippage, Fee
+- Helps users verify fee calculations are correct
+
+### Added
+
+#### How To Play Documentation
+- **NEW SECTION: One-Sided Markets** - Explains what happens when only one side has holders
+- **NEW SECTION: Emergency Refund** - Documents all trigger conditions with formula and examples
+- **NEW SECTION: Finalization Process** - 4 scenarios with bond distribution details
+- **NEW SECTION: Pool Liquidity & Selling** - AMM behavior, partial sell limitations, solutions
+
+#### Fee Display for Sells
+- Added "Fee (1.5% included)" line in sell estimates
+- Shows the fee amount that's already deducted from Est. Return
+- Improves transparency - users know the displayed return is NET amount
+
+### Technical Details
+- `isSellAll` memo: Now only true when selling ENTIRE position
+- `isSellingPoolMax` memo: New variable for pool-limited scenarios
+- Added `whitespace-nowrap`, `gap-2`, `flex-shrink-0` to slippage display line
+- SlippageSettings input validation for text-based decimal input
+
+---
+
 ## [0.7.32] - 2026-01-22
 
 ### Fixed - Critical ABI Mismatch (Sell Button Not Working)

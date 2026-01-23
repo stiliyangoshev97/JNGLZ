@@ -108,8 +108,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const currentShares = direction === 'yes' ? userYesShares : userNoShares;
 
   // Get max sellable shares from contract (respects pool liquidity limits)
-  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes } = useMaxSellableShares(marketId, userYesShares, true);
-  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo } = useMaxSellableShares(marketId, userNoShares, false);
+  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
+  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
   
   const maxSellableShares = direction === 'yes' ? maxSellableYes : maxSellableNo;
   const maxSellBnbOut = direction === 'yes' ? maxSellBnbYes : maxSellBnbNo;
@@ -120,18 +120,29 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
     return maxSellableShares < currentShares;
   }, [currentShares, maxSellableShares]);
 
-  // Check if selling all shares
+  // Check if selling ALL shares (true full position exit)
   const isSellAll = useMemo(() => {
     if (action !== 'sell' || !amount || currentShares === 0n) return false;
     try {
       const sharesToSell = parseEther(amount);
-      // Use maxSellableShares if pool is limited
-      const effectiveMax = maxSellableShares !== undefined ? maxSellableShares : currentShares;
-      return sharesToSell >= effectiveMax;
+      // Only true when selling entire position (not just pool max)
+      return sharesToSell >= currentShares;
     } catch {
       return false;
     }
-  }, [action, amount, currentShares, maxSellableShares]);
+  }, [action, amount, currentShares]);
+
+  // Check if selling pool maximum (when pool-limited and selling max possible)
+  const isSellingPoolMax = useMemo(() => {
+    if (action !== 'sell' || !amount || !isPoolLimited || maxSellableShares === undefined) return false;
+    try {
+      const sharesToSell = parseEther(amount);
+      // True when selling the pool max but NOT the full position
+      return sharesToSell >= maxSellableShares && sharesToSell < currentShares;
+    } catch {
+      return false;
+    }
+  }, [action, amount, isPoolLimited, maxSellableShares, currentShares]);
 
   // Reset form on success
   useEffect(() => {
@@ -141,6 +152,9 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       setAmount('');
       // Refetch position after successful trade
       refetchPosition();
+      // Refetch max sellable shares (pool liquidity may have changed)
+      refetchMaxSellableYes();
+      refetchMaxSellableNo();
       // Refetch user's BNB balance (local)
       refetchBalance();
       // Invalidate ALL balance queries so Header/other components update too
@@ -153,7 +167,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       resetSellYes();
       resetSellNo();
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient, showToast]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchMaxSellableYes, refetchMaxSellableNo, refetchBalance, queryClient, showToast]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
@@ -161,7 +175,8 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       return formatShares(previewBuyData as bigint);
     }
     if (action === 'sell' && previewSellData) {
-      return `${formatBNB(previewSellData as bigint)} BNB`;
+      // Use 6 decimals for sell estimates to show precise values
+      return `${formatBNB(previewSellData as bigint, 6)} BNB`;
     }
     return '0';
   }, [action, previewBuyData, previewSellData]);
@@ -271,7 +286,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
         {/* Direction Selection (YES/NO) */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setDirection('yes')}
+            onClick={() => { setDirection('yes'); setAmount(''); }}
             className={cn(
               'py-4 text-center font-bold text-xl uppercase border-2 transition-all',
               direction === 'yes'
@@ -285,7 +300,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
             </span>
           </button>
           <button
-            onClick={() => setDirection('no')}
+            onClick={() => { setDirection('no'); setAmount(''); }}
             className={cn(
               'py-4 text-center font-bold text-xl uppercase border-2 transition-all',
               direction === 'no'
@@ -356,52 +371,65 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
           </button>
         </div>
 
-        {/* Amount Input */}
-        <Input
-          type="text"
-          inputMode="decimal"
-          placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
-          value={amount}
-          onChange={(e) => {
-            // Replace comma with period for decimal input
-            const value = e.target.value.replace(',', '.');
-            // Only allow valid decimal numbers
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-              setAmount(value);
-            }
-          }}
-          label={action === 'buy' ? 'AMOUNT (BNB)' : 'SHARES'}
-        />
+        {/* No shares to sell warning */}
+        {action === 'sell' && currentShares === 0n && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-center">
+            <p className="text-text-secondary text-sm">
+              You don't have any {direction.toUpperCase()} shares to sell.
+            </p>
+          </div>
+        )}
 
-        {/* Quick amounts */}
-        <div className="flex gap-2">
-          {action === 'buy' ? (
-            BUY_PRESETS.map((val) => (
-              <button
-                key={val}
-                onClick={() => setAmount(val)}
-                className={cn(
-                  'flex-1 py-1 text-xs font-mono border transition-colors',
-                  amount === val
-                    ? 'border-cyber text-cyber bg-cyber/10'
-                    : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
-                )}
-              >
-                {val}
-              </button>
-            ))
-          ) : (
-            sellPresets.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => setAmount(formatEther(preset.shares))}
-                className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
-              >
-                {preset.label}
-              </button>
-            ))
-          )}
-        </div>
+        {/* Amount Input - hidden when trying to sell 0 shares */}
+        {!(action === 'sell' && currentShares === 0n) && (
+          <>
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder={action === 'buy' ? 'Amount in BNB' : 'Shares to sell'}
+              value={amount}
+              onChange={(e) => {
+                // Replace comma with period for decimal input
+                const value = e.target.value.replace(',', '.');
+                // Only allow valid decimal numbers
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setAmount(value);
+                }
+              }}
+              label={action === 'buy' ? 'AMOUNT (BNB)' : 'SHARES'}
+            />
+
+            {/* Quick amounts */}
+            <div className="flex gap-2">
+              {action === 'buy' ? (
+                BUY_PRESETS.map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => setAmount(val)}
+                    className={cn(
+                      'flex-1 py-1 text-xs font-mono border transition-colors',
+                      amount === val
+                        ? 'border-cyber text-cyber bg-cyber/10'
+                        : 'border-dark-600 text-text-secondary hover:text-white hover:border-dark-500'
+                    )}
+                  >
+                    {val}
+                  </button>
+                ))
+              ) : (
+                sellPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setAmount(formatEther(preset.shares))}
+                    className="flex-1 py-1 text-xs font-mono border border-dark-600 text-text-secondary hover:text-white hover:border-dark-500 transition-colors"
+                  >
+                    {preset.label}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
         {/* Estimate */}
         {amount && parseFloat(amount) > 0 && (
@@ -415,13 +443,13 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               </span>
             </div>
             {/* Minimum output with slippage */}
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-text-muted">Min. after slippage ({slippagePercent}%)</span>
-              <span className="font-mono text-text-secondary">
+            <div className="flex justify-between text-xs mt-1 gap-2">
+              <span className="text-text-muted whitespace-nowrap">Min. after slippage ({slippagePercent}%)</span>
+              <span className="font-mono text-text-secondary text-right flex-shrink-0">
                 {action === 'buy' && previewBuyData
                   ? formatShares(applySlippage(previewBuyData as bigint, slippageBps))
                   : action === 'sell' && previewSellData
-                  ? `${formatBNB(applySlippage(previewSellData as bigint, slippageBps))} BNB`
+                  ? `${formatBNB(applySlippage(previewSellData as bigint, slippageBps), 6)} BNB`
                   : '0'}
               </span>
             </div>
@@ -429,22 +457,30 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               <div className="flex justify-between text-xs mt-1">
                 <span className="text-text-muted">Fee (1.5%)</span>
                 <span className="font-mono text-text-secondary">
-                  {(parseFloat(amount) * 0.015).toFixed(4)} BNB
+                  {(parseFloat(amount) * 0.015).toFixed(6)} BNB
+                </span>
+              </div>
+            )}
+            {action === 'sell' && previewSellData && (
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-text-muted">Fee (1.5% included)</span>
+                <span className="font-mono text-text-secondary">
+                  ~{formatBNB((previewSellData as bigint) * 15n / 985n, 6)} BNB
                 </span>
               </div>
             )}
           </div>
         )}
 
-        {/* Sell All Warning */}
+        {/* Sell All Warning - true full position exit */}
         {isSellAll && (
           <div className="p-3 bg-warning/10 border border-warning text-sm">
             <div className="flex gap-2">
               <span className="text-warning">⚠️</span>
               <div>
-                <p className="text-warning font-bold text-xs mb-1">SELLING ALL SHARES</p>
+                <p className="text-warning font-bold text-xs mb-1">EXITING FULL POSITION</p>
                 <p className="text-text-secondary text-xs">
-                  You will exit your position and receive BNB now.
+                  You will sell all your shares and receive BNB now.
                   You will NOT receive any payout when the market resolves.
                 </p>
               </div>
@@ -452,17 +488,17 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
           </div>
         )}
 
-        {/* Pool Limited Info - explain remaining shares */}
-        {action === 'sell' && isPoolLimited && !isSellAll && (
+        {/* Selling Pool Maximum - when pool limits but user is selling max possible */}
+        {isSellingPoolMax && (
           <div className="p-3 bg-cyber/10 border border-cyber text-sm">
             <div className="flex gap-2">
-              <span className="text-cyber">💡</span>
+              <span className="text-cyber">⚠️</span>
               <div>
-                <p className="text-cyber font-bold text-xs mb-1">PARTIAL SELL DUE TO POOL LIQUIDITY</p>
+                <p className="text-cyber font-bold text-xs mb-1">SELLING MAXIMUM POSSIBLE</p>
                 <p className="text-text-secondary text-xs">
-                  You can sell up to {maxSellableShares ? formatShares(maxSellableShares) : '0'} shares now. 
-                  Your remaining shares stay in the market - if {direction.toUpperCase()} wins, 
-                  you'll receive the full payout for those shares!
+                  Pool liquidity limits this sale to {maxSellableShares ? formatShares(maxSellableShares) : '0'} shares.
+                  You'll keep {currentShares && maxSellableShares ? formatShares(currentShares - maxSellableShares) : '0'} shares - 
+                  if {direction.toUpperCase()} wins, you'll receive the full payout for those!
                 </p>
               </div>
             </div>
