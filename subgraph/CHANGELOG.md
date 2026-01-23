@@ -2,6 +2,32 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [3.8.5] - 2026-01-23 (UNRELEASED)
+
+### Changed - Simplified Pool Balance Tracking 🎯
+
+#### Contract Bug #4 Fix Impact
+Contract v3.8.2 fixed Trade event consistency - BUY events now emit NET BNB (after fees), same as SELL events.
+
+#### Previous Subgraph Logic (v3.8.4)
+```typescript
+// BUY: Event emitted msg.value (gross), so we calculated net
+let amountAfterFee = bnbAmount * 9850 / 10000;
+market.poolBalance += amountAfterFee;
+```
+
+#### New Subgraph Logic (v3.8.5)
+```typescript
+// BUY: Event now emits amountAfterFee directly - use it as-is
+market.poolBalance += bnbAmount;
+```
+
+**Impact:** Simpler code, no fee calculation needed for BUY operations.
+
+**Requires:** Contract v3.8.2+ which emits net BNB for buys.
+
+---
+
 ## [3.8.4] - 2026-01-23
 
 ### Fixed - Critical poolBalance Tracking Bug 🐛

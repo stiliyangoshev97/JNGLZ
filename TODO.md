@@ -64,13 +64,15 @@ After thorough investigation, this behavior is **intentional and correct** for a
 
 **Commit:** Pending on branch `fix/pool-balance-tracking`
 
-### Bug #5: Subgraph Fee Assumption
+### ✅ Bug #5: Subgraph Fee Assumption - FIXED
 
-**Problem:** Subgraph v3.8.4 assumes ALL buys have 1.5% fee, but `createMarketAndBuy` only had 1%.
+**Problem:** Subgraph v3.8.4 was calculating `amountAfterFee` from BUY event's `bnbAmount`, assuming it was gross.
 
-**Impact:** Pool balance calculation was wrong for markets created with initial buy.
+**Root Cause:** With Bug #4 fix, BUY events now emit NET BNB (after fees). The subgraph was double-deducting fees!
 
-**Status:** Bug #1 fix resolves the root cause. Subgraph may need update to handle edge cases.
+**Fix Applied:** Simplified subgraph - BUY events now use `bnbAmount` directly since it's already net.
+
+**Subgraph Version:** v3.8.5 (requires contract v3.8.2+)
 
 ---
 

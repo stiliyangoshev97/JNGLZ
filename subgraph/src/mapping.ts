@@ -53,6 +53,7 @@ const ONE_BI = BigInt.fromI32(1);
 const ZERO_BD = BigDecimal.fromString("0");
 
 // Fee constants (must match contract: platformFeeBps=100 + creatorFeeBps=50 = 150 bps = 1.5%)
+// v3.8.2: BUY events now emit net BNB (after fees), so fee calculation only needed for SELL
 const TOTAL_FEE_BPS = BigInt.fromI32(150); // 1.5% total fee
 const BPS_DENOMINATOR = BigInt.fromI32(10000);
 
@@ -303,19 +304,17 @@ export function handleTrade(event: TradeEvent): void {
   market.totalTrades = market.totalTrades.plus(ONE_BI);
 
   // Update share supplies and pool balance
-  // IMPORTANT: Fee calculation must match contract (1.5% total fee)
-  // BUY: event emits msg.value (100%), pool receives amountAfterFee (98.5%)
-  // SELL: event emits bnbOut (net after fee), pool loses grossBnbOut (100%)
+  // v3.8.2: Trade event now emits NET BNB (after fees) for both BUY and SELL
+  // BUY: event emits amountAfterFee (what goes to pool)
+  // SELL: event emits bnbOut (what user receives after fees)
   if (event.params.isBuy) {
     if (event.params.isYes) {
       market.yesShares = market.yesShares.plus(event.params.shares);
     } else {
       market.noShares = market.noShares.plus(event.params.shares);
     }
-    // Pool receives bnbAmount minus 1.5% fee
-    // amountAfterFee = bnbAmount * (10000 - 150) / 10000 = bnbAmount * 9850 / 10000
-    let amountAfterFee = event.params.bnbAmount.times(BPS_DENOMINATOR.minus(TOTAL_FEE_BPS)).div(BPS_DENOMINATOR);
-    market.poolBalance = market.poolBalance.plus(amountAfterFee);
+    // v3.8.2: Event now emits net BNB directly - pool receives exactly this amount
+    market.poolBalance = market.poolBalance.plus(event.params.bnbAmount);
   } else {
     // Sell
     if (event.params.isYes) {
