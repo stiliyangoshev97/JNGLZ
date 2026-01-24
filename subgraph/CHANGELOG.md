@@ -2,6 +2,30 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [4.0.3] - 2025-01-25
+
+### Fixed - Subgraph StartBlock Correction 🔧
+
+#### The Issue
+The subgraph was configured to start indexing from block `86129412`, but the actual contract deployment occurred at block `86129397` - 15 blocks earlier.
+
+#### Root Cause
+Wrong startBlock value in `subgraph.yaml` configuration.
+
+#### The Fix
+Updated `subgraph.yaml`:
+```yaml
+# FROM:
+startBlock: 86129412
+
+# TO:
+startBlock: 86129397
+```
+
+**Impact:** Ensures all events from contract deployment are indexed, including any early transactions that may have been missed.
+
+---
+
 ## [4.0.2] - 2026-01-24
 
 ### Fixed - Trading P/L Accuracy for Leaderboard 🎯
