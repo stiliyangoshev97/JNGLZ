@@ -177,9 +177,15 @@ export const GET_MARKET = gql`
         yesShares
         noShares
         totalInvested
+        totalReturned
         averageYesPrice
         averageNoPrice
+        netCostBasis
+        fullyExited
+        tradingPnLRealized
         claimed
+        claimedAmount
+        realizedPnL
       }
     }
   }

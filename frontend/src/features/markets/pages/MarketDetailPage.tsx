@@ -51,6 +51,13 @@ interface HolderPosition {
   yesShares: string;
   noShares: string;
   totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
+  fullyExited?: boolean;
+  tradingPnLRealized?: string;
+  claimed?: boolean;
+  claimedAmount?: string | null;
+  realizedPnL?: string | null;
 }
 
 export function MarketDetailPage() {
@@ -604,7 +611,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          REALIZED P/L
+          P/L
         </button>
         <button
           onClick={() => setActiveTab('holders')}
@@ -624,7 +631,7 @@ function TradesAndHoldersTabs({
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
-          <RealizedPnl trades={trades} />
+          <RealizedPnl trades={trades} positions={positions} />
         ) : (
           <HoldersTable positions={positions} />
         )}

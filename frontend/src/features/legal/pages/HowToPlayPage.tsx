@@ -218,6 +218,75 @@ export function HowToPlayPage() {
                   </p>
                 </div>
               </div>
+
+              {/* THE FIRST MOVER - Advanced Arbitrage */}
+              <div className="bg-dark-800 border border-yes/50 p-5">
+                <h3 className="text-xl font-black text-yes mb-2">THE FIRST MOVER <span className="text-sm font-normal text-text-muted">(Free Shares Arbitrage)</span></h3>
+                <p className="text-text-secondary mb-3">
+                  <strong className="text-white">The Goal:</strong> Get "free" shares with house money.
+                </p>
+                <div className="space-y-2 text-sm">
+                  <p className="text-text-secondary">
+                    <strong className="text-cyber">The Play:</strong> Be the <strong className="text-yes">first buyer</strong> in a fresh market. 
+                    Buy a position (e.g., 1 BNB of YES shares at 50%). Then <strong className="text-white">partially sell</strong> — 
+                    the bonding curve lets you extract most of your BNB back while keeping some shares.
+                  </p>
+                  <p className="text-text-secondary">
+                    <strong className="text-yes">The Win:</strong> You now hold shares that cost you <strong className="text-white">almost nothing</strong> (just the 1.5% trading fees). 
+                    If someone else buys after you, your remaining shares increase in value — sell for profit. 
+                    If your side wins at resolution, you claim winnings from shares you barely paid for!
+                  </p>
+                  <div className="bg-dark-900/50 p-3 mt-3 border border-dark-600">
+                    <p className="text-white font-bold text-xs mb-2">Example:</p>
+                    <div className="text-text-muted text-xs space-y-1">
+                      <p>1. Buy 1 BNB of YES at 50% → Get ~200 shares</p>
+                      <p>2. Sell 150 shares → Get ~0.97 BNB back (after fees)</p>
+                      <p>3. You still hold <span className="text-yes">50 shares</span> that only cost you <span className="text-cyber">~0.03 BNB</span></p>
+                      <p>4. If YES wins → Your 50 shares claim from the entire pool = <span className="text-yes">massive ROI</span></p>
+                    </div>
+                  </div>
+                  <p className="text-warning text-xs mt-3">
+                    ⚠️ This works best when you're the first/only trader. Once others trade, the math changes.
+                  </p>
+                </div>
+              </div>
+
+              {/* THE REFUND FARMER - Refund Arbitrage */}
+              <div className="bg-dark-800 border border-warning/50 p-5">
+                <h3 className="text-xl font-black text-warning mb-2">THE REFUND FARMER <span className="text-sm font-normal text-text-muted">(Cancellation Arbitrage)</span></h3>
+                <p className="text-text-secondary mb-3">
+                  <strong className="text-white">The Goal:</strong> Profit from potential market cancellation.
+                </p>
+                <div className="space-y-2 text-sm">
+                  <p className="text-text-secondary">
+                    <strong className="text-cyber">The Play:</strong> Look for markets likely to be <strong className="text-warning">cancelled</strong> 
+                    (one-sided, ambiguous questions, no activity). Buy shares <strong className="text-white">early at low prices</strong>. 
+                    Since refunds are based on <strong className="text-warning">share count, not amount paid</strong>, 
+                    early buyers get a disproportionate refund.
+                  </p>
+                  <p className="text-text-secondary">
+                    <strong className="text-yes">The Win:</strong> If the market gets cancelled, you receive more BNB back than you paid — 
+                    funded by late buyers who paid higher prices for fewer shares.
+                  </p>
+                  <div className="bg-dark-900/50 p-3 mt-3 border border-dark-600">
+                    <p className="text-white font-bold text-xs mb-2">Example: One-Sided Market Refund</p>
+                    <div className="text-text-muted text-xs space-y-1">
+                      <p>1. You buy early: <span className="text-white">100 shares</span> for <span className="text-white">1 BNB</span> (0.01 BNB/share)</p>
+                      <p>2. Late buyer: <span className="text-white">50 shares</span> for <span className="text-white">2 BNB</span> (0.04 BNB/share)</p>
+                      <p>3. Market cancelled → Pool has ~2.7 BNB (after fees)</p>
+                      <p>4. You own 66.7% of shares → Refund = <span className="text-yes">1.8 BNB</span> (paid 1 BNB = <span className="text-yes">+0.8 profit</span>)</p>
+                      <p>5. Late buyer owns 33.3% → Refund = <span className="text-no">0.9 BNB</span> (paid 2 BNB = <span className="text-no">-1.1 loss</span>)</p>
+                    </div>
+                  </div>
+                  <div className="bg-no/10 p-3 mt-3 border border-no">
+                    <p className="text-no font-bold text-xs mb-1">⚠️ ETHICAL WARNING</p>
+                    <p className="text-text-muted text-xs">
+                      This strategy profits at the expense of late buyers. While it's valid AMM behavior, 
+                      use it responsibly. Don't create fake markets just to farm refunds.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1005,8 +1074,75 @@ export function HowToPlayPage() {
                   </ul>
                 </div>
 
+                {/* CRITICAL WARNING: Refund based on shares, not amount paid */}
+                <div className="bg-warning/20 p-4 border-2 border-warning mt-4">
+                  <p className="text-warning font-black mb-3 flex items-center gap-2">
+                    ⚠️ CRITICAL: REFUNDS ARE BASED ON SHARES, NOT AMOUNT PAID
+                  </p>
+                  <p className="text-text-secondary text-sm mb-4">
+                    Due to the <strong className="text-white">bonding curve</strong>, early buyers pay less per share than late buyers.
+                    However, refunds are calculated based on <strong className="text-warning">share count</strong>, not how much BNB you invested.
+                  </p>
+                  
+                  <div className="bg-dark-900/70 p-4 border border-dark-600 mb-4">
+                    <p className="text-white font-bold mb-3 text-sm">Example: Why Late Buyers Can Lose on Refund</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs font-mono">
+                        <thead>
+                          <tr className="border-b border-dark-600">
+                            <th className="text-left p-2 text-text-muted">Trader</th>
+                            <th className="text-right p-2 text-text-muted">Shares</th>
+                            <th className="text-right p-2 text-text-muted">Paid</th>
+                            <th className="text-right p-2 text-text-muted">Refund</th>
+                            <th className="text-right p-2 text-text-muted">Net P&L</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-dark-700">
+                            <td className="p-2 text-white">Alice <span className="text-text-muted">(early)</span></td>
+                            <td className="p-2 text-yes text-right">100</td>
+                            <td className="p-2 text-right">1.0 BNB</td>
+                            <td className="p-2 text-cyber text-right">1.8 BNB</td>
+                            <td className="p-2 text-yes text-right font-bold">+0.8 BNB</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 text-white">Bob <span className="text-text-muted">(late)</span></td>
+                            <td className="p-2 text-yes text-right">50</td>
+                            <td className="p-2 text-right">2.0 BNB</td>
+                            <td className="p-2 text-cyber text-right">0.9 BNB</td>
+                            <td className="p-2 text-no text-right font-bold">-1.1 BNB</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-text-muted text-xs mt-3">
+                      Pool: ~2.7 BNB (after fees). Alice owns 66.7% of shares → gets 66.7% of pool.
+                      Bob owns 33.3% → gets 33.3%. Bob paid MORE but gets LESS because he has fewer shares.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <p className="text-white font-bold">Why does this happen?</p>
+                    <ul className="list-disc list-inside space-y-1 text-text-secondary">
+                      <li><strong className="text-cyber">Bonding curve:</strong> Early buyers get shares cheaper, late buyers pay more per share</li>
+                      <li><strong className="text-cyber">Share-based refund:</strong> The contract only knows how many shares you own, not what you paid</li>
+                      <li><strong className="text-cyber">Early risk premium:</strong> Early buyers took more risk when liquidity was low</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-dark-800 p-3 mt-4 border border-dark-600">
+                    <p className="text-cyber font-bold text-xs mb-2">💡 PRO TIP: Minimize Refund Risk</p>
+                    <ul className="list-disc list-inside space-y-1 text-text-muted text-xs">
+                      <li>Avoid buying into <strong className="text-warning">one-sided markets</strong> (99%+ on one side) - high cancellation risk</li>
+                      <li>Check <strong className="text-white">market activity</strong> before buying at high prices</li>
+                      <li>Consider <strong className="text-white">selling before deadline</strong> if you're unsure about resolution</li>
+                      <li>The <strong className="text-white">earlier you buy</strong>, the better your refund ratio if cancelled</li>
+                    </ul>
+                  </div>
+                </div>
+
                 <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
-                  <p className="text-white font-bold mb-2">Example:</p>
+                  <p className="text-white font-bold mb-2">Basic Example (Equal Share Prices):</p>
                   <div className="text-text-secondary space-y-2 text-xs">
                     <p>Market expired 24+ hours ago with no proposal. Pool has <span className="text-cyber">5 BNB</span>.</p>
                     <p>Total shares in market: <span className="text-white">500 YES + 300 NO = 800 total</span></p>
@@ -1110,55 +1246,141 @@ export function HowToPlayPage() {
           {/* ===== POOL LIQUIDITY & SELLING ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-purple-500 pl-4 mb-6">
-              POOL LIQUIDITY & SELLING
+              AMM MECHANICS & THE "FREE SHARES" PHENOMENON
             </h2>
             
             <div className="bg-purple-500/10 border-2 border-purple-500 p-6 mb-6">
-              <p className="text-purple-400 font-black text-lg mb-4">HOW SELLING WORKS</p>
+              <p className="text-purple-400 font-black text-lg mb-4">HOW THE AMM ACTUALLY WORKS</p>
               
               <div className="space-y-4 text-sm">
                 <p className="text-text-secondary">
-                  JNGLZ uses an <strong className="text-purple-400">Automated Market Maker (AMM)</strong> for instant trading. 
-                  When you sell shares, you receive BNB <strong className="text-white">from the pool</strong>. 
-                  The AMM ensures you can always exit your position.
+                  JNGLZ uses an <strong className="text-purple-400">Automated Market Maker (AMM)</strong> with a bonding curve. 
+                  This creates a unique property: <strong className="text-yes">you can often extract your entire investment 
+                  AND still keep shares</strong>. This isn't a bug — it's how AMM math works.
                 </p>
 
-                <div className="bg-yes/10 p-4 border border-yes">
-                  <p className="text-yes font-bold mb-2">✓ YOU CAN ALWAYS SELL ALL YOUR SHARES</p>
-                  <p className="text-text-secondary text-xs">
-                    If you're the only trader or trading in a quiet market, you can sell your entire position. 
-                    The AMM math ensures the pool always has enough BNB to pay you for your shares.
-                  </p>
-                </div>
-
-                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
-                  <p className="text-white font-bold mb-2">Price Slippage on Sells</p>
+                {/* The Key Insight */}
+                <div className="bg-yes/10 p-4 border-2 border-yes">
+                  <p className="text-yes font-bold mb-2">🔑 THE KEY INSIGHT: PARTIAL SELL = FREE REMAINING SHARES</p>
                   <p className="text-text-secondary text-xs mb-3">
-                    Like any AMM (Uniswap, PancakeSwap), selling pushes the price DOWN. The more you sell, the worse your average price:
+                    When you buy shares, you push the price UP. When you sell some back, you're selling at this 
+                    <strong className="text-white"> higher price</strong>. The AMM pays you from the pool — often enough to 
+                    recover your entire initial investment while leaving you with "free" shares.
                   </p>
-                  <div className="bg-dark-800 p-3 text-xs font-mono space-y-2">
-                    <p className="text-text-muted">Example: You hold 100 shares worth 0.006 BNB each</p>
-                    <p>• Sell 10 shares → ~0.0059 BNB/share (small impact)</p>
-                    <p>• Sell 50 shares → ~0.0055 BNB/share (medium impact)</p>
-                    <p>• Sell all 100 → ~0.0050 BNB/share (larger impact)</p>
-                    <p className="text-cyber mt-2">Lower heat levels (DEGEN FLASH) = more slippage per share</p>
+                  <div className="bg-dark-900/70 p-3 border border-dark-600">
+                    <p className="text-white font-bold text-xs mb-2">Real Example (Actual Trade History):</p>
+                    <div className="font-mono text-xs space-y-1">
+                      <p className="text-cyber">Step 1: BUY NO → 0.985 BNB → 197 shares</p>
+                      <p className="text-warning">Step 2: SELL NO → 98.50 shares → 0.4875 BNB</p>
+                      <p className="text-warning">Step 3: SELL NO → 98.01 shares → 0.4827 BNB</p>
+                      <p className="border-t border-dark-600 pt-2 mt-2">
+                        <span className="text-text-muted">Total sold:</span> <span className="text-white">196.51 shares</span> for <span className="text-yes">0.9702 BNB</span>
+                      </p>
+                      <p>
+                        <span className="text-text-muted">Remaining:</span> <span className="text-yes">~0.49 shares</span> that cost you <span className="text-cyber">~0.015 BNB</span> (just the fees!)
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-warning/10 p-4 border border-warning mt-4">
-                  <p className="text-warning font-bold mb-2">⚠️ EARLY SELLERS GET BETTER PRICES</p>
-                  <p className="text-text-secondary text-xs">
-                    In multi-trader scenarios, sellers compete for pool liquidity. The first to sell gets 
-                    the best price, later sellers get progressively worse prices as the pool drains.
-                    This is standard AMM behavior — same as Uniswap.
+                {/* What This Means */}
+                <div className="bg-cyber/10 p-4 border border-cyber mt-4">
+                  <p className="text-cyber font-bold mb-2">WHAT THIS MEANS FOR YOU</p>
+                  <p className="text-text-secondary text-xs mb-3">
+                    After partial selling, your remaining shares are essentially <strong className="text-white">"house money"</strong>:
                   </p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-2">
+                    <li>
+                      <strong className="text-yes">If someone buys after you:</strong> Price goes up → 
+                      sell your remaining shares for <strong className="text-yes">pure profit</strong>
+                    </li>
+                    <li>
+                      <strong className="text-yes">If market resolves in your favor:</strong> Your "free" shares 
+                      claim a portion of the <strong className="text-yes">entire losing side's BNB</strong>
+                    </li>
+                    <li>
+                      <strong className="text-no">If market resolves against you:</strong> You only lose the 
+                      <strong className="text-white"> ~1.5% trading fees</strong> you already paid
+                    </li>
+                  </ul>
                 </div>
 
-                <div className="bg-cyber/10 p-4 border border-cyber mt-4">
-                  <p className="text-cyber font-bold mb-2">POOL SOLVENCY PROTECTION</p>
+                {/* Why This Happens - Math */}
+                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
+                  <p className="text-white font-bold mb-2">Why Does This Happen? (The Math)</p>
+                  <p className="text-text-secondary text-xs mb-3">
+                    The bonding curve prices shares based on <strong className="text-white">current supply ratio</strong>, 
+                    not your purchase history:
+                  </p>
+                  <div className="bg-dark-800 p-3 text-xs font-mono space-y-2">
+                    <p className="text-text-muted">Fresh market at 50/50:</p>
+                    <p>1. You buy 200 NO shares → Price rises to ~60% NO</p>
+                    <p>2. You sell 100 shares at the <span className="text-yes">new higher price</span></p>
+                    <p>3. Price drops back, but you already extracted value</p>
+                    <p>4. Sell another 100 → Extract more value</p>
+                    <p className="text-cyber mt-2">Result: You've drained most of your BNB back, but math says you still own shares!</p>
+                  </div>
+                </div>
+
+                {/* Important Caveats */}
+                <div className="bg-warning/10 p-4 border border-warning mt-4">
+                  <p className="text-warning font-bold mb-2">⚠️ IMPORTANT CAVEATS</p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-2">
+                    <li>
+                      <strong className="text-white">Works best as first buyer:</strong> You push price up with no one 
+                      ahead of you. Later buyers compete with existing supply.
+                    </li>
+                    <li>
+                      <strong className="text-white">Fees are real:</strong> You pay 1.5% on every trade. 
+                      The "free shares" cost you these fees.
+                    </li>
+                    <li>
+                      <strong className="text-white">Someone else may do this too:</strong> If everyone tries this, 
+                      no one has an edge. It's an opportunity, not a guarantee.
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Heat Level Reality Check */}
+                <div className="bg-purple-500/10 p-4 border-2 border-purple-500 mt-4">
+                  <p className="text-purple-400 font-bold mb-2">🌡️ HEAT LEVEL REALITY CHECK</p>
+                  <p className="text-text-secondary text-xs mb-3">
+                    This "free shares" phenomenon <strong className="text-warning">entirely depends on the heat level</strong>. 
+                    The effect is dramatic in low vLiq markets but nearly impossible in high vLiq markets:
+                  </p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-2 p-2 bg-dark-900/50 border border-no/30">
+                      <span className="text-no font-bold">DEGEN FLASH (vLiq=50):</span>
+                      <span className="text-text-secondary">1 BNB moves price ~33%. Easy to extract value. <span className="text-yes">Best opportunity.</span></span>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-dark-900/50 border border-yellow-500/30">
+                      <span className="text-yellow-500 font-bold">STREET FIGHT (vLiq=200):</span>
+                      <span className="text-text-secondary">1 BNB moves price ~16%. Still possible with decent capital.</span>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-dark-900/50 border border-blue-400/30">
+                      <span className="text-blue-400 font-bold">INSTITUTION (vLiq=2000):</span>
+                      <span className="text-text-secondary">1 BNB moves price ~2%. Need 10+ BNB to see meaningful effect.</span>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-dark-900/50 border border-purple-400/30">
+                      <span className="text-purple-400 font-bold">DEEP SPACE (vLiq=10000):</span>
+                      <span className="text-text-secondary">1 BNB moves price &lt;1%. <span className="text-no">Requires massive capital. Not worth the risk.</span></span>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-2 bg-dark-900/70 border border-dark-600">
+                    <p className="text-text-muted text-xs">
+                      <strong className="text-warning">Bottom line:</strong> In most markets, this strategy isn't worth actively pursuing. 
+                      The risk vs. reward rarely makes sense unless you're in a <span className="text-no">DEGEN FLASH</span> market 
+                      and happen to be first. Some traders may get lucky, but don't count on it as a reliable strategy.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pool Solvency */}
+                <div className="bg-dark-900/50 p-4 border border-dark-600 mt-4">
+                  <p className="text-white font-bold mb-2">Pool Solvency</p>
                   <p className="text-text-secondary text-xs mb-2">
                     The contract includes an <strong className="text-white">InsufficientPoolBalance</strong> safety check. 
-                    If somehow the pool can't afford your payout, the transaction reverts safely.
+                    If the pool can't afford your payout, the transaction reverts safely. Options:
                   </p>
                   <ul className="list-disc list-inside text-text-muted text-xs space-y-1">
                     <li><strong className="text-white">Wait for others to buy</strong> — any buy (YES or NO) adds BNB to the pool</li>
