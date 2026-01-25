@@ -595,19 +595,13 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         )}
       </div>
 
-      {/* Current market chance - ALWAYS show for unresolved markets */}
-      {!isResolved ? (
-        <div className="flex items-center justify-between text-sm mb-4">
-          <span className="text-text-muted">CHANCE</span>
-          <div className="text-right">
-            <CompactChance value={yesPercent} />
-            <span className="text-xs text-text-muted ml-1">({Math.round(yesPercent)}¢)</span>
-          </div>
+      {/* Current market chance - ALWAYS show for ALL markets */}
+      <div className="flex items-center justify-between text-sm mb-4">
+        <span className="text-text-muted">CHANCE</span>
+        <div className="text-right">
+          <CompactChance value={yesPercent} />
         </div>
-      ) : (
-        /* Spacer for resolved markets to maintain consistent height */
-        <div className="h-6 mb-4" />
-      )}
+      </div>
 
       {/* Outcome/Proposed/Expiry - show OUTCOME for resolved, PROPOSED for pending proposal, EXPIRY for markets without proposal */}
       {isResolved ? (
