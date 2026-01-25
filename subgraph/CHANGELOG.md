@@ -2,6 +2,55 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [1.0.0] - 2026-01-25 - Fresh Subgraph Deployment 🚀
+
+### Issue - Persistent Sync Lag on Graph Studio
+
+#### Symptoms
+- New subgraph versions (v4.0.1+) were consistently 300-800 blocks behind chain head
+- Old version (v3.8.4) stayed synced (~7 blocks behind)
+- Multiple deployments all showed the same lag behavior
+- Error appeared as "99% synced" but never reached 100%
+
+#### Investigation Process
+1. Compared code differences between v3.8.4 and v4.0.2+ via git diff
+2. Identified changes: `fullyExited` P/L tracking logic, pool balance clamp
+3. Attempted removing `fullyExited` logic (v4.0.7, v4.0.8) - no improvement
+4. Tried updating `startBlock` to current block - still lagged
+5. **Key realization:** The sync lag was NOT caused by code complexity
+
+#### Root Cause
+**Stale subgraph deployment state on Graph Studio.** After many failed/partial deployments, the old `jnglz-bnb-testnet` subgraph accumulated issues that couldn't be resolved by new version deployments.
+
+#### The Fix
+1. Created a **completely new subgraph** in Graph Studio: `jnglz-testnet-fresh`
+2. Set `startBlock` to current block (`86465841`) to avoid historical sync
+3. Deployed as v1.0.0
+4. Published to Gateway with new API key
+5. **Result:** 100% synced instantly, 0 blocks behind
+
+#### Lessons Learned
+- Subgraph sync issues aren't always code-related
+- Graph Studio can have stale state from multiple failed deployments  
+- When in doubt, create a fresh subgraph instead of redeploying to the same one
+- The `startBlock` matters for initial sync time, not ongoing sync performance
+
+### Configuration
+```yaml
+# subgraph.yaml
+startBlock: 86465841  # Fresh start, no historical data needed for testnet
+```
+
+### Deployment Details
+- **Subgraph Name:** `jnglz-testnet-fresh`
+- **Version:** v1.0.0
+- **Subgraph ID:** `3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC`
+- **Gateway URL:** `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC`
+- **API Key:** `bd58484c1566274066b1453e52043443`
+- **Whitelisted Domains:** `localhost`, `jnglz.fun`
+
+---
+
 ## [4.0.3] - 2025-01-25
 
 ### Fixed - Subgraph StartBlock Correction 🔧
