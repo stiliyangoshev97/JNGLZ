@@ -400,7 +400,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
             {userNoShares > 0n && existingPositionPayout.noPayout > 0n && (
               <div className="flex justify-between">
                 <span className="text-text-muted">If NO wins now:</span>
-                <span className="text-no font-mono">
+                <span className="text-yes font-mono">
                   ~{formatBNB(existingPositionPayout.noPayout)} BNB
                 </span>
               </div>
@@ -557,7 +557,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               <div className="mt-3 pt-3 border-t border-dark-600">
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">If {direction.toUpperCase()} wins now:</span>
-                  <span className={cn('font-mono', direction === 'yes' ? 'text-yes' : 'text-no')}>
+                  <span className="text-yes font-mono">
                     ~{formatBNB(buyPreviewPayout.payout)} BNB
                     {buyPreviewPayout.multiplier > 0 && (
                       <span className="text-text-secondary ml-1">
