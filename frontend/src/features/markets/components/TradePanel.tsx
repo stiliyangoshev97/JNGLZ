@@ -67,6 +67,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const [action, setAction] = useState<TradeAction>('buy');
   const [amount, setAmount] = useState('');
 
+  // Reset form and invalidate cached data when wallet changes
+  useEffect(() => {
+    // Reset form state
+    setAmount('');
+    setAction('buy');
+    // Invalidate all contract reads to ensure fresh data for new wallet
+    queryClient.invalidateQueries({ queryKey: ['readContract'] });
+  }, [address, queryClient]);
+
   // Parse amount for contract calls
   const amountWei = useMemo(() => {
     try {
@@ -155,15 +164,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       // Show success toast
       showToast('Trade successful!', 'success');
       setAmount('');
-      // Refetch position after successful trade
+      // Refetch position after successful trade (maxSellable will auto-update via position effect below)
       refetchPosition();
-      // Refetch max sellable shares (pool liquidity may have changed)
-      refetchMaxSellableYes();
-      refetchMaxSellableNo();
       // Refetch user's BNB balance (local)
       refetchBalance();
       // Invalidate ALL balance queries so Header/other components update too
       queryClient.invalidateQueries({ queryKey: ['balance'] });
+      // Invalidate ALL readContract queries to ensure fresh data
+      // This ensures maxSellable queries with new args get fresh results
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
       // Trigger market data refetch for instant UI update
       onTradeSuccess?.();
       // Reset all write hooks immediately (no delay needed since we use toast)
@@ -172,7 +181,18 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       resetSellYes();
       resetSellNo();
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchMaxSellableYes, refetchMaxSellableNo, refetchBalance, queryClient, showToast]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient, showToast]);
+
+  // Re-fetch maxSellable shares when position changes
+  // This ensures correct data after trades (position args change → new query needs fetching)
+  useEffect(() => {
+    if (userYesShares > 0n) {
+      refetchMaxSellableYes();
+    }
+    if (userNoShares > 0n) {
+      refetchMaxSellableNo();
+    }
+  }, [userYesShares, userNoShares, refetchMaxSellableYes, refetchMaxSellableNo]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
