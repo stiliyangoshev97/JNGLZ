@@ -777,15 +777,42 @@ Virtual liquidity determines how much a trade affects the price. Higher liquidit
 
 ---
 
-### 2️⃣ CLAIMING FEES (When You Claim Winnings)
+### 2️⃣ RESOLUTION FEE (0.3%)
 
-| Fee | Amount | Goes To | When |
-|-----|--------|---------|------|
-| **Resolution Fee** | 0.3% | Treasury | Claiming winnings |
+The 0.3% resolution fee is applied when you **deposit bonds** or **claim pool winnings**.
 
-**Example:** You claim 10 BNB winnings
-- 0.03 BNB → Treasury (0.3%)
-- 9.97 BNB → You
+| Action | 0.3% Fee? | Applied When |
+|--------|-----------|--------------|
+| **Proposer posts bond** | ✅ YES | On deposit |
+| **Disputer posts bond** | ✅ YES | On deposit |
+| **Winner claims pool payout** | ✅ YES | On claim |
+
+**Example - Proposer Bond:**
+```
+Required bond:     0.005 BNB
+You must send:     0.005015 BNB (bond + 0.3% fee)
+Fee to Treasury:   0.000015 BNB (0.3%)
+Stored as bond:    0.005 BNB
+```
+
+**Example - Claiming Winnings:**
+```
+Pool payout:       10 BNB
+Fee to Treasury:   0.03 BNB (0.3%)
+You receive:       9.97 BNB
+```
+
+---
+
+### 2️⃣.1 NO 0.3% FEE ON:
+
+These actions have **NO** resolution fee because the fee was already paid on deposit, or it's a different fee type:
+
+| Action | Fee? | Reason |
+|--------|------|--------|
+| **Bond Withdrawals** | ❌ NO | Fee was pre-paid on deposit |
+| **Jury Fee Claims** | ❌ NO | Comes from loser's bond, not pool |
+| **Creator Fee Withdrawals** | ❌ NO | Comes from trading fees, not pool |
 
 ---
 

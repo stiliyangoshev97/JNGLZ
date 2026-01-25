@@ -809,25 +809,80 @@ export function HowToPlayPage() {
 
                 {/* Resolution Fee */}
                 <div>
-                  <h4 className="text-white font-bold mb-3">Resolution Fee (on winning claims)</h4>
-                  <div className="p-3 bg-dark-900 flex justify-between items-center">
-                    <div>
-                      <p className="text-text-muted text-xs">Resolution Fee</p>
-                      <p className="text-cyber text-xl font-mono">0.3%</p>
+                  <h4 className="text-white font-bold mb-3">Resolution Fee (0.3%)</h4>
+                  <p className="text-text-secondary text-sm mb-3">
+                    The 0.3% resolution fee is applied when you <strong className="text-white">deposit</strong> bonds or <strong className="text-white">claim</strong> winnings:
+                  </p>
+                  
+                  <div className="space-y-2">
+                    {/* Winner Claims */}
+                    <div className="p-3 bg-dark-900 flex justify-between items-center">
+                      <div>
+                        <p className="text-text-muted text-xs">Claiming Pool Winnings</p>
+                        <p className="text-yes text-lg font-mono">0.3% of payout</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-text-muted text-xs">goes to</p>
+                        <p className="text-cyber text-sm font-bold">Treasury</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-text-muted text-xs">goes to</p>
-                      <p className="text-cyber text-sm font-bold">Treasury</p>
+                    
+                    {/* Proposer Bond */}
+                    <div className="p-3 bg-dark-900 flex justify-between items-center">
+                      <div>
+                        <p className="text-text-muted text-xs">Proposer Bond (on deposit)</p>
+                        <p className="text-yellow-500 text-lg font-mono">0.3% of amount sent</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-text-muted text-xs">goes to</p>
+                        <p className="text-cyber text-sm font-bold">Treasury</p>
+                      </div>
+                    </div>
+                    
+                    {/* Disputer Bond */}
+                    <div className="p-3 bg-dark-900 flex justify-between items-center">
+                      <div>
+                        <p className="text-text-muted text-xs">Disputer Bond (on deposit)</p>
+                        <p className="text-no text-lg font-mono">0.3% of amount sent</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-text-muted text-xs">goes to</p>
+                        <p className="text-cyber text-sm font-bold">Treasury</p>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-text-muted text-xs mt-2 text-center">Deducted from your payout when you claim winnings</p>
+                  
+                  {/* Example calculation */}
+                  <div className="mt-3 p-3 bg-dark-900/50 border border-dark-600">
+                    <p className="text-white text-xs font-bold mb-2">Example: Proposing with 0.01 BNB required bond</p>
+                    <ul className="text-text-secondary text-xs space-y-1">
+                      <li>• Required bond: <span className="text-white font-mono">0.01 BNB</span></li>
+                      <li>• You must send: <span className="text-white font-mono">~0.01003 BNB</span> (so bond after fee ≥ 0.01)</li>
+                      <li>• 0.3% fee taken: <span className="text-cyber font-mono">~0.00003 BNB</span> → Treasury</li>
+                      <li>• Bond stored on-chain: <span className="text-yes font-mono">0.01 BNB</span></li>
+                    </ul>
+                    <p className="text-text-muted text-xs mt-2 border-t border-dark-600 pt-2">
+                      If you win, you receive the <strong className="text-white">stored bond amount</strong> (0.01 BNB) plus 50% of the loser's stored bond. 
+                      <strong className="text-yes"> No additional fee on withdrawal.</strong>
+                    </p>
+                  </div>
+                  
+                  {/* NO FEE items */}
+                  <div className="mt-3 p-3 bg-yes/10 border border-yes/30">
+                    <p className="text-yes text-xs font-bold mb-2">NO 0.3% FEE ON:</p>
+                    <ul className="text-text-secondary text-xs space-y-1">
+                      <li>• <strong className="text-white">Bond Withdrawals</strong> - When you withdraw your bond winnings (fee was already paid on deposit)</li>
+                      <li>• <strong className="text-white">Jury Fee Claims</strong> - Voters get 100% of their proportional share from the loser's bond</li>
+                      <li>• <strong className="text-white">Creator Fee Withdrawals</strong> - Market creators get 100% of accumulated fees</li>
+                    </ul>
+                  </div>
                   
                   {/* Important clarification */}
                   <div className="mt-3 p-3 bg-warning/10 border border-warning/30">
                     <p className="text-warning text-xs font-bold mb-1">IMPORTANT: Resolution Fee ≠ Jury Fees</p>
                     <p className="text-text-secondary text-xs">
-                      The <strong className="text-white">0.3% resolution fee</strong> is a protocol fee on claim payouts that goes to the <strong className="text-cyber">Treasury</strong>. 
-                      This is <strong className="text-no">completely separate</strong> from jury fees earned by voters during disputed resolution.
+                      The <strong className="text-white">0.3% resolution fee</strong> is a protocol fee that goes to the <strong className="text-cyber">Treasury</strong>. 
+                      <strong className="text-no"> Completely separate</strong> from jury fees earned by voters during disputed resolution.
                       Voters earn their share of the <strong className="text-white">50% loser's bond</strong>, NOT the 0.3% fee.
                     </p>
                   </div>

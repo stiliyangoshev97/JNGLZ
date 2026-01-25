@@ -49,6 +49,8 @@ interface PositionWithMarket {
   yesShares: string;
   noShares: string;
   totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
   claimed: boolean;
   claimedAmount?: string;
   emergencyRefunded?: boolean;
@@ -78,7 +80,8 @@ function calculateMarketRealizedPnl(
   marketId: string,
   walletAddress: string,
   currentYesShares: number,
-  currentNoShares: number
+  currentNoShares: number,
+  isMarketResolved: boolean = false
 ): { realizedPnlBNB: number; realizedPnlPercent: number; hasSells: boolean; isFullyExited: boolean } {
   const address = walletAddress.toLowerCase();
   const marketIdLower = marketId.toLowerCase();
@@ -122,20 +125,22 @@ function calculateMarketRealizedPnl(
   }
 
   // Calculate realized P/L using average cost basis
-  // Only calculate for sides that are FULLY SOLD (0 remaining shares)
+  // Show Trading P/L when:
+  // 1. Fully exited (0 remaining shares on that side), OR
+  // 2. Market is resolved (trading is frozen, P/L from sells is finalized)
   let realizedPnlBNB = 0;
   let totalCostBasis = 0;
 
-  // Only count YES P/L if fully exited from YES position
-  if (hasYesSells && data.yes.sharesBought > 0 && currentYesShares === 0) {
+  // Count YES P/L if fully exited from YES position OR market is resolved
+  if (hasYesSells && data.yes.sharesBought > 0 && (currentYesShares === 0 || isMarketResolved)) {
     const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
     const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
     realizedPnlBNB += data.yes.sold - costBasisOfSold;
     totalCostBasis += costBasisOfSold;
   }
 
-  // Only count NO P/L if fully exited from NO position
-  if (hasNoSells && data.no.sharesBought > 0 && currentNoShares === 0) {
+  // Count NO P/L if fully exited from NO position OR market is resolved
+  if (hasNoSells && data.no.sharesBought > 0 && (currentNoShares === 0 || isMarketResolved)) {
     const avgCostPerShare = data.no.bought / data.no.sharesBought;
     const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
     realizedPnlBNB += data.no.sold - costBasisOfSold;
@@ -206,24 +211,38 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   }
   
   // Calculate trading P/L for this market from trades (sells only)
+  // After resolution, show Trading P/L even for partial sells (trading is frozen)
   const tradingPnl = useMemo(() => {
     if (!trades.length || !address) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false, isFullyExited: false };
     }
-    return calculateMarketRealizedPnl(trades, market.id, address, yesShares, noShares);
-  }, [trades, market.id, address, yesShares, noShares]);
+    return calculateMarketRealizedPnl(trades, market.id, address, yesShares, noShares, market.resolved);
+  }, [trades, market.id, address, yesShares, noShares, market.resolved]);
   
-  // Resolution P/L = claimedAmount - totalInvested (for resolved markets)
+  // Resolution P/L = claimedAmount - netCostBasis (for resolved markets)
+  // netCostBasis = totalInvested - totalReturned (what's still "at risk")
+  // This correctly handles users who sold before resolution - their sold shares are NOT part of resolution P/L
   // Refunds are separate (capital recovery, not P/L)
   const resolutionStats = useMemo(() => {
     const claimedAmount = parseFloat(position.claimedAmount || '0');
     const refundedAmount = parseFloat(position.refundedAmount || '0');
     const isResolved = market.resolved;
     
+    // Use netCostBasis which accounts for money already returned via sells
+    // netCostBasis = totalInvested - totalReturned
+    // If user sold all shares at profit, netCostBasis can be NEGATIVE (they got back more than invested)
+    // In that case, they have nothing "at risk" for resolution - all their P/L is from trading
+    const rawNetCostBasis = parseFloat(position.netCostBasis || position.totalInvested || '0');
+    // Clamp to 0 - if netCostBasis is negative, user has no capital at risk for resolution
+    const netCostBasis = Math.max(0, rawNetCostBasis);
+    
     // Only calculate resolution P/L for resolved markets
     let resolutionPnl = 0;
     if (isResolved || claimedAmount > 0) {
-      resolutionPnl = claimedAmount - invested;
+      // Resolution P/L only applies to capital that was still at risk at resolution
+      // If netCostBasis was negative (sold at profit), resolution P/L = claimedAmount - 0 = claimedAmount
+      // If user had no shares (claimedAmount = 0) and negative netCostBasis, resolution P/L = 0
+      resolutionPnl = claimedAmount - netCostBasis;
     }
     
     return {
@@ -233,7 +252,7 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
       hasRefunded: refundedAmount > 0,
       isResolved,
     };
-  }, [position.claimedAmount, position.refundedAmount, market.resolved, invested]);
+  }, [position.claimedAmount, position.refundedAmount, position.netCostBasis, position.totalInvested, market.resolved]);
   
   // Determine if position is "closed" for P/L purposes
   // Position is closed if: market is resolved OR user has no shares left (fully exited)
@@ -245,14 +264,15 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   
   // Total P/L for this position
   const totalPnl = useMemo(() => {
-    // Trading P/L is only valid when position is fully exited (0 shares remaining)
-    // Until fully exited, any partial sells don't represent a "realized" P/L
-    // If resolved, include resolution P/L
-    const tradingPnlValue = tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0;
+    // Trading P/L is valid when:
+    // 1. Position is fully exited (0 shares remaining), OR
+    // 2. Market is resolved (trading is frozen, partial sells are finalized)
+    const canShowTradingPnl = tradingPnl.isFullyExited || resolutionStats.isResolved;
+    const tradingPnlValue = canShowTradingPnl ? tradingPnl.realizedPnlBNB : 0;
     const combined = tradingPnlValue + (resolutionStats.isResolved ? resolutionStats.resolutionPnl : 0);
     // Only show P/L activity when there's actually something realized
-    const hasActivity = tradingPnl.isFullyExited || resolutionStats.isResolved;
-    return { combined, hasActivity };
+    const hasActivity = (canShowTradingPnl && tradingPnl.hasSells) || resolutionStats.isResolved;
+    return { combined, hasActivity, tradingPnlValue, canShowTradingPnl };
   }, [tradingPnl, resolutionStats]);
   
   // Time and status checks
@@ -530,8 +550,8 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
           <div className="flex justify-end gap-2 mt-1 text-xs font-mono">
             {totalPnl.hasActivity ? (
               <>
-                <span className={(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0) >= 0 ? 'text-yes/80' : 'text-no/80'}>
-                  Trading: {(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0) >= 0 ? '+' : ''}{(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0).toFixed(4)}
+                <span className={totalPnl.tradingPnlValue >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                  Trading: {totalPnl.tradingPnlValue >= 0 ? '+' : ''}{totalPnl.tradingPnlValue.toFixed(4)}
                 </span>
                 <span className="text-text-muted">|</span>
                 <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes/80' : 'text-no/80'}>
@@ -587,19 +607,13 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         )}
       </div>
 
-      {/* Current market chance - ALWAYS show for unresolved markets */}
-      {!isResolved ? (
-        <div className="flex items-center justify-between text-sm mb-4">
-          <span className="text-text-muted">CHANCE</span>
-          <div className="text-right">
-            <CompactChance value={yesPercent} />
-            <span className="text-xs text-text-muted ml-1">({Math.round(yesPercent)}¢)</span>
-          </div>
+      {/* Current market chance - ALWAYS show for ALL markets */}
+      <div className="flex items-center justify-between text-sm mb-4">
+        <span className="text-text-muted">CHANCE</span>
+        <div className="text-right">
+          <CompactChance value={yesPercent} />
         </div>
-      ) : (
-        /* Spacer for resolved markets to maintain consistent height */
-        <div className="h-6 mb-4" />
-      )}
+      </div>
 
       {/* Outcome/Proposed/Expiry - show OUTCOME for resolved, PROPOSED for pending proposal, EXPIRY for markets without proposal */}
       {isResolved ? (

@@ -2,6 +2,105 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.44] - 2025-01-26
+
+### Fixed - Resolution P/L with Negative netCostBasis
+
+#### The Issue
+When a user sells ALL shares at a profit before market resolution, `netCostBasis` becomes negative (totalReturned > totalInvested). This caused Resolution P/L to incorrectly count the negative cost basis as profit.
+
+Example: User bought 0.0985 BNB, sold for 0.1243 BNB (profit), then `netCostBasis = 0.0985 - 0.1243 = -0.0258`. When Resolution P/L calculated `claimed - netCostBasis = 0 - (-0.0258) = +0.0258` - incorrectly showing profit!
+
+#### The Fix
+Clamp `netCostBasis` to `Math.max(0, rawNetCostBasis)`:
+- If user has exited at profit, their capital at risk is 0
+- Resolution P/L = `claimedAmount - 0 = 0` (correct!)
+- The profit was already captured in Trading P/L
+
+#### Files Changed
+- `PositionCard.tsx` - Clamp netCostBasis to prevent negative values
+
+---
+
+### Added - Trading P/L Display After Market Resolution
+
+#### The Issue
+Trading P/L section in Market Detail Page was hidden after market resolution, making it impossible to see historical trading performance.
+
+#### The Fix
+Added `isMarketResolved` prop to `RealizedPnl` component:
+- Trading P/L now shows when `positionFullyExited || isMarketResolved`
+- Users can see their trading performance even after claiming winnings
+
+#### Files Changed
+- `TradeHistory.tsx` - Added `isMarketResolved` prop to `RealizedPnl`
+- `MarketDetailPage.tsx` - Pass `isMarketResolved` to `TradesAndHoldersTabs`
+
+---
+
+### Added - Subgraph Deployment Rules Documentation
+
+Created comprehensive guide for safe subgraph deployments:
+- Golden rules (schema changes = new subgraph)
+- Deployment checklist
+- Known gotchas (P/L calculations, decimal precision)
+- Migration strategy
+- Emergency procedures
+
+#### Files Changed
+- `subgraph/SUBGRAPH_DEPLOYMENT_RULES.md` - New documentation file
+
+---
+
+## [0.7.43] - 2025-01-26
+
+### Fixed - Resolution P/L Calculation Bug
+
+#### The Issue
+Resolution P/L was calculated as `claimedAmount - totalInvested`, which showed incorrect negative P/L for users who:
+1. Bought shares
+2. Sold ALL shares at a profit (exited via trading)
+3. Later saw the market resolve
+
+Example: User invested 0.0985 BNB, sold for +0.0258 BNB profit (Trading P/L), but Resolution P/L showed -0.0985 BNB because `claimedAmount` was 0.
+
+#### The Fix
+Changed Resolution P/L calculation to use `netCostBasis` instead of `totalInvested`:
+- `netCostBasis` = `totalInvested - totalReturned` (what's still "at risk")
+- If user sold all shares before resolution, `netCostBasis = 0`
+- Resolution P/L = `claimedAmount - netCostBasis` = 0 (correct!)
+
+#### Files Changed
+- `positions.queries.ts` - Added `netCostBasis` and `totalReturned` to POSITION_FRAGMENT
+- `PositionCard.tsx` - Updated `resolutionStats` calculation and interface
+- `PortfolioPage.tsx` - Updated `resolutionStats` calculation and interface
+
+---
+
+### Updated - How To Play Documentation (0.3% Resolution Fee)
+
+#### Previously Undocumented
+The 0.3% resolution fee is applied when you **deposit** bonds or **claim** winnings:
+1. **Claiming Pool Winnings** - 0.3% deducted from pool payout
+2. **Proposer Bond** - 0.3% deducted when posting bond (on deposit)
+3. **Disputer Bond** - 0.3% deducted when posting bond (on deposit)
+
+#### NO 0.3% Fee On:
+- **Bond Withdrawals** - Fee was already paid on deposit
+- **Jury Fee Claims** - Voters get 100% of their share from loser's bond
+- **Creator Fee Withdrawals** - Creators get 100% of accumulated fees
+
+#### Now Documented
+- Clarified fee is taken on DEPOSIT, not withdrawal
+- Added explicit "NO FEE" section for bond withdrawals, jury claims, creator fees
+- Updated example to show required bond vs amount sent
+- Clear distinction between protocol fees (Treasury) and jury fees (from loser's bond)
+
+#### Files Changed
+- `HowToPlayPage.tsx` - Revised Resolution Fee section for 100% accuracy
+
+---
+
 ## [0.7.42] - 2025-01-25
 
 ### Fixed - TradePanel UX Improvements
