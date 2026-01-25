@@ -47,6 +47,8 @@ export const POSITION_FRAGMENT = gql`
     yesShares
     noShares
     totalInvested
+    totalReturned
+    netCostBasis
     averageYesPrice
     averageNoPrice
     claimed

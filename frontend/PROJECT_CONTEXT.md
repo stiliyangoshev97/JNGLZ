@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** January 25, 2026  
-> **Version:** 0.7.42
+> **Version:** 0.7.43
 > **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix)
 
 ---

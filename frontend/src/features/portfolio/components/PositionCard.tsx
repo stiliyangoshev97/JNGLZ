@@ -49,6 +49,8 @@ interface PositionWithMarket {
   yesShares: string;
   noShares: string;
   totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
   claimed: boolean;
   claimedAmount?: string;
   emergencyRefunded?: boolean;
@@ -213,17 +215,23 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
     return calculateMarketRealizedPnl(trades, market.id, address, yesShares, noShares);
   }, [trades, market.id, address, yesShares, noShares]);
   
-  // Resolution P/L = claimedAmount - totalInvested (for resolved markets)
+  // Resolution P/L = claimedAmount - netCostBasis (for resolved markets)
+  // netCostBasis = totalInvested - totalReturned (what's still "at risk")
+  // This correctly handles users who sold before resolution - their sold shares are NOT part of resolution P/L
   // Refunds are separate (capital recovery, not P/L)
   const resolutionStats = useMemo(() => {
     const claimedAmount = parseFloat(position.claimedAmount || '0');
     const refundedAmount = parseFloat(position.refundedAmount || '0');
     const isResolved = market.resolved;
     
+    // Use netCostBasis which accounts for money already returned via sells
+    // If user sold all shares before resolution, netCostBasis = 0, so resolution P/L = claimedAmount - 0 = claimedAmount
+    const netCostBasis = parseFloat(position.netCostBasis || position.totalInvested || '0');
+    
     // Only calculate resolution P/L for resolved markets
     let resolutionPnl = 0;
     if (isResolved || claimedAmount > 0) {
-      resolutionPnl = claimedAmount - invested;
+      resolutionPnl = claimedAmount - netCostBasis;
     }
     
     return {
@@ -233,7 +241,7 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
       hasRefunded: refundedAmount > 0,
       isResolved,
     };
-  }, [position.claimedAmount, position.refundedAmount, market.resolved, invested]);
+  }, [position.claimedAmount, position.refundedAmount, position.netCostBasis, position.totalInvested, market.resolved]);
   
   // Determine if position is "closed" for P/L purposes
   // Position is closed if: market is resolved OR user has no shares left (fully exited)

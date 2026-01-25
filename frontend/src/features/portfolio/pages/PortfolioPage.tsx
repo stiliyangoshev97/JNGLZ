@@ -62,6 +62,8 @@ interface PositionWithMarket {
   yesShares: string;
   noShares: string;
   totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
   claimed: boolean;
   claimedAmount?: string;
   emergencyRefunded?: boolean;
@@ -250,11 +252,14 @@ export function PortfolioPage() {
     return { realizedPnlBNB, realizedPnlPercent, hasSells };
   }, [tradesData?.trades, address, data?.positions]);
 
-  // Calculate Resolution P/L (NET: claims - invested for resolved positions only)
+  // Calculate Resolution P/L (NET: claims - netCostBasis for resolved positions only)
+  // netCostBasis = totalInvested - totalReturned (what's still "at risk" after sells)
+  // This correctly handles users who sold before resolution
   // Also track refunds separately (capital recovery, not P/L)
   // v0.7.12: Only count positions that are actually closed
+  // v0.7.43: Use netCostBasis instead of totalInvested to account for prior sells
   const resolutionStats = useMemo(() => {
-    const positions = data?.positions || [];
+    const positions = (data?.positions || []) as PositionWithMarket[];
     
     let resolutionPnl = 0;
     let totalRefunded = 0;
@@ -278,10 +283,11 @@ export function PortfolioPage() {
       
       // Only count resolution P/L for closed positions
       if (positionClosed && (isResolved || hasClaimed)) {
-        // Resolution P/L = what you got back - what you invested
+        // Resolution P/L = what you got back - what's still at risk (net cost basis)
+        // If user sold all shares before resolution, netCostBasis = 0
         const claimed = parseFloat(pos.claimedAmount || '0');
-        const invested = parseFloat(pos.totalInvested || '0');
-        resolutionPnl += claimed - invested;
+        const netCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
+        resolutionPnl += claimed - netCostBasis;
         resolvedCount++;
       }
     });
