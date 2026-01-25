@@ -73,6 +73,8 @@ When experiencing persistent sync issues on Graph Studio:
 2. Create a fresh subgraph with a new name
 3. Delete/unpublish the old problematic subgraph
 
+> 📚 **See:** [`SUBGRAPH_DEPLOYMENT_RULES.md`](./SUBGRAPH_DEPLOYMENT_RULES.md) for comprehensive deployment guidelines to avoid these issues on mainnet.
+
 ---
 
 ## 📐 Schema Design
