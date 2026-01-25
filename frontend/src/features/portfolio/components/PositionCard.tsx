@@ -225,12 +225,19 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
     const isResolved = market.resolved;
     
     // Use netCostBasis which accounts for money already returned via sells
-    // If user sold all shares before resolution, netCostBasis = 0, so resolution P/L = claimedAmount - 0 = claimedAmount
-    const netCostBasis = parseFloat(position.netCostBasis || position.totalInvested || '0');
+    // netCostBasis = totalInvested - totalReturned
+    // If user sold all shares at profit, netCostBasis can be NEGATIVE (they got back more than invested)
+    // In that case, they have nothing "at risk" for resolution - all their P/L is from trading
+    const rawNetCostBasis = parseFloat(position.netCostBasis || position.totalInvested || '0');
+    // Clamp to 0 - if netCostBasis is negative, user has no capital at risk for resolution
+    const netCostBasis = Math.max(0, rawNetCostBasis);
     
     // Only calculate resolution P/L for resolved markets
     let resolutionPnl = 0;
     if (isResolved || claimedAmount > 0) {
+      // Resolution P/L only applies to capital that was still at risk at resolution
+      // If netCostBasis was negative (sold at profit), resolution P/L = claimedAmount - 0 = claimedAmount
+      // If user had no shares (claimedAmount = 0) and negative netCostBasis, resolution P/L = 0
       resolutionPnl = claimedAmount - netCostBasis;
     }
     
