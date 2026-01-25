@@ -2,6 +2,44 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.41] - 2025-01-25
+
+### Added - "If Wins Now" Payout Display in Trade Panel
+
+Shows estimated payout if the market resolves immediately in the user's favor.
+
+#### For Existing Positions
+```
+Your Position: 150 YES shares
+
+If YES wins now: ~0.35 BNB
+If NO wins now: ~0.12 BNB
+Returns change as others trade
+```
+
+#### For Buy Preview (when entering amount)
+```
+If YES wins now: ~0.25 BNB (2.5x)
+Returns change as others trade
+```
+
+#### Calculation Formula
+```
+payout = (userShares / totalWinningShares) × poolBalance
+multiplier = payout / buyAmount (for buy preview only)
+```
+
+#### Key Points
+- Honest representation of parimutuel system
+- First buyer on empty market sees ~1x (just their money back)
+- Returns increase as others bet on the opposite side
+- Always shows disclaimer: "Returns change as others trade"
+
+#### Files Changed
+- `TradePanel.tsx` - Added payout calculations and UI display
+
+---
+
 ## [0.7.40] - 2025-01-25
 
 ### Fixed - Resolved Markets Show 100%/0% Outcome

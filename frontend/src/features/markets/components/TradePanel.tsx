@@ -107,6 +107,11 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const userNoShares = position?.noShares || 0n;
   const currentShares = direction === 'yes' ? userYesShares : userNoShares;
 
+  // Market share supplies (for payout calculations)
+  const totalYesShares = BigInt(market.yesShares || '0');
+  const totalNoShares = BigInt(market.noShares || '0');
+  const poolBalance = BigInt(market.poolBalance || '0');
+
   // Get max sellable shares from contract (respects pool liquidity limits)
   const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
   const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
@@ -180,6 +185,56 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
     }
     return '0';
   }, [action, previewBuyData, previewSellData]);
+
+  // Calculate "If wins now" payout for existing position
+  const existingPositionPayout = useMemo(() => {
+    // Calculate for YES position
+    const yesPayout = userYesShares > 0n && totalYesShares > 0n && poolBalance > 0n
+      ? (userYesShares * poolBalance) / totalYesShares
+      : 0n;
+    
+    // Calculate for NO position
+    const noPayout = userNoShares > 0n && totalNoShares > 0n && poolBalance > 0n
+      ? (userNoShares * poolBalance) / totalNoShares
+      : 0n;
+
+    return {
+      yesPayout,
+      noPayout,
+    };
+  }, [userYesShares, userNoShares, totalYesShares, totalNoShares, poolBalance]);
+
+  // Calculate "If wins now" payout for buy preview
+  const buyPreviewPayout = useMemo(() => {
+    if (action !== 'buy' || !previewBuyData || amountWei === 0n) return null;
+    
+    const newShares = previewBuyData as bigint;
+    const newPoolBalance = poolBalance + amountWei;
+    
+    if (direction === 'yes') {
+      const newTotalYesShares = totalYesShares + newShares;
+      const totalUserYesShares = userYesShares + newShares;
+      
+      if (newTotalYesShares === 0n) return null;
+      
+      const payout = (totalUserYesShares * newPoolBalance) / newTotalYesShares;
+      // Multiplier based on current buy amount only
+      const multiplier = amountWei > 0n ? Number(payout * 100n / amountWei) / 100 : 0;
+      
+      return { payout, multiplier };
+    } else {
+      const newTotalNoShares = totalNoShares + newShares;
+      const totalUserNoShares = userNoShares + newShares;
+      
+      if (newTotalNoShares === 0n) return null;
+      
+      const payout = (totalUserNoShares * newPoolBalance) / newTotalNoShares;
+      // Multiplier based on current buy amount only
+      const multiplier = amountWei > 0n ? Number(payout * 100n / amountWei) / 100 : 0;
+      
+      return { payout, multiplier };
+    }
+  }, [action, previewBuyData, amountWei, direction, poolBalance, totalYesShares, totalNoShares, userYesShares, userNoShares]);
 
   // Sell preset buttons (25%, 50%, 75%, MAX) - use maxSellableShares to respect pool limits
   const sellPresets = useMemo(() => {
@@ -331,6 +386,33 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               </span>
             </div>
             
+            {/* If wins now payout - YES */}
+            {userYesShares > 0n && existingPositionPayout.yesPayout > 0n && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">If YES wins now:</span>
+                <span className="text-yes font-mono">
+                  ~{formatBNB(existingPositionPayout.yesPayout)} BNB
+                </span>
+              </div>
+            )}
+            
+            {/* If wins now payout - NO */}
+            {userNoShares > 0n && existingPositionPayout.noPayout > 0n && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">If NO wins now:</span>
+                <span className="text-no font-mono">
+                  ~{formatBNB(existingPositionPayout.noPayout)} BNB
+                </span>
+              </div>
+            )}
+            
+            {/* Returns change note */}
+            {(existingPositionPayout.yesPayout > 0n || existingPositionPayout.noPayout > 0n) && (
+              <p className="text-text-muted text-xs italic">
+                Returns change as others trade
+              </p>
+            )}
+            
             {/* Pool Liquidity Warning */}
             {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (
               <div className="pt-2 border-t border-dark-600">
@@ -467,6 +549,26 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                 <span className="font-mono text-text-secondary">
                   ~{formatBNB((previewSellData as bigint) * 15n / 985n, 6)} BNB
                 </span>
+              </div>
+            )}
+            
+            {/* Buy Preview - If wins now payout */}
+            {action === 'buy' && buyPreviewPayout && (
+              <div className="mt-3 pt-3 border-t border-dark-600">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">If {direction.toUpperCase()} wins now:</span>
+                  <span className={cn('font-mono', direction === 'yes' ? 'text-yes' : 'text-no')}>
+                    ~{formatBNB(buyPreviewPayout.payout)} BNB
+                    {buyPreviewPayout.multiplier > 0 && (
+                      <span className="text-text-secondary ml-1">
+                        ({buyPreviewPayout.multiplier.toFixed(2)}x)
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <p className="text-text-muted text-xs italic mt-1">
+                  Returns change as others trade
+                </p>
               </div>
             )}
           </div>
