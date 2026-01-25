@@ -2,6 +2,41 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.42] - 2025-01-25
+
+### Fixed - TradePanel UX Improvements
+
+#### 1. Payout Preview Color Fix
+- **Issue**: "If NO wins now" payout was displayed in red (loss-like) instead of green
+- **Fix**: Changed all payout previews to use green (`text-yes`) since payouts are always positive
+- Both existing position payouts and buy preview payouts now show in green
+
+#### 2. Position Shares Not Updating After Trades
+- **Root Cause**: `useMaxSellableShares` hook was being refetched with stale `userShares` args after trades
+- **Fix**: 
+  - Added effect to re-fetch maxSellable when position changes
+  - Added effect to reset form and invalidate queries when wallet changes
+  - Invalidate all `readContract` queries after successful trades
+- Now works correctly when:
+  - Selling partial positions
+  - Switching wallets
+  - Consecutive trades
+
+#### 3. Stray "0" in Pool Liquidity Warning
+- **Issue**: Warning showed "shares0" instead of "shares" when BNB amount was 0
+- **Root Cause**: `0n && "string"` returns `0n` in JavaScript, which React renders as "0"
+- **Fix**: Changed to explicit check `maxSellBnbOut !== undefined && maxSellBnbOut > 0n`
+
+#### 4. Removed Redundant Pool Liquidity Warning
+- **Issue**: Pool liquidity warning was shown twice (in position panel AND when selling)
+- **Fix**: Removed warning from position panel, kept only the detailed "SELLING MAXIMUM POSSIBLE" warning when user enters sell amount
+- Cleaner UX with contextual warnings at the right time
+
+#### Files Changed
+- `TradePanel.tsx` - All fixes applied
+
+---
+
 ## [0.7.41] - 2025-01-25
 
 ### Added - "If Wins Now" Payout Display in Trade Panel
