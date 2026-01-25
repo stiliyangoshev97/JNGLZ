@@ -140,6 +140,7 @@ interface PositionData {
 interface RealizedPnlProps {
   trades: Trade[];
   positions?: PositionData[];
+  isMarketResolved?: boolean;
 }
 
 interface WalletPnl {
@@ -156,7 +157,7 @@ interface WalletPnl {
   hasClaimed: boolean;      // Has user claimed?
 }
 
-export function RealizedPnl({ trades, positions = [] }: RealizedPnlProps) {
+export function RealizedPnl({ trades, positions = [], isMarketResolved = false }: RealizedPnlProps) {
   const walletPnls = useMemo(() => {
     // Build a map of positions by address for resolution P/L
     const positionMap = new Map<string, PositionData>();
@@ -219,11 +220,14 @@ export function RealizedPnl({ trades, positions = [] }: RealizedPnlProps) {
       // Skip if no sells AND no claims
       if (!hasYesSells && !hasNoSells && !hasClaimed) return;
 
-      // Calculate trading P/L (only if fully exited via trading)
+      // Calculate trading P/L when:
+      // 1. Fully exited via trading (0 shares remaining), OR
+      // 2. Market is resolved (trading is frozen, P/L from sells is finalized)
+      const canShowTradingPnl = positionFullyExited || isMarketResolved;
       let tradingPnlBNB = 0;
       let totalCostBasis = 0;
 
-      if (positionFullyExited && (hasYesSells || hasNoSells)) {
+      if (canShowTradingPnl && (hasYesSells || hasNoSells)) {
         // YES side trading P/L
         if (hasYesSells && data.yes.sharesBought > 0) {
           const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
@@ -257,7 +261,7 @@ export function RealizedPnl({ trades, positions = [] }: RealizedPnlProps) {
       else if (hasNoSells) side = 'NO';
 
       // Only include if there's something to show
-      const hasTradeData = positionFullyExited && (hasYesSells || hasNoSells);
+      const hasTradeData = canShowTradingPnl && (hasYesSells || hasNoSells);
       const hasResolutionData = hasClaimed && resolutionPnL !== null;
       
       if (!hasTradeData && !hasResolutionData) return;
@@ -313,7 +317,7 @@ export function RealizedPnl({ trades, positions = [] }: RealizedPnlProps) {
       const totalB = b.tradingPnlBNB + (b.resolutionPnlBNB ?? 0);
       return totalB - totalA;
     });
-  }, [trades, positions]);
+  }, [trades, positions, isMarketResolved]);
 
   if (walletPnls.length === 0) {
     return (

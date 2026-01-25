@@ -80,7 +80,8 @@ function calculateMarketRealizedPnl(
   marketId: string,
   walletAddress: string,
   currentYesShares: number,
-  currentNoShares: number
+  currentNoShares: number,
+  isMarketResolved: boolean = false
 ): { realizedPnlBNB: number; realizedPnlPercent: number; hasSells: boolean; isFullyExited: boolean } {
   const address = walletAddress.toLowerCase();
   const marketIdLower = marketId.toLowerCase();
@@ -124,20 +125,22 @@ function calculateMarketRealizedPnl(
   }
 
   // Calculate realized P/L using average cost basis
-  // Only calculate for sides that are FULLY SOLD (0 remaining shares)
+  // Show Trading P/L when:
+  // 1. Fully exited (0 remaining shares on that side), OR
+  // 2. Market is resolved (trading is frozen, P/L from sells is finalized)
   let realizedPnlBNB = 0;
   let totalCostBasis = 0;
 
-  // Only count YES P/L if fully exited from YES position
-  if (hasYesSells && data.yes.sharesBought > 0 && currentYesShares === 0) {
+  // Count YES P/L if fully exited from YES position OR market is resolved
+  if (hasYesSells && data.yes.sharesBought > 0 && (currentYesShares === 0 || isMarketResolved)) {
     const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
     const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
     realizedPnlBNB += data.yes.sold - costBasisOfSold;
     totalCostBasis += costBasisOfSold;
   }
 
-  // Only count NO P/L if fully exited from NO position
-  if (hasNoSells && data.no.sharesBought > 0 && currentNoShares === 0) {
+  // Count NO P/L if fully exited from NO position OR market is resolved
+  if (hasNoSells && data.no.sharesBought > 0 && (currentNoShares === 0 || isMarketResolved)) {
     const avgCostPerShare = data.no.bought / data.no.sharesBought;
     const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
     realizedPnlBNB += data.no.sold - costBasisOfSold;
@@ -208,12 +211,13 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   }
   
   // Calculate trading P/L for this market from trades (sells only)
+  // After resolution, show Trading P/L even for partial sells (trading is frozen)
   const tradingPnl = useMemo(() => {
     if (!trades.length || !address) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false, isFullyExited: false };
     }
-    return calculateMarketRealizedPnl(trades, market.id, address, yesShares, noShares);
-  }, [trades, market.id, address, yesShares, noShares]);
+    return calculateMarketRealizedPnl(trades, market.id, address, yesShares, noShares, market.resolved);
+  }, [trades, market.id, address, yesShares, noShares, market.resolved]);
   
   // Resolution P/L = claimedAmount - netCostBasis (for resolved markets)
   // netCostBasis = totalInvested - totalReturned (what's still "at risk")
@@ -260,14 +264,15 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   
   // Total P/L for this position
   const totalPnl = useMemo(() => {
-    // Trading P/L is only valid when position is fully exited (0 shares remaining)
-    // Until fully exited, any partial sells don't represent a "realized" P/L
-    // If resolved, include resolution P/L
-    const tradingPnlValue = tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0;
+    // Trading P/L is valid when:
+    // 1. Position is fully exited (0 shares remaining), OR
+    // 2. Market is resolved (trading is frozen, partial sells are finalized)
+    const canShowTradingPnl = tradingPnl.isFullyExited || resolutionStats.isResolved;
+    const tradingPnlValue = canShowTradingPnl ? tradingPnl.realizedPnlBNB : 0;
     const combined = tradingPnlValue + (resolutionStats.isResolved ? resolutionStats.resolutionPnl : 0);
     // Only show P/L activity when there's actually something realized
-    const hasActivity = tradingPnl.isFullyExited || resolutionStats.isResolved;
-    return { combined, hasActivity };
+    const hasActivity = (canShowTradingPnl && tradingPnl.hasSells) || resolutionStats.isResolved;
+    return { combined, hasActivity, tradingPnlValue, canShowTradingPnl };
   }, [tradingPnl, resolutionStats]);
   
   // Time and status checks
@@ -545,8 +550,8 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
           <div className="flex justify-end gap-2 mt-1 text-xs font-mono">
             {totalPnl.hasActivity ? (
               <>
-                <span className={(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0) >= 0 ? 'text-yes/80' : 'text-no/80'}>
-                  Trading: {(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0) >= 0 ? '+' : ''}{(tradingPnl.isFullyExited ? tradingPnl.realizedPnlBNB : 0).toFixed(4)}
+                <span className={totalPnl.tradingPnlValue >= 0 ? 'text-yes/80' : 'text-no/80'}>
+                  Trading: {totalPnl.tradingPnlValue >= 0 ? '+' : ''}{totalPnl.tradingPnlValue.toFixed(4)}
                 </span>
                 <span className="text-text-muted">|</span>
                 <span className={resolutionStats.resolutionPnl >= 0 ? 'text-yes/80' : 'text-no/80'}>

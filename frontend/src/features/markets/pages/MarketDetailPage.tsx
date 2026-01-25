@@ -400,6 +400,7 @@ export function MarketDetailPage() {
                 <TradesAndHoldersTabs
                   trades={trades}
                   positions={positions}
+                  isMarketResolved={isResolved}
                 />
               </div>
             </div>
@@ -468,6 +469,7 @@ export function MarketDetailPage() {
             <TradesAndHoldersTabs
               trades={trades}
               positions={positions}
+              isMarketResolved={isResolved}
             />
           </div>
           
@@ -585,10 +587,12 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
  */
 function TradesAndHoldersTabs({ 
   trades, 
-  positions, 
+  positions,
+  isMarketResolved,
 }: { 
   trades: Trade[]; 
   positions: HolderPosition[];
+  isMarketResolved: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders'>('trades');
 
@@ -636,7 +640,7 @@ function TradesAndHoldersTabs({
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
-          <RealizedPnl trades={trades} positions={positions} />
+          <RealizedPnl trades={trades} positions={positions} isMarketResolved={isMarketResolved} />
         ) : (
           <HoldersTable positions={positions} />
         )}
