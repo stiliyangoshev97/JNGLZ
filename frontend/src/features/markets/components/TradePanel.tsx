@@ -432,16 +432,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                 Returns change as others trade
               </p>
             )}
-            
-            {/* Pool Liquidity Warning */}
-            {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (
-              <div className="pt-2 border-t border-dark-600">
-                <p className="text-warning text-xs">
-                  ⚠️ Pool liquidity limits max sell to {formatShares(maxSellableShares)} {direction.toUpperCase()} shares
-                  {maxSellBnbOut !== undefined && maxSellBnbOut > 0n && ` (~${formatBNB(maxSellBnbOut)} BNB)`}
-                </p>
-              </div>
-            )}
           </div>
         )}
 
