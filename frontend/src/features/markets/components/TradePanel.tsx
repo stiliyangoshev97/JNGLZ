@@ -122,11 +122,10 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const poolBalance = BigInt(market.poolBalance || '0');
 
   // Get max sellable shares from contract (respects pool liquidity limits)
-  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
-  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
+  const { maxShares: maxSellableYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
+  const { maxShares: maxSellableNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
   
   const maxSellableShares = direction === 'yes' ? maxSellableYes : maxSellableNo;
-  const maxSellBnbOut = direction === 'yes' ? maxSellBnbYes : maxSellBnbNo;
 
   // Check if pool liquidity limits selling all shares
   const isPoolLimited = useMemo(() => {
