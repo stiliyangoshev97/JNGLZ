@@ -16,6 +16,7 @@ import { useAccount } from 'wagmi';
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { Badge } from '@/shared/components/ui/Badge';
+import { AddressDisplay } from '@/shared/components/ui/Jazzicon';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
 import {
   useProposeOutcome,
@@ -468,6 +469,16 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                 {market.proposedOutcome ? 'YES' : 'NO'}
               </span>
             </div>
+            {/* Proposer Address */}
+            <div className="flex justify-between items-center">
+              <span className="text-text-muted">Proposed by:</span>
+              <div className="flex items-center gap-2">
+                <AddressDisplay address={market.proposer || ''} truncateLength={4} />
+                {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                  <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -486,6 +497,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                 <p className="text-yes font-bold text-xs mb-1">
                   PROPOSER ({market.proposedOutcome ? 'YES' : 'NO'})
                 </p>
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <AddressDisplay address={market.proposer || ''} truncateLength={3} className="text-[10px]" />
+                  {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                    <span className="text-cyber text-[8px]">👑</span>
+                  )}
+                </div>
                 <p className="text-white font-mono text-lg">{formatShares(proposerVotes)}</p>
                 <p className="text-text-muted text-[10px]">votes</p>
               </div>
@@ -493,6 +510,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                 <p className="text-no font-bold text-xs mb-1">
                   DISPUTER ({market.proposedOutcome ? 'NO' : 'YES'})
                 </p>
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <AddressDisplay address={market.disputer || ''} truncateLength={3} className="text-[10px]" />
+                  {market.disputer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                    <span className="text-cyber text-[8px]">👑</span>
+                  )}
+                </div>
                 <p className="text-white font-mono text-lg">{formatShares(disputerVotes)}</p>
                 <p className="text-text-muted text-[10px]">votes</p>
               </div>

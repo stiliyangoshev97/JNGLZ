@@ -2,6 +2,112 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.41] - 2025-01-25
+
+### Added - "If Wins Now" Payout Display in Trade Panel
+
+Shows estimated payout if the market resolves immediately in the user's favor.
+
+#### For Existing Positions
+```
+Your Position: 150 YES shares
+
+If YES wins now: ~0.35 BNB
+If NO wins now: ~0.12 BNB
+Returns change as others trade
+```
+
+#### For Buy Preview (when entering amount)
+```
+If YES wins now: ~0.25 BNB (2.5x)
+Returns change as others trade
+```
+
+#### Calculation Formula
+```
+payout = (userShares / totalWinningShares) × poolBalance
+multiplier = payout / buyAmount (for buy preview only)
+```
+
+#### Key Points
+- Honest representation of parimutuel system
+- First buyer on empty market sees ~1x (just their money back)
+- Returns increase as others bet on the opposite side
+- Always shows disclaimer: "Returns change as others trade"
+
+#### Files Changed
+- `TradePanel.tsx` - Added payout calculations and UI display
+
+---
+
+## [0.7.40] - 2025-01-25
+
+### Fixed - Resolved Markets Show 100%/0% Outcome
+
+#### The Issue
+When a market was resolved, the UI continued showing the trading percentages (e.g., 65% YES / 35% NO) instead of the definitive outcome (100% YES or 100% NO).
+
+#### The Fix
+Updated percentage calculation to check if market is resolved:
+- **Resolved with YES outcome** → Shows **100% YES / 0% NO**
+- **Resolved with NO outcome** → Shows **0% YES / 100% NO**
+- **Active/Pending markets** → Shows calculated bonding curve percentages
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Main market view
+- `MarketCard.tsx` - Market grid cards
+- `PositionCard.tsx` - Portfolio position cards
+
+#### Visual Impact
+- ChanceDisplay shows 100% or 0%
+- SplitHeatBar shows full green (YES) or full red (NO)
+- Price cents show 100¢ or 0¢
+- Consistent across all market views
+
+---
+
+## [0.7.39] - 2026-01-25
+
+### Added - Trading P/L & Resolution P/L Columns
+
+#### Refactored RealizedPnl Component
+The P/L tab now shows **both** Trading P/L and Resolution P/L in a consistent layout:
+
+| Column | Description |
+|--------|-------------|
+| **TRADING P/L** | Profit/loss from fully exited positions via trading (sells) |
+| **RESOLUTION P/L** | Profit/loss from claimed amounts after market resolution |
+
+#### Design Consistency
+- **Both columns always visible** - no more conditional hiding
+- **0 BNB (0%)** shown in grey for:
+  - Trading P/L when no trading exits
+  - Resolution P/L when not yet claimed
+- **Green** for positive P/L with `+` prefix
+- **Red** for negative P/L
+- **Grey** for zero or pending values
+
+#### Technical Changes
+- Extended GraphQL query to fetch `claimedAmount`, `netCostBasis`, `realizedPnL`, `fullyExited`, `tradingPnLRealized` from positions
+- Extended `HolderPosition` interface with resolution P/L fields
+- Refactored `RealizedPnl` component to merge trades and positions data
+- Updated tab label from "REALIZED P/L" to "P/L"
+
+---
+
+## [0.7.38] - 2026-01-25
+
+### Added - Proposer/Disputer Address Display in Resolution Panel
+
+#### ResolutionPanel Enhancement
+- **Added** proposer address display in "Proposed Outcome" status section
+- Shows **"CREATOR"** badge if proposer is the market creator
+- **Updated** dispute vote tally cards to show both proposer and disputer addresses
+- Uses 👑 emoji to indicate if proposer/disputer is the market creator
+- Leverages existing `AddressDisplay` component for consistent styling
+
+---
+
 ## [0.7.37] - 2026-01-24
 
 ### Fixed - P/L Display Bug for Partial Sells

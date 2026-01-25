@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30"
       abi: PredictionMarket
-      startBlock: 86129412
+      startBlock: 86129397
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

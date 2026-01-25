@@ -193,11 +193,16 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   const hasNo = noShares > 0;
   
   // Calculate current prices from market using bonding curve
+  // For resolved markets, show 100%/0% based on outcome
   let yesPercent = 50;
   
   if (market) {
-    // Use proper bonding curve calculation with market's virtual liquidity
-    yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0', market.virtualLiquidity);
+    if (market.resolved) {
+      yesPercent = market.outcome ? 100 : 0;
+    } else {
+      // Use proper bonding curve calculation with market's virtual liquidity
+      yesPercent = calculateYesPercent(market.yesShares || '0', market.noShares || '0', market.virtualLiquidity);
+    }
   }
   
   // Calculate trading P/L for this market from trades (sells only)

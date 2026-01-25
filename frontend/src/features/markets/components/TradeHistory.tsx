@@ -115,15 +115,31 @@ function getTimeAgo(date: Date): string {
 }
 
 /**
- * ===== REALIZED P/L COMPONENT =====
+ * ===== TRADING & RESOLUTION P/L COMPONENT =====
  * 
- * Shows realized profit/loss per wallet.
- * Only wallets that have sold shares appear here.
- * Uses average cost basis for calculation.
+ * Shows both types of realized profit/loss per wallet:
+ * - Trading P/L: When traders fully exit via sells (before resolution)
+ * - Resolution P/L: When traders claim after market resolution
  */
+
+// Position data from subgraph
+interface PositionData {
+  user: { address: string };
+  yesShares: string;
+  noShares: string;
+  totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
+  fullyExited?: boolean;
+  tradingPnLRealized?: string;
+  claimed?: boolean;
+  claimedAmount?: string | null;
+  realizedPnL?: string | null;
+}
 
 interface RealizedPnlProps {
   trades: Trade[];
+  positions?: PositionData[];
 }
 
 interface WalletPnl {
@@ -133,12 +149,22 @@ interface WalletPnl {
   totalSold: number;        // Total BNB received from sells
   sharesBought: number;     // Total shares bought
   sharesSold: number;       // Total shares sold
-  realizedPnlBNB: number;   // Profit/Loss in BNB
-  realizedPnlPercent: number; // Profit/Loss percentage
+  tradingPnlBNB: number;    // Trading P/L in BNB (from sells)
+  tradingPnlPercent: number; // Trading P/L percentage
+  resolutionPnlBNB: number | null;   // Resolution P/L in BNB (from claims)
+  resolutionPnlPercent: number | null; // Resolution P/L percentage
+  hasClaimed: boolean;      // Has user claimed?
 }
 
-export function RealizedPnl({ trades }: RealizedPnlProps) {
+export function RealizedPnl({ trades, positions = [] }: RealizedPnlProps) {
   const walletPnls = useMemo(() => {
+    // Build a map of positions by address for resolution P/L
+    const positionMap = new Map<string, PositionData>();
+    positions.forEach(pos => {
+      const addr = pos.user?.address?.toLowerCase();
+      if (addr) positionMap.set(addr, pos);
+    });
+
     // Group trades by wallet and side
     const walletMap = new Map<string, {
       yes: { bought: number; sold: number; sharesBought: number; sharesSold: number };
@@ -172,55 +198,69 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
       }
     });
 
-    // Calculate realized P/L for wallets that have FULLY EXITED (sold all shares)
+    // Calculate P/L for wallets
     const pnls: WalletPnl[] = [];
 
     walletMap.forEach((data, address) => {
       const hasYesSells = data.yes.sharesSold > 0;
       const hasNoSells = data.no.sharesSold > 0;
 
-      // Skip if no sells
-      if (!hasYesSells && !hasNoSells) return;
-
-      // Check if position is fully closed (no remaining shares)
-      // Use small epsilon for floating point comparison
+      // Check if position is fully closed via trading
       const EPSILON = 0.0001;
       const yesSharesRemaining = data.yes.sharesBought - data.yes.sharesSold;
       const noSharesRemaining = data.no.sharesBought - data.no.sharesSold;
-      const positionFullyClosed = Math.abs(yesSharesRemaining) < EPSILON && Math.abs(noSharesRemaining) < EPSILON;
+      const positionFullyExited = Math.abs(yesSharesRemaining) < EPSILON && Math.abs(noSharesRemaining) < EPSILON;
 
-      // Only show P/L for fully closed positions
-      if (!positionFullyClosed) return;
+      // Get position data for resolution P/L
+      const position = positionMap.get(address);
+      const hasClaimed = position?.claimed ?? false;
+      const resolutionPnL = position?.realizedPnL ? parseFloat(position.realizedPnL) : null;
 
-      // Calculate realized P/L using average cost basis
-      let realizedPnlBNB = 0;
+      // Skip if no sells AND no claims
+      if (!hasYesSells && !hasNoSells && !hasClaimed) return;
+
+      // Calculate trading P/L (only if fully exited via trading)
+      let tradingPnlBNB = 0;
       let totalCostBasis = 0;
 
-      // YES side realized P/L
-      if (hasYesSells && data.yes.sharesBought > 0) {
-        const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
-        const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
-        realizedPnlBNB += data.yes.sold - costBasisOfSold;
-        totalCostBasis += costBasisOfSold;
+      if (positionFullyExited && (hasYesSells || hasNoSells)) {
+        // YES side trading P/L
+        if (hasYesSells && data.yes.sharesBought > 0) {
+          const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
+          const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
+          tradingPnlBNB += data.yes.sold - costBasisOfSold;
+          totalCostBasis += costBasisOfSold;
+        }
+
+        // NO side trading P/L
+        if (hasNoSells && data.no.sharesBought > 0) {
+          const avgCostPerShare = data.no.bought / data.no.sharesBought;
+          const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
+          tradingPnlBNB += data.no.sold - costBasisOfSold;
+          totalCostBasis += costBasisOfSold;
+        }
       }
 
-      // NO side realized P/L
-      if (hasNoSells && data.no.sharesBought > 0) {
-        const avgCostPerShare = data.no.bought / data.no.sharesBought;
-        const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
-        realizedPnlBNB += data.no.sold - costBasisOfSold;
-        totalCostBasis += costBasisOfSold;
-      }
-
-      // Calculate percentage (avoid division by zero)
-      const realizedPnlPercent = totalCostBasis > 0 
-        ? (realizedPnlBNB / totalCostBasis) * 100 
+      const tradingPnlPercent = totalCostBasis > 0 
+        ? (tradingPnlBNB / totalCostBasis) * 100 
         : 0;
+
+      // Calculate resolution P/L percentage
+      const netCostBasis = position?.netCostBasis ? parseFloat(position.netCostBasis) : null;
+      const resolutionPnlPercent = (resolutionPnL !== null && netCostBasis && netCostBasis > 0)
+        ? (resolutionPnL / netCostBasis) * 100
+        : null;
 
       // Determine side
       let side: 'YES' | 'NO' | 'BOTH' = 'YES';
       if (hasYesSells && hasNoSells) side = 'BOTH';
       else if (hasNoSells) side = 'NO';
+
+      // Only include if there's something to show
+      const hasTradeData = positionFullyExited && (hasYesSells || hasNoSells);
+      const hasResolutionData = hasClaimed && resolutionPnL !== null;
+      
+      if (!hasTradeData && !hasResolutionData) return;
 
       pnls.push({
         address,
@@ -229,21 +269,58 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
         totalSold: data.yes.sold + data.no.sold,
         sharesBought: data.yes.sharesBought + data.no.sharesBought,
         sharesSold: data.yes.sharesSold + data.no.sharesSold,
-        realizedPnlBNB,
-        realizedPnlPercent,
+        tradingPnlBNB: hasTradeData ? tradingPnlBNB : 0,
+        tradingPnlPercent: hasTradeData ? tradingPnlPercent : 0,
+        resolutionPnlBNB: hasResolutionData ? resolutionPnL : null,
+        resolutionPnlPercent: hasResolutionData ? resolutionPnlPercent : null,
+        hasClaimed,
       });
     });
 
-    // Sort by P/L descending (winners first, then losers)
-    return pnls.sort((a, b) => b.realizedPnlBNB - a.realizedPnlBNB);
-  }, [trades]);
+    // Also add wallets that have claimed but didn't trade (held till resolution)
+    positionMap.forEach((position, address) => {
+      if (!walletMap.has(address) && position.claimed && position.realizedPnL) {
+        const resolutionPnL = parseFloat(position.realizedPnL);
+        const netCostBasis = position.netCostBasis ? parseFloat(position.netCostBasis) : 0;
+        const resolutionPnlPercent = netCostBasis > 0 ? (resolutionPnL / netCostBasis) * 100 : 0;
+        
+        // Determine side based on shares
+        const yesShares = Number(BigInt(position.yesShares || '0')) / 1e18;
+        const noShares = Number(BigInt(position.noShares || '0')) / 1e18;
+        let side: 'YES' | 'NO' | 'BOTH' = 'YES';
+        if (yesShares > 0 && noShares > 0) side = 'BOTH';
+        else if (noShares > 0) side = 'NO';
+
+        pnls.push({
+          address,
+          side,
+          totalBought: parseFloat(position.totalInvested || '0'),
+          totalSold: parseFloat(position.totalReturned || '0'),
+          sharesBought: yesShares + noShares,
+          sharesSold: 0,
+          tradingPnlBNB: 0,
+          tradingPnlPercent: 0,
+          resolutionPnlBNB: resolutionPnL,
+          resolutionPnlPercent,
+          hasClaimed: true,
+        });
+      }
+    });
+
+    // Sort by total P/L (trading + resolution) descending
+    return pnls.sort((a, b) => {
+      const totalA = a.tradingPnlBNB + (a.resolutionPnlBNB ?? 0);
+      const totalB = b.tradingPnlBNB + (b.resolutionPnlBNB ?? 0);
+      return totalB - totalA;
+    });
+  }, [trades, positions]);
 
   if (walletPnls.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-8">
         <div className="text-center">
-          <p className="text-text-muted font-mono">NO REALIZED P/L YET</p>
-          <p className="text-text-muted text-xs mt-1">Appears when traders sell their shares</p>
+          <p className="text-text-muted font-mono">NO P/L DATA YET</p>
+          <p className="text-text-muted text-xs mt-1">Appears when traders exit or claim</p>
         </div>
       </div>
     );
@@ -255,7 +332,8 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
       <div className="px-4 py-2 bg-dark-800 flex items-center gap-3 text-xs font-mono text-text-muted">
         <div className="flex-1">TRADER</div>
         <div className="w-16 text-center">SIDE</div>
-        <div className="w-28 text-right">REALIZED P/L</div>
+        <div className="w-28 text-right">TRADING P/L</div>
+        <div className="w-28 text-right">RESOLUTION P/L</div>
       </div>
       
       {/* Rows */}
@@ -277,17 +355,56 @@ export function RealizedPnl({ trades }: RealizedPnlProps) {
             )}
           </div>
           
-          {/* Realized P/L */}
+          {/* Trading P/L */}
           <div className={cn(
-            'w-28 text-right font-mono text-sm font-bold',
-            pnl.realizedPnlBNB >= 0 ? 'text-yes' : 'text-no'
+            'w-28 text-right font-mono text-sm',
+            pnl.tradingPnlBNB === 0 ? 'text-text-muted' : pnl.tradingPnlBNB >= 0 ? 'text-yes font-bold' : 'text-no font-bold'
           )}>
-            <div>
-              {pnl.realizedPnlBNB >= 0 ? '+' : ''}{pnl.realizedPnlBNB.toFixed(4)} BNB
-            </div>
-            <div className="text-xs opacity-75">
-              ({pnl.realizedPnlPercent >= 0 ? '+' : ''}{pnl.realizedPnlPercent.toFixed(1)}%)
-            </div>
+            {pnl.tradingPnlBNB !== 0 ? (
+              <>
+                <div>
+                  {pnl.tradingPnlBNB >= 0 ? '+' : ''}{pnl.tradingPnlBNB.toFixed(4)} BNB
+                </div>
+                <div className="text-xs opacity-75">
+                  ({pnl.tradingPnlPercent >= 0 ? '+' : ''}{pnl.tradingPnlPercent.toFixed(1)}%)
+                </div>
+              </>
+            ) : (
+              <div>
+                <div>0 BNB</div>
+                <div className="text-xs opacity-75">(0%)</div>
+              </div>
+            )}
+          </div>
+
+          {/* Resolution P/L - Always show, grey 0 if not claimed yet */}
+          <div className={cn(
+            'w-28 text-right font-mono text-sm',
+            pnl.resolutionPnlBNB === null 
+              ? 'text-text-muted' 
+              : pnl.resolutionPnlBNB > 0 
+                ? 'text-yes font-bold' 
+                : pnl.resolutionPnlBNB < 0 
+                  ? 'text-no font-bold' 
+                  : 'text-text-muted'
+          )}>
+            {pnl.resolutionPnlBNB !== null ? (
+              <>
+                <div>
+                  {pnl.resolutionPnlBNB > 0 ? '+' : ''}{pnl.resolutionPnlBNB.toFixed(4)} BNB
+                </div>
+                {pnl.resolutionPnlPercent !== null && (
+                  <div className="text-xs opacity-75">
+                    ({pnl.resolutionPnlPercent > 0 ? '+' : ''}{pnl.resolutionPnlPercent.toFixed(1)}%)
+                  </div>
+                )}
+              </>
+            ) : (
+              <div>
+                <div>0 BNB</div>
+                <div className="text-xs opacity-75">(0%)</div>
+              </div>
+            )}
           </div>
         </div>
       ))}

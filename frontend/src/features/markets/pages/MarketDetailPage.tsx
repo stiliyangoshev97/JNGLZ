@@ -51,6 +51,13 @@ interface HolderPosition {
   yesShares: string;
   noShares: string;
   totalInvested: string;
+  totalReturned?: string;
+  netCostBasis?: string;
+  fullyExited?: boolean;
+  tradingPnLRealized?: string;
+  claimed?: boolean;
+  claimedAmount?: string | null;
+  realizedPnL?: string | null;
 }
 
 export function MarketDetailPage() {
@@ -233,8 +240,13 @@ export function MarketDetailPage() {
   const isUsingStaleData = !data?.market && !!lastGoodMarketRef.current;
 
   // Calculate prices using bonding curve formula (with market's virtual liquidity)
-  const yesPercent = calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
-  const noPercent = calculateNoPercent(market.yesShares, market.noShares, market.virtualLiquidity);
+  // For resolved markets, show 100%/0% based on outcome
+  const yesPercent = market.resolved 
+    ? (market.outcome ? 100 : 0)
+    : calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
+  const noPercent = market.resolved
+    ? (market.outcome ? 0 : 100)
+    : calculateNoPercent(market.yesShares, market.noShares, market.virtualLiquidity);
 
   // Time calculations
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
@@ -604,7 +616,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          REALIZED P/L
+          P/L
         </button>
         <button
           onClick={() => setActiveTab('holders')}
@@ -624,7 +636,7 @@ function TradesAndHoldersTabs({
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
-          <RealizedPnl trades={trades} />
+          <RealizedPnl trades={trades} positions={positions} />
         ) : (
           <HoldersTable positions={positions} />
         )}
