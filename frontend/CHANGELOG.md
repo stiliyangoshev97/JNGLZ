@@ -2,6 +2,32 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.40] - 2025-01-25
+
+### Fixed - Resolved Markets Show 100%/0% Outcome
+
+#### The Issue
+When a market was resolved, the UI continued showing the trading percentages (e.g., 65% YES / 35% NO) instead of the definitive outcome (100% YES or 100% NO).
+
+#### The Fix
+Updated percentage calculation to check if market is resolved:
+- **Resolved with YES outcome** → Shows **100% YES / 0% NO**
+- **Resolved with NO outcome** → Shows **0% YES / 100% NO**
+- **Active/Pending markets** → Shows calculated bonding curve percentages
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Main market view
+- `MarketCard.tsx` - Market grid cards
+- `PositionCard.tsx` - Portfolio position cards
+
+#### Visual Impact
+- ChanceDisplay shows 100% or 0%
+- SplitHeatBar shows full green (YES) or full red (NO)
+- Price cents show 100¢ or 0¢
+- Consistent across all market views
+
+---
+
 ## [0.7.39] - 2026-01-25
 
 ### Added - Trading P/L & Resolution P/L Columns

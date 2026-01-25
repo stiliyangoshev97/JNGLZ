@@ -30,7 +30,10 @@ interface MarketCardProps {
 
 function MarketCardComponent({ market, className }: MarketCardProps) {
   // Calculate YES price percentage using bonding curve formula (with market's virtual liquidity)
-  const yesPercent = calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
+  // For resolved markets, show 100%/0% based on outcome
+  const yesPercent = market.resolved
+    ? (market.outcome ? 100 : 0)
+    : calculateYesPercent(market.yesShares, market.noShares, market.virtualLiquidity);
 
   // Calculate time remaining
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
