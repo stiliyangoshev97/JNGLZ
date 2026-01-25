@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 11, 2026  
-> **Status:** ✅ Deployed (v3.4.1)
+> **Last Updated:** January 25, 2026  
+> **Status:** ✅ Deployed (jnglz-testnet-fresh v1.0.0)
 
 ---
 
@@ -10,22 +10,26 @@
 
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
 
-### GraphQL Endpoint (Production)
+### GraphQL Endpoint (Production Gateway)
 ```
-https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
+https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
 ```
 
-### GraphQL Endpoint (Studio)
+### GraphQL Endpoint (Studio - Development)
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1
+https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v1.0.0
 ```
+
+### API Key
+- **Key:** `bd58484c1566274066b1453e52043443`
+- **Whitelisted Domains:** `localhost`, `jnglz.fun`
+- **Rate Limit:** 100,000 queries/month
 
 ### Contract Details (Testnet)
-- **Address:** `0x4e20Df1772D972f10E9604e7e9C775B1ae897464`
+- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
-- **Start Block:** 83514593
-- **BscScan:** https://testnet.bscscan.com/address/0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-- **Contract Version:** v3.4.1 (Pull Pattern + ReplaceSigner + Sweep Protection)
+- **Start Block:** 86465841
+- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
 
 ### Mainnet (Pending)
 - **Address:** TBD (deploy after testnet validation)
@@ -38,16 +42,36 @@ https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.4.1
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Schema Definition | ✅ 100% | 10 entities (includes ProposerReward) |
-| Subgraph Config | ✅ 100% | subgraph.yaml updated for v3.3.0 |
-| Mappings | ✅ 100% | 12 event handlers (includes ProposerRewardPaid) |
+| Schema Definition | ✅ 100% | Includes fullyExited P/L tracking |
+| Subgraph Config | ✅ 100% | Fresh deployment jnglz-testnet-fresh |
+| Mappings | ✅ 100% | All event handlers working |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Testnet Deployment | ✅ 100% | v3.3.1 deployed to The Graph Studio |
+| Testnet Deployment | ✅ 100% | v1.0.0 - 100% synced, 0 blocks behind |
+| Gateway Published | ✅ 100% | Live on decentralized network |
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
 
 **Overall Progress: 100%** ✅
+
+---
+
+## ⚠️ Important: Subgraph Sync Issues (Resolved)
+
+### The Problem (Jan 25, 2026)
+Multiple deployments to `jnglz-bnb-testnet` showed persistent 300-800 block sync lag.
+
+### Root Cause
+**NOT code-related.** Stale state on Graph Studio from many failed deployments.
+
+### Solution
+Created a **completely new subgraph** `jnglz-testnet-fresh` - synced instantly.
+
+### Lesson Learned
+When experiencing persistent sync issues on Graph Studio:
+1. Don't keep redeploying to the same subgraph
+2. Create a fresh subgraph with a new name
+3. Delete/unpublish the old problematic subgraph
 
 ---
 
