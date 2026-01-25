@@ -67,6 +67,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const [action, setAction] = useState<TradeAction>('buy');
   const [amount, setAmount] = useState('');
 
+  // Reset form and invalidate cached data when wallet changes
+  useEffect(() => {
+    // Reset form state
+    setAmount('');
+    setAction('buy');
+    // Invalidate all contract reads to ensure fresh data for new wallet
+    queryClient.invalidateQueries({ queryKey: ['readContract'] });
+  }, [address, queryClient]);
+
   // Parse amount for contract calls
   const amountWei = useMemo(() => {
     try {
@@ -113,11 +122,10 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
   const poolBalance = BigInt(market.poolBalance || '0');
 
   // Get max sellable shares from contract (respects pool liquidity limits)
-  const { maxShares: maxSellableYes, bnbOut: maxSellBnbYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
-  const { maxShares: maxSellableNo, bnbOut: maxSellBnbNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
+  const { maxShares: maxSellableYes, refetch: refetchMaxSellableYes } = useMaxSellableShares(marketId, userYesShares, true);
+  const { maxShares: maxSellableNo, refetch: refetchMaxSellableNo } = useMaxSellableShares(marketId, userNoShares, false);
   
   const maxSellableShares = direction === 'yes' ? maxSellableYes : maxSellableNo;
-  const maxSellBnbOut = direction === 'yes' ? maxSellBnbYes : maxSellBnbNo;
 
   // Check if pool liquidity limits selling all shares
   const isPoolLimited = useMemo(() => {
@@ -155,15 +163,15 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       // Show success toast
       showToast('Trade successful!', 'success');
       setAmount('');
-      // Refetch position after successful trade
+      // Refetch position after successful trade (maxSellable will auto-update via position effect below)
       refetchPosition();
-      // Refetch max sellable shares (pool liquidity may have changed)
-      refetchMaxSellableYes();
-      refetchMaxSellableNo();
       // Refetch user's BNB balance (local)
       refetchBalance();
       // Invalidate ALL balance queries so Header/other components update too
       queryClient.invalidateQueries({ queryKey: ['balance'] });
+      // Invalidate ALL readContract queries to ensure fresh data
+      // This ensures maxSellable queries with new args get fresh results
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
       // Trigger market data refetch for instant UI update
       onTradeSuccess?.();
       // Reset all write hooks immediately (no delay needed since we use toast)
@@ -172,7 +180,18 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       resetSellYes();
       resetSellNo();
     }
-  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchMaxSellableYes, refetchMaxSellableNo, refetchBalance, queryClient, showToast]);
+  }, [isSuccess, resetBuyYes, resetBuyNo, resetSellYes, resetSellNo, onTradeSuccess, refetchPosition, refetchBalance, queryClient, showToast]);
+
+  // Re-fetch maxSellable shares when position changes
+  // This ensures correct data after trades (position args change → new query needs fetching)
+  useEffect(() => {
+    if (userYesShares > 0n) {
+      refetchMaxSellableYes();
+    }
+    if (userNoShares > 0n) {
+      refetchMaxSellableNo();
+    }
+  }, [userYesShares, userNoShares, refetchMaxSellableYes, refetchMaxSellableNo]);
 
   // Calculate estimated output
   const estimatedOutput = useMemo(() => {
@@ -400,7 +419,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
             {userNoShares > 0n && existingPositionPayout.noPayout > 0n && (
               <div className="flex justify-between">
                 <span className="text-text-muted">If NO wins now:</span>
-                <span className="text-no font-mono">
+                <span className="text-yes font-mono">
                   ~{formatBNB(existingPositionPayout.noPayout)} BNB
                 </span>
               </div>
@@ -411,16 +430,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               <p className="text-text-muted text-xs italic">
                 Returns change as others trade
               </p>
-            )}
-            
-            {/* Pool Liquidity Warning */}
-            {action === 'sell' && isPoolLimited && maxSellableShares !== undefined && (
-              <div className="pt-2 border-t border-dark-600">
-                <p className="text-warning text-xs">
-                  ⚠️ Pool liquidity limits max sell to {formatShares(maxSellableShares)} {direction.toUpperCase()} shares
-                  {maxSellBnbOut && ` (~${formatBNB(maxSellBnbOut)} BNB)`}
-                </p>
-              </div>
             )}
           </div>
         )}
@@ -557,7 +566,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
               <div className="mt-3 pt-3 border-t border-dark-600">
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">If {direction.toUpperCase()} wins now:</span>
-                  <span className={cn('font-mono', direction === 'yes' ? 'text-yes' : 'text-no')}>
+                  <span className="text-yes font-mono">
                     ~{formatBNB(buyPreviewPayout.payout)} BNB
                     {buyPreviewPayout.multiplier > 0 && (
                       <span className="text-text-secondary ml-1">
