@@ -1,80 +1,95 @@
 # Subgraph Deployment Rules
 
-> ⚠️ **CRITICAL**: The subgraph is the source of truth for all on-chain data. Incorrect deployments can corrupt historical data that CANNOT be recovered.
+> ⚠️ **CRITICAL**: The subgraph is the source of truth for all on-chain data. Understanding redeployment behavior is essential.
 
 ---
 
 ## 🚨 Golden Rules
 
-### 1. Schema Changes = New Subgraph
-If you need to:
-- Add new fields to existing entities
-- Remove fields from existing entities
-- Change field types
-- Add new entities with relationships to existing data
+### 1. Redeployment ALWAYS Re-indexes From Scratch
 
-**You MUST create a brand new subgraph** (new name, new deployment). Redeploying does NOT reset internal state.
+When you deploy (or redeploy) to a subgraph in The Graph Studio:
+- ✅ **All historical data is wiped**
+- ✅ **Indexing starts fresh from `startBlock`**
+- ✅ **New schema AND mapping logic apply to everything**
 
-### 2. Redeployment Limitations
-When you redeploy to the same subgraph:
-- ✅ Mapping logic changes take effect going forward
-- ✅ New events will use new logic
-- ❌ Historical data is NOT re-indexed
-- ❌ Existing entity values are NOT recalculated
-- ❌ Internal state persists from previous deployment
+This means you can safely redeploy schema changes to the **same subgraph** - it will re-index everything with the new schema.
 
-### 3. Testing Protocol
-Before ANY deployment:
-1. **Test on local Graph node** with Docker first
-2. **Deploy to testnet subgraph** (separate from production)
-3. **Verify all queries** return expected data
-4. **Run for 24+ hours** to catch edge cases
-5. **Only then** consider mainnet deployment
+### 2. When to Create a NEW Subgraph Name
+
+Create a new subgraph (`jnglz-testnet-v2`, etc.) when:
+- You want to **keep the old version running** as a fallback
+- You're deploying to **production** and need zero downtime
+- You want to **compare** old vs new indexing results
+
+For development/testing, redeploying to the same subgraph is fine.
+
+### 3. Common Gotcha: "0 Triggers Found"
+
+If your subgraph syncs but finds 0 triggers (events), check:
+- **Required array fields** must be initialized as `[]` in handlers, not left as null
+- **Entity creation order** - parent entities must exist before adding relationships
+- **Field types** - `[String!]!` means non-null array of non-null strings
+
+**Example of the bug we hit:**
+```typescript
+// ❌ BAD - positionIds never initialized, causes silent failures
+market.positionIds  // undefined/null
+
+// ✅ GOOD - initialize in handleMarketCreated
+market.positionIds = []
+```
 
 ---
 
 ## 📋 Deployment Checklist
 
 ### Before Deployment
-- [ ] All schema changes reviewed by another developer
-- [ ] Mapping logic tested with unit tests
-- [ ] Local Graph node deployment successful
-- [ ] Testnet deployment running without errors
-- [ ] Frontend queries verified against new schema
-- [ ] Rollback plan documented
+- [ ] Run `graph codegen` - no errors
+- [ ] Run `graph build` - no errors  
+- [ ] All required fields have default values in handlers
+- [ ] Array fields initialized as `[]` not null
 
 ### After Deployment
-- [ ] Verify indexing is progressing (not stuck)
-- [ ] Check for indexing errors in Studio
-- [ ] Verify sample queries return expected data
-- [ ] Monitor for 1 hour minimum
-- [ ] Update frontend `VITE_SUBGRAPH_URL` if needed
+- [ ] Check Studio logs - should see "Found X triggers" (not 0)
+- [ ] Verify indexing is progressing (block number increasing)
+- [ ] Test a sample query returns expected data
+- [ ] If stuck, check for schema initialization issues
 
 ---
 
-## 🔴 Known Gotchas
+## 🔴 Lessons Learned
 
-### 1. P/L Calculations (Current State)
-The `tradingPnL` field in the `User` entity **only updates when `position.fullyExited = true`**.
+### 1. v2.0.0 Stuck, v3.0.0 Worked Instantly
 
-```typescript
-// mapping.ts line ~410-417
-if (position.fullyExited) {
-  user.tradingPnL = user.tradingPnL.plus(position.tradingPnLRealized);
-  user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
-}
-```
+**Problem:** v2.0.0 showed "Found 0 triggers" while v3.0.0 found 42-52 triggers per block.
 
-**Implication**: Users who haven't fully exited positions won't have accurate `tradingPnL` on the leaderboard.
+**Cause:** `positionIds: [String!]!` field on Market wasn't being initialized in `handleMarketCreated()`. The handler silently failed.
 
-**Fix requires**: Schema migration (new subgraph) to track `unrealizedPnL` separately.
+**Fix:** Added `market.positionIds = []` in `handleMarketCreated()`.
 
-### 2. Decimal Precision
-- All BNB values stored as `BigDecimal` with 18 decimals
-- Use `toDecimal(value, 18)` helper consistently
-- Never mix `BigInt` and `BigDecimal` in calculations
+**Lesson:** AssemblyScript/Graph node can fail silently when required fields aren't properly initialized. Always initialize arrays as `[]`.
 
-### 3. Entity ID Patterns
+### 2. P/L Calculation Fix Required Schema Changes
+
+**Problem:** Trading P/L only updated when `position.fullyExited = true`, missing partial sell profits.
+
+**Solution:** Added 8 tracking fields to Position entity for average cost basis calculation on every sell.
+
+**Lesson:** Some fixes require schema changes. With The Graph Studio, you can redeploy schema changes and it re-indexes everything.
+
+### 3. Loser Resolution P/L Was 0
+
+**Problem:** Losers showed P/L of 0 instead of their actual loss.
+
+**Solution:** Added `positionIds` array to Market, iterate through all positions in `handleMarketResolved()`, set loser P/L = `-netCostBasis`.
+
+**Lesson:** Need to track relationships (Market → Positions) to do batch operations at resolution time.
+
+---
+
+## 📁 Entity ID Patterns
+
 | Entity | ID Format | Example |
 |--------|-----------|---------|
 | Market | `marketId.toString()` | `"42"` |
@@ -82,76 +97,48 @@ if (position.fullyExited) {
 | Trade | `txHash-logIndex` | `"0xdef...-0"` |
 | User | `userAddress.toHexString()` | `"0xabc..."` |
 
-### 4. Block Handlers
-- Expensive operations - use sparingly
-- Consider using call handlers or event handlers instead
-- Can slow indexing significantly at scale
+---
+
+## 🏷️ Versioning
+
+| Schema Version | Deployment Version | Notes |
+|----------------|-------------------|-------|
+| v5.1.0 | v3.0.0 | Current - P/L fix with positionIds |
+| v5.0.0 | v2.0.0 | Failed - missing positionIds init |
+| v4.x.x | v1.0.0 | Old - P/L only on full exit |
 
 ---
 
-## 🔄 Migration Strategy
+## 📞 Debugging Tips
 
-When schema changes are unavoidable:
+### Indexer Stuck / 0 Triggers
+1. Check Studio logs for trigger count
+2. Look for uninitialized required fields
+3. Verify all `[Type!]!` arrays are set to `[]`
+4. Check handler logic isn't silently failing
 
-1. **Create new subgraph** with new name (e.g., `junkiefun-bnb-testnet-v5`)
-2. **Deploy new subgraph** to The Graph Studio
-3. **Index from genesis block** (or startBlock if specified)
-4. **Wait for full sync** before switching frontend
-5. **Update frontend env** with new subgraph URL
-6. **Keep old subgraph running** for 48 hours as fallback
-7. **Deprecate old subgraph** after confirming stability
-
----
-
-## 📁 File Structure
-
-```
-subgraph/
-├── schema.graphql          # Entity definitions (CAREFUL!)
-├── subgraph.yaml           # Manifest (data sources, startBlock)
-├── src/
-│   └── mapping.ts          # Event handlers (can update)
-├── abis/
-│   └── PredictionMarket.json  # Contract ABI
-└── SUBGRAPH_DEPLOYMENT_RULES.md  # This file
+### Verify Sync Status
+```graphql
+{
+  _meta {
+    block { number }
+    hasIndexingErrors
+  }
+}
 ```
 
----
-
-## 🏷️ Versioning Convention
-
-| Version | Meaning |
-|---------|---------|
-| v4.0.0 | Current stable (Contract v3.8.2) |
-| v4.0.x | Bug fixes in mapping logic only |
-| v4.x.0 | New features (additive schema changes only) |
-| v5.0.0 | Breaking schema changes (new subgraph required) |
-
----
-
-## 📞 Emergency Procedures
-
-### Indexer Stuck
-1. Check The Graph Studio for error logs
-2. If block-level issue, may need to redeploy
-3. Contact The Graph Discord for help
-
-### Corrupted Data
-1. **Do NOT redeploy** - it won't fix historical data
-2. Create new subgraph with corrected logic
-3. Re-index from scratch
-4. Migrate frontend to new subgraph
-
-### Frontend Shows Stale Data
-1. Check `_meta { block { number } }` query
-2. Verify indexer is syncing
-3. May be rate limiting - check API key usage
+### Quick Data Check
+```graphql
+{
+  markets(first: 5) { id, positionIds }
+  positions(first: 5) { id, realizedPnL }
+}
+```
 
 ---
 
 ## 📚 Resources
 
-- [The Graph Documentation](https://thegraph.com/docs/)
-- [AssemblyScript Reference](https://www.assemblyscript.org/introduction.html)
-- [Graph Protocol Discord](https://discord.gg/graphprotocol)
-- [Subgraph Best Practices](https://thegraph.com/docs/en/developing/creating-a-subgraph/#best-practices)
+- [The Graph Studio](https://thegraph.com/studio/)
+- [AssemblyScript Docs](https://www.assemblyscript.org/)
+- [Subgraph Manifest Spec](https://thegraph.com/docs/en/developing/creating-a-subgraph/)
