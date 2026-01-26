@@ -2,6 +2,24 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.45] - 2026-01-26
+
+### Fixed - Loser Resolution P/L Display in Market Details Page
+
+#### The Issue
+After subgraph v5.1.0 fixed loser P/L calculation, the Market Details page P/L tab still showed `0 BNB` for losers instead of their negative Resolution P/L. This happened because the frontend condition `hasResolutionData = hasClaimed && resolutionPnL !== null` required `claimed=true`, but losers have `claimed=false` (they can't claim).
+
+#### The Fix
+Updated `RealizedPnl` component in `TradeHistory.tsx`:
+- Changed condition from `hasClaimed && resolutionPnL !== null` to just `resolutionPnL !== null`
+- Losers now correctly show negative Resolution P/L (e.g., `-0.0333 BNB`)
+- Also updated the positionMap loop to include wallets with `realizedPnL` set (not just `claimed=true`)
+
+#### Files Changed
+- `TradeHistory.tsx` - Fixed `hasResolutionData` condition and positionMap loop
+
+---
+
 ## [0.7.44] - 2025-01-26
 
 ### Fixed - Resolution P/L with Negative netCostBasis
