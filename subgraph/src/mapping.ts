@@ -123,6 +123,7 @@ function getOrCreateUser(address: Address): User {
  * Get or create Position entity
  * v3.5.0: Added P/L tracking fields
  * v3.7.0: Added juryFeesClaimed field
+ * v5.0.0: Added share tracking fields for accurate trading P/L
  */
 function getOrCreatePosition(marketId: string, userAddress: Address): Position {
   let id = marketId + "-" + userAddress.toHexString();
@@ -134,13 +135,24 @@ function getOrCreatePosition(marketId: string, userAddress: Address): Position {
     position.market = marketId;
     position.yesShares = ZERO_BI;
     position.noShares = ZERO_BI;
+    
+    // v5.0.0: Share tracking for accurate P/L calculation
+    position.totalYesSharesBought = ZERO_BI;
+    position.totalYesSharesSold = ZERO_BI;
+    position.totalNoSharesBought = ZERO_BI;
+    position.totalNoSharesSold = ZERO_BI;
+    position.totalYesBnbBought = ZERO_BD;
+    position.totalYesBnbSold = ZERO_BD;
+    position.totalNoBnbBought = ZERO_BD;
+    position.totalNoBnbSold = ZERO_BD;
+    
     position.totalInvested = ZERO_BD;
     position.totalReturned = ZERO_BD;
     position.averageYesPrice = ZERO_BD;
     position.averageNoPrice = ZERO_BD;
     position.netCostBasis = ZERO_BD;
-    position.fullyExited = false; // v4.0.2
-    position.tradingPnLRealized = ZERO_BD; // v4.0.2
+    position.fullyExited = false;
+    position.tradingPnLRealized = ZERO_BD;
     position.claimed = false;
     position.emergencyRefunded = false;
     position.hasVoted = false;
@@ -350,72 +362,103 @@ export function handleTrade(event: TradeEvent): void {
   } else {
     user.totalSold = user.totalSold.plus(trade.bnbAmount);
   }
-  // NOTE: tradingPnL is now updated per-position when fully exited (see below)
-  // user.totalPnL is also updated there
+  // NOTE: tradingPnL is now updated on every sell using avg cost basis (v5.0.0)
   
   user.save();
 
   // Update position
   let position = getOrCreatePosition(marketId, event.params.trader);
+  let bnbAmountBD = trade.bnbAmount;
+  let sharesBD = event.params.shares.toBigDecimal();
 
   if (event.params.isBuy) {
+    // ============================================
+    // BUY: Track shares and BNB spent per side (v5.0.0)
+    // ============================================
     if (event.params.isYes) {
-      // Update average YES price
-      let totalYesCost = position.averageYesPrice.times(
-        position.yesShares.toBigDecimal()
-      );
-      let newTotalCost = totalYesCost.plus(trade.bnbAmount);
+      // Update YES tracking
+      position.totalYesSharesBought = position.totalYesSharesBought.plus(event.params.shares);
+      position.totalYesBnbBought = position.totalYesBnbBought.plus(bnbAmountBD);
+      
+      // Update average YES price (legacy)
+      let totalYesCost = position.averageYesPrice.times(position.yesShares.toBigDecimal());
+      let newTotalCost = totalYesCost.plus(bnbAmountBD);
       position.yesShares = position.yesShares.plus(event.params.shares);
       if (position.yesShares.gt(ZERO_BI)) {
-        position.averageYesPrice = newTotalCost.div(
-          position.yesShares.toBigDecimal()
-        );
+        position.averageYesPrice = newTotalCost.div(position.yesShares.toBigDecimal());
       }
     } else {
-      // Update average NO price
-      let totalNoCost = position.averageNoPrice.times(
-        position.noShares.toBigDecimal()
-      );
-      let newTotalCost = totalNoCost.plus(trade.bnbAmount);
+      // Update NO tracking
+      position.totalNoSharesBought = position.totalNoSharesBought.plus(event.params.shares);
+      position.totalNoBnbBought = position.totalNoBnbBought.plus(bnbAmountBD);
+      
+      // Update average NO price (legacy)
+      let totalNoCost = position.averageNoPrice.times(position.noShares.toBigDecimal());
+      let newTotalCost = totalNoCost.plus(bnbAmountBD);
       position.noShares = position.noShares.plus(event.params.shares);
       if (position.noShares.gt(ZERO_BI)) {
-        position.averageNoPrice = newTotalCost.div(
-          position.noShares.toBigDecimal()
-        );
+        position.averageNoPrice = newTotalCost.div(position.noShares.toBigDecimal());
       }
     }
-    position.totalInvested = position.totalInvested.plus(trade.bnbAmount);
+    position.totalInvested = position.totalInvested.plus(bnbAmountBD);
     
-    // v4.0.2: If user buys back after fully exiting, reset the flag
+    // If user buys back after fully exiting, position is no longer fully exited
     if (position.fullyExited) {
-      // User is re-entering this position - reverse the previously counted P/L
-      user.tradingPnL = user.tradingPnL.minus(position.tradingPnLRealized);
-      user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
-      user.save();
-      
       position.fullyExited = false;
-      position.tradingPnLRealized = ZERO_BD;
+      // Note: We don't reverse tradingPnLRealized - it represents realized gains from past sells
+      // Any new trades will add to it
     }
   } else {
-    // Sell - reduce shares and track returns
-    if (event.params.isYes) {
-      position.yesShares = position.yesShares.minus(event.params.shares);
-    } else {
-      position.noShares = position.noShares.minus(event.params.shares);
-    }
-    // Track total returned from sells (v3.5.0)
-    position.totalReturned = position.totalReturned.plus(trade.bnbAmount);
+    // ============================================
+    // SELL: Calculate trading P/L using avg cost basis (v5.0.0)
+    // Same formula as frontend: avgCostPerShare * sharesSold = costBasis
+    // tradingPnL = bnbReceived - costBasis
+    // ============================================
+    let thisSellPnL = ZERO_BD;
     
-    // v4.0.2: Check if position is now fully exited (0 shares on BOTH sides)
-    if (position.yesShares.equals(ZERO_BI) && position.noShares.equals(ZERO_BI) && !position.fullyExited) {
-      // Position fully exited via trading - realize the P/L
-      position.fullyExited = true;
-      position.tradingPnLRealized = position.totalReturned.minus(position.totalInvested);
+    if (event.params.isYes) {
+      // Track YES sell
+      position.totalYesSharesSold = position.totalYesSharesSold.plus(event.params.shares);
+      position.totalYesBnbSold = position.totalYesBnbSold.plus(bnbAmountBD);
+      position.yesShares = position.yesShares.minus(event.params.shares);
       
-      // Update user's trading P/L with this position's realized P/L
-      user.tradingPnL = user.tradingPnL.plus(position.tradingPnLRealized);
-      user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
-      user.save();
+      // Calculate P/L for this sell using average cost basis
+      if (position.totalYesSharesBought.gt(ZERO_BI)) {
+        let avgCostPerShare = position.totalYesBnbBought.div(position.totalYesSharesBought.toBigDecimal());
+        let costBasisOfSold = avgCostPerShare.times(sharesBD);
+        thisSellPnL = bnbAmountBD.minus(costBasisOfSold);
+      }
+    } else {
+      // Track NO sell
+      position.totalNoSharesSold = position.totalNoSharesSold.plus(event.params.shares);
+      position.totalNoBnbSold = position.totalNoBnbSold.plus(bnbAmountBD);
+      position.noShares = position.noShares.minus(event.params.shares);
+      
+      // Calculate P/L for this sell using average cost basis
+      if (position.totalNoSharesBought.gt(ZERO_BI)) {
+        let avgCostPerShare = position.totalNoBnbBought.div(position.totalNoSharesBought.toBigDecimal());
+        let costBasisOfSold = avgCostPerShare.times(sharesBD);
+        thisSellPnL = bnbAmountBD.minus(costBasisOfSold);
+      }
+    }
+    
+    // Track total returned from sells (legacy)
+    position.totalReturned = position.totalReturned.plus(bnbAmountBD);
+    
+    // ============================================
+    // v5.0.0: Update trading P/L on EVERY sell (not just full exits)
+    // This fixes the leaderboard P/L calculation for partial sells
+    // ============================================
+    position.tradingPnLRealized = position.tradingPnLRealized.plus(thisSellPnL);
+    
+    // Update user's trading P/L immediately
+    user.tradingPnL = user.tradingPnL.plus(thisSellPnL);
+    user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+    user.save();
+    
+    // Check if position is now fully exited (0 shares on BOTH sides)
+    if (position.yesShares.equals(ZERO_BI) && position.noShares.equals(ZERO_BI)) {
+      position.fullyExited = true;
     }
   }
   
@@ -559,6 +602,7 @@ export function handleMarketResolved(event: MarketResolved): void {
  * Handle Claimed event
  * Creates Claim entity and updates User/Position
  * v3.5.0: Added P/L tracking for leaderboard
+ * v5.0.0: Simplified - trading P/L is now tracked on every sell, no longer calculated here
  */
 export function handleClaimed(event: Claimed): void {
   let marketId = event.params.marketId.toString();
@@ -583,19 +627,25 @@ export function handleClaimed(event: Claimed): void {
   // Update user stats
   user.totalClaimed = user.totalClaimed.plus(claimAmount);
   
-  // P/L Tracking (v3.5.0)
-  // Update position first to get netCostBasis
+  // Update position
   let position = getOrCreatePosition(marketId, event.params.user);
   position.claimed = true;
   position.claimedAmount = claimAmount;
   
+  // v5.0.0: Trading P/L is already tracked on every sell
+  // Mark position as finalized for clarity
+  position.fullyExited = true;
+  
   // Calculate realized P/L for this position: claimed - netCostBasis
-  let realizedPnL = claimAmount.minus(position.netCostBasis);
+  // netCostBasis is what's still "at risk" after sells: totalInvested - totalReturned
+  // Clamp negative netCostBasis to 0 (user sold at profit, nothing at risk)
+  let effectiveNetCostBasis = position.netCostBasis.gt(ZERO_BD) ? position.netCostBasis : ZERO_BD;
+  let realizedPnL = claimAmount.minus(effectiveNetCostBasis);
   position.realizedPnL = realizedPnL;
   position.save();
   
-  // Update user resolution P/L
-  user.totalInvestedInResolved = user.totalInvestedInResolved.plus(position.netCostBasis);
+  // Update user resolution P/L (only count non-negative cost basis)
+  user.totalInvestedInResolved = user.totalInvestedInResolved.plus(effectiveNetCostBasis);
   user.totalClaimedFromResolved = user.totalClaimedFromResolved.plus(claimAmount);
   user.resolutionPnL = user.totalClaimedFromResolved.minus(user.totalInvestedInResolved);
   

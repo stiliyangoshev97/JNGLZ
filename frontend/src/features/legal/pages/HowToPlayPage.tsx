@@ -1492,6 +1492,151 @@ export function HowToPlayPage() {
             </div>
           </section>
 
+          {/* ===== EDGE CASES & CONFUSING P/L ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-warning pl-4 mb-6">
+              EDGE CASES & CONFUSING P/L SCENARIOS
+            </h2>
+            
+            <div className="bg-warning/10 border-2 border-warning p-6 mb-6">
+              <p className="text-warning font-black text-lg mb-4">WHEN WINNING DOESN'T FEEL LIKE WINNING</p>
+              
+              <div className="space-y-6 text-sm">
+                <p className="text-text-secondary">
+                  Sometimes the P/L math can be confusing. Here are edge cases that might seem like bugs but are 
+                  actually <strong className="text-white">how AMM markets work</strong>.
+                </p>
+
+                {/* Edge Case 1: Empty Pool Winner */}
+                <div className="bg-dark-900/50 p-5 border border-warning">
+                  <p className="text-warning font-bold mb-3 flex items-center gap-2">
+                    ⚠️ EDGE CASE: "I WON BUT GOT 0 BNB!"
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-dark-800 p-4 border border-dark-600">
+                      <p className="text-white font-bold mb-2">The Scenario:</p>
+                      <div className="text-text-secondary text-xs space-y-1">
+                        <p>1. You buy 100 YES shares for 0.5 BNB</p>
+                        <p>2. Another trader sells ALL their shares before resolution</p>
+                        <p>3. Pool is now nearly empty (0 BNB)</p>
+                        <p>4. Market resolves <span className="text-yes font-bold">YES</span> — you won!</p>
+                        <p>5. You claim... and receive <span className="text-no font-bold">0 BNB</span></p>
+                      </div>
+                    </div>
+
+                    <div className="bg-dark-800 p-4 border border-dark-600">
+                      <p className="text-white font-bold mb-2">Why This Happens:</p>
+                      <p className="text-text-secondary text-xs mb-3">
+                        The payout formula is: <span className="text-cyber font-mono">(Your Shares / Total Winning Shares) × Pool Balance</span>
+                      </p>
+                      <p className="text-text-secondary text-xs">
+                        If the pool has <strong className="text-white">0 BNB</strong>, then:
+                      </p>
+                      <div className="bg-dark-900 p-2 font-mono text-xs mt-2">
+                        <p className="text-no">Payout = (100 / 100) × 0 = <span className="text-no font-bold">0 BNB</span></p>
+                      </div>
+                      <p className="text-text-muted text-xs mt-2">
+                        You "won" the prediction, but there's nothing in the pool to pay you!
+                      </p>
+                    </div>
+
+                    <div className="bg-dark-800 p-4 border border-dark-600">
+                      <p className="text-white font-bold mb-2">Your P/L Breakdown:</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs font-mono">
+                          <tbody>
+                            <tr className="border-b border-dark-700">
+                              <td className="p-2 text-text-muted">Cost basis (what you paid):</td>
+                              <td className="p-2 text-white text-right">0.5 BNB</td>
+                            </tr>
+                            <tr className="border-b border-dark-700">
+                              <td className="p-2 text-text-muted">Amount claimed:</td>
+                              <td className="p-2 text-white text-right">0 BNB</td>
+                            </tr>
+                            <tr className="bg-no/10">
+                              <td className="p-2 text-no font-bold">Resolution P/L:</td>
+                              <td className="p-2 text-no text-right font-bold">-0.5 BNB</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-text-muted text-xs mt-3">
+                        Your P/L shows a <span className="text-no">loss</span> because you invested 0.5 BNB and got 0 BNB back — 
+                        even though you "won" the prediction.
+                      </p>
+                    </div>
+
+                    <div className="bg-cyber/10 p-4 border border-cyber">
+                      <p className="text-cyber font-bold mb-2">Where Did Your BNB Go?</p>
+                      <p className="text-text-secondary text-xs">
+                        When you bought shares, your BNB went <strong className="text-white">into the pool</strong>. 
+                        When others <strong className="text-white">sold their shares before you</strong>, they took BNB 
+                        <strong className="text-white"> out of the pool</strong>. The sellers got your money — 
+                        not because of any bug, but because AMM sells are paid from the pool.
+                      </p>
+                    </div>
+
+                    <div className="bg-yes/10 p-4 border border-yes">
+                      <p className="text-yes font-bold mb-2">💡 How to Avoid This</p>
+                      <ul className="list-disc list-inside text-text-secondary text-xs space-y-1">
+                        <li><strong className="text-white">Check pool balance</strong> before holding to resolution</li>
+                        <li><strong className="text-white">Sell some shares yourself</strong> while the pool has liquidity</li>
+                        <li><strong className="text-white">Don't be the last holder</strong> — if everyone sells, you're left holding worthless claims</li>
+                        <li><strong className="text-white">Trading P/L matters too</strong> — you can profit from selling even if resolution pays nothing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edge Case 2: Negative P/L Despite Winning */}
+                <div className="bg-dark-900/50 p-5 border border-dark-600">
+                  <p className="text-white font-bold mb-3 flex items-center gap-2">
+                    📊 UNDERSTANDING YOUR P/L
+                  </p>
+                  
+                  <div className="space-y-3 text-xs text-text-secondary">
+                    <p>
+                      Your <strong className="text-white">Total P/L</strong> in JNGLZ has two parts:
+                    </p>
+                    
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="p-3 bg-dark-800 border border-cyber/30">
+                        <p className="text-cyber font-bold mb-1">Trading P/L</p>
+                        <p>Profit/loss from buying low and selling high (or vice versa) <strong className="text-white">before resolution</strong>.</p>
+                        <p className="text-text-muted mt-1 text-xs">Formula: BNB received from sells - cost basis of shares sold</p>
+                      </div>
+                      <div className="p-3 bg-dark-800 border border-yes/30">
+                        <p className="text-yes font-bold mb-1">Resolution P/L</p>
+                        <p>Profit/loss from <strong className="text-white">claiming after market resolves</strong>.</p>
+                        <p className="text-text-muted mt-1 text-xs">Formula: Amount claimed - remaining cost basis</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-dark-800 p-3 border border-dark-600 mt-2">
+                      <p className="text-white font-bold mb-2">Total P/L = Trading P/L + Resolution P/L</p>
+                      <p className="text-text-muted">
+                        You can have positive Trading P/L but negative Resolution P/L (or vice versa). 
+                        What matters is the <strong className="text-white">total</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Takeaway */}
+                <div className="bg-dark-800 p-4 border border-dark-600">
+                  <p className="text-cyber font-bold mb-2">🎯 KEY TAKEAWAY</p>
+                  <p className="text-text-secondary text-sm">
+                    In an AMM, <strong className="text-white">"winning" the prediction doesn't guarantee profit</strong>. 
+                    The pool is a shared resource — if others drain it before resolution, there may be nothing left to claim.
+                    Always consider <strong className="text-white">taking profits via selling</strong> rather than waiting for resolution, 
+                    especially if you see the pool balance dropping.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* ===== WHY PRICE TRADING WORKS ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">

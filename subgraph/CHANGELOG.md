@@ -2,6 +2,56 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.0.0] - 2026-01-26 - Leaderboard P/L Fix 🎯
+
+### Problem
+The leaderboard's P/L calculation was incorrect for users who did partial sells before market resolution. The `User.tradingPnL` field only updated when `position.fullyExited = true` (0 shares on both YES and NO sides), causing partial sell profits to be missing from the leaderboard.
+
+### Root Cause
+- Position entity only tracked `totalInvested` and `totalReturned`, not shares bought/sold per side
+- Without knowing how many shares were bought vs sold per side, we couldn't calculate average cost basis
+- The old code calculated `tradingPnL = totalReturned - totalInvested` which is wrong for partial exits
+- Example: Buy 100 YES for 1 BNB, sell 50 YES for 0.8 BNB → old code showed -0.2 BNB (wrong!), should be +0.3 BNB
+
+### Solution
+Added per-side share and BNB tracking to Position entity, enabling accurate average cost basis calculation on every sell (same formula as frontend):
+
+```typescript
+// New tracking fields
+totalYesSharesBought, totalYesSharesSold
+totalNoSharesBought, totalNoSharesSold  
+totalYesBnbBought, totalYesBnbSold
+totalNoBnbBought, totalNoBnbSold
+
+// P/L calculation on every sell (not just full exits)
+avgCostPerShare = totalYesBnbBought / totalYesSharesBought
+costBasisOfSold = avgCostPerShare * sharesSold
+tradingPnL = bnbReceived - costBasisOfSold
+```
+
+### Changes
+
+#### schema.graphql
+- Added 8 new fields to Position entity for share/BNB tracking per side
+- Updated version to v5.0.0
+
+#### mapping.ts
+- Updated `getOrCreatePosition()` to initialize new fields
+- **BUY handler:** Now tracks `totalXxxSharesBought` and `totalXxxBnbBought` 
+- **SELL handler:** Now calculates P/L on every sell using average cost basis and updates `User.tradingPnL` immediately
+- **Claim handler:** Simplified - trading P/L is now tracked on sells, not calculated on claim
+
+### Impact
+- ✅ Leaderboard now shows accurate trading P/L for all users
+- ✅ Partial sells are counted immediately (not waiting for full exit or resolution)
+- ✅ Resolution P/L is unchanged - still calculated correctly on claims
+- ✅ Total P/L = Trading P/L + Resolution P/L (formula unchanged)
+
+### Breaking Changes
+⚠️ **Requires full resync** - new Position fields need to be populated from trade history. Deploy as new subgraph or resync from startBlock.
+
+---
+
 ## [1.0.0] - 2026-01-25 - Fresh Subgraph Deployment 🚀
 
 ### Issue - Persistent Sync Lag on Graph Studio

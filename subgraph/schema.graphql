@@ -1,9 +1,10 @@
 # ============================================
-# JunkieFun Subgraph - Entity Schema (v3.5.0)
+# JunkieFun Subgraph - Entity Schema (v5.0.0)
 # ============================================
 # Indexes PredictionMarket contract events on BNB Chain
 # Provides GraphQL API for frontend queries
 # v3.5.0: Added P/L tracking for leaderboard
+# v5.0.0: Fixed leaderboard P/L - now tracks shares bought/sold for accurate trading P/L
 
 # ============================================
 # Market Entity - Core prediction market data
@@ -126,25 +127,37 @@ type User @entity(immutable: false) {
 }
 
 # ============================================
-# Position Entity - User positions per market (v3.5.0 - P/L tracking)
+# Position Entity - User positions per market (v5.0.0 - Fixed P/L tracking)
 # ============================================
 type Position @entity(immutable: false) {
   id: ID! # marketId-userAddress
   user: User! # Related user
   market: Market! # Related market
-  # Share Holdings
-  yesShares: BigInt! # YES shares held
-  noShares: BigInt! # NO shares held
-  # Investment Tracking (for P/L calculation)
+  # Share Holdings (current)
+  yesShares: BigInt! # YES shares currently held
+  noShares: BigInt! # NO shares currently held
+  # ============================================
+  # SHARE TRACKING FOR ACCURATE P/L (v5.0.0)
+  # Tracks cumulative buys/sells per side for avg cost basis calculation
+  # ============================================
+  totalYesSharesBought: BigInt! # Total YES shares ever bought
+  totalYesSharesSold: BigInt! # Total YES shares ever sold
+  totalNoSharesBought: BigInt! # Total NO shares ever bought
+  totalNoSharesSold: BigInt! # Total NO shares ever sold
+  totalYesBnbBought: BigDecimal! # Total BNB spent buying YES shares
+  totalYesBnbSold: BigDecimal! # Total BNB received selling YES shares
+  totalNoBnbBought: BigDecimal! # Total BNB spent buying NO shares
+  totalNoBnbSold: BigDecimal! # Total BNB received selling NO shares
+  # Investment Tracking (legacy - kept for compatibility)
   totalInvested: BigDecimal! # Total BNB invested (cost basis)
   totalReturned: BigDecimal! # Total BNB returned from sells
   averageYesPrice: BigDecimal! # Avg price paid for YES
   averageNoPrice: BigDecimal! # Avg price paid for NO
   # Net cost basis (for resolution P/L)
   netCostBasis: BigDecimal! # totalInvested - totalReturned (what's "at risk")
-  # Trading P/L (v4.0.2 - only realized when fully exited)
+  # Trading P/L (v5.0.0 - calculated on every sell using avg cost basis)
   fullyExited: Boolean! # Position fully exited (0 YES and 0 NO shares via trading)
-  tradingPnLRealized: BigDecimal! # P/L realized when fully exited (totalReturned - totalInvested)
+  tradingPnLRealized: BigDecimal! # Cumulative P/L from sells (updated on every sell)
   # Claim Status
   claimed: Boolean! # Has user claimed?
   claimedAmount: BigDecimal # Amount claimed (if claimed)
