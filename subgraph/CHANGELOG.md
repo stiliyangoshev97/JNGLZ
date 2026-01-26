@@ -2,6 +2,51 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.1.0] - 2026-01-26 - Loser Resolution P/L Fix 🎯
+
+### Problem
+When a market resolved, users on the **losing side** showed `0 BNB` for Resolution P/L instead of their actual loss. This happened because:
+1. Losers can't call `claim()` (they have no winning shares)
+2. `realizedPnL` was only set in `handleClaimed()`
+3. No claim = no P/L recorded = shows as 0
+
+### Example
+- User buys 10 NO shares for 0.5 BNB
+- Market resolves YES (NO loses)
+- User can't claim anything
+- **Before:** Resolution P/L = 0 BNB (wrong!)
+- **After:** Resolution P/L = -0.5 BNB (correct - they lost their investment)
+
+### Solution
+In `handleMarketResolved()`, iterate through all positions and calculate Resolution P/L for losers:
+- **Losers:** `realizedPnL = 0 - netCostBasis = -netCostBasis`
+- **Winners:** Still calculated when they claim (unchanged)
+
+### Changes
+
+#### schema.graphql
+- Added `positionIds: [String!]!` to Market entity to track all positions
+- Updated version to v5.1.0
+
+#### mapping.ts
+- Updated `getOrCreatePosition()` to add position ID to market's `positionIds` list
+- Updated `handleMarketResolved()` to iterate through all positions and:
+  - Calculate loser P/L = -netCostBasis
+  - Update User.resolutionPnL
+  - Update User.lossCount and winRate
+  - Update User.totalPnL
+
+### Impact
+- ✅ Losers now correctly show negative Resolution P/L
+- ✅ Leaderboard includes losers' losses in total P/L
+- ✅ User.lossCount and winRate are now accurate for losers
+- ✅ Winners unchanged - still calculated on claim
+
+### Breaking Changes
+⚠️ **Requires full resync** - new Market.positionIds field needs to be populated. Deploy as v3.0.0 to new subgraph endpoint or resync from startBlock.
+
+---
+
 ## [5.0.0] - 2026-01-26 - Leaderboard P/L Fix 🎯
 
 ### Problem

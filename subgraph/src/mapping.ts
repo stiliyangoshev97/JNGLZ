@@ -124,6 +124,7 @@ function getOrCreateUser(address: Address): User {
  * v3.5.0: Added P/L tracking fields
  * v3.7.0: Added juryFeesClaimed field
  * v5.0.0: Added share tracking fields for accurate trading P/L
+ * v5.1.0: Adds position ID to market's positionIds list for resolution iteration
  */
 function getOrCreatePosition(marketId: string, userAddress: Address): Position {
   let id = marketId + "-" + userAddress.toHexString();
@@ -159,6 +160,15 @@ function getOrCreatePosition(marketId: string, userAddress: Address): Position {
     position.juryFeesClaimed = false; // v3.7.0
     // votedForProposer, claimedAmount, refundedAmount, realizedPnL, juryFeesClaimedAmount left unset (null) until set
     position.save();
+    
+    // v5.1.0: Add position ID to market's positionIds list for resolution iteration
+    let market = Market.load(marketId);
+    if (market != null) {
+      let positionIds = market.positionIds;
+      positionIds.push(id);
+      market.positionIds = positionIds;
+      market.save();
+    }
   }
 
   return position;
@@ -254,6 +264,9 @@ export function handleMarketCreated(event: MarketCreated): void {
   market.proposerVoteWeight = ZERO_BI;
   market.disputerVoteWeight = ZERO_BI;
   market.totalVoters = ZERO_BI;
+  
+  // v5.1.0: Initialize position IDs list for resolution P/L calculation
+  market.positionIds = [];
 
   // Link to creator
   let creator = getOrCreateUser(event.params.creator);
@@ -576,6 +589,7 @@ export function handleVoteCast(event: VoteCast): void {
 /**
  * Handle MarketResolved event
  * Updates Market with final resolution
+ * v5.1.0: Calculate Resolution P/L for ALL positions (winners AND losers)
  */
 export function handleMarketResolved(event: MarketResolved): void {
   let marketId = event.params.marketId.toString();
@@ -585,11 +599,73 @@ export function handleMarketResolved(event: MarketResolved): void {
     return;
   }
 
+  let outcome = event.params.outcome; // true = YES wins, false = NO wins
+
   market.status = "Resolved";
   market.resolved = true;
-  market.outcome = event.params.outcome;
+  market.outcome = outcome;
 
   market.save();
+
+  // v5.1.0: Calculate Resolution P/L for all positions
+  // Losers: their remaining shares are now worthless → P/L = -netCostBasis
+  // Winners: will get their P/L calculated when they claim (in handleClaimed)
+  let positionIds = market.positionIds;
+  for (let i = 0; i < positionIds.length; i++) {
+    let position = Position.load(positionIds[i]);
+    if (position == null) continue;
+    
+    // Skip if already fully exited via trading (no shares to resolve)
+    if (position.fullyExited) continue;
+    
+    // Skip if already claimed (P/L already calculated)
+    if (position.claimed) continue;
+    
+    // Determine if this position is on the LOSING side
+    // If outcome = YES (true), then NO holders are losers
+    // If outcome = NO (false), then YES holders are losers
+    let yesShares = position.yesShares;
+    let noShares = position.noShares;
+    
+    // Check if they have ONLY losing shares (or no shares)
+    let hasWinningShares = outcome ? yesShares.gt(ZERO_BI) : noShares.gt(ZERO_BI);
+    let hasLosingShares = outcome ? noShares.gt(ZERO_BI) : yesShares.gt(ZERO_BI);
+    
+    // If they have winning shares, they'll claim later (P/L set in handleClaimed)
+    // Only set loser P/L for positions with ONLY losing shares
+    if (!hasWinningShares && hasLosingShares) {
+      // Loser: their shares are worth 0, so P/L = 0 - netCostBasis = -netCostBasis
+      let netCostBasis = position.netCostBasis;
+      
+      // Only record loss if they have a positive cost basis (actually invested something)
+      if (netCostBasis.gt(ZERO_BD)) {
+        let loserPnL = ZERO_BD.minus(netCostBasis); // Negative value
+        position.realizedPnL = loserPnL;
+        position.fullyExited = true; // Position is now finalized
+        position.save();
+        
+        // Update user's resolution P/L
+        let user = User.load(position.user);
+        if (user != null) {
+          user.totalInvestedInResolved = user.totalInvestedInResolved.plus(netCostBasis);
+          // totalClaimedFromResolved stays the same (they claimed 0)
+          user.resolutionPnL = user.totalClaimedFromResolved.minus(user.totalInvestedInResolved);
+          user.lossCount = user.lossCount.plus(ONE_BI);
+          
+          // Update win rate
+          let totalResolved = user.winCount.plus(user.lossCount);
+          if (totalResolved.gt(ZERO_BI)) {
+            user.winRate = user.winCount.toBigDecimal().div(totalResolved.toBigDecimal()).times(BigDecimal.fromString("100"));
+          }
+          
+          // Update total P/L
+          user.totalPnL = user.tradingPnL.plus(user.resolutionPnL);
+          user.save();
+        }
+      }
+    }
+    // Note: Positions with winning shares will have their P/L set when they call claim()
+  }
 
   // Update global stats
   let stats = getOrCreateGlobalStats();

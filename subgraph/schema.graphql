@@ -1,10 +1,11 @@
 # ============================================
-# JunkieFun Subgraph - Entity Schema (v5.0.0)
+# JunkieFun Subgraph - Entity Schema (v5.1.0)
 # ============================================
 # Indexes PredictionMarket contract events on BNB Chain
 # Provides GraphQL API for frontend queries
 # v3.5.0: Added P/L tracking for leaderboard
 # v5.0.0: Fixed leaderboard P/L - now tracks shares bought/sold for accurate trading P/L
+# v5.1.0: Added positionIds to Market for loser P/L calculation on resolution
 
 # ============================================
 # Market Entity - Core prediction market data
@@ -50,6 +51,8 @@ type Market @entity(immutable: false) {
   proposerVoteWeight: BigInt! # Total votes for proposer
   disputerVoteWeight: BigInt! # Total votes for disputer
   totalVoters: BigInt! # Number of voters
+  # Position tracking for resolution P/L (v5.1.0)
+  positionIds: [String!]! # List of position IDs for iterating on resolution
   # Relations
   trades: [Trade!]! @derivedFrom(field: "market")
   positions: [Position!]! @derivedFrom(field: "market")
