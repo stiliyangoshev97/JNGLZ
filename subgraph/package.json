@@ -1,13 +1,13 @@
 {
   "name": "junkiefun-subgraph",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "5.1.0",
   "description": "Subgraph for JunkieFun Prediction Market on BNB Chain",
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --studio junkiefun-bnb-testnet",
-    "deploy:testnet": "graph deploy --studio junkiefun-bnb-testnet",
+    "deploy": "graph deploy --studio jnglz-testnet-fresh",
+    "deploy:testnet": "graph deploy --studio jnglz-testnet-fresh",
     "deploy:mainnet": "graph deploy --studio junkiefun-bnb-mainnet",
     "create-local": "graph create --node http://localhost:8020/ junkiefun",
     "remove-local": "graph remove --node http://localhost:8020/ junkiefun",

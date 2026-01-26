@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 25, 2026  
-> **Status:** ✅ Deployed (jnglz-testnet-fresh v1.0.0)
+> **Last Updated:** January 26, 2026  
+> **Status:** ✅ Deployed (jnglz-testnet-fresh v3.0.0 - Accurate Leaderboard P/L with Loser Tracking)
 
 ---
 
@@ -17,7 +17,7 @@ https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H
 
 ### GraphQL Endpoint (Studio - Development)
 ```
-https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v1.0.0
+https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0
 ```
 
 ### API Key
@@ -42,12 +42,12 @@ https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v1.0.0
 
 | Component | Progress | Notes |
 |-----------|----------|-------|
-| Schema Definition | ✅ 100% | Includes fullyExited P/L tracking |
+| Schema Definition | ✅ 100% | v5.1.0 - Includes positionIds for loser P/L tracking |
 | Subgraph Config | ✅ 100% | Fresh deployment jnglz-testnet-fresh |
-| Mappings | ✅ 100% | All event handlers working |
+| Mappings | ✅ 100% | All event handlers including loser Resolution P/L |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Testnet Deployment | ✅ 100% | v1.0.0 - 100% synced, 0 blocks behind |
+| Testnet Deployment | ✅ 100% | v3.0.0 - 100% synced, trading + resolution P/L accurate |
 | Gateway Published | ✅ 100% | Live on decentralized network |
 | Mainnet Subgraph | ⬜ 0% | After testnet validation |
 | Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |

@@ -215,6 +215,7 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
       // Get position data for resolution P/L
       const position = positionMap.get(address);
       const hasClaimed = position?.claimed ?? false;
+      // v5.1.0: realizedPnL is now set for BOTH winners (on claim) AND losers (on resolution)
       const resolutionPnL = position?.realizedPnL ? parseFloat(position.realizedPnL) : null;
 
       // Skip if no sells AND no claims
@@ -262,7 +263,8 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
 
       // Only include if there's something to show
       const hasTradeData = canShowTradingPnl && (hasYesSells || hasNoSells);
-      const hasResolutionData = hasClaimed && resolutionPnL !== null;
+      // v5.1.0: Show resolution P/L if it exists (losers have it set on resolution, not just on claim)
+      const hasResolutionData = resolutionPnL !== null;
       
       if (!hasTradeData && !hasResolutionData) return;
 
@@ -281,9 +283,10 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
       });
     });
 
-    // Also add wallets that have claimed but didn't trade (held till resolution)
+    // Also add wallets that have resolution P/L but didn't trade (held till resolution)
+    // v5.1.0: Include losers who have realizedPnL set (not just claimed winners)
     positionMap.forEach((position, address) => {
-      if (!walletMap.has(address) && position.claimed && position.realizedPnL) {
+      if (!walletMap.has(address) && position.realizedPnL) {
         const resolutionPnL = parseFloat(position.realizedPnL);
         const netCostBasis = position.netCostBasis ? parseFloat(position.netCostBasis) : 0;
         const resolutionPnlPercent = netCostBasis > 0 ? (resolutionPnL / netCostBasis) * 100 : 0;
