@@ -1492,6 +1492,197 @@ export function HowToPlayPage() {
             </div>
           </section>
 
+          {/* ===== P/L CALCULATION EXPLAINED ===== */}
+          <section>
+            <h2 className="text-2xl font-black text-white border-l-4 border-cyber pl-4 mb-6">
+              P/L CALCULATION EXPLAINED
+            </h2>
+            
+            <div className="bg-cyber/10 border-2 border-cyber p-6 mb-6">
+              <p className="text-cyber font-black text-lg mb-4">UNDERSTANDING YOUR PROFIT & LOSS</p>
+              
+              <div className="space-y-6 text-sm">
+                <p className="text-text-secondary">
+                  Your P/L in JNGLZ is tracked in <strong className="text-white">two separate components</strong>. 
+                  Understanding both is crucial for interpreting your portfolio correctly.
+                </p>
+
+                {/* Component 1: Trading P/L */}
+                <div className="bg-dark-900/50 p-5 border border-cyber">
+                  <p className="text-cyber font-bold mb-3 flex items-center gap-2">
+                    📈 TRADING P/L
+                  </p>
+                  <p className="text-text-secondary mb-3">
+                    Profit or loss from <strong className="text-white">buying and selling shares</strong> in the market.
+                  </p>
+                  
+                  <div className="bg-dark-800 p-4 border border-dark-600 mb-4">
+                    <p className="text-white font-bold mb-2">Formula:</p>
+                    <div className="font-mono text-xs bg-dark-900/70 p-3">
+                      <p><span className="text-cyber">Trading P/L</span> = Total BNB from sells - Cost basis of sold shares</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-white font-bold text-xs">When is Trading P/L shown?</p>
+                    <ul className="list-disc list-inside text-text-secondary text-xs space-y-1">
+                      <li><strong className="text-yes">Fully exited:</strong> When you sell all your shares (0 remaining), your Trading P/L is finalized</li>
+                      <li><strong className="text-yes">Market resolved:</strong> After resolution, trading is frozen, so partial sell P/L is also shown</li>
+                      <li><strong className="text-text-muted">Position open:</strong> While holding shares, Trading P/L is hidden (unrealized until you exit)</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-dark-800 p-3 border border-dark-600 mt-4">
+                    <p className="text-white font-bold text-xs mb-2">Example:</p>
+                    <div className="text-text-secondary text-xs space-y-1">
+                      <p>1. Buy 100 YES shares for 0.5 BNB (avg cost: 0.005 BNB/share)</p>
+                      <p>2. Price rises, you sell 50 shares for 0.4 BNB</p>
+                      <p>3. Cost basis of sold shares: 50 × 0.005 = 0.25 BNB</p>
+                      <p>4. <span className="text-yes font-bold">Trading P/L = 0.4 - 0.25 = +0.15 BNB</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Component 2: Resolution P/L */}
+                <div className="bg-dark-900/50 p-5 border border-yes">
+                  <p className="text-yes font-bold mb-3 flex items-center gap-2">
+                    🏆 RESOLUTION P/L
+                  </p>
+                  <p className="text-text-secondary mb-3">
+                    Profit or loss from <strong className="text-white">claiming your winnings</strong> when the market resolves.
+                  </p>
+                  
+                  <div className="bg-dark-800 p-4 border border-dark-600 mb-4">
+                    <p className="text-white font-bold mb-2">Formula:</p>
+                    <div className="font-mono text-xs bg-dark-900/70 p-3">
+                      <p><span className="text-yes">Resolution P/L</span> = Amount claimed - Remaining cost basis</p>
+                      <p className="text-text-muted mt-2">Remaining cost basis = Total invested - Total returned from sells</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-dark-800 p-3 border border-dark-600 mt-4">
+                    <p className="text-white font-bold text-xs mb-2">Example (continuing from above):</p>
+                    <div className="text-text-secondary text-xs space-y-1">
+                      <p>1. You still hold 50 YES shares (cost basis: 0.25 BNB remaining)</p>
+                      <p>2. Market resolves YES, pool has 2 BNB, total YES supply is 200</p>
+                      <p>3. Your claim: (50/200) × 2 = 0.5 BNB</p>
+                      <p>4. <span className="text-yes font-bold">Resolution P/L = 0.5 - 0.25 = +0.25 BNB</span></p>
+                      <p className="mt-2 text-cyan-400">Total P/L = Trading (+0.15) + Resolution (+0.25) = <span className="text-yes font-bold">+0.40 BNB</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Component 3: Total P/L */}
+                <div className="bg-dark-900/50 p-5 border border-white">
+                  <p className="text-white font-bold mb-3 flex items-center gap-2">
+                    📊 TOTAL P/L
+                  </p>
+                  
+                  <div className="bg-dark-800 p-4 border border-dark-600 mb-4">
+                    <p className="text-white font-bold mb-2">Formula:</p>
+                    <div className="font-mono text-lg text-center bg-dark-900/70 p-4">
+                      <span className="text-white">Total P/L</span> = <span className="text-cyber">Trading P/L</span> + <span className="text-yes">Resolution P/L</span>
+                    </div>
+                  </div>
+
+                  <p className="text-text-secondary text-xs">
+                    Your total P/L is the sum of both components. You can have:
+                  </p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-1 mt-2">
+                    <li><span className="text-yes">+Trading</span> and <span className="text-yes">+Resolution</span> = Best case (profitable trades + winning side)</li>
+                    <li><span className="text-yes">+Trading</span> and <span className="text-no">-Resolution</span> = Sold at profit but lost at resolution</li>
+                    <li><span className="text-no">-Trading</span> and <span className="text-yes">+Resolution</span> = Sold at loss but won at resolution</li>
+                    <li><span className="text-no">-Trading</span> and <span className="text-no">-Resolution</span> = Worst case</li>
+                  </ul>
+                </div>
+
+                {/* Refunds - Separate from P/L */}
+                <div className="bg-dark-900/50 p-5 border border-warning">
+                  <p className="text-warning font-bold mb-3 flex items-center gap-2">
+                    ↩ REFUNDS (NOT INCLUDED IN P/L)
+                  </p>
+                  <p className="text-text-secondary mb-3">
+                    <strong className="text-warning">Emergency refunds</strong> are tracked separately and are 
+                    <strong className="text-white"> NOT included in your P/L calculation</strong>.
+                  </p>
+                  
+                  <div className="bg-dark-800 p-4 border border-dark-600 mb-4">
+                    <p className="text-white font-bold mb-2">Why?</p>
+                    <p className="text-text-secondary text-xs">
+                      Refunds are <strong className="text-white">capital recovery</strong>, not profit/loss from trading or resolution. 
+                      They're shown with a separate "REFUNDED" badge and amount in your portfolio.
+                    </p>
+                  </div>
+
+                  <div className="bg-warning/20 p-4 border border-warning mt-4">
+                    <p className="text-warning font-bold text-xs mb-2">⚠️ IMPORTANT EDGE CASE</p>
+                    <p className="text-text-secondary text-xs mb-3">
+                      If you <strong className="text-white">partially sold shares at a profit</strong> and then the market gets 
+                      <strong className="text-white"> emergency refunded</strong>, your displayed P/L may be misleading:
+                    </p>
+                    <div className="bg-dark-900/70 p-3 border border-dark-600">
+                      <p className="text-white font-bold text-xs mb-2">Scenario:</p>
+                      <div className="text-text-secondary text-xs space-y-1">
+                        <p>1. Buy 100 YES for 0.5 BNB</p>
+                        <p>2. Sell 50 YES for 0.4 BNB → <span className="text-yes">Trading P/L: +0.15 BNB</span></p>
+                        <p>3. Market gets emergency refunded (pool lost value)</p>
+                        <p>4. Your 50 remaining shares refund: 0.1 BNB (shown separately)</p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-dark-600">
+                        <p className="text-text-muted text-xs">
+                          <strong className="text-white">What you see:</strong> Trading P/L: <span className="text-yes">+0.15 BNB</span> | Refund: <span className="text-cyan-400">0.1 BNB</span>
+                        </p>
+                        <p className="text-text-muted text-xs mt-1">
+                          <strong className="text-white">Your actual net:</strong> 0.4 (sell) + 0.1 (refund) - 0.5 (invested) = <span className="text-no">-0.0 BNB</span> (or loss)
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-warning text-xs mt-3 font-bold">
+                      Always consider BOTH your P/L and refund amounts together for the complete picture.
+                    </p>
+                  </div>
+                </div>
+
+                {/* P/L Display States */}
+                <div className="bg-dark-900/50 p-5 border border-dark-600">
+                  <p className="text-white font-bold mb-3">P/L DISPLAY STATES</p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-3 bg-dark-800 border border-dark-600">
+                      <span className="text-text-muted font-mono text-xs">—</span>
+                      <div>
+                        <p className="text-white font-bold text-xs">Position Open</p>
+                        <p className="text-text-secondary text-xs">Still holding shares, P/L is unrealized and not shown</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-dark-800 border border-yes/30">
+                      <span className="text-yes font-mono text-xs">+0.XX</span>
+                      <div>
+                        <p className="text-yes font-bold text-xs">Positive P/L</p>
+                        <p className="text-text-secondary text-xs">You made money from trading/resolution</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-dark-800 border border-no/30">
+                      <span className="text-no font-mono text-xs">-0.XX</span>
+                      <div>
+                        <p className="text-no font-bold text-xs">Negative P/L</p>
+                        <p className="text-text-secondary text-xs">You lost money from trading/resolution</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-dark-800 border border-cyan-400/30">
+                      <span className="text-cyan-400 font-mono text-xs">REFUNDED</span>
+                      <div>
+                        <p className="text-cyan-400 font-bold text-xs">Emergency Refund</p>
+                        <p className="text-text-secondary text-xs">Market wasn't resolved, capital returned proportionally</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
           {/* ===== EDGE CASES & CONFUSING P/L ===== */}
           <section>
             <h2 className="text-2xl font-black text-white border-l-4 border-warning pl-4 mb-6">

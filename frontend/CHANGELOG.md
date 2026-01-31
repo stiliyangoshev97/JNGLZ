@@ -2,6 +2,43 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.47] - 2026-01-31
+
+### Added - Comprehensive P/L Documentation in How To Play
+
+#### The Issue
+Users were confused about how P/L is calculated, especially the difference between Trading P/L and Resolution P/L, and edge cases involving emergency refunds.
+
+#### The Fix
+Added new "P/L CALCULATION EXPLAINED" section to How To Play page:
+- **Trading P/L:** Profit/loss from buying and selling shares (shown when fully exited or market resolved)
+- **Resolution P/L:** Profit/loss from claiming winnings after market resolves
+- **Total P/L:** Sum of Trading + Resolution P/L
+- **Refunds:** Explained that refunds are tracked separately (capital recovery, not P/L)
+- **Edge Case Warning:** Documented the scenario where partial sells show profit but overall position may be a loss after emergency refund
+
+#### Files Changed
+- `HowToPlayPage.tsx` - New P/L Calculation section with formulas, examples, and edge case documentation
+
+---
+
+### Added - P/L Disclaimer for Emergency Refunded Markets
+
+#### The Issue
+When a user partially sells shares at a profit and then the market gets emergency refunded, the Trading P/L shows positive but the refund may result in overall loss. This was confusing.
+
+#### The Fix
+Added disclaimer in PositionCard when:
+- Position has been emergency refunded AND
+- Position has trading activity (sells)
+
+Shows warning: "⚠️ P/L excludes refund. Check total: Trading P/L + Refund - Cost basis"
+
+#### Files Changed
+- `PositionCard.tsx` - Conditional disclaimer for refunded positions with trading activity
+
+---
+
 ## [0.7.46] - 2026-01-31
 
 ### Fixed - Mobile Holders Table Overlap
