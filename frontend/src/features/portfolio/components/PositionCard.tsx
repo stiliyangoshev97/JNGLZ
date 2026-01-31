@@ -479,9 +479,12 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         to={`/market/${market.id}`}
         className="block mb-3 min-h-[48px]"
       >
-        <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors">
-          {market.question || `Market #${market.id}`}
-        </h3>
+        <div className="flex items-baseline gap-2">
+          <span className="text-cyber font-mono text-xs shrink-0">#{market.marketId || market.id}</span>
+          <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors leading-tight">
+            {market.question || `Market #${market.id}`}
+          </h3>
+        </div>
       </Link>
 
       {/* Position badges */}
@@ -572,6 +575,12 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
               </>
             )}
           </div>
+          {/* Disclaimer for refunded markets with trading activity */}
+          {resolutionStats.hasRefunded && totalPnl.canShowTradingPnl && tradingPnl.hasSells && (
+            <p className="text-warning/70 text-[10px] mt-1.5 leading-tight">
+              ⚠️ P/L excludes refund. Check total: Trading P/L + Refund - Cost basis
+            </p>
+          )}
         </div>
       </div>
 

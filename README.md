@@ -106,7 +106,7 @@ JunkieDotFun/
 | Component | Address/URL | Status |
 |-----------|-------------|--------|
 | **Contract (v3.5.0)** | [`0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`](https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8) | ✅ Live |
-| **Subgraph (v3.4.2)** | [The Graph Studio](https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet) | ✅ Live |
+| **Subgraph (v3.0.0)** | [The Graph Studio](https://thegraph.com/studio/subgraph/jnglz-testnet-fresh) | ✅ Live |
 
 ---
 

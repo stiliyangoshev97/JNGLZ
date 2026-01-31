@@ -368,19 +368,9 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
             pnl.tradingPnlBNB === 0 ? 'text-text-muted' : pnl.tradingPnlBNB >= 0 ? 'text-yes font-bold' : 'text-no font-bold'
           )}>
             {pnl.tradingPnlBNB !== 0 ? (
-              <>
-                <div>
-                  {pnl.tradingPnlBNB >= 0 ? '+' : ''}{pnl.tradingPnlBNB.toFixed(4)} BNB
-                </div>
-                <div className="text-xs opacity-75">
-                  ({pnl.tradingPnlPercent >= 0 ? '+' : ''}{pnl.tradingPnlPercent.toFixed(1)}%)
-                </div>
-              </>
+              <span>{pnl.tradingPnlBNB >= 0 ? '+' : ''}{pnl.tradingPnlBNB.toFixed(4)} BNB</span>
             ) : (
-              <div>
-                <div>0 BNB</div>
-                <div className="text-xs opacity-75">(0%)</div>
-              </div>
+              <span>0 BNB</span>
             )}
           </div>
 
@@ -396,21 +386,9 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
                   : 'text-text-muted'
           )}>
             {pnl.resolutionPnlBNB !== null ? (
-              <>
-                <div>
-                  {pnl.resolutionPnlBNB > 0 ? '+' : ''}{pnl.resolutionPnlBNB.toFixed(4)} BNB
-                </div>
-                {pnl.resolutionPnlPercent !== null && (
-                  <div className="text-xs opacity-75">
-                    ({pnl.resolutionPnlPercent > 0 ? '+' : ''}{pnl.resolutionPnlPercent.toFixed(1)}%)
-                  </div>
-                )}
-              </>
+              <span>{pnl.resolutionPnlBNB > 0 ? '+' : ''}{pnl.resolutionPnlBNB.toFixed(4)} BNB</span>
             ) : (
-              <div>
-                <div>0 BNB</div>
-                <div className="text-xs opacity-75">(0%)</div>
-              </div>
+              <span>0 BNB</span>
             )}
           </div>
         </div>

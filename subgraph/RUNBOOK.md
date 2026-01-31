@@ -33,7 +33,7 @@ graph auth --studio <YOUR_DEPLOY_KEY>
 ```bash
 npm run deploy:testnet
 # or
-graph deploy --studio junkiefun-bnb-testnet
+graph deploy --studio jnglz-testnet-fresh
 ```
 
 ### Deploy to Mainnet (when ready)
@@ -41,7 +41,7 @@ graph deploy --studio junkiefun-bnb-testnet
 ```bash
 npm run deploy:mainnet
 # or
-graph deploy --studio junkiefun-bnb-mainnet
+graph deploy --studio jnglz-bnb-mainnet
 ```
 
 ## 🔄 Development Workflow
@@ -81,7 +81,7 @@ npm run deploy
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"query": "{ markets(first: 5) { id question totalVolume } }"}' \
-  https://api.studio.thegraph.com/query/<ID>/junkiefun-bnb-testnet/0.0.2
+  https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0
 ```
 
 ## 📊 Useful Queries for Testing

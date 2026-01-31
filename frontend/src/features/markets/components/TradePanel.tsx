@@ -237,10 +237,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       if (newTotalYesShares === 0n) return null;
       
       const payout = (totalUserYesShares * newPoolBalance) / newTotalYesShares;
-      // Multiplier based on current buy amount only
-      const multiplier = amountWei > 0n ? Number(payout * 100n / amountWei) / 100 : 0;
-      
-      return { payout, multiplier };
+      return { payout };
     } else {
       const newTotalNoShares = totalNoShares + newShares;
       const totalUserNoShares = userNoShares + newShares;
@@ -248,10 +245,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
       if (newTotalNoShares === 0n) return null;
       
       const payout = (totalUserNoShares * newPoolBalance) / newTotalNoShares;
-      // Multiplier based on current buy amount only
-      const multiplier = amountWei > 0n ? Number(payout * 100n / amountWei) / 100 : 0;
-      
-      return { payout, multiplier };
+      return { payout };
     }
   }, [action, previewBuyData, amountWei, direction, poolBalance, totalYesShares, totalNoShares, userYesShares, userNoShares]);
 
@@ -568,11 +562,6 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                   <span className="text-text-muted">If {direction.toUpperCase()} wins now:</span>
                   <span className="text-yes font-mono">
                     ~{formatBNB(buyPreviewPayout.payout)} BNB
-                    {buyPreviewPayout.multiplier > 0 && (
-                      <span className="text-text-secondary ml-1">
-                        ({buyPreviewPayout.multiplier.toFixed(2)}x)
-                      </span>
-                    )}
                   </span>
                 </div>
                 <p className="text-text-muted text-xs italic mt-1">

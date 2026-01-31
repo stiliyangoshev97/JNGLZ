@@ -2,6 +2,260 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.52] - 2026-01-31
+
+### Fixed - Portfolio Page Market ID Alignment
+
+- Fixed market ID (`#123`) not aligning with the event name in position cards
+- Changed flex alignment from `items-start` to `items-baseline` for proper text baseline alignment
+- Added `leading-tight` to event name for consistent line height
+
+## [0.7.51] - 2026-01-31
+
+### Fixed - Market Not Found Page Anti-Drain Protection (Option 3)
+
+Implemented smart retry logic to prevent attackers from draining subgraph requests by hitting invalid market URLs.
+
+#### The Problem
+Previously, hitting `/market/999` (non-existent market) would trigger **10 retry attempts** = 10 subgraph requests.
+An attacker could easily drain our subgraph quota by hitting multiple invalid URLs.
+
+#### The Solution (Option 3)
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| Query succeeds but `data.market` is `null` | 10 retries | **No retries** → Show NOT FOUND immediately |
+| Query fails with network error | 10 retries | **3 retries** max |
+| TRY AGAIN button | Restarted retry loop | **Single refetch only** |
+
+#### Protection Summary
+
+| Attack Scenario | Requests Before | Requests After |
+|-----------------|-----------------|----------------|
+| `/market/999` | 10 | **1** |
+| 100 invalid URLs | 1,000 | **100** |
+
+#### UI Changes
+- Replaced "?" icon with JZ logo (`/logo.svg`)
+- Removed border around logo for cleaner look
+- TRY AGAIN button always visible (for edge cases like new market creation with graph latency)
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Smart retry logic, logo change, TRY AGAIN behavior
+
+---
+
+## [0.7.50] - 2026-01-31
+
+### Removed - P/L Percentage Display from Market Details
+
+Following DexScreener's approach of showing only absolute values, removed the percentage display from the P/L tab on the Market Details page.
+
+#### Before
+```
+Trading P/L: +0.0148 BNB (-1.5%)
+Resolution P/L: +0.5000 BNB (+25.0%)
+```
+
+#### After
+```
+Trading P/L: +0.0148 BNB
+Resolution P/L: +0.5000 BNB
+```
+
+#### Rationale
+- Percentages can be misleading when cost basis varies
+- Absolute BNB values are clearer and more actionable
+- Cleaner, simpler UI
+
+#### Files Changed
+- `TradeHistory.tsx` - Removed percentage display from RealizedPnl component
+
+---
+
+## [0.7.49] - 2026-01-31
+
+### Removed - Confusing Payout Multiplier from Trade Panel
+
+#### The Issue
+The buy preview in TradePanel showed a payout multiplier (e.g., `~1.9850 BNB (1.98x)`) that was misleading:
+
+- 1 BNB buy → ~1.9850 BNB payout = **1.98x** (seems great!)
+- 2 BNB buy → ~2.9850 BNB payout = **1.49x** (seems worse?)
+
+The multiplier made larger investments appear "worse" when they actually have the same absolute profit potential (the pool size is fixed).
+
+#### The Fix
+Removed the multiplier display. Now shows only the estimated payout:
+```
+If YES wins now:
+~1.9850 BNB
+Returns change as others trade
+```
+
+Users can easily calculate profit: `payout - investment`. The multiplier added confusion without adding value.
+
+#### Files Changed
+- `TradePanel.tsx` - Removed multiplier display and calculation from buyPreviewPayout
+
+---
+
+## [0.7.48] - 2026-01-31
+
+### Fixed - Portfolio Header Resolution P/L Double-Counting Bug
+
+#### The Issue
+The Portfolio page header was showing incorrect Total P/L. Specifically, Resolution P/L was showing a value (e.g., +0.0258 BNB) when no markets had actually been resolved. This caused the Total P/L to be inflated.
+
+**Example:**
+- Header showed: `Total P/L: +0.0500 BNB (T: +0.0243 | R: +0.0258)`
+- Individual markets showed: Trading: +0.0243, Resolution: +0.0000
+- Leaderboard (correct): +0.0243 BNB
+
+#### Root Cause
+When a user sells shares at a profit greater than their original investment, `netCostBasis` becomes negative (e.g., invested 0.1 BNB, returned 0.1258 BNB → netCostBasis = -0.0258).
+
+In `PositionCard.tsx`, this was handled correctly:
+```tsx
+const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
+```
+
+But in `PortfolioPage.tsx`, the clamping was missing:
+```tsx
+const netCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');  // ❌ No clamping
+resolutionPnl += claimed - netCostBasis;  // 0 - (-0.0258) = +0.0258 ❌
+```
+
+This caused trading profits to be double-counted as resolution P/L.
+
+#### The Fix
+Added the same clamping logic to `PortfolioPage.tsx`:
+```tsx
+const rawNetCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
+const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
+```
+
+Now when netCostBasis is negative (profitable exit), resolution P/L correctly shows 0.
+
+#### Files Changed
+- `PortfolioPage.tsx` - Added `Math.max(0, rawNetCostBasis)` clamping in resolutionStats calculation
+
+---
+
+## [0.7.47] - 2026-01-31
+
+### Added - Comprehensive P/L Documentation in How To Play
+
+#### The Issue
+Users were confused about how P/L is calculated, especially the difference between Trading P/L and Resolution P/L, and edge cases involving emergency refunds.
+
+#### The Fix
+Added new "P/L CALCULATION EXPLAINED" section to How To Play page:
+- **Trading P/L:** Profit/loss from buying and selling shares (shown when fully exited or market resolved)
+- **Resolution P/L:** Profit/loss from claiming winnings after market resolves
+- **Total P/L:** Sum of Trading + Resolution P/L
+- **Refunds:** Explained that refunds are tracked separately (capital recovery, not P/L)
+- **Edge Case Warning:** Documented the scenario where partial sells show profit but overall position may be a loss after emergency refund
+
+#### Files Changed
+- `HowToPlayPage.tsx` - New P/L Calculation section with formulas, examples, and edge case documentation
+
+---
+
+### Added - P/L Disclaimer for Emergency Refunded Markets
+
+#### The Issue
+When a user partially sells shares at a profit and then the market gets emergency refunded, the Trading P/L shows positive but the refund may result in overall loss. This was confusing.
+
+#### The Fix
+Added disclaimer in PositionCard when:
+- Position has been emergency refunded AND
+- Position has trading activity (sells)
+
+Shows warning: "⚠️ P/L excludes refund. Check total: Trading P/L + Refund - Cost basis"
+
+#### Files Changed
+- `PositionCard.tsx` - Conditional disclaimer for refunded positions with trading activity
+
+---
+
+## [0.7.46] - 2026-01-31
+
+### Fixed - Mobile Holders Table Overlap
+
+#### The Issue
+On mobile devices in the Market Detail Page, the HOLDERS tab had overlapping content where the share numbers would overlap with the wallet address.
+
+#### The Fix
+Implemented responsive two-row layout for mobile:
+- **Desktop (≥640px):** Single row with all columns (Rank | Address | Shares | Side | Status)
+- **Mobile (<640px):** Stacked two-row layout
+  - Row 1: Rank | Address | Shares
+  - Row 2: Side badges | Status badge
+- Reduced padding, icon sizes, and truncation lengths for mobile
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Responsive `HoldersTable` component with separate mobile/desktop layouts
+
+---
+
+### Added - Live Question Character Counter in Create Market
+
+#### The Issue
+The Create Market form required minimum 10 characters for the question, but users only saw this error when attempting to submit, not while typing.
+
+#### The Fix
+Added live character counter with visual feedback:
+- Shows `X/10 min` in **red** when under 10 characters
+- Shows `X/500` in muted color when 10-500 characters
+- Shows `X/500` in **red** when over 500 characters
+
+#### Files Changed
+- `CreateMarketPage.tsx` - Live character counter with color-coded feedback
+
+---
+
+### Added - Market ID Display in Portfolio Position Cards
+
+#### The Issue
+Portfolio position cards showed market question, shares, P/L, etc., but not the market ID, making it hard to reference specific markets.
+
+#### The Fix
+Added market ID prefix to position card titles:
+- Format: `#42 Will Bitcoin reach $100k?`
+- Styled in cyber color with monospace font
+- Small, non-intrusive but visible
+
+#### Files Changed
+- `PositionCard.tsx` - Added market ID display next to question
+
+---
+
+### Optimized - Image Compression (82% Smaller)
+
+#### The Issue
+Public folder images were uncompressed, totaling ~731KB which slowed page loads.
+
+#### The Fix
+Used CLI tools (jpegoptim, pngquant) to compress all images:
+
+| File | Before | After | Savings |
+|------|--------|-------|---------|
+| `thejungle-logo.jpg` | 140KB | 34KB | 76% |
+| `og-image.jpg` | 170KB | 40KB | 76% |
+| `JNGLZFUN-zoomed-removebg.png` | 81KB | 7.2KB | 91% |
+| `android-chrome-512x512.png` | 89KB | 4.2KB | 95% |
+| `market-created.png` | 85KB | 7.6KB | 91% |
+| `og-image.png` | 81KB | 7.2KB | 91% |
+| `thejungle-logo.png` | 85KB | 7.6KB | 91% |
+
+**Total: ~731KB → ~128KB (82% reduction)**
+
+#### Files Changed
+- All PNG and JPG files in `/public//` folder
+
+---
+
 ## [0.7.45] - 2026-01-26
 
 ### Fixed - Loser Resolution P/L Display in Market Details Page
@@ -2306,75 +2560,3 @@ Now with 1% default slippage:
 - Position hook returns parsed tuple (6 values from contract)
 - Preview hooks only query when amount > 0
 - Form validation with Zod, proper error display
-
----
-
-## [0.3.0] - 2026-01-08
-
-### Added - Error Handling & Bug Fixes
-
-#### Error Boundary (`src/shared/components/ErrorBoundary.tsx`)
-- Catches and displays runtime errors with brutalist UI
-- **Chunk Load Errors** (after deployments): Shows "Update Available" with refresh button
-- **General Errors**: Shows error message + stack trace (expandable) with retry/home options
-- Integrated with React Router as `errorElement`
-- Prevents blank screen crashes, provides actionable recovery
-
-#### Price Calculation Fix (`src/shared/utils/format.ts`)
-- **NEW**: `calculateYesPercent()` - Correct bonding curve formula with virtual liquidity
-- **NEW**: `calculateNoPercent()` - Complement function
-- Formula: `P(YES) = (yesShares + 100e18) / (yesShares + noShares + 200e18)`
-- Matches contract's `_getYesPrice()` exactly with `VIRTUAL_LIQUIDITY = 100 * 1e18`
-
-### Fixed
-
-#### Critical Bug: Price Calculation Inverted (#2, #5)
-- **Before**: `yesPercent = noShares / total` (WRONG - showed 0% after buying YES)
-- **After**: `yesPercent = virtualYes / (virtualYes + virtualNo)` (matches contract)
-- Fixed in: `MarketDetailPage.tsx`, `MarketCard.tsx`
-
-#### Critical Bug: BigDecimal vs BigInt (#6, browser crash)
-- Subgraph returns `totalVolume`, `poolBalance` as `BigDecimal` (e.g., "0.02")
-- Subgraph returns `yesShares`, `noShares` as `BigInt` (e.g., "100000000000000000000")
-- **Before**: Code tried `BigInt("0.02")` → crash
-- **After**: Use `parseFloat()` for BigDecimal fields, `BigInt()` for BigInt fields
-- Fixed in: `MarketsPage.tsx`, `MarketCard.tsx`, `MarketDetailPage.tsx`
-
-#### Bug: Time Display Issues (#3, #4)
-- Fixed `formatTimeRemaining()` being called with wrong parameter format
-- Now correctly passes Unix timestamp (seconds), not duration (milliseconds)
-- Fixed "ENDS EXPIRED" showing for non-expired markets
-
-#### Bug: Image Not Displayed (#7)
-- Added image rendering to `MarketDetailPage.tsx` in MarketInfo section
-- MarketCard already had image support (was working if imageUrl provided)
-
-#### Bug: Evidence Link Not Displayed (#8)
-- Verified evidenceLink IS displayed in MarketInfo component
-- Issue was likely empty `evidenceLink` from subgraph data
-
-### Changed
-- Reduced poll interval from 10s to 30s for trades ticker (prevents excessive refetching)
-- Market detail page poll interval remains 15s for responsiveness
-- Router now includes `errorElement={<ErrorBoundary />}` for global error catching
-
-### Technical Notes
-- Subgraph field types: `BigInt` = "123456..." (wei), `BigDecimal` = "0.02" (BNB)
-- Always use `parseFloat()` for `totalVolume`, `bnbAmount`, `poolBalance`
-- Always use `BigInt()` for `yesShares`, `noShares`, `shares`, timestamps
-- Virtual liquidity constant must match contract: `100n * 10n ** 18n`
-
----
-
-## Pending Features (Phase 3+)
-
-### Supabase Integration (Not Started)
-- Comments system
-- User profiles
-- Moderation (hide markets/comments)
-- SIWE authentication
-
-### Admin Features (Not Started)
-- MultiSig wallet detection
-- Hide/unhide markets
-- Hide/unhide comments

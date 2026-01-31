@@ -1,7 +1,7 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 24, 2026  
-> **Status:** Smart Contracts ✅ v3.6.1 DEPLOYED | Subgraph ✅ v4.0.1 | Frontend ✅ v0.7.37  
+> **Last Updated:** January 31, 2026  
+> **Status:** Smart Contracts ✅ v3.8.2 DEPLOYED | Subgraph ✅ v5.1.0 | Frontend ✅ v0.7.46  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
@@ -399,8 +399,8 @@ Expiry ────────────────────────�
 - **Block:** 84281825
 - **Verified:** ✅ Yes
 
-### Subgraph v3.4.2 - P/L Tracking ✅
-- **Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/3.4.2`
+### Subgraph jnglz-testnet-fresh v3.0.0 - P/L Tracking ✅
+- **Endpoint:** `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC`
 - New P/L fields: `totalPnL`, `tradingPnL`, `resolutionPnL`, `winRate`, etc.
 - User entity now tracks all earnings for leaderboard
 
@@ -593,7 +593,7 @@ RESULT: Buy→sell always loses ~3% to fees (no arbitrage possible)
 - [ ] Update `subgraph/subgraph.yaml` with new contract address
 - [ ] Update `subgraph/abis/PredictionMarket.json` if ABI changed (check `getMaxSellableShares`)
 - [ ] Run `npm run codegen && npm run build`
-- [ ] Deploy new subgraph version: `graph deploy --studio junkiefun-bnb-testnet`
+- [ ] Deploy new subgraph version: `graph deploy --studio jnglz-testnet-fresh`
 - [ ] Wait for subgraph to sync (~5-10 min)
 
 #### 3. Update Frontend ⏳
@@ -748,12 +748,10 @@ With 100 virtual liquidity, small bets (0.01-0.1 BNB) barely move the price. Tra
 - **v3.1.0:** `0x4C1508BA973856125a4F42c343560DB918c9EB2b` - Arbitrage vulnerability in bonding curve
 - **v2.5.0 and earlier:** See DeployedContracts.txt
 
-### 📊 Subgraph v0.0.3 (January 9, 2026) - ⚠️ NEEDS UPDATE
-- **Status:** ⚠️ Still pointing to v3.1.0 contract - needs redeployment
-- **TODO:** Update to v3.3.0 address `0x986BF4058265a4c6A5d78ee4DF555198C8C3B7F7`
-- **TODO:** Add `ProposerRewardPaid` event handler
-- **GraphQL Endpoint:** `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3`
-- **Studio URL:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+### 📊 Subgraph jnglz-testnet-fresh v3.0.0 (January 2026) - ✅ LIVE
+- **Status:** ✅ Deployed with v3.8.2 contract address
+- **Gateway:** `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC`
+- **Studio URL:** https://thegraph.com/studio/subgraph/jnglz-testnet-fresh
 
 ### 🎨 Frontend v0.5.0 (January 10, 2026) - ⚠️ NEEDS UPDATE
 - **Status:** ⚠️ Still pointing to old contract address
@@ -1054,8 +1052,8 @@ if (percentage < 100n) {
 ## 📊 PHASE 2: The Graph (Subgraph) ✅ CODE COMPLETE
 
 ### Setup ✅
-- [ ] Create account on Subgraph Studio (https://thegraph.com/studio) **← USER ACTION NEEDED**
-- [ ] Create new subgraph: `junkiefun-bnb-testnet`
+- [x] Create account on Subgraph Studio (https://thegraph.com/studio)
+- [x] Create new subgraph: `jnglz-testnet-fresh`
 - [x] Install Graph CLI & dependencies
 - [x] Initialize subgraph project structure
 - [x] Generate types (`npm run codegen`)
@@ -1092,7 +1090,7 @@ if (percentage < 100n) {
 ### Mainnet (After Testnet Validation)
 - [ ] Deploy contract to BNB Mainnet
 - [ ] Create `subgraph.mainnet.yaml` config
-- [ ] Create mainnet subgraph on Studio: `junkiefun-bnb-mainnet`
+- [ ] Create mainnet subgraph on Studio: `jnglz-bnb-mainnet`
 - [ ] Deploy mainnet subgraph
 
 ---

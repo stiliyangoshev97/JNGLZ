@@ -85,24 +85,24 @@ eslint              ^9.x.x             # Linting
 assemblyscript              ^0.19.x    # AssemblyScript compiler (peer dep)
 
 # Deployed Subgraph:
-# - Name: junkiefun-bnb-testnet
-# - Version: v0.0.1
-# - Endpoint: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/0.0.2
-# - Studio: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+# - Name: jnglz-testnet-fresh
+# - Version: v3.0.0
+# - Gateway: https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
+# - Studio: https://thegraph.com/studio/subgraph/jnglz-testnet-fresh
 
 # Installation:
 # npm install -g @graphprotocol/graph-cli
 # cd subgraph && npm install
 # graph auth --studio <deploy-key>
 # graph codegen && graph build
-# graph deploy --studio junkiefun-bnb-testnet
+# graph deploy --studio jnglz-testnet-fresh
 
 # ============================================================================
 # EXTERNAL SERVICES
 # ============================================================================
 
 The Graph Studio     -                 # Subgraph hosting (https://thegraph.com/studio)
-                                       # ✅ junkiefun-bnb-testnet deployed
+                                       # ✅ jnglz-testnet-fresh deployed
 WalletConnect        -                 # Wallet connection (Project ID required)
 Vercel               -                 # Frontend hosting (optional)
 BscScan              -                 # Contract verification (API key required)

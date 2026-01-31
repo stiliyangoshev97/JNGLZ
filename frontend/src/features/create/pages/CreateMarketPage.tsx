@@ -195,7 +195,6 @@ export function CreateMarketPage() {
     },
   });
 
-  const watchedQuestion = watch('question');
   const watchedDuration = watch('durationHours');
   const watchedHeatLevel = watch('heatLevel');
   const wantFirstTrade = watch('wantFirstTrade');
@@ -346,9 +345,9 @@ export function CreateMarketPage() {
               {...register('question')}
               placeholder="Will Bitcoin reach $100,000 by end of 2026?"
               error={errors.question?.message}
-              helperText={`${watchedQuestion?.length || 0}/500 characters`}
             />
-            <p className="text-xs text-text-muted mt-2">
+            {/* Helper text */}
+            <p className="text-xs text-text-muted mt-1">
               Ask a clear yes/no question that can be objectively resolved.
             </p>
           </Card>

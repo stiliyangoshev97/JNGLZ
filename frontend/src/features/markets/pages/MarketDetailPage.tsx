@@ -64,11 +64,15 @@ export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isMarketNotFound, setIsMarketNotFound] = useState(false); // Track if market definitely doesn't exist (query succeeded but data.market is null)
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
   const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
-  const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
+  
+  // Option 3: Only retry on actual network errors, not when market doesn't exist
+  // Reduced from 10 to 3 retries to prevent subgraph draining on errors
+  const maxRetries = 3;
 
   // Initial query without polling to get market data first
   const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
@@ -151,18 +155,42 @@ export function MarketDetailPage() {
   // Only show loading on initial load, not on polls/refetches
   const isInitialLoading = loading && !data?.market;
 
-  // Retry fetching ONLY on initial load (not during normal operation)
-  // Predator v2: Removed aggressive retry loops that caused extra queries
+  // ===== OPTION 3: Smart Retry Logic (Anti-Drain Protection) =====
+  // 
+  // Two distinct scenarios:
+  // 1. Query SUCCEEDED but data.market is NULL → Market doesn't exist → NO RETRIES
+  // 2. Query FAILED with error (network issue) → Retry up to 3 times
+  //
+  // This prevents attackers from draining subgraph by hitting /market/999, /market/1000, etc.
+  // Each invalid URL = 1 request only. Retries only on actual network failures.
+  
   useEffect(() => {
-    // Only retry if we're on initial load and haven't loaded successfully yet
-    if (!hasLoadedOnce && !loading && !data?.market && retryCount < maxRetries) {
+    // Skip if already loaded, still loading, or already confirmed not found
+    if (hasLoadedOnce || loading || isMarketNotFound) return;
+    
+    // CASE 1: Query succeeded but market is null → Market doesn't exist
+    // This means subgraph responded but the market ID doesn't exist in the contract
+    // → NO RETRIES, show "Market Not Found" immediately
+    if (!error && data !== undefined && data.market === null) {
+      setIsMarketNotFound(true);
+      return;
+    }
+    
+    // CASE 2: Query failed with an actual error (network/GraphQL issue)
+    // → Retry up to maxRetries times (for new market creation, subgraph lag, etc.)
+    if (error && retryCount < maxRetries) {
       const timer = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         refetch();
-      }, 3000); // Retry every 3 seconds during initial load only
+      }, 3000); // Retry every 3 seconds
       return () => clearTimeout(timer);
     }
-  }, [loading, data?.market, retryCount, refetch, hasLoadedOnce]);
+    
+    // CASE 3: Retries exhausted on actual error → Show not found
+    if (error && retryCount >= maxRetries) {
+      setIsMarketNotFound(true);
+    }
+  }, [loading, data, error, retryCount, refetch, hasLoadedOnce, isMarketNotFound]);
 
   // NOTE: Removed recovery polling - the main temperature-based polling handles reconnection
   // The 10-second recovery interval was causing duplicate queries
@@ -178,12 +206,15 @@ export function MarketDetailPage() {
     disconnectedTime !== null && 
     (Date.now() - disconnectedTime) > RECONNECT_GRACE_PERIOD;
 
-  // Still loading or retrying - only on INITIAL load, not polls
-  if (isInitialLoading || (!displayMarket && retryCount < maxRetries && retryCount > 0)) {
+  // Still loading or retrying on error - only on INITIAL load, not polls
+  // Note: Only show retrying message when there's an actual error (network issue)
+  const isRetryingOnError = !hasLoadedOnce && error && retryCount < maxRetries && retryCount > 0;
+  
+  if (isInitialLoading || isRetryingOnError) {
     return (
       <LoadingOverlay 
-        message={retryCount > 0 ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
-        subMessage={retryCount > 0 ? `Waiting for subgraph... (${retryCount}/${maxRetries})` : undefined}
+        message={isRetryingOnError ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
+        subMessage={isRetryingOnError ? `Network error, retrying... (${retryCount}/${maxRetries})` : undefined}
       />
     );
   }
@@ -204,18 +235,26 @@ export function MarketDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 border-2 border-dark-500 rounded-lg flex items-center justify-center">
-            <span className="text-2xl text-text-muted">?</span>
+          <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src="/logo.svg" 
+              alt="JNGLZ" 
+              className="w-12 h-12 object-contain opacity-50"
+            />
           </div>
           <p className="text-xl font-bold text-white mb-2">MARKET NOT FOUND</p>
           <p className="text-text-secondary text-sm mb-6">
             {error?.message || 'This market does not exist or failed to load.'}
           </p>
           <div className="flex flex-col gap-3">
+            {/* TRY AGAIN always visible - does SINGLE refetch only (no retry loop restart)
+                Useful for edge cases like newly created markets with subgraph latency */}
             <Button 
               variant="ghost" 
               onClick={() => {
-                setRetryCount(0);
+                // Single refetch only - does NOT reset retryCount to restart retry loop
+                // This prevents attackers from using the button to drain subgraph
+                setIsMarketNotFound(false); // Allow showing loading state
                 setDisconnectedTime(null);
                 refetch();
               }}
@@ -693,13 +732,20 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
 
   return (
     <div className="divide-y divide-dark-700">
-      {/* Header */}
-      <div className="px-4 py-2 bg-dark-800 flex items-center gap-3 text-xs font-mono text-text-muted">
+      {/* Header - Desktop */}
+      <div className="hidden sm:flex px-4 py-2 bg-dark-800 items-center gap-3 text-xs font-mono text-text-muted">
         <div className="w-8 text-center">#</div>
         <div className="flex-1">HOLDER</div>
         <div className="w-24 text-right">SHARES</div>
         <div className="w-20 text-center">SIDE</div>
         <div className="w-24 text-right">STATUS</div>
+      </div>
+
+      {/* Header - Mobile */}
+      <div className="sm:hidden px-3 py-2 bg-dark-800 flex items-center gap-2 text-xs font-mono text-text-muted">
+        <div className="w-6 text-center">#</div>
+        <div className="flex-1">HOLDER</div>
+        <div className="w-16 text-right">SHARES</div>
       </div>
       
       {/* Rows */}
@@ -709,39 +755,81 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
         const hasNo = holder.noShares > 0;
         
         return (
-          <div key={holder.address} className="px-4 py-3 flex items-center gap-3 hover:bg-dark-800/50">
-            {/* Rank */}
-            <div className="w-8 text-center font-mono text-text-muted">
-              {index + 1}
+          <div key={holder.address} className="hover:bg-dark-800/50">
+            {/* Desktop Row */}
+            <div className="hidden sm:flex px-4 py-3 items-center gap-3">
+              {/* Rank */}
+              <div className="w-8 text-center font-mono text-text-muted">
+                {index + 1}
+              </div>
+              
+              {/* Address */}
+              <div className="flex-1 min-w-0">
+                <AddressDisplay address={holder.address} iconSize={20} truncateLength={4} />
+              </div>
+              
+              {/* Total Shares */}
+              <div className="w-24 text-right font-mono text-white">
+                {holder.totalShares.toFixed(2)}
+              </div>
+              
+              {/* Side */}
+              <div className="w-20 text-center flex justify-center gap-1">
+                {hasYes && hasNo ? (
+                  <>
+                    <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
+                    <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
+                  </>
+                ) : hasYes ? (
+                  <span className="text-yes text-xs font-bold">YES</span>
+                ) : (
+                  <span className="text-no text-xs font-bold">NO</span>
+                )}
+              </div>
+              
+              {/* Status Badge */}
+              <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
+                {status.label}
+              </div>
             </div>
-            
-            {/* Address */}
-            <div className="flex-1 min-w-0">
-              <AddressDisplay address={holder.address} iconSize={20} truncateLength={4} />
-            </div>
-            
-            {/* Total Shares */}
-            <div className="w-24 text-right font-mono text-white">
-              {holder.totalShares.toFixed(2)}
-            </div>
-            
-            {/* Side */}
-            <div className="w-20 text-center flex justify-center gap-1">
-              {hasYes && hasNo ? (
-                <>
-                  <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
-                  <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
-                </>
-              ) : hasYes ? (
-                <span className="text-yes text-xs font-bold">YES</span>
-              ) : (
-                <span className="text-no text-xs font-bold">NO</span>
-              )}
-            </div>
-            
-            {/* Status Badge */}
-            <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
-              {status.label}
+
+            {/* Mobile Row - Stacked Layout */}
+            <div className="sm:hidden px-3 py-3">
+              <div className="flex items-center gap-2">
+                {/* Rank */}
+                <div className="w-6 text-center font-mono text-text-muted text-sm">
+                  {index + 1}
+                </div>
+                
+                {/* Address */}
+                <div className="flex-1 min-w-0">
+                  <AddressDisplay address={holder.address} iconSize={18} truncateLength={3} />
+                </div>
+                
+                {/* Total Shares */}
+                <div className="w-16 text-right font-mono text-white text-sm">
+                  {holder.totalShares.toFixed(1)}
+                </div>
+              </div>
+              
+              {/* Second row: Side & Status */}
+              <div className="flex items-center justify-between mt-1.5 ml-8">
+                <div className="flex gap-1">
+                  {hasYes && hasNo ? (
+                    <>
+                      <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
+                      <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
+                    </>
+                  ) : hasYes ? (
+                    <span className="text-yes text-xs font-bold px-1.5 py-0.5 bg-yes/20 rounded">YES</span>
+                  ) : (
+                    <span className="text-no text-xs font-bold px-1.5 py-0.5 bg-no/20 rounded">NO</span>
+                  )}
+                </div>
+                <span className={cn("text-xs font-bold", status.color)}>
+                  {status.label}
+                </span>
+              </div>
             </div>
           </div>
         );
