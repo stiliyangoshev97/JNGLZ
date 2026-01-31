@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 26, 2026  
-> **Version:** 0.7.45
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix)
+> **Last Updated:** January 31, 2026  
+> **Version:** 0.7.46
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression)
 
 ---
 
@@ -33,8 +33,9 @@
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Studio URL (v4.0.0) | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v4.0.0` |
-| Version | v4.0.0 (Latest Deployment - Contract v3.8.2) |
+| Studio URL (v3.0.0) | `https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0` |
+| Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC` |
+| Version | v3.0.0 (jnglz-testnet-fresh - Contract v3.8.2) |
 | Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)
@@ -225,8 +226,8 @@ Contract parameter: `heatLevel: uint8` (0, 1, or 2)
 # WalletConnect (REQUIRED)
 VITE_WALLETCONNECT_PROJECT_ID=your-project-id
 
-# The Graph (v0.0.3)
-VITE_SUBGRAPH_URL=https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v0.0.3
+# The Graph (jnglz-testnet-fresh v3.0.0)
+VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
 
 # Contract (v3.1.0)
 VITE_CONTRACT_ADDRESS=0x4C1508BA973856125a4F42c343560DB918c9EB2b

@@ -89,10 +89,11 @@
 - **Proposer Reward**: 0.5% of pool
 
 ### Subgraph (The Graph)
-- **Subgraph Name**: junkiefun-bnb-testnet
-- **Version**: v4.0.0
-- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v4.0.0
-- **Studio URL**: https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+- **Subgraph Name**: jnglz-testnet-fresh
+- **Version**: v3.0.0
+- **GraphQL Endpoint**: https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0
+- **Gateway URL**: https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
+- **Studio URL**: https://thegraph.com/studio/subgraph/jnglz-testnet-fresh
 - **Status**: ✅ Updated to v3.8.2 contract address
 
 ### MultiSig Signers (3-of-3)

@@ -346,11 +346,24 @@ export function CreateMarketPage() {
               {...register('question')}
               placeholder="Will Bitcoin reach $100,000 by end of 2026?"
               error={errors.question?.message}
-              helperText={`${watchedQuestion?.length || 0}/500 characters`}
             />
-            <p className="text-xs text-text-muted mt-2">
-              Ask a clear yes/no question that can be objectively resolved.
-            </p>
+            {/* Live character counter with minimum indicator */}
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-text-muted">
+                Ask a clear yes/no question that can be objectively resolved.
+              </p>
+              <span className={`text-xs font-mono ${
+                (watchedQuestion?.length || 0) < 10 
+                  ? 'text-no' 
+                  : (watchedQuestion?.length || 0) > 500 
+                    ? 'text-no' 
+                    : 'text-text-muted'
+              }`}>
+                {(watchedQuestion?.length || 0) < 10 
+                  ? `${watchedQuestion?.length || 0}/10 min` 
+                  : `${watchedQuestion?.length || 0}/500`}
+              </span>
+            </div>
           </Card>
 
           {/* Expiration - FIXED with working presets */}

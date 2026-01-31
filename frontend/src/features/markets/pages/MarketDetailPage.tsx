@@ -693,13 +693,20 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
 
   return (
     <div className="divide-y divide-dark-700">
-      {/* Header */}
-      <div className="px-4 py-2 bg-dark-800 flex items-center gap-3 text-xs font-mono text-text-muted">
+      {/* Header - Desktop */}
+      <div className="hidden sm:flex px-4 py-2 bg-dark-800 items-center gap-3 text-xs font-mono text-text-muted">
         <div className="w-8 text-center">#</div>
         <div className="flex-1">HOLDER</div>
         <div className="w-24 text-right">SHARES</div>
         <div className="w-20 text-center">SIDE</div>
         <div className="w-24 text-right">STATUS</div>
+      </div>
+
+      {/* Header - Mobile */}
+      <div className="sm:hidden px-3 py-2 bg-dark-800 flex items-center gap-2 text-xs font-mono text-text-muted">
+        <div className="w-6 text-center">#</div>
+        <div className="flex-1">HOLDER</div>
+        <div className="w-16 text-right">SHARES</div>
       </div>
       
       {/* Rows */}
@@ -709,39 +716,81 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
         const hasNo = holder.noShares > 0;
         
         return (
-          <div key={holder.address} className="px-4 py-3 flex items-center gap-3 hover:bg-dark-800/50">
-            {/* Rank */}
-            <div className="w-8 text-center font-mono text-text-muted">
-              {index + 1}
+          <div key={holder.address} className="hover:bg-dark-800/50">
+            {/* Desktop Row */}
+            <div className="hidden sm:flex px-4 py-3 items-center gap-3">
+              {/* Rank */}
+              <div className="w-8 text-center font-mono text-text-muted">
+                {index + 1}
+              </div>
+              
+              {/* Address */}
+              <div className="flex-1 min-w-0">
+                <AddressDisplay address={holder.address} iconSize={20} truncateLength={4} />
+              </div>
+              
+              {/* Total Shares */}
+              <div className="w-24 text-right font-mono text-white">
+                {holder.totalShares.toFixed(2)}
+              </div>
+              
+              {/* Side */}
+              <div className="w-20 text-center flex justify-center gap-1">
+                {hasYes && hasNo ? (
+                  <>
+                    <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
+                    <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
+                  </>
+                ) : hasYes ? (
+                  <span className="text-yes text-xs font-bold">YES</span>
+                ) : (
+                  <span className="text-no text-xs font-bold">NO</span>
+                )}
+              </div>
+              
+              {/* Status Badge */}
+              <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
+                {status.label}
+              </div>
             </div>
-            
-            {/* Address */}
-            <div className="flex-1 min-w-0">
-              <AddressDisplay address={holder.address} iconSize={20} truncateLength={4} />
-            </div>
-            
-            {/* Total Shares */}
-            <div className="w-24 text-right font-mono text-white">
-              {holder.totalShares.toFixed(2)}
-            </div>
-            
-            {/* Side */}
-            <div className="w-20 text-center flex justify-center gap-1">
-              {hasYes && hasNo ? (
-                <>
-                  <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
-                  <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
-                </>
-              ) : hasYes ? (
-                <span className="text-yes text-xs font-bold">YES</span>
-              ) : (
-                <span className="text-no text-xs font-bold">NO</span>
-              )}
-            </div>
-            
-            {/* Status Badge */}
-            <div className={cn("w-24 text-right text-xs font-bold", status.color)}>
-              {status.label}
+
+            {/* Mobile Row - Stacked Layout */}
+            <div className="sm:hidden px-3 py-3">
+              <div className="flex items-center gap-2">
+                {/* Rank */}
+                <div className="w-6 text-center font-mono text-text-muted text-sm">
+                  {index + 1}
+                </div>
+                
+                {/* Address */}
+                <div className="flex-1 min-w-0">
+                  <AddressDisplay address={holder.address} iconSize={18} truncateLength={3} />
+                </div>
+                
+                {/* Total Shares */}
+                <div className="w-16 text-right font-mono text-white text-sm">
+                  {holder.totalShares.toFixed(1)}
+                </div>
+              </div>
+              
+              {/* Second row: Side & Status */}
+              <div className="flex items-center justify-between mt-1.5 ml-8">
+                <div className="flex gap-1">
+                  {hasYes && hasNo ? (
+                    <>
+                      <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
+                      <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
+                    </>
+                  ) : hasYes ? (
+                    <span className="text-yes text-xs font-bold px-1.5 py-0.5 bg-yes/20 rounded">YES</span>
+                  ) : (
+                    <span className="text-no text-xs font-bold px-1.5 py-0.5 bg-no/20 rounded">NO</span>
+                  )}
+                </div>
+                <span className={cn("text-xs font-bold", status.color)}>
+                  {status.label}
+                </span>
+              </div>
             </div>
           </div>
         );

@@ -2,6 +2,83 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.46] - 2026-01-31
+
+### Fixed - Mobile Holders Table Overlap
+
+#### The Issue
+On mobile devices in the Market Detail Page, the HOLDERS tab had overlapping content where the share numbers would overlap with the wallet address.
+
+#### The Fix
+Implemented responsive two-row layout for mobile:
+- **Desktop (≥640px):** Single row with all columns (Rank | Address | Shares | Side | Status)
+- **Mobile (<640px):** Stacked two-row layout
+  - Row 1: Rank | Address | Shares
+  - Row 2: Side badges | Status badge
+- Reduced padding, icon sizes, and truncation lengths for mobile
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Responsive `HoldersTable` component with separate mobile/desktop layouts
+
+---
+
+### Added - Live Question Character Counter in Create Market
+
+#### The Issue
+The Create Market form required minimum 10 characters for the question, but users only saw this error when attempting to submit, not while typing.
+
+#### The Fix
+Added live character counter with visual feedback:
+- Shows `X/10 min` in **red** when under 10 characters
+- Shows `X/500` in muted color when 10-500 characters
+- Shows `X/500` in **red** when over 500 characters
+
+#### Files Changed
+- `CreateMarketPage.tsx` - Live character counter with color-coded feedback
+
+---
+
+### Added - Market ID Display in Portfolio Position Cards
+
+#### The Issue
+Portfolio position cards showed market question, shares, P/L, etc., but not the market ID, making it hard to reference specific markets.
+
+#### The Fix
+Added market ID prefix to position card titles:
+- Format: `#42 Will Bitcoin reach $100k?`
+- Styled in cyber color with monospace font
+- Small, non-intrusive but visible
+
+#### Files Changed
+- `PositionCard.tsx` - Added market ID display next to question
+
+---
+
+### Optimized - Image Compression (82% Smaller)
+
+#### The Issue
+Public folder images were uncompressed, totaling ~731KB which slowed page loads.
+
+#### The Fix
+Used CLI tools (jpegoptim, pngquant) to compress all images:
+
+| File | Before | After | Savings |
+|------|--------|-------|---------|
+| `thejungle-logo.jpg` | 140KB | 34KB | 76% |
+| `og-image.jpg` | 170KB | 40KB | 76% |
+| `JNGLZFUN-zoomed-removebg.png` | 81KB | 7.2KB | 91% |
+| `android-chrome-512x512.png` | 89KB | 4.2KB | 95% |
+| `market-created.png` | 85KB | 7.6KB | 91% |
+| `og-image.png` | 81KB | 7.2KB | 91% |
+| `thejungle-logo.png` | 85KB | 7.6KB | 91% |
+
+**Total: ~731KB → ~128KB (82% reduction)**
+
+#### Files Changed
+- All PNG and JPG files in `/public/` folder
+
+---
+
 ## [0.7.45] - 2026-01-26
 
 ### Fixed - Loser Resolution P/L Display in Market Details Page
@@ -2306,75 +2383,3 @@ Now with 1% default slippage:
 - Position hook returns parsed tuple (6 values from contract)
 - Preview hooks only query when amount > 0
 - Form validation with Zod, proper error display
-
----
-
-## [0.3.0] - 2026-01-08
-
-### Added - Error Handling & Bug Fixes
-
-#### Error Boundary (`src/shared/components/ErrorBoundary.tsx`)
-- Catches and displays runtime errors with brutalist UI
-- **Chunk Load Errors** (after deployments): Shows "Update Available" with refresh button
-- **General Errors**: Shows error message + stack trace (expandable) with retry/home options
-- Integrated with React Router as `errorElement`
-- Prevents blank screen crashes, provides actionable recovery
-
-#### Price Calculation Fix (`src/shared/utils/format.ts`)
-- **NEW**: `calculateYesPercent()` - Correct bonding curve formula with virtual liquidity
-- **NEW**: `calculateNoPercent()` - Complement function
-- Formula: `P(YES) = (yesShares + 100e18) / (yesShares + noShares + 200e18)`
-- Matches contract's `_getYesPrice()` exactly with `VIRTUAL_LIQUIDITY = 100 * 1e18`
-
-### Fixed
-
-#### Critical Bug: Price Calculation Inverted (#2, #5)
-- **Before**: `yesPercent = noShares / total` (WRONG - showed 0% after buying YES)
-- **After**: `yesPercent = virtualYes / (virtualYes + virtualNo)` (matches contract)
-- Fixed in: `MarketDetailPage.tsx`, `MarketCard.tsx`
-
-#### Critical Bug: BigDecimal vs BigInt (#6, browser crash)
-- Subgraph returns `totalVolume`, `poolBalance` as `BigDecimal` (e.g., "0.02")
-- Subgraph returns `yesShares`, `noShares` as `BigInt` (e.g., "100000000000000000000")
-- **Before**: Code tried `BigInt("0.02")` → crash
-- **After**: Use `parseFloat()` for BigDecimal fields, `BigInt()` for BigInt fields
-- Fixed in: `MarketsPage.tsx`, `MarketCard.tsx`, `MarketDetailPage.tsx`
-
-#### Bug: Time Display Issues (#3, #4)
-- Fixed `formatTimeRemaining()` being called with wrong parameter format
-- Now correctly passes Unix timestamp (seconds), not duration (milliseconds)
-- Fixed "ENDS EXPIRED" showing for non-expired markets
-
-#### Bug: Image Not Displayed (#7)
-- Added image rendering to `MarketDetailPage.tsx` in MarketInfo section
-- MarketCard already had image support (was working if imageUrl provided)
-
-#### Bug: Evidence Link Not Displayed (#8)
-- Verified evidenceLink IS displayed in MarketInfo component
-- Issue was likely empty `evidenceLink` from subgraph data
-
-### Changed
-- Reduced poll interval from 10s to 30s for trades ticker (prevents excessive refetching)
-- Market detail page poll interval remains 15s for responsiveness
-- Router now includes `errorElement={<ErrorBoundary />}` for global error catching
-
-### Technical Notes
-- Subgraph field types: `BigInt` = "123456..." (wei), `BigDecimal` = "0.02" (BNB)
-- Always use `parseFloat()` for `totalVolume`, `bnbAmount`, `poolBalance`
-- Always use `BigInt()` for `yesShares`, `noShares`, `shares`, timestamps
-- Virtual liquidity constant must match contract: `100n * 10n ** 18n`
-
----
-
-## Pending Features (Phase 3+)
-
-### Supabase Integration (Not Started)
-- Comments system
-- User profiles
-- Moderation (hide markets/comments)
-- SIWE authentication
-
-### Admin Features (Not Started)
-- MultiSig wallet detection
-- Hide/unhide markets
-- Hide/unhide comments

@@ -6,7 +6,7 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 | Metric | Value |
 |--------|-------|
-| Status | ✅ Deployed (v4.0.0) |
+| Status | ✅ Deployed (jnglz-testnet-fresh v3.0.0) |
 | Network | BNB Testnet (Chapel) |
 | Contract | `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30` |
 | Start Block | 86129412 |
@@ -14,17 +14,17 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 ## 🔗 GraphQL Endpoint
 
-**Production:**
+**Gateway (Production):**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v4.0.0
+https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
 ```
 
 **Studio:**
 ```
-https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v4.0.0
+https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0
 ```
 
-**Studio Dashboard:** https://thegraph.com/studio/subgraph/junkiefun-bnb-testnet
+**Studio Dashboard:** https://thegraph.com/studio/subgraph/jnglz-testnet-fresh
 
 ## 🚀 Setup
 
@@ -59,7 +59,7 @@ npm run build
 1. Go to https://thegraph.com/studio/
 2. Connect your wallet
 3. Click "Create a Subgraph"
-4. Name it: `junkiefun-bnb-testnet`
+4. Name it: `jnglz-testnet-fresh`
 5. Select network: `BNB Smart Chain Testnet (Chapel)`
 
 ### 2. Authenticate
@@ -238,7 +238,8 @@ subgraph/
 
 | Network | URL |
 |---------|-----|
-| BNB Testnet | `https://api.studio.thegraph.com/query/1722665/junkiefun-bnb-testnet/v3.8.2` |
+| BNB Testnet (Gateway) | `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC` |
+| BNB Testnet (Studio) | `https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0` |
 | BNB Mainnet | TBD |
 
 ## 📚 Resources
