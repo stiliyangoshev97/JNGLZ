@@ -479,9 +479,9 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
         to={`/market/${market.id}`}
         className="block mb-3 min-h-[48px]"
       >
-        <div className="flex items-start gap-2">
+        <div className="flex items-baseline gap-2">
           <span className="text-cyber font-mono text-xs shrink-0">#{market.marketId || market.id}</span>
-          <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors">
+          <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors leading-tight">
             {market.question || `Market #${market.id}`}
           </h3>
         </div>

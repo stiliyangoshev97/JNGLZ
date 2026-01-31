@@ -2,6 +2,14 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.52] - 2026-01-31
+
+### Fixed - Portfolio Page Market ID Alignment
+
+- Fixed market ID (`#123`) not aligning with the event name in position cards
+- Changed flex alignment from `items-start` to `items-baseline` for proper text baseline alignment
+- Added `leading-tight` to event name for consistent line height
+
 ## [0.7.51] - 2026-01-31
 
 ### Fixed - Market Not Found Page Anti-Drain Protection (Option 3)
