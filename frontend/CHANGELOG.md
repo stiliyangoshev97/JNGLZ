@@ -2,6 +2,34 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.50] - 2026-01-31
+
+### Removed - P/L Percentage Display from Market Details
+
+Following DexScreener's approach of showing only absolute values, removed the percentage display from the P/L tab on the Market Details page.
+
+#### Before
+```
+Trading P/L: +0.0148 BNB (-1.5%)
+Resolution P/L: +0.5000 BNB (+25.0%)
+```
+
+#### After
+```
+Trading P/L: +0.0148 BNB
+Resolution P/L: +0.5000 BNB
+```
+
+#### Rationale
+- Percentages can be misleading when cost basis varies
+- Absolute BNB values are clearer and more actionable
+- Cleaner, simpler UI
+
+#### Files Changed
+- `TradeHistory.tsx` - Removed percentage display from RealizedPnl component
+
+---
+
 ## [0.7.49] - 2026-01-31
 
 ### Removed - Confusing Payout Multiplier from Trade Panel
