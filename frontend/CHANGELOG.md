@@ -2,6 +2,48 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.48] - 2026-01-31
+
+### Fixed - Portfolio Header Resolution P/L Double-Counting Bug
+
+#### The Issue
+The Portfolio page header was showing incorrect Total P/L. Specifically, Resolution P/L was showing a value (e.g., +0.0258 BNB) when no markets had actually been resolved. This caused the Total P/L to be inflated.
+
+**Example:**
+- Header showed: `Total P/L: +0.0500 BNB (T: +0.0243 | R: +0.0258)`
+- Individual markets showed: Trading: +0.0243, Resolution: +0.0000
+- Leaderboard (correct): +0.0243 BNB
+
+#### Root Cause
+When a user sells shares at a profit greater than their original investment, `netCostBasis` becomes negative (e.g., invested 0.1 BNB, returned 0.1258 BNB → netCostBasis = -0.0258).
+
+In `PositionCard.tsx`, this was handled correctly:
+```tsx
+const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
+```
+
+But in `PortfolioPage.tsx`, the clamping was missing:
+```tsx
+const netCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');  // ❌ No clamping
+resolutionPnl += claimed - netCostBasis;  // 0 - (-0.0258) = +0.0258 ❌
+```
+
+This caused trading profits to be double-counted as resolution P/L.
+
+#### The Fix
+Added the same clamping logic to `PortfolioPage.tsx`:
+```tsx
+const rawNetCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
+const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
+```
+
+Now when netCostBasis is negative (profitable exit), resolution P/L correctly shows 0.
+
+#### Files Changed
+- `PortfolioPage.tsx` - Added `Math.max(0, rawNetCostBasis)` clamping in resolutionStats calculation
+
+---
+
 ## [0.7.47] - 2026-01-31
 
 ### Added - Comprehensive P/L Documentation in How To Play
@@ -112,7 +154,7 @@ Used CLI tools (jpegoptim, pngquant) to compress all images:
 **Total: ~731KB → ~128KB (82% reduction)**
 
 #### Files Changed
-- All PNG and JPG files in `/public/` folder
+- All PNG and JPG files in `/public//` folder
 
 ---
 

@@ -286,7 +286,11 @@ export function PortfolioPage() {
         // Resolution P/L = what you got back - what's still at risk (net cost basis)
         // If user sold all shares before resolution, netCostBasis = 0
         const claimed = parseFloat(pos.claimedAmount || '0');
-        const netCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
+        // netCostBasis = totalInvested - totalReturned
+        // Can be NEGATIVE if user sold at profit (returned > invested)
+        // Clamp to 0 - negative netCostBasis means no capital at risk for resolution
+        const rawNetCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
+        const netCostBasis = Math.max(0, rawNetCostBasis);
         resolutionPnl += claimed - netCostBasis;
         resolvedCount++;
       }
