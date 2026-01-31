@@ -2,6 +2,33 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.49] - 2026-01-31
+
+### Removed - Confusing Payout Multiplier from Trade Panel
+
+#### The Issue
+The buy preview in TradePanel showed a payout multiplier (e.g., `~1.9850 BNB (1.98x)`) that was misleading:
+
+- 1 BNB buy → ~1.9850 BNB payout = **1.98x** (seems great!)
+- 2 BNB buy → ~2.9850 BNB payout = **1.49x** (seems worse?)
+
+The multiplier made larger investments appear "worse" when they actually have the same absolute profit potential (the pool size is fixed).
+
+#### The Fix
+Removed the multiplier display. Now shows only the estimated payout:
+```
+If YES wins now:
+~1.9850 BNB
+Returns change as others trade
+```
+
+Users can easily calculate profit: `payout - investment`. The multiplier added confusion without adding value.
+
+#### Files Changed
+- `TradePanel.tsx` - Removed multiplier display and calculation from buyPreviewPayout
+
+---
+
 ## [0.7.48] - 2026-01-31
 
 ### Fixed - Portfolio Header Resolution P/L Double-Counting Bug
