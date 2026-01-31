@@ -64,11 +64,15 @@ export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isMarketNotFound, setIsMarketNotFound] = useState(false); // Track if market definitely doesn't exist (query succeeded but data.market is null)
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
   const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
-  const maxRetries = 10; // Will retry for up to 30 seconds (10 * 3s)
+  
+  // Option 3: Only retry on actual network errors, not when market doesn't exist
+  // Reduced from 10 to 3 retries to prevent subgraph draining on errors
+  const maxRetries = 3;
 
   // Initial query without polling to get market data first
   const { data, loading, error, refetch } = useQuery<GetMarketResponse>(GET_MARKET, {
@@ -151,18 +155,42 @@ export function MarketDetailPage() {
   // Only show loading on initial load, not on polls/refetches
   const isInitialLoading = loading && !data?.market;
 
-  // Retry fetching ONLY on initial load (not during normal operation)
-  // Predator v2: Removed aggressive retry loops that caused extra queries
+  // ===== OPTION 3: Smart Retry Logic (Anti-Drain Protection) =====
+  // 
+  // Two distinct scenarios:
+  // 1. Query SUCCEEDED but data.market is NULL → Market doesn't exist → NO RETRIES
+  // 2. Query FAILED with error (network issue) → Retry up to 3 times
+  //
+  // This prevents attackers from draining subgraph by hitting /market/999, /market/1000, etc.
+  // Each invalid URL = 1 request only. Retries only on actual network failures.
+  
   useEffect(() => {
-    // Only retry if we're on initial load and haven't loaded successfully yet
-    if (!hasLoadedOnce && !loading && !data?.market && retryCount < maxRetries) {
+    // Skip if already loaded, still loading, or already confirmed not found
+    if (hasLoadedOnce || loading || isMarketNotFound) return;
+    
+    // CASE 1: Query succeeded but market is null → Market doesn't exist
+    // This means subgraph responded but the market ID doesn't exist in the contract
+    // → NO RETRIES, show "Market Not Found" immediately
+    if (!error && data !== undefined && data.market === null) {
+      setIsMarketNotFound(true);
+      return;
+    }
+    
+    // CASE 2: Query failed with an actual error (network/GraphQL issue)
+    // → Retry up to maxRetries times (for new market creation, subgraph lag, etc.)
+    if (error && retryCount < maxRetries) {
       const timer = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         refetch();
-      }, 3000); // Retry every 3 seconds during initial load only
+      }, 3000); // Retry every 3 seconds
       return () => clearTimeout(timer);
     }
-  }, [loading, data?.market, retryCount, refetch, hasLoadedOnce]);
+    
+    // CASE 3: Retries exhausted on actual error → Show not found
+    if (error && retryCount >= maxRetries) {
+      setIsMarketNotFound(true);
+    }
+  }, [loading, data, error, retryCount, refetch, hasLoadedOnce, isMarketNotFound]);
 
   // NOTE: Removed recovery polling - the main temperature-based polling handles reconnection
   // The 10-second recovery interval was causing duplicate queries
@@ -178,12 +206,15 @@ export function MarketDetailPage() {
     disconnectedTime !== null && 
     (Date.now() - disconnectedTime) > RECONNECT_GRACE_PERIOD;
 
-  // Still loading or retrying - only on INITIAL load, not polls
-  if (isInitialLoading || (!displayMarket && retryCount < maxRetries && retryCount > 0)) {
+  // Still loading or retrying on error - only on INITIAL load, not polls
+  // Note: Only show retrying message when there's an actual error (network issue)
+  const isRetryingOnError = !hasLoadedOnce && error && retryCount < maxRetries && retryCount > 0;
+  
+  if (isInitialLoading || isRetryingOnError) {
     return (
       <LoadingOverlay 
-        message={retryCount > 0 ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
-        subMessage={retryCount > 0 ? `Waiting for subgraph... (${retryCount}/${maxRetries})` : undefined}
+        message={isRetryingOnError ? "SYNCING FROM BLOCKCHAIN" : "LOADING MARKET"} 
+        subMessage={isRetryingOnError ? `Network error, retrying... (${retryCount}/${maxRetries})` : undefined}
       />
     );
   }
@@ -204,18 +235,26 @@ export function MarketDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 border-2 border-dark-500 rounded-lg flex items-center justify-center">
-            <span className="text-2xl text-text-muted">?</span>
+          <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src="/logo.svg" 
+              alt="JNGLZ" 
+              className="w-12 h-12 object-contain opacity-50"
+            />
           </div>
           <p className="text-xl font-bold text-white mb-2">MARKET NOT FOUND</p>
           <p className="text-text-secondary text-sm mb-6">
             {error?.message || 'This market does not exist or failed to load.'}
           </p>
           <div className="flex flex-col gap-3">
+            {/* TRY AGAIN always visible - does SINGLE refetch only (no retry loop restart)
+                Useful for edge cases like newly created markets with subgraph latency */}
             <Button 
               variant="ghost" 
               onClick={() => {
-                setRetryCount(0);
+                // Single refetch only - does NOT reset retryCount to restart retry loop
+                // This prevents attackers from using the button to drain subgraph
+                setIsMarketNotFound(false); // Allow showing loading state
                 setDisconnectedTime(null);
                 refetch();
               }}
