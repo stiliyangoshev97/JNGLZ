@@ -2,6 +2,41 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.7.51] - 2026-01-31
+
+### Fixed - Market Not Found Page Anti-Drain Protection (Option 3)
+
+Implemented smart retry logic to prevent attackers from draining subgraph requests by hitting invalid market URLs.
+
+#### The Problem
+Previously, hitting `/market/999` (non-existent market) would trigger **10 retry attempts** = 10 subgraph requests.
+An attacker could easily drain our subgraph quota by hitting multiple invalid URLs.
+
+#### The Solution (Option 3)
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| Query succeeds but `data.market` is `null` | 10 retries | **No retries** → Show NOT FOUND immediately |
+| Query fails with network error | 10 retries | **3 retries** max |
+| TRY AGAIN button | Restarted retry loop | **Single refetch only** |
+
+#### Protection Summary
+
+| Attack Scenario | Requests Before | Requests After |
+|-----------------|-----------------|----------------|
+| `/market/999` | 10 | **1** |
+| 100 invalid URLs | 1,000 | **100** |
+
+#### UI Changes
+- Replaced "?" icon with JZ logo (`/logo.svg`)
+- Removed border around logo for cleaner look
+- TRY AGAIN button always visible (for edge cases like new market creation with graph latency)
+
+#### Files Changed
+- `MarketDetailPage.tsx` - Smart retry logic, logo change, TRY AGAIN behavior
+
+---
+
 ## [0.7.50] - 2026-01-31
 
 ### Removed - P/L Percentage Display from Market Details
