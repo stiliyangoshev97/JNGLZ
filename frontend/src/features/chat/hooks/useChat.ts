@@ -4,7 +4,8 @@ import { useSIWE } from '@/shared/hooks/useSIWE'
 import { 
   fetchChatMessages, 
   sendChatMessage, 
-  subscribeToChatMessages 
+  subscribeToChatMessages,
+  deleteChatMessage 
 } from '../api/chat.api'
 import type { ChatMessage, Network } from '@/lib/database.types'
 
@@ -18,9 +19,11 @@ interface UseChatReturn {
   messages: ChatMessage[]
   isLoading: boolean
   isSending: boolean
+  isDeleting: boolean
   error: string | null
   rateLimitSeconds: number | null
   sendMessage: (message: string) => Promise<boolean>
+  deleteMessage: (messageId: string) => Promise<boolean>
   refreshMessages: () => Promise<void>
   isAuthenticated: boolean
   signIn: () => Promise<boolean>
@@ -35,6 +38,7 @@ export function useChat(params: UseChatParams): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null)
   
@@ -65,7 +69,7 @@ export function useChat(params: UseChatParams): UseChatReturn {
   useEffect(() => {
     refreshMessages()
     
-    // Subscribe to new messages
+    // Subscribe to new messages and deletions
     const unsubscribe = subscribeToChatMessages(
       { marketId, contractAddress, network },
       (newMessage) => {
@@ -76,6 +80,9 @@ export function useChat(params: UseChatParams): UseChatReturn {
           }
           return [...prev, newMessage]
         })
+      },
+      (deletedMessageId) => {
+        setMessages(prev => prev.filter(m => m.id !== deletedMessageId))
       }
     )
     
@@ -88,28 +95,39 @@ export function useChat(params: UseChatParams): UseChatReturn {
     }
   }, [marketId, contractAddress, network, refreshMessages])
 
-  // Rate limit countdown timer
+  // Rate limit countdown timer - starts when rateLimitSeconds is set to a positive number
   useEffect(() => {
-    if (rateLimitSeconds !== null && rateLimitSeconds > 0) {
-      rateLimitTimerRef.current = setInterval(() => {
-        setRateLimitSeconds(prev => {
-          if (prev === null || prev <= 1) {
-            if (rateLimitTimerRef.current) {
-              clearInterval(rateLimitTimerRef.current)
-            }
-            return null
-          }
-          return prev - 1
-        })
-      }, 1000)
+    // Only start timer when we have a positive rate limit
+    if (rateLimitSeconds === null || rateLimitSeconds <= 0) {
+      return
     }
+    
+    // Clear any existing timer
+    if (rateLimitTimerRef.current) {
+      clearInterval(rateLimitTimerRef.current)
+    }
+    
+    rateLimitTimerRef.current = setInterval(() => {
+      setRateLimitSeconds(prev => {
+        if (prev === null || prev <= 1) {
+          if (rateLimitTimerRef.current) {
+            clearInterval(rateLimitTimerRef.current)
+            rateLimitTimerRef.current = null
+          }
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
     
     return () => {
       if (rateLimitTimerRef.current) {
         clearInterval(rateLimitTimerRef.current)
+        rateLimitTimerRef.current = null
       }
     }
-  }, [rateLimitSeconds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rateLimitSeconds !== null])
 
   // Sign in with SIWE
   const signIn = useCallback(async (): Promise<boolean> => {
@@ -162,7 +180,7 @@ export function useChat(params: UseChatParams): UseChatReturn {
       if (!result.success) {
         if (result.waitSeconds) {
           setRateLimitSeconds(result.waitSeconds)
-          setError(`Rate limited. Please wait ${result.waitSeconds} seconds.`)
+          // Don't set error, the placeholder will show countdown
         } else {
           setError(result.error || 'Failed to send message')
         }
@@ -180,13 +198,60 @@ export function useChat(params: UseChatParams): UseChatReturn {
     }
   }, [address, marketId, contractAddress, network, getSession, siweSignIn])
 
+  // Delete message (admin only)
+  const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
+    if (!address) {
+      setError('Wallet not connected')
+      return false
+    }
+    
+    // Get or create SIWE session
+    let session = getSession()
+    if (!session) {
+      session = await siweSignIn()
+      if (!session) {
+        setError('Please sign in to delete messages')
+        return false
+      }
+    }
+    
+    setIsDeleting(true)
+    setError(null)
+    
+    try {
+      const result = await deleteChatMessage({
+        siweMessage: session.message,
+        signature: session.signature,
+        address: session.address,
+        messageId,
+      })
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to delete message')
+        return false
+      }
+      
+      // Remove from local state immediately (real-time will also handle it)
+      setMessages(prev => prev.filter(m => m.id !== messageId))
+      return true
+    } catch (err) {
+      setError('Failed to delete message')
+      console.error('Error deleting message:', err)
+      return false
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [address, getSession, siweSignIn])
+
   return {
     messages,
     isLoading,
     isSending,
+    isDeleting,
     error,
     rateLimitSeconds,
     sendMessage,
+    deleteMessage,
     refreshMessages,
     isAuthenticated: isAuthenticated(),
     signIn,

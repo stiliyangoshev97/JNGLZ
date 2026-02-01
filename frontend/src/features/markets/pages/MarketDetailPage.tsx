@@ -25,6 +25,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
+import { useAccount } from 'wagmi';
 import { GET_MARKET } from '@/shared/api';
 import type { GetMarketResponse } from '@/shared/api';
 import { ChanceDisplay, PriceDisplay } from '@/shared/components/ui/ChanceDisplay';
@@ -44,7 +45,7 @@ import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
 import type { Trade } from '@/shared/schemas';
-import { ChatTab } from '@/features/chat';
+import { ChatTab, ModerationModal } from '@/features/chat';
 import { env } from '@/shared/config/env';
 import type { Network } from '@/lib/database.types';
 
@@ -65,13 +66,18 @@ interface HolderPosition {
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
+  const { address } = useAccount();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isMarketNotFound, setIsMarketNotFound] = useState(false); // Track if market definitely doesn't exist (query succeeded but data.market is null)
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showModerationModal, setShowModerationModal] = useState(false);
   const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
   const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
+  
+  // Check if current user is admin
+  const isAdmin = address ? env.ADMIN_ADDRESSES.includes(address.toLowerCase()) : false;
   
   // Option 3: Only retry on actual network errors, not when market doesn't exist
   // Reduced from 10 to 3 retries to prevent subgraph draining on errors
@@ -346,6 +352,15 @@ export function MarketDetailPage() {
                     ⟳ Syncing...
                   </Badge>
                 )}
+                {/* Admin Moderate Button */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowModerationModal(true)}
+                    className="ml-auto px-3 py-1 text-xs font-bold uppercase bg-admin/20 text-admin border border-admin/30 hover:bg-admin/30 transition-colors flex items-center gap-1"
+                  >
+                    ⚙️ MODERATE
+                  </button>
+                )}
               </div>
 
               {/* Question - line-clamp for long text, clickable to expand */}
@@ -551,6 +566,17 @@ export function MarketDetailPage() {
           Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
         </p>
       </Modal>
+
+      {/* Moderation Modal (Admin only) */}
+      {isAdmin && (
+        <ModerationModal
+          isOpen={showModerationModal}
+          onClose={() => setShowModerationModal(false)}
+          marketId={market.marketId}
+          contractAddress={env.CONTRACT_ADDRESS}
+          network={env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet'}
+        />
+      )}
     </div>
   );
 }

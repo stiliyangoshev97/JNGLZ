@@ -2,6 +2,7 @@
 export { ChatTab } from './components/ChatTab'
 export { ChatMessage } from './components/ChatMessage'
 export { ChatInput } from './components/ChatInput'
+export { ModerationModal } from './components/ModerationModal'
 
 export { useChat } from './hooks/useChat'
 

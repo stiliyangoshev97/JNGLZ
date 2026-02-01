@@ -20,6 +20,18 @@ interface SendMessageResponse {
   waitSeconds?: number
 }
 
+interface DeleteMessageParams {
+  siweMessage: string
+  signature: string
+  address: string
+  messageId: string
+}
+
+interface DeleteMessageResponse {
+  success: boolean
+  error?: string
+}
+
 /**
  * Fetch chat messages for a specific market
  */
@@ -100,7 +112,8 @@ export function subscribeToChatMessages(
     contractAddress: string
     network: Network
   },
-  onMessage: (message: ChatMessage) => void
+  onMessage: (message: ChatMessage) => void,
+  onDelete?: (messageId: string) => void
 ): (() => void) | null {
   if (!isSupabaseConfigured || !supabase) {
     console.warn('Supabase not configured')
@@ -128,12 +141,63 @@ export function subscribeToChatMessages(
         }
       }
     )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `market_id=eq.${params.marketId}`,
+      },
+      (payload) => {
+        const deletedMessage = payload.old as { id: string }
+        if (deletedMessage.id && onDelete) {
+          onDelete(deletedMessage.id)
+        }
+      }
+    )
     .subscribe()
 
   // Return unsubscribe function
   return () => {
     if (supabase) {
       supabase.removeChannel(channel)
+    }
+  }
+}
+
+/**
+ * Delete a chat message via Edge Function (admin only)
+ */
+export async function deleteChatMessage(params: DeleteMessageParams): Promise<DeleteMessageResponse> {
+  if (!SUPABASE_URL) {
+    return { success: false, error: 'Supabase not configured' }
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/delete-message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'Failed to delete message',
+      }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting chat message:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete message',
     }
   }
 }

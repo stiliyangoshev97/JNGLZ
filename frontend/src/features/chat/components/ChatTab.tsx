@@ -6,6 +6,7 @@ import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import type { Network } from '@/lib/database.types'
 import { isSupabaseConfigured } from '@/lib/supabase'
+import { env } from '@/shared/config/env'
 
 interface ChatTabProps {
   marketId: string
@@ -19,13 +20,18 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
   const { address } = useAccount()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
+  // Check if current user is admin
+  const isAdmin = address ? env.ADMIN_ADDRESSES.includes(address.toLowerCase()) : false
+  
   const {
     messages,
     isLoading,
     isSending,
+    isDeleting,
     error,
     rateLimitSeconds,
     sendMessage,
+    deleteMessage,
     isAuthenticated,
     signIn,
     isSigningIn,
@@ -80,6 +86,9 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
                   msg.sender_address.toLowerCase() === address.toLowerCase()
                 }
                 holderBadge={holders?.get(msg.sender_address.toLowerCase()) || null}
+                isAdmin={isAdmin}
+                onDelete={isAdmin ? () => deleteMessage(msg.id) : undefined}
+                isDeleting={isDeleting}
               />
             ))}
             <div ref={messagesEndRef} />

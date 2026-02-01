@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
+import { Trash2, Loader2 } from 'lucide-react'
 import type { ChatMessage as ChatMessageType } from '@/lib/database.types'
 import { formatAddress } from '@/shared/utils/format'
 
@@ -6,14 +7,24 @@ interface ChatMessageProps {
   message: ChatMessageType
   isOwnMessage: boolean
   holderBadge?: 'yes' | 'no' | null
+  isAdmin?: boolean
+  onDelete?: () => Promise<boolean>
+  isDeleting?: boolean
 }
 
-export function ChatMessage({ message, isOwnMessage, holderBadge }: ChatMessageProps) {
+export function ChatMessage({ 
+  message, 
+  isOwnMessage, 
+  holderBadge,
+  isAdmin,
+  onDelete,
+  isDeleting,
+}: ChatMessageProps) {
   const timeAgo = formatDistanceToNow(new Date(message.created_at), { addSuffix: true })
   
   return (
     <div className={`flex flex-col gap-1 ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-      {/* Header: Address + Badge + Time */}
+      {/* Header: Address + Badge + Time + Delete */}
       <div className="flex items-center gap-2 text-xs">
         <span className="text-text-muted font-mono">
           {formatAddress(message.sender_address)}
@@ -34,6 +45,22 @@ export function ChatMessage({ message, isOwnMessage, holderBadge }: ChatMessageP
         <span className="text-text-muted/60">
           {timeAgo}
         </span>
+        
+        {/* Admin delete button */}
+        {isAdmin && onDelete && (
+          <button
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="text-no/60 hover:text-no transition-colors disabled:opacity-50"
+            title="Delete message"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Trash2 className="w-3 h-3" />
+            )}
+          </button>
+        )}
       </div>
       
       {/* Message Bubble */}
