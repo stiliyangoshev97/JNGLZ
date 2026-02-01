@@ -247,3 +247,203 @@ subgraph/
 - [The Graph Documentation](https://thegraph.com/docs/)
 - [Subgraph Studio](https://thegraph.com/studio/)
 - [AssemblyScript API](https://thegraph.com/docs/en/developing/assemblyscript-api/)
+
+## 🔄 Handling Multiple Contract Versions
+
+When deploying a new contract version, you can support both old and new contracts in a single subgraph using **multiple data sources**.
+
+### Why This Approach?
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Single Subgraph (Recommended)** | One API endpoint, unified data, 1x cost | More complex mapping code |
+| Two Separate Subgraphs | Simpler per-subgraph | 2x API costs, frontend must merge data |
+| Factory/Proxy Pattern | Automatic discovery | Requires contract redesign |
+
+### Implementation Steps
+
+#### 1. Update `subgraph.yaml`
+
+Add a new data source for each contract version:
+
+```yaml
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  # V1 Contract (original deployment)
+  - kind: ethereum
+    name: PredictionMarketV1
+    network: chapel
+    source:
+      address: "0xOLD_CONTRACT_ADDRESS"
+      abi: PredictionMarket
+      startBlock: 86129412
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - Trade
+        - User
+        - Position
+      abis:
+        - name: PredictionMarket
+          file: ./abis/PredictionMarket.json
+      eventHandlers:
+        - event: MarketCreated(indexed uint256,string,uint256)
+          handler: handleMarketCreatedV1
+        - event: Trade(indexed uint256,indexed address,bool,bool,uint256,uint256)
+          handler: handleTradeV1
+      file: ./src/mapping.ts
+
+  # V2 Contract (new deployment)
+  - kind: ethereum
+    name: PredictionMarketV2
+    network: chapel
+    source:
+      address: "0xNEW_CONTRACT_ADDRESS"
+      abi: PredictionMarketV2
+      startBlock: 87000000  # New contract deploy block
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - Trade
+        - User
+        - Position
+      abis:
+        - name: PredictionMarketV2
+          file: ./abis/PredictionMarketV2.json
+      eventHandlers:
+        - event: MarketCreated(indexed uint256,string,uint256)
+          handler: handleMarketCreatedV2
+        - event: Trade(indexed uint256,indexed address,bool,bool,uint256,uint256)
+          handler: handleTradeV2
+      file: ./src/mapping.ts
+```
+
+#### 2. Update `schema.graphql`
+
+Add fields to track contract version:
+
+```graphql
+type Market @entity {
+  id: ID!
+  marketId: BigInt!
+  # ... existing fields ...
+  
+  # Multi-contract support
+  contractAddress: Bytes!      # Which contract this market belongs to
+  contractVersion: String!     # "v1" or "v2"
+}
+
+type Trade @entity {
+  id: ID!
+  # ... existing fields ...
+  
+  contractAddress: Bytes!
+  contractVersion: String!
+}
+```
+
+#### 3. Update `mapping.ts`
+
+Create separate handlers or use shared logic:
+
+```typescript
+import { MarketCreated as MarketCreatedV1 } from "../generated/PredictionMarketV1/PredictionMarket"
+import { MarketCreated as MarketCreatedV2 } from "../generated/PredictionMarketV2/PredictionMarketV2"
+
+// Shared handler logic
+function createMarket(
+  marketId: BigInt,
+  question: string,
+  expiry: BigInt,
+  contractAddress: Bytes,
+  version: string
+): void {
+  let id = contractAddress.toHexString() + "-" + marketId.toString()
+  let market = new Market(id)
+  market.marketId = marketId
+  market.question = question
+  market.contractAddress = contractAddress
+  market.contractVersion = version
+  // ... rest of fields
+  market.save()
+}
+
+// V1 Handler
+export function handleMarketCreatedV1(event: MarketCreatedV1): void {
+  createMarket(
+    event.params.marketId,
+    event.params.question,
+    event.params.expiryTimestamp,
+    event.address,
+    "v1"
+  )
+}
+
+// V2 Handler
+export function handleMarketCreatedV2(event: MarketCreatedV2): void {
+  createMarket(
+    event.params.marketId,
+    event.params.question,
+    event.params.expiryTimestamp,
+    event.address,
+    "v2"
+  )
+}
+```
+
+#### 4. Update Frontend Queries
+
+Filter or sort by contract version if needed:
+
+```graphql
+query GetAllMarkets {
+  markets(orderBy: createdAt, orderDirection: desc) {
+    id
+    marketId
+    question
+    contractVersion
+    contractAddress
+  }
+}
+
+# Or filter by version
+query GetV2Markets {
+  markets(where: { contractVersion: "v2" }) {
+    id
+    marketId
+    question
+  }
+}
+```
+
+### Entity ID Strategy
+
+**Important:** When supporting multiple contracts, entity IDs must be unique across contracts:
+
+```typescript
+// ❌ Bad: marketId alone can collide
+let id = marketId.toString()  // Market #1 exists in both v1 and v2!
+
+// ✅ Good: Include contract address
+let id = contractAddress.toHexString() + "-" + marketId.toString()
+// Result: "0xOLD...-1" and "0xNEW...-1" are unique
+```
+
+### Migration Checklist
+
+- [ ] Add new ABI to `/abis/` folder
+- [ ] Add new data source in `subgraph.yaml`
+- [ ] Add `contractAddress` and `contractVersion` to schema
+- [ ] Update entity ID generation to include contract address
+- [ ] Create version-specific handlers (or update shared handlers)
+- [ ] Run `npm run codegen` to generate new types
+- [ ] Test locally with `graph build`
+- [ ] Deploy: `npm run deploy`

@@ -25,6 +25,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
+import { useAccount } from 'wagmi';
 import { GET_MARKET } from '@/shared/api';
 import type { GetMarketResponse } from '@/shared/api';
 import { ChanceDisplay, PriceDisplay } from '@/shared/components/ui/ChanceDisplay';
@@ -44,6 +45,9 @@ import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
 import type { Trade } from '@/shared/schemas';
+import { ChatTab, ModerationModal, useMarketModeration } from '@/features/chat';
+import type { Network } from '@/lib/database.types';
+import { env } from '@/shared/config/env';
 
 // Position data interface for holders
 interface HolderPosition {
@@ -62,13 +66,26 @@ interface HolderPosition {
 
 export function MarketDetailPage() {
   const { marketId } = useParams<{ marketId: string }>();
+  const { address } = useAccount();
   const [retryCount, setRetryCount] = useState(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isMarketNotFound, setIsMarketNotFound] = useState(false); // Track if market definitely doesn't exist (query succeeded but data.market is null)
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showModerationModal, setShowModerationModal] = useState(false);
   const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
   const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
+  
+  // Check if current user is admin
+  const isAdmin = address ? env.ADMIN_ADDRESSES.includes(address.toLowerCase()) : false;
+  
+  // Fetch moderation status from Supabase
+  const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
+  const { isHidden, refetch: refetchModeration } = useMarketModeration({
+    marketId: marketId || '',
+    contractAddress: env.CONTRACT_ADDRESS,
+    network,
+  });
   
   // Option 3: Only retry on actual network errors, not when market doesn't exist
   // Reduced from 10 to 3 retries to prevent subgraph draining on errors
@@ -314,18 +331,24 @@ export function MarketDetailPage() {
       {/* Hero Section */}
       <section className="border-b border-dark-600 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4">
-          {/* Market Image - Full width if exists */}
+          {/* Market Image - Full width if exists, or hidden placeholder if moderated */}
           {market.imageUrl && (
-            <div className="group relative -mx-4 mb-4 md:mb-6 h-40 md:h-48 lg:h-64 overflow-hidden">
-              <img
-                src={market.imageUrl}
-                alt=""
-                loading="eager"
-                decoding="async"
-                className="w-full h-full object-cover market-image"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/50 to-transparent" />
-            </div>
+            isHidden('image') ? (
+              <div className="group relative -mx-4 mb-4 md:mb-6 h-40 md:h-48 lg:h-64 overflow-hidden bg-dark-800 flex items-center justify-center">
+                <span className="text-text-muted font-mono text-sm">[Image Hidden by Moderator]</span>
+              </div>
+            ) : (
+              <div className="group relative -mx-4 mb-4 md:mb-6 h-40 md:h-48 lg:h-64 overflow-hidden">
+                <img
+                  src={market.imageUrl}
+                  alt=""
+                  loading="eager"
+                  decoding="async"
+                  className="w-full h-full object-cover market-image"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/50 to-transparent" />
+              </div>
+            )
           )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -343,21 +366,36 @@ export function MarketDetailPage() {
                     ⟳ Syncing...
                   </Badge>
                 )}
+                {/* Admin Moderate Button */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowModerationModal(true)}
+                    className="ml-auto px-3 py-1 text-xs font-bold uppercase bg-admin/20 text-admin border border-admin/30 hover:bg-admin/30 transition-colors flex items-center gap-1"
+                  >
+                     MODERATE
+                  </button>
+                )}
               </div>
 
               {/* Question - line-clamp for long text, clickable to expand */}
               <div className="mb-3 md:mb-4">
-                <h1 
-                  className={cn(
-                    "text-xl md:text-2xl lg:text-4xl font-black text-white break-all",
-                    "line-clamp-2",
-                    market.question.length > 80 && "cursor-pointer hover:text-cyber/90 transition-colors"
-                  )}
-                  onClick={() => market.question.length > 80 && setShowQuestionModal(true)}
-                  title={market.question.length > 80 ? "Click to view full question" : undefined}
-                >
-                  {market.question}
-                </h1>
+                {isHidden('name') ? (
+                  <h1 className="text-xl md:text-2xl lg:text-4xl font-black text-text-muted">
+                    [Content Hidden by Moderator]
+                  </h1>
+                ) : (
+                  <h1 
+                    className={cn(
+                      "text-xl md:text-2xl lg:text-4xl font-black text-white break-all",
+                      "line-clamp-2",
+                      market.question.length > 80 && "cursor-pointer hover:text-cyber/90 transition-colors"
+                    )}
+                    onClick={() => market.question.length > 80 && setShowQuestionModal(true)}
+                    title={market.question.length > 80 ? "Click to view full question" : undefined}
+                  >
+                    {market.question}
+                  </h1>
+                )}
               </div>
 
               {/* Creator & Time - Scrollable on mobile */}
@@ -384,7 +422,12 @@ export function MarketDetailPage() {
 
               {/* Market Info - Inline below header */}
               <div className="mt-4 pt-4 border-t border-dark-700">
-                <MarketInfoCompact market={market} onShowRules={() => setShowRulesModal(true)} />
+                <MarketInfoCompact 
+                  market={market} 
+                  onShowRules={() => setShowRulesModal(true)}
+                  isRulesHidden={isHidden('rules')}
+                  isEvidenceHidden={isHidden('evidence')}
+                />
               </div>
 
               {/* Chance Display - Horizontal banner */}
@@ -440,6 +483,7 @@ export function MarketDetailPage() {
                   trades={trades}
                   positions={positions}
                   isMarketResolved={isResolved}
+                  marketId={market.marketId}
                 />
               </div>
             </div>
@@ -509,6 +553,7 @@ export function MarketDetailPage() {
               trades={trades}
               positions={positions}
               isMarketResolved={isResolved}
+              marketId={market.marketId}
             />
           </div>
           
@@ -531,7 +576,11 @@ export function MarketDetailPage() {
         title="Full Question"
         size="lg"
       >
-        <p className="text-white break-all whitespace-pre-wrap">{market.question}</p>
+        {isHidden('name') ? (
+          <p className="text-text-muted">[Content Hidden by Moderator]</p>
+        ) : (
+          <p className="text-white break-all whitespace-pre-wrap">{market.question}</p>
+        )}
       </Modal>
 
       {/* Rules Modal */}
@@ -541,11 +590,29 @@ export function MarketDetailPage() {
         title="Resolution Rules"
         size="lg"
       >
-        <p className="text-text-secondary break-all whitespace-pre-wrap">{market.resolutionRules}</p>
-        <p className="text-yellow-500/80 mt-4 pt-4 border-t border-dark-700 text-sm">
-          Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
-        </p>
+        {isHidden('rules') ? (
+          <p className="text-text-muted">[Content Hidden by Moderator]</p>
+        ) : (
+          <>
+            <p className="text-text-secondary break-all whitespace-pre-wrap">{market.resolutionRules}</p>
+            <p className="text-yellow-500/80 mt-4 pt-4 border-t border-dark-700 text-sm">
+              Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
+            </p>
+          </>
+        )}
       </Modal>
+
+      {/* Moderation Modal (Admin only) */}
+      {isAdmin && (
+        <ModerationModal
+          isOpen={showModerationModal}
+          onClose={() => setShowModerationModal(false)}
+          marketId={market.marketId}
+          contractAddress={env.CONTRACT_ADDRESS}
+          network={env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet'}
+          onModerationChange={refetchModeration}
+        />
+      )}
     </div>
   );
 }
@@ -553,7 +620,17 @@ export function MarketDetailPage() {
 /**
  * Compact market info displayed inline in the header area
  */
-function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRules: () => void }) {
+function MarketInfoCompact({ 
+  market, 
+  onShowRules,
+  isRulesHidden = false,
+  isEvidenceHidden = false,
+}: { 
+  market: Market; 
+  onShowRules: () => void;
+  isRulesHidden?: boolean;
+  isEvidenceHidden?: boolean;
+}) {
   // totalVolume is BigDecimal (already in BNB), poolBalance is BigInt (wei)
   const volumeBNB = parseFloat(market.totalVolume || '0').toFixed(4);
   const poolBalanceWei = BigInt(market.poolBalance || '0');
@@ -578,9 +655,15 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
       </div>
 
       {/* Evidence & Rules */}
-      {(market.evidenceLink || market.resolutionRules) && (
+      {(market.evidenceLink || market.resolutionRules || isEvidenceHidden || isRulesHidden) && (
         <div className="space-y-2 text-xs">
-          {market.evidenceLink && (
+          {/* Evidence Link - show hidden placeholder or actual link */}
+          {isEvidenceHidden ? (
+            <div>
+              <span className="text-text-muted font-mono">SOURCE: </span>
+              <span className="text-text-muted font-mono">[Link Hidden by Moderator]</span>
+            </div>
+          ) : market.evidenceLink && (
             <div>
               <span className="text-text-muted font-mono">SOURCE: </span>
               <a
@@ -595,7 +678,13 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
               </a>
             </div>
           )}
-          {market.resolutionRules && (
+          {/* Resolution Rules - show hidden placeholder or actual rules */}
+          {isRulesHidden ? (
+            <div>
+              <span className="text-text-muted font-mono">RULES: </span>
+              <span className="text-text-muted">[Content Hidden by Moderator]</span>
+            </div>
+          ) : market.resolutionRules && (
             <div>
               <span className="text-text-muted font-mono">RULES: </span>
               <span 
@@ -610,10 +699,12 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
               </span>
             </div>
           )}
-          {/* Street Consensus Disclaimer */}
-          <p className="text-yellow-500/80 mt-2 pt-2 border-t border-dark-700">
-            Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
-          </p>
+          {/* Street Consensus Disclaimer - only show if rules are visible */}
+          {!isRulesHidden && market.resolutionRules && (
+            <p className="text-yellow-500/80 mt-2 pt-2 border-t border-dark-700">
+              Note: These rules are guidelines for proposers and voters. Final outcome is determined by Street Consensus (proposal → dispute → vote). The market may resolve differently if disputed.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -621,19 +712,44 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
 }
 
 /**
- * Tabbed interface for Trades, Realized P/L, and Holders
+ * Tabbed interface for Trades, Realized P/L, Holders, and Chat
  * Uses fixed max-height with internal scrolling
  */
 function TradesAndHoldersTabs({ 
   trades, 
   positions,
   isMarketResolved,
+  marketId,
 }: { 
   trades: Trade[]; 
   positions: HolderPosition[];
   isMarketResolved: boolean;
+  marketId: string;
 }) {
-  const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders'>('trades');
+  const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders' | 'chat'>('trades');
+  
+  // Compute network and contract address for chat
+  const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
+  const contractAddress = env.CONTRACT_ADDRESS;
+  
+  // Compute holders map for chat badges (address -> 'yes' | 'no')
+  const holdersMap = useMemo(() => {
+    const map = new Map<string, 'yes' | 'no'>();
+    for (const pos of positions) {
+      const yesShares = BigInt(pos.yesShares || '0');
+      const noShares = BigInt(pos.noShares || '0');
+      // Determine primary position
+      if (yesShares > noShares) {
+        map.set(pos.user.address.toLowerCase(), 'yes');
+      } else if (noShares > yesShares) {
+        map.set(pos.user.address.toLowerCase(), 'no');
+      } else if (yesShares > 0n) {
+        // Equal but non-zero, default to yes
+        map.set(pos.user.address.toLowerCase(), 'yes');
+      }
+    }
+    return map;
+  }, [positions]);
 
   return (
     <>
@@ -672,16 +788,34 @@ function TradesAndHoldersTabs({
         >
           HOLDERS
         </button>
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold uppercase transition-colors",
+            activeTab === 'chat'
+              ? "text-cyber border-b-2 border-cyber bg-cyber/5"
+              : "text-text-secondary hover:text-white"
+          )}
+        >
+          CHAT
+        </button>
       </div>
 
       {/* Tab Content - Fixed max-height with scroll */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className={cn("max-h-[400px] overflow-y-auto", activeTab === 'chat' && "max-h-none overflow-visible")}>
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
           <RealizedPnl trades={trades} positions={positions} isMarketResolved={isMarketResolved} />
-        ) : (
+        ) : activeTab === 'holders' ? (
           <HoldersTable positions={positions} />
+        ) : (
+          <ChatTab
+            marketId={marketId}
+            contractAddress={contractAddress}
+            network={network}
+            holders={holdersMap}
+          />
         )}
       </div>
     </>

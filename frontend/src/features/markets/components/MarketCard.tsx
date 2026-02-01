@@ -26,9 +26,13 @@ import type { Market } from '@/shared/schemas';
 interface MarketCardProps {
   market: Market;
   className?: string;
+  /** Whether the market name/question is hidden by moderation */
+  isNameHidden?: boolean;
+  /** Whether the market image is hidden by moderation */
+  isImageHidden?: boolean;
 }
 
-function MarketCardComponent({ market, className }: MarketCardProps) {
+function MarketCardComponent({ market, className, isNameHidden = false, isImageHidden = false }: MarketCardProps) {
   // Calculate YES price percentage using bonding curve formula (with market's virtual liquidity)
   // For resolved markets, show 100%/0% based on outcome
   const yesPercent = market.resolved
@@ -100,7 +104,7 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
         )}
       >
         {/* Image */}
-        {market.imageUrl && (
+        {market.imageUrl && !isImageHidden && (
           <div className="relative h-40 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
             <img
               src={market.imageUrl}
@@ -126,6 +130,23 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
           </div>
         )}
 
+        {/* Hidden image placeholder */}
+        {market.imageUrl && isImageHidden && (
+          <div className="relative h-40 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600 bg-dark-700 flex items-center justify-center">
+            <span className="text-text-muted text-sm font-mono">IMAGE HIDDEN</span>
+            {/* Heat level badge (top left) */}
+            <div className="absolute top-2 left-2">
+              <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+            </div>
+            {/* Status badge overlay (top right) */}
+            {getStatusBadge() && (
+              <div className="absolute top-2 right-2">
+                {getStatusBadge()}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Heat level badge (if no image, show above question) */}
         {!market.imageUrl && (
           <div className="flex items-center gap-2 mb-2">
@@ -135,8 +156,13 @@ function MarketCardComponent({ market, className }: MarketCardProps) {
         )}
 
         {/* Question - fixed min-height for consistent layout across cards */}
-        <h3 className="text-base font-semibold text-white line-clamp-2 break-all mb-3 min-h-[48px] group-hover:text-cyber transition-colors">
-          {market.question}
+        <h3 className={cn(
+          "text-base font-semibold line-clamp-2 break-all mb-3 min-h-[48px] transition-colors",
+          isNameHidden 
+            ? "text-text-muted" 
+            : "text-white group-hover:text-cyber"
+        )}>
+          {isNameHidden ? '[Content Hidden by Moderator]' : market.question}
         </h3>
 
         {/* Market ID */}

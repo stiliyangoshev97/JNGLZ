@@ -28,6 +28,9 @@ import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
+import { useMarketsModeration } from '@/features/chat';
+import { env } from '@/shared/config/env';
+import type { Network } from '@/lib/database.types';
 
 // Sort options
 type SortOption = 'volume' | 'newest' | 'ending' | 'liquidity';
@@ -69,6 +72,19 @@ export function MarketsPage() {
 
   // Setup focus refetch (triggers refetch when tab becomes visible)
   const { isVisible } = useFocusRefetch(refetch);
+
+  // Get market IDs for moderation lookup
+  const marketIds = useMemo(() => {
+    return data?.markets?.map(m => m.marketId) || [];
+  }, [data?.markets]);
+
+  // Fetch moderation status for all markets
+  const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
+  const { isFieldHidden } = useMarketsModeration({
+    marketIds,
+    contractAddress: env.CONTRACT_ADDRESS,
+    network,
+  });
 
   // Close heat dropdown when clicking outside
   useEffect(() => {
@@ -615,7 +631,12 @@ export function MarketsPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {paginatedMarkets.map((market) => (
-                  <MarketCard key={market.id} market={market} />
+                  <MarketCard 
+                    key={market.id} 
+                    market={market}
+                    isNameHidden={isFieldHidden(market.marketId, 'name')}
+                    isImageHidden={isFieldHidden(market.marketId, 'image')}
+                  />
                 ))}
               </div>
 

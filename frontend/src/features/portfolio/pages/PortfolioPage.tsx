@@ -30,6 +30,9 @@ import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPol
 import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees, useClaimJuryFees } from '@/shared/hooks';
 import { formatEther } from 'viem';
 import { formatBNB } from '@/shared/utils/format';
+import { useMarketsModeration } from '@/features/chat';
+import { env } from '@/shared/config/env';
+import type { Network } from '@/lib/database.types';
 
 
 // Position with full market data
@@ -168,6 +171,31 @@ export function PortfolioPage() {
     variables: { user: address?.toLowerCase() },
     skip: !address,
     notifyOnNetworkStatusChange: false,
+  });
+
+  // Get market IDs for moderation lookup (from both positions and my-markets)
+  const allMarketIds = useMemo(() => {
+    const ids = new Set<string>();
+    // Add market IDs from positions - use marketId if available, otherwise extract from id
+    data?.positions?.forEach(pos => {
+      // Position has market with id (subgraph format: "0x...contractAddress-marketId")
+      // Extract marketId from the composite id or use marketId field
+      const marketIdFromPos = (pos.market as PositionWithMarket['market']).marketId || pos.market.id.split('-').pop();
+      if (marketIdFromPos) ids.add(marketIdFromPos);
+    });
+    // Add market IDs from my-markets
+    myMarketsData?.markets?.forEach(m => {
+      if (m.marketId) ids.add(m.marketId);
+    });
+    return Array.from(ids);
+  }, [data?.positions, myMarketsData?.markets]);
+
+  // Fetch moderation status for all markets in portfolio
+  const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
+  const { isFieldHidden } = useMarketsModeration({
+    marketIds: allMarketIds,
+    contractAddress: env.CONTRACT_ADDRESS,
+    network,
   });
 
   // Calculate trading P/L from sells - ONLY for closed positions (fully exited OR resolved markets)
@@ -923,7 +951,12 @@ export function PortfolioPage() {
                   return (
                     <div key={pos.id} className="flex items-center justify-between p-3 bg-dark-800 border border-dark-600 rounded">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{pos.market.question}</p>
+                        <p className={cn(
+                          "text-sm truncate",
+                          isFieldHidden(marketId, 'name') ? "text-text-muted" : "text-white"
+                        )}>
+                          {isFieldHidden(marketId, 'name') ? '[Content Hidden by Moderator]' : pos.market.question}
+                        </p>
                         <p className="text-xs text-text-muted">
                           Your votes: {formatBNB(userShares)} • Total winning votes: {formatBNB(totalWinningVotes)}
                         </p>
@@ -1413,6 +1446,8 @@ export function PortfolioPage() {
                     position={position} 
                     trades={tradesData?.trades || []}
                     onActionSuccess={handlePositionActionSuccess}
+                    isNameHidden={isFieldHidden(position.market.marketId || '', 'name')}
+                    isImageHidden={isFieldHidden(position.market.marketId || '', 'image')}
                   />
                 ))}
               </div>
@@ -1486,7 +1521,12 @@ export function PortfolioPage() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {myMarkets.slice(0, marketsDisplayCount).map((market) => (
-                      <MyMarketCard key={market.id} market={market} />
+                      <MyMarketCard 
+                        key={market.id} 
+                        market={market}
+                        isNameHidden={isFieldHidden(market.marketId, 'name')}
+                        isImageHidden={isFieldHidden(market.marketId, 'image')}
+                      />
                     ))}
                   </div>
                   
@@ -1721,9 +1761,11 @@ interface MyMarketCardProps {
     yesShares?: string;
     noShares?: string;
   };
+  isNameHidden?: boolean;
+  isImageHidden?: boolean;
 }
 
-function MyMarketCard({ market }: MyMarketCardProps) {
+function MyMarketCard({ market, isNameHidden = false, isImageHidden = false }: MyMarketCardProps) {
   const now = Date.now();
   const expiryMs = Number(market.expiryTimestamp) * 1000;
   const isExpired = now > expiryMs;
@@ -1796,7 +1838,7 @@ function MyMarketCard({ market }: MyMarketCardProps) {
     <Link to={`/market/${market.marketId || market.id}`}>
       <Card variant="hover" className="group h-full flex flex-col overflow-hidden">
         {/* Market Image */}
-        {market.imageUrl && (
+        {market.imageUrl && !isImageHidden && (
           <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
             <img
               src={market.imageUrl}
@@ -1819,6 +1861,23 @@ function MyMarketCard({ market }: MyMarketCardProps) {
             </div>
           </div>
         )}
+
+        {/* Hidden image placeholder */}
+        {market.imageUrl && isImageHidden && (
+          <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600 bg-dark-700 flex items-center justify-center">
+            <span className="text-text-muted text-sm font-mono">IMAGE HIDDEN</span>
+            {/* Heat level badge (top left) */}
+            {market.heatLevel !== undefined && (
+              <div className="absolute top-2 left-2">
+                <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+              </div>
+            )}
+            {/* Status badge overlay (top right) */}
+            <div className="absolute top-2 right-2">
+              <Badge variant={badgeInfo.variant}>{badgeInfo.text}</Badge>
+            </div>
+          </div>
+        )}
         
         {/* Heat level badge (if no image, show above question) */}
         {!market.imageUrl && market.heatLevel !== undefined && (
@@ -1829,8 +1888,11 @@ function MyMarketCard({ market }: MyMarketCardProps) {
         
         <div className="flex-1 flex flex-col">
           {/* Question */}
-          <p className="font-bold text-white line-clamp-2 text-sm min-h-[40px] break-all">
-            {market.question}
+          <p className={cn(
+            "font-bold line-clamp-2 text-sm min-h-[40px] break-all",
+            isNameHidden ? "text-text-muted" : "text-white"
+          )}>
+            {isNameHidden ? '[Content Hidden by Moderator]' : market.question}
           </p>
           
           {/* Status badge (only if no image) */}

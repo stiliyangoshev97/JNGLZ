@@ -67,6 +67,8 @@ interface PositionCardProps {
   position: PositionWithMarket;
   trades?: Trade[]; // All user's trades - we'll filter by market
   onActionSuccess?: () => void; // Callback when claim/refund/finalize succeeds
+  isNameHidden?: boolean;
+  isImageHidden?: boolean;
 }
 
 /**
@@ -154,7 +156,7 @@ function calculateMarketRealizedPnl(
   return { realizedPnlBNB, realizedPnlPercent, hasSells, isFullyExited };
 }
 
-export function PositionCard({ position, trades = [], onActionSuccess }: PositionCardProps) {
+export function PositionCard({ position, trades = [], onActionSuccess, isNameHidden = false, isImageHidden = false }: PositionCardProps) {
   const { address } = useAccount();
   const market = position.market;
   
@@ -448,7 +450,7 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
   return (
     <Card variant="hover" className="group h-full flex flex-col overflow-hidden">
       {/* Market Image */}
-      {market.imageUrl && (
+      {market.imageUrl && !isImageHidden && (
         <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600">
           <img
             src={market.imageUrl}
@@ -458,6 +460,19 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent" />
           
+          {/* Heat level badge (top left) */}
+          {market.heatLevel !== undefined && (
+            <div className="absolute top-2 left-2">
+              <HeatLevelBadge heatLevel={market.heatLevel} size="sm" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hidden image placeholder */}
+      {market.imageUrl && isImageHidden && (
+        <div className="relative h-32 -mx-4 -mt-4 mb-4 overflow-hidden border-b border-dark-600 bg-dark-700 flex items-center justify-center">
+          <span className="text-text-muted text-sm font-mono">IMAGE HIDDEN</span>
           {/* Heat level badge (top left) */}
           {market.heatLevel !== undefined && (
             <div className="absolute top-2 left-2">
@@ -481,8 +496,13 @@ export function PositionCard({ position, trades = [], onActionSuccess }: Positio
       >
         <div className="flex items-baseline gap-2">
           <span className="text-cyber font-mono text-xs shrink-0">#{market.marketId || market.id}</span>
-          <h3 className="font-semibold text-white line-clamp-2 break-all group-hover:text-cyber transition-colors leading-tight">
-            {market.question || `Market #${market.id}`}
+          <h3 className={cn(
+            "font-semibold line-clamp-2 break-all transition-colors leading-tight",
+            isNameHidden 
+              ? "text-text-muted" 
+              : "text-white group-hover:text-cyber"
+          )}>
+            {isNameHidden ? '[Content Hidden by Moderator]' : (market.question || `Market #${market.id}`)}
           </h3>
         </div>
       </Link>
