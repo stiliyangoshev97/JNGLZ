@@ -2,6 +2,33 @@
 
 All notable changes to the JNGLZ.FUN Supabase backend will be documented in this file.
 
+## [1.2.0] - 2026-02-02
+
+### Added - Content Moderation Display
+
+#### Frontend Moderation Display
+- **MarketDetailPage**: Moderation now applied to displayed content
+  - Hidden question/name shows `[Content Hidden by Moderator]`
+  - Hidden rules show `[Content Hidden by Moderator]`
+  - Hidden evidence link shows `[Link Hidden by Moderator]`
+  - Hidden image shows placeholder with `[Image Hidden by Moderator]`
+- **MarketsPage**: Market cards now respect moderation
+  - Hidden market names display placeholder text
+  - Hidden images show "IMAGE HIDDEN" placeholder
+  - Batch moderation fetch for efficient API usage
+
+#### New Hooks
+- `useMarketModeration` - Single market moderation status
+- `useMarketsModeration` - Batch moderation for market lists
+
+#### Moderation Flow
+1. Market loads → fetch moderation status from Supabase
+2. If `is_active` moderation exists → check `hidden_fields` array
+3. Apply `[Content Hidden]` replacement for each hidden field
+4. Admin changes moderation → refetch + real-time update
+
+---
+
 ## [1.1.0] - 2026-02-02
 
 ### Added - Admin Moderation UI Support

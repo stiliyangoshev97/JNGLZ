@@ -2,6 +2,44 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.1] - 2026-02-02
+
+### Added - Content Moderation Display
+
+Moderation data from Supabase is now fetched and applied to hide content in the UI.
+
+#### MarketDetailPage
+- Hidden question/name displays `[Content Hidden by Moderator]`
+- Hidden rules display `[Content Hidden by Moderator]`
+- Hidden evidence link displays `[Link Hidden by Moderator]`
+- Hidden image displays placeholder with `[Image Hidden by Moderator]`
+- Question Modal and Rules Modal respect moderation
+- After admin moderation → automatic refetch updates display
+
+#### MarketsPage (Market Grid)
+- Market cards now respect moderation status
+- Hidden names display `[Content Hidden by Moderator]` in grey
+- Hidden images display "IMAGE HIDDEN" placeholder
+- Batch moderation fetch for efficient API calls
+
+#### New Hooks
+- `useMarketModeration` - Fetches moderation for single market (detail page)
+- `useMarketsModeration` - Batch fetches moderation for market list (grid)
+
+#### Files Created
+```
+src/features/chat/hooks/useMarketModeration.ts
+src/features/chat/hooks/useMarketsModeration.ts
+```
+
+#### Files Modified
+- `MarketDetailPage.tsx` - Uses `useMarketModeration`, applies hidden content
+- `MarketsPage.tsx` - Uses `useMarketsModeration`, passes moderation props to cards
+- `MarketCard.tsx` - New props `isNameHidden`, `isImageHidden`
+- `chat/index.ts` - Exports new hooks
+
+---
+
 ## [0.8.0] - 2026-02-02
 
 ### Added - Supabase Integration: Chat & Content Moderation
