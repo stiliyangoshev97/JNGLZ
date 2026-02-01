@@ -22,9 +22,15 @@ Moderation data from Supabase is now fetched and applied to hide content in the 
 - Hidden images display "IMAGE HIDDEN" placeholder
 - Batch moderation fetch for efficient API calls
 
+#### PortfolioPage
+- **MY POSITIONS tab**: Position cards respect moderation
+- **MY MARKETS tab**: Creator market cards respect moderation
+- **Jury Fees banner**: Market names respect moderation
+- Batch moderation fetch for all markets in portfolio
+
 #### New Hooks
 - `useMarketModeration` - Fetches moderation for single market (detail page)
-- `useMarketsModeration` - Batch fetches moderation for market list (grid)
+- `useMarketsModeration` - Batch fetches moderation for market list (grid, portfolio)
 
 #### Files Created
 ```
@@ -35,7 +41,9 @@ src/features/chat/hooks/useMarketsModeration.ts
 #### Files Modified
 - `MarketDetailPage.tsx` - Uses `useMarketModeration`, applies hidden content
 - `MarketsPage.tsx` - Uses `useMarketsModeration`, passes moderation props to cards
+- `PortfolioPage.tsx` - Uses `useMarketsModeration`, passes moderation to PositionCard and MyMarketCard
 - `MarketCard.tsx` - New props `isNameHidden`, `isImageHidden`
+- `PositionCard.tsx` - New props `isNameHidden`, `isImageHidden`
 - `chat/index.ts` - Exports new hooks
 
 ---
