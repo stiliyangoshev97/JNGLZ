@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 31, 2026  
-> **Version:** 0.7.52
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain)
+> **Last Updated:** February 2, 2026  
+> **Version:** 0.8.0
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + **Supabase Chat & Moderation**)
 
 ---
 
@@ -48,11 +48,28 @@ VITE_CHAIN_ID=97
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
 
+# Supabase (Chat & Moderation)
+VITE_SUPABASE_URL=https://rbizamxghqaqskvdjfrg.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+
 # Maintenance Mode (blocks entire site)
 VITE_MAINTENANCE_MODE=false
 VITE_MAINTENANCE_MESSAGE=We're upgrading our systems!
 VITE_MAINTENANCE_END_TIME=January 20, 2026 at 10:00 UTC
 ```
+
+### Supabase (Chat & Moderation)
+| Item | Value |
+|------|-------|
+| Project Name | `jnglz-fun` |
+| Project Ref | `rbizamxghqaqskvdjfrg` |
+| URL | `https://rbizamxghqaqskvdjfrg.supabase.co` |
+| Documentation | See `/supabase/PROJECT_CONTEXT_SUPABASE.md` |
+
+**Edge Functions:**
+- `send-message` - Chat with SIWE auth + rate limiting
+- `delete-message` - Admin message deletion
+- `moderate-market` - Admin content moderation
 
 ---
 
@@ -80,9 +97,10 @@ VITE_MAINTENANCE_END_TIME=January 20, 2026 at 10:00 UTC
 | Smart Polling | ✅ 100% | **Predator v2**: Temperature-based, tab visibility, focus refetch |
 | Optimistic Updates | ✅ 100% | Instant UI with rollback on failure |
 | Pull Pattern | ✅ 100% | Withdraw bonds/creator fees UI |
-| Supabase (Comments) | ⬜ 0% | Future phase |
+| Supabase Chat | ✅ 100% | Real-time chat per market with SIWE auth |
+| Content Moderation | ✅ 100% | Admin hide/unhide market content |
 
-**Overall Progress: ~98% (Comments pending)**
+**Overall Progress: ~100%**
 
 ---
 

@@ -2,6 +2,68 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.0] - 2026-02-02
+
+### Added - Supabase Integration: Chat & Content Moderation
+
+Complete Supabase backend integration for real-time chat and admin content moderation.
+
+#### Real-time Market Chat
+- **CHAT tab** added to MarketDetailPage alongside TRADES, P/L, HOLDERS
+- Real-time message updates via Supabase Realtime subscriptions
+- **SIWE Authentication** - Sign message to verify wallet ownership (24h sessions)
+- **Rate limiting** - 1 message per 60 seconds per wallet
+- **Holder badges** - Shows 🟢 YES or 🔴 NO based on user's dominant position
+- **500 character limit** with live character counter
+
+#### Admin Moderation Features
+- **"⚙️ MODERATE" button** in market header (visible to admin wallets only)
+- **ModerationModal** - Toggle hide/unhide for market content:
+  - Event Name
+  - Resolution Rules  
+  - Evidence Link
+  - Market Image
+- **Delete message button** - Red trash icon on chat messages (admin only)
+- Hidden content shows `[Content Hidden]` text replacement
+
+#### Technical Implementation
+- Supabase client singleton (`/src/lib/supabase.ts`)
+- Database types (`/src/lib/database.types.ts`)
+- SIWE hook (`/src/shared/hooks/useSIWE.ts`)
+- Chat feature module (`/src/features/chat/`)
+- Edge Functions for secure writes (service_role key)
+
+#### Files Created
+```
+src/lib/supabase.ts
+src/lib/database.types.ts
+src/shared/hooks/useSIWE.ts
+src/features/chat/api/chat.api.ts
+src/features/chat/api/moderation.api.ts
+src/features/chat/hooks/useChat.ts
+src/features/chat/components/ChatTab.tsx
+src/features/chat/components/ChatMessage.tsx
+src/features/chat/components/ChatInput.tsx
+src/features/chat/components/ModerationModal.tsx
+src/features/chat/index.ts
+```
+
+#### Files Modified
+- `MarketDetailPage.tsx` - Added CHAT tab, admin check, ModerationModal
+- `package.json` - Added `@supabase/supabase-js`, `date-fns`, `lucide-react`
+- `.env` - Added `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+
+#### Supabase Setup (see `/supabase/README.md`)
+- Project: `jnglz-fun` (rbizamxghqaqskvdjfrg)
+- Edge Functions: `send-message`, `delete-message`, `moderate-market`
+- Database: `chat_messages`, `chat_rate_limits`, `moderated_markets`
+
+### Fixed - Chat Rate Limit UX
+- Removed "Rate limited." prefix text, now shows only "Wait Xs..." in placeholder
+- Fixed rate limit countdown timer not clearing when reaching 0
+
+---
+
 ## [0.7.52] - 2026-01-31
 
 ### Fixed - Portfolio Page Market ID Alignment

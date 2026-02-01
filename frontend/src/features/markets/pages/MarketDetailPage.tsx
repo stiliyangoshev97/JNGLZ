@@ -358,7 +358,7 @@ export function MarketDetailPage() {
                     onClick={() => setShowModerationModal(true)}
                     className="ml-auto px-3 py-1 text-xs font-bold uppercase bg-admin/20 text-admin border border-admin/30 hover:bg-admin/30 transition-colors flex items-center gap-1"
                   >
-                    ⚙️ MODERATE
+                     MODERATE
                   </button>
                 )}
               </div>
