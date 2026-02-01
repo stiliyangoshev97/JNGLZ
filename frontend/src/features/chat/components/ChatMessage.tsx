@@ -15,33 +15,33 @@ export function ChatMessage({ message, isOwnMessage, holderBadge }: ChatMessageP
     <div className={`flex flex-col gap-1 ${isOwnMessage ? 'items-end' : 'items-start'}`}>
       {/* Header: Address + Badge + Time */}
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-jungle-muted font-mono">
+        <span className="text-text-muted font-mono">
           {formatAddress(message.sender_address)}
         </span>
         
         {holderBadge && (
           <span 
-            className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+            className={`px-1.5 py-0.5 text-[10px] font-bold uppercase ${
               holderBadge === 'yes' 
-                ? 'bg-jungle-green/20 text-jungle-green' 
-                : 'bg-jungle-red/20 text-jungle-red'
+                ? 'bg-yes/20 text-yes' 
+                : 'bg-no/20 text-no'
             }`}
           >
             {holderBadge === 'yes' ? '🟢 YES' : '🔴 NO'}
           </span>
         )}
         
-        <span className="text-jungle-muted/60">
+        <span className="text-text-muted/60">
           {timeAgo}
         </span>
       </div>
       
       {/* Message Bubble */}
       <div 
-        className={`max-w-[85%] px-3 py-2 rounded-lg break-words ${
+        className={`max-w-[85%] px-3 py-2 break-words ${
           isOwnMessage 
-            ? 'bg-jungle-primary/20 text-jungle-text' 
-            : 'bg-jungle-card text-jungle-text'
+            ? 'bg-cyber/20 text-white border border-cyber/30' 
+            : 'bg-dark-800 text-text-secondary border border-dark-600'
         }`}
       >
         {message.message}

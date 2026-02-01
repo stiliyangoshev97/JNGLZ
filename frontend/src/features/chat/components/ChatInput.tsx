@@ -53,12 +53,12 @@ export function ChatInput({
   // Not connected state
   if (!isConnected) {
     return (
-      <div className="border-t border-jungle-border p-4">
+      <div className="border-t border-dark-600 p-4">
         <button
           onClick={openConnectModal}
-          className="w-full py-2 px-4 bg-jungle-primary/20 hover:bg-jungle-primary/30 
-                     text-jungle-primary rounded-lg transition-colors flex items-center 
-                     justify-center gap-2"
+          className="w-full py-2 px-4 bg-cyber/20 hover:bg-cyber/30 
+                     text-cyber transition-colors flex items-center 
+                     justify-center gap-2 border border-cyber/30"
         >
           <Lock className="w-4 h-4" />
           Connect wallet to chat
@@ -70,13 +70,14 @@ export function ChatInput({
   // Not authenticated with SIWE
   if (!isAuthenticated) {
     return (
-      <div className="border-t border-jungle-border p-4">
+      <div className="border-t border-dark-600 p-4">
         <button
           onClick={onSignIn}
           disabled={isSigningIn}
-          className="w-full py-2 px-4 bg-jungle-primary/20 hover:bg-jungle-primary/30 
-                     text-jungle-primary rounded-lg transition-colors flex items-center 
-                     justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2 px-4 bg-cyber/20 hover:bg-cyber/30 
+                     text-cyber transition-colors flex items-center 
+                     justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
+                     border border-cyber/30"
         >
           {isSigningIn ? (
             <>
@@ -90,7 +91,7 @@ export function ChatInput({
             </>
           )}
         </button>
-        <p className="text-xs text-jungle-muted text-center mt-2">
+        <p className="text-xs text-text-muted text-center mt-2">
           Sign a message to verify your wallet and enable chat
         </p>
       </div>
@@ -98,7 +99,7 @@ export function ChatInput({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-jungle-border p-4">
+    <form onSubmit={handleSubmit} className="border-t border-dark-600 p-4">
       <div className="flex gap-2">
         <div className="flex-1 relative">
           <input
@@ -109,18 +110,18 @@ export function ChatInput({
             placeholder={rateLimitSeconds ? `Wait ${rateLimitSeconds}s...` : 'Type a message...'}
             disabled={isSending || !!rateLimitSeconds || disabled}
             maxLength={550} // Allow some overage for UX, validation will block
-            className={`w-full px-4 py-2 bg-jungle-dark border rounded-lg 
-                       text-jungle-text placeholder-jungle-muted/50
-                       focus:outline-none focus:ring-2 focus:ring-jungle-primary/50
+            className={`w-full px-4 py-2 bg-dark-900 border 
+                       text-white placeholder-text-muted
+                       focus:outline-none focus:ring-2 focus:ring-cyber/50
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       ${isOverLimit ? 'border-jungle-red' : 'border-jungle-border'}`}
+                       ${isOverLimit ? 'border-no' : 'border-dark-600'}`}
           />
           
           {/* Character count */}
           {message.length > 0 && (
             <span 
               className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs
-                         ${isOverLimit ? 'text-jungle-red' : 'text-jungle-muted'}`}
+                         ${isOverLimit ? 'text-no' : 'text-text-muted'}`}
             >
               {charCount}/500
             </span>
@@ -130,8 +131,8 @@ export function ChatInput({
         <button
           type="submit"
           disabled={!canSend}
-          className="px-4 py-2 bg-jungle-primary hover:bg-jungle-primary/80 
-                     text-jungle-dark font-semibold rounded-lg transition-colors
+          className="px-4 py-2 bg-cyber hover:bg-cyber/80 
+                     text-black font-semibold transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed
                      flex items-center justify-center min-w-[48px]"
         >
@@ -144,7 +145,7 @@ export function ChatInput({
       </div>
       
       {isOverLimit && (
-        <p className="text-xs text-jungle-red mt-1">
+        <p className="text-xs text-no mt-1">
           Message exceeds 500 character limit
         </p>
       )}

@@ -44,6 +44,9 @@ import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
 import type { Trade } from '@/shared/schemas';
+import { ChatTab } from '@/features/chat';
+import { env } from '@/shared/config/env';
+import type { Network } from '@/lib/database.types';
 
 // Position data interface for holders
 interface HolderPosition {
@@ -440,6 +443,7 @@ export function MarketDetailPage() {
                   trades={trades}
                   positions={positions}
                   isMarketResolved={isResolved}
+                  marketId={market.marketId}
                 />
               </div>
             </div>
@@ -509,6 +513,7 @@ export function MarketDetailPage() {
               trades={trades}
               positions={positions}
               isMarketResolved={isResolved}
+              marketId={market.marketId}
             />
           </div>
           
@@ -621,19 +626,44 @@ function MarketInfoCompact({ market, onShowRules }: { market: Market; onShowRule
 }
 
 /**
- * Tabbed interface for Trades, Realized P/L, and Holders
+ * Tabbed interface for Trades, Realized P/L, Holders, and Chat
  * Uses fixed max-height with internal scrolling
  */
 function TradesAndHoldersTabs({ 
   trades, 
   positions,
   isMarketResolved,
+  marketId,
 }: { 
   trades: Trade[]; 
   positions: HolderPosition[];
   isMarketResolved: boolean;
+  marketId: string;
 }) {
-  const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders'>('trades');
+  const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders' | 'chat'>('trades');
+  
+  // Compute network and contract address for chat
+  const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
+  const contractAddress = env.CONTRACT_ADDRESS;
+  
+  // Compute holders map for chat badges (address -> 'yes' | 'no')
+  const holdersMap = useMemo(() => {
+    const map = new Map<string, 'yes' | 'no'>();
+    for (const pos of positions) {
+      const yesShares = BigInt(pos.yesShares || '0');
+      const noShares = BigInt(pos.noShares || '0');
+      // Determine primary position
+      if (yesShares > noShares) {
+        map.set(pos.user.address.toLowerCase(), 'yes');
+      } else if (noShares > yesShares) {
+        map.set(pos.user.address.toLowerCase(), 'no');
+      } else if (yesShares > 0n) {
+        // Equal but non-zero, default to yes
+        map.set(pos.user.address.toLowerCase(), 'yes');
+      }
+    }
+    return map;
+  }, [positions]);
 
   return (
     <>
@@ -672,16 +702,34 @@ function TradesAndHoldersTabs({
         >
           HOLDERS
         </button>
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold uppercase transition-colors",
+            activeTab === 'chat'
+              ? "text-cyber border-b-2 border-cyber bg-cyber/5"
+              : "text-text-secondary hover:text-white"
+          )}
+        >
+          CHAT
+        </button>
       </div>
 
       {/* Tab Content - Fixed max-height with scroll */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className={cn("max-h-[400px] overflow-y-auto", activeTab === 'chat' && "max-h-none overflow-visible")}>
         {activeTab === 'trades' ? (
           <TradeHistory trades={trades} />
         ) : activeTab === 'realized' ? (
           <RealizedPnl trades={trades} positions={positions} isMarketResolved={isMarketResolved} />
-        ) : (
+        ) : activeTab === 'holders' ? (
           <HoldersTable positions={positions} />
+        ) : (
+          <ChatTab
+            marketId={marketId}
+            contractAddress={contractAddress}
+            network={network}
+            holders={holdersMap}
+          />
         )}
       </div>
     </>

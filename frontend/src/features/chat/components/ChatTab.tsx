@@ -40,11 +40,11 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
   if (!isSupabaseConfigured) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <MessageSquare className="w-12 h-12 text-jungle-muted mb-4" />
-        <h3 className="text-lg font-semibold text-jungle-text mb-2">
+        <MessageSquare className="w-12 h-12 text-text-muted mb-4" />
+        <h3 className="text-lg font-semibold text-white mb-2">
           Chat Not Available
         </h3>
-        <p className="text-jungle-muted text-sm">
+        <p className="text-text-muted text-sm">
           Chat feature is not configured for this deployment.
         </p>
       </div>
@@ -52,20 +52,20 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
   }
 
   return (
-    <div className="flex flex-col h-[500px] bg-jungle-dark/50 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-[400px] bg-dark-900 overflow-hidden">
       {/* Messages List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 text-jungle-primary animate-spin" />
+            <Loader2 className="w-8 h-8 text-cyber animate-spin" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageSquare className="w-12 h-12 text-jungle-muted mb-4" />
-            <h3 className="text-lg font-semibold text-jungle-text mb-2">
+            <MessageSquare className="w-12 h-12 text-text-muted mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">
               No messages yet
             </h3>
-            <p className="text-jungle-muted text-sm">
+            <p className="text-text-muted text-sm">
               Be the first to start the conversation!
             </p>
           </div>
@@ -89,9 +89,9 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
       
       {/* Error Banner */}
       {error && (
-        <div className="px-4 py-2 bg-jungle-red/20 border-t border-jungle-red/30 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-jungle-red flex-shrink-0" />
-          <span className="text-sm text-jungle-red">{error}</span>
+        <div className="px-4 py-2 bg-no/20 border-t border-no/30 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-no flex-shrink-0" />
+          <span className="text-sm text-no">{error}</span>
         </div>
       )}
       
