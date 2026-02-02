@@ -8,8 +8,16 @@
  */
 
 import { Link } from 'react-router-dom';
+import { useSEO } from '@/shared/hooks/useSEO';
 
 export function HowToPlayPage() {
+  // SEO: Set page title
+  useSEO({
+    title: 'How to Play',
+    description: 'Learn how to trade on JNGLZ.FUN prediction markets. Understand heat levels, bonding curves, resolution mechanics, and winning strategies.',
+    path: '/how-to-play',
+  });
+
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="max-w-4xl mx-auto px-4">

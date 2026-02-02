@@ -45,6 +45,39 @@
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://jnglz.fun/" />
+    
+    <!-- JSON-LD Structured Data (Base - enhanced dynamically per page) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "JNGLZ.FUN",
+      "alternateName": ["JNGLZ", "Junglz"],
+      "url": "https://jnglz.fun",
+      "description": "Create and trade on prediction markets with BNB. Anyone can launch markets, trade YES/NO shares, and win by being right. No middlemen, no oracles - just Street Consensus.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://jnglz.fun/?search={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "JNGLZ.FUN",
+      "url": "https://jnglz.fun",
+      "logo": "https://jnglz.fun/logo.svg",
+      "description": "Decentralized prediction market launchpad on BNB Chain",
+      "sameAs": [
+        "https://twitter.com/jnglzdotfun"
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

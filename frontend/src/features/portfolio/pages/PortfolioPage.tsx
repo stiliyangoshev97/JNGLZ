@@ -27,6 +27,7 @@ import { cn } from '@/shared/utils/cn';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { Link } from 'react-router-dom';
 import { useSmartPollInterval, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { usePendingWithdrawals, useWithdrawBond, useWithdrawCreatorFees, useClaimJuryFees } from '@/shared/hooks';
 import { formatEther } from 'viem';
 import { formatBNB } from '@/shared/utils/format';
@@ -115,6 +116,14 @@ export function PortfolioPage() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const loadMoreMarketsRef = useRef<HTMLDivElement>(null);
   const heatDropdownRef = useRef<HTMLDivElement>(null);
+
+  // SEO: Set page title
+  useSEO({
+    title: 'Portfolio',
+    description: 'View your prediction market positions, P/L, created markets, and claimable winnings.',
+    path: '/portfolio',
+    noIndex: true, // Portfolio is private, don't index
+  });
 
   // Predator Polling v2: 120s interval, stops when tab is inactive
   // OPTIMIZATION: Only poll the ACTIVE view to reduce queries by 66%

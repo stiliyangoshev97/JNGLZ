@@ -141,6 +141,7 @@ interface RealizedPnlProps {
   trades: Trade[];
   positions?: PositionData[];
   isMarketResolved?: boolean;
+  maxItems?: number;
 }
 
 interface WalletPnl {
@@ -157,7 +158,7 @@ interface WalletPnl {
   hasClaimed: boolean;      // Has user claimed?
 }
 
-export function RealizedPnl({ trades, positions = [], isMarketResolved = false }: RealizedPnlProps) {
+export function RealizedPnl({ trades, positions = [], isMarketResolved = false, maxItems = 20 }: RealizedPnlProps) {
   const walletPnls = useMemo(() => {
     // Build a map of positions by address for resolution P/L
     const positionMap = new Map<string, PositionData>();
@@ -319,8 +320,8 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false }
       const totalA = a.tradingPnlBNB + (a.resolutionPnlBNB ?? 0);
       const totalB = b.tradingPnlBNB + (b.resolutionPnlBNB ?? 0);
       return totalB - totalA;
-    });
-  }, [trades, positions, isMarketResolved]);
+    }).slice(0, maxItems);
+  }, [trades, positions, isMarketResolved, maxItems]);
 
   if (walletPnls.length === 0) {
     return (

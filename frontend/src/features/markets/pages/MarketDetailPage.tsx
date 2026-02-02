@@ -44,6 +44,7 @@ import { formatTimeRemaining, calculateYesPercent, calculateNoPercent } from '@/
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useMarketPollInterval, useTradeRefetch } from '@/shared/hooks/useSmartPolling';
+import { useSEO, getMarketJsonLd } from '@/shared/hooks/useSEO';
 import type { Trade } from '@/shared/schemas';
 import { ChatTab, ModerationModal, useMarketModeration } from '@/features/chat';
 import type { Network } from '@/lib/database.types';
@@ -214,6 +215,26 @@ export function MarketDetailPage() {
 
   // Use either fresh data or last good data (prevents flicker during brief reconnection)
   const displayMarket = data?.market ?? lastGoodMarketRef.current;
+  
+  // SEO: Dynamic meta tags for market sharing (Twitter, Discord, etc.)
+  const seoYesPercent = displayMarket ? calculateYesPercent(displayMarket.yesShares, displayMarket.noShares) : 50;
+  useSEO({
+    title: displayMarket?.question || `Market #${marketId}`,
+    description: displayMarket 
+      ? `${seoYesPercent}% chance YES • Trade on this prediction market on JNGLZ.FUN`
+      : 'View this prediction market on JNGLZ.FUN',
+    path: `/market/${marketId}`,
+    image: displayMarket?.imageUrl ?? undefined,
+    jsonLd: displayMarket ? getMarketJsonLd({
+      id: marketId || '',
+      question: displayMarket.question,
+      imageUrl: displayMarket.imageUrl ?? undefined,
+      createdAt: displayMarket.createdAt,
+      expiryTimestamp: displayMarket.expiryTimestamp,
+      totalVolume: displayMarket.totalVolume,
+      yesPercent: seoYesPercent,
+    }) : undefined,
+  });
   
   // Calculate if we should show reconnecting state
   // Only show after 10 seconds of no data (grace period for transient issues)
@@ -780,7 +801,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          TRADES
+          RECENT TRADES
         </button>
         <button
           onClick={() => setActiveTab('realized')}
@@ -802,7 +823,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          HOLDERS
+          TOP HOLDERS
         </button>
         <button
           onClick={() => setActiveTab('chat')}
@@ -843,7 +864,7 @@ function TradesAndHoldersTabs({
 /**
  * Holders table showing shareholders sorted by total shares
  */
-function HoldersTable({ positions }: { positions: HolderPosition[] }) {
+function HoldersTable({ positions, maxItems = 20 }: { positions: HolderPosition[], maxItems?: number }) {
   // Process and sort holders by total shares
   const sortedHolders = useMemo(() => {
     return positions
@@ -859,8 +880,9 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
         };
       })
       .filter(h => h.totalShares > 0)
-      .sort((a, b) => b.totalShares - a.totalShares);
-  }, [positions]);
+      .sort((a, b) => b.totalShares - a.totalShares)
+      .slice(0, maxItems);
+  }, [positions, maxItems]);
 
   // Get status badge based on shares
   const getStatusBadge = (totalShares: number) => {

@@ -24,7 +24,7 @@ import { env } from './env';
  * - Mainnet (56) for production
  * - Testnet (97) for development
  */
-const chains = env.ENABLE_TESTNET 
+const chains = env.IS_TESTNET 
   ? [bscTestnet, bsc] as const
   : [bsc] as const;
 
@@ -72,5 +72,5 @@ export function isChainSupported(chainId: number | undefined): boolean {
  * Get the default chain based on environment
  */
 export function getDefaultChain() {
-  return env.ENABLE_TESTNET ? bscTestnet : bsc;
+  return env.IS_TESTNET ? bscTestnet : bsc;
 }

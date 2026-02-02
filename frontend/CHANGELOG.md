@@ -2,6 +2,145 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.5] - 2026-02-02
+
+### Added - Network Switch (Single Variable Toggle)
+
+Simplified testnet/mainnet switching to a **single environment variable**.
+
+#### New Environment Variable Structure
+```bash
+# OLD: Multiple variables to change when switching networks
+VITE_ENABLE_TESTNET=true
+VITE_CONTRACT_ADDRESS=0x...
+VITE_SUBGRAPH_URL=https://...
+VITE_CHAIN_ID=97
+
+# NEW: One master toggle, dual config
+VITE_IS_TESTNET=true                    # ← Change ONLY this!
+VITE_TESTNET_CONTRACT_ADDRESS=0x...     # Testnet config
+VITE_TESTNET_SUBGRAPH_URL=https://...
+VITE_MAINNET_CONTRACT_ADDRESS=0x...     # Mainnet config
+VITE_MAINNET_SUBGRAPH_URL=https://...
+```
+
+#### How It Works
+- `VITE_IS_TESTNET=true` → Uses testnet config (BNB Testnet, Chain ID: 97)
+- `VITE_IS_TESTNET=false` → Uses mainnet config (BNB Chain, Chain ID: 56)
+- Chain ID auto-selected based on switch (no manual VITE_CHAIN_ID needed)
+
+#### Files Modified
+```
+.env                        # Restructured with network switch
+.env.example               # Updated template
+src/shared/config/env.ts   # Auto-select based on VITE_IS_TESTNET
+src/shared/config/wagmi.ts # Changed ENABLE_TESTNET → IS_TESTNET
+PROJECT_CONTEXT.md         # Updated documentation
+.github/workflows/ci.yml   # Updated CI environment variables
+```
+
+#### Migration
+If upgrading from v0.8.4, update your `.env`:
+1. Replace `VITE_ENABLE_TESTNET` with `VITE_IS_TESTNET`
+2. Replace `VITE_CONTRACT_ADDRESS` with `VITE_TESTNET_CONTRACT_ADDRESS`
+3. Replace `VITE_SUBGRAPH_URL` with `VITE_TESTNET_SUBGRAPH_URL`
+4. Remove `VITE_CHAIN_ID` (auto-selected now)
+5. Add empty `VITE_MAINNET_*` vars for future mainnet deployment
+
+---
+
+## [0.8.4] - 2026-02-02
+
+### Changed - Consistent Tab Limits for Market Detail Page
+
+Unified all Market Detail tabs to show **20 items** for consistency and performance.
+
+#### Tab Label Updates
+| Tab | Old Label | New Label |
+|-----|-----------|-----------|
+| Trades | TRADES | RECENT TRADES |
+| Holders | HOLDERS | TOP HOLDERS |
+| P/L | P/L | P/L (unchanged) |
+
+#### Item Limits (All 20)
+| Tab | Previous Limit | New Limit |
+|-----|----------------|-----------|
+| RECENT TRADES | 20 | 20 (unchanged) |
+| TOP HOLDERS | 50 | **20** |
+| P/L | unlimited | **20** |
+
+#### Rationale
+- **Consistency**: All data tabs now show the same number of items
+- **Performance**: Reduced rendering for large markets
+- **UX**: "Top 20" is meaningful for leaderboards
+- **Chat**: Kept at 100 messages (different use case - conversation context)
+
+#### Files Modified
+```
+src/features/markets/pages/MarketDetailPage.tsx
+src/features/markets/components/TradeHistory.tsx
+```
+
+---
+
+## [0.8.3] - 2026-02-02
+
+### Added - SEO Optimization for Mainnet Launch
+
+Comprehensive SEO improvements for better discoverability and social sharing.
+
+#### New `useSEO` Hook
+- **React 19 Compatible**: Custom hook since `react-helmet-async` doesn't support React 19
+- **Dynamic Page Titles**: Each route now has unique browser tab title
+- **Open Graph Tags**: Dynamic OG meta for Facebook, Discord, Telegram sharing
+- **Twitter Cards**: Dynamic Twitter meta with `summary_large_image`
+- **Canonical URLs**: Proper canonical link per page
+- **JSON-LD Structured Data**: Schema.org markup for rich snippets
+- **noIndex Support**: Private pages (portfolio) excluded from indexing
+
+#### Page-Level SEO
+| Page | Title | Indexed |
+|------|-------|---------|
+| `/` (Markets) | "Prediction Markets \| JNGLZ.FUN" | ✅ |
+| `/market/:id` | "{Question} \| JNGLZ.FUN" | ✅ |
+| `/portfolio` | "Portfolio \| JNGLZ.FUN" | ❌ (private) |
+| `/create` | "Create Market \| JNGLZ.FUN" | ✅ |
+| `/leaderboard` | "Leaderboard \| JNGLZ.FUN" | ✅ |
+| `/terms` | "Terms of Service \| JNGLZ.FUN" | ✅ |
+| `/privacy` | "Privacy Policy \| JNGLZ.FUN" | ✅ |
+| `/how-to-play` | "How to Play \| JNGLZ.FUN" | ✅ |
+
+#### Dynamic Market Sharing
+- **Title**: Market question as share title
+- **Description**: "{X}% chance YES • Trade on this prediction market"
+- **Image**: Market's custom image (if set)
+- **JSON-LD**: Product schema for each market
+
+#### Base SEO (index.html)
+- Added WebSite JSON-LD schema with SearchAction
+- Added Organization JSON-LD schema with logo and social links
+
+#### Files Created
+```
+src/shared/hooks/useSEO.ts
+```
+
+#### Files Modified
+```
+src/shared/hooks/index.ts (export)
+src/features/markets/pages/MarketsPage.tsx
+src/features/markets/pages/MarketDetailPage.tsx
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/create/pages/CreateMarketPage.tsx
+src/features/leaderboard/pages/LeaderboardPage.tsx
+src/features/legal/pages/TermsPage.tsx
+src/features/legal/pages/PrivacyPage.tsx
+src/features/legal/pages/HowToPlayPage.tsx
+index.html
+```
+
+---
+
 ## [0.8.2] - 2026-02-02
 
 ### Added - Chat Security Enhancements

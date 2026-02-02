@@ -543,7 +543,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {/* Creator Priority Window Message - shown to non-creators during first 10 minutes */}
         {inCreatorPriority && !isCreator && !hasProposal && !isEmptyMarket && !isOneSidedMarket && !isResolved && (
           <div className="p-3 bg-dark-800 border border-cyber/50 text-sm">
-            <p className="text-cyber font-bold mb-2">⏳ CREATOR PRIORITY WINDOW</p>
+            <p className="text-cyber font-bold mb-2">CREATOR PRIORITY WINDOW</p>
             <p className="text-text-secondary text-xs mb-3">
               The market creator has exclusive rights to propose the outcome for the first 10 minutes after expiry.
             </p>
