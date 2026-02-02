@@ -228,7 +228,14 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
     if (action !== 'buy' || !previewBuyData || amountWei === 0n) return null;
     
     const newShares = previewBuyData as bigint;
-    const newPoolBalance = poolBalance + amountWei;
+    
+    // Account for trading fees: 1% platform + 0.5% creator = 1.5% total (150 bps)
+    // The pool only receives the net amount after fees are deducted
+    const TOTAL_FEE_BPS = 150n; // 1.5% = 150 basis points
+    const BPS_DENOMINATOR = 10000n;
+    const feeAmount = (amountWei * TOTAL_FEE_BPS) / BPS_DENOMINATOR;
+    const netAmountToPool = amountWei - feeAmount;
+    const newPoolBalance = poolBalance + netAmountToPool;
     
     if (direction === 'yes') {
       const newTotalYesShares = totalYesShares + newShares;
