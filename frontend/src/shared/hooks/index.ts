@@ -83,3 +83,13 @@ export {
   useSellYesOptimistic,
   useSellNoOptimistic,
 } from './useTradeWithOptimism';
+
+// SEO Hook (dynamic document head management)
+export {
+  useSEO,
+  getOrganizationJsonLd,
+  getMarketJsonLd,
+  getWebsiteJsonLd,
+  SITE_CONFIG,
+  type SEOProps,
+} from './useSEO';

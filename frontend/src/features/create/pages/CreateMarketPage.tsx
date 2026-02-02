@@ -31,6 +31,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import { useSEO } from '@/shared/hooks/useSEO';
 import {
   useCreateMarket,
   useCreateMarketAndBuy,
@@ -97,6 +98,13 @@ export function CreateMarketPage() {
   const { isConnected, address } = useAccount();
   const { canTrade, isWrongNetwork } = useChainValidation();
   const queryClient = useQueryClient();
+  
+  // SEO: Set page title
+  useSEO({
+    title: 'Create Market',
+    description: 'Launch your own prediction market on BNB Chain. Set your question, duration, and heat level - then let the trading begin.',
+    path: '/create',
+  });
   
   // Get user's BNB balance
   const { data: balanceData } = useBalance({

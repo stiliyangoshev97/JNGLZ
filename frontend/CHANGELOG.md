@@ -2,6 +2,64 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.3] - 2026-02-02
+
+### Added - SEO Optimization for Mainnet Launch
+
+Comprehensive SEO improvements for better discoverability and social sharing.
+
+#### New `useSEO` Hook
+- **React 19 Compatible**: Custom hook since `react-helmet-async` doesn't support React 19
+- **Dynamic Page Titles**: Each route now has unique browser tab title
+- **Open Graph Tags**: Dynamic OG meta for Facebook, Discord, Telegram sharing
+- **Twitter Cards**: Dynamic Twitter meta with `summary_large_image`
+- **Canonical URLs**: Proper canonical link per page
+- **JSON-LD Structured Data**: Schema.org markup for rich snippets
+- **noIndex Support**: Private pages (portfolio) excluded from indexing
+
+#### Page-Level SEO
+| Page | Title | Indexed |
+|------|-------|---------|
+| `/` (Markets) | "Prediction Markets \| JNGLZ.FUN" | ✅ |
+| `/market/:id` | "{Question} \| JNGLZ.FUN" | ✅ |
+| `/portfolio` | "Portfolio \| JNGLZ.FUN" | ❌ (private) |
+| `/create` | "Create Market \| JNGLZ.FUN" | ✅ |
+| `/leaderboard` | "Leaderboard \| JNGLZ.FUN" | ✅ |
+| `/terms` | "Terms of Service \| JNGLZ.FUN" | ✅ |
+| `/privacy` | "Privacy Policy \| JNGLZ.FUN" | ✅ |
+| `/how-to-play` | "How to Play \| JNGLZ.FUN" | ✅ |
+
+#### Dynamic Market Sharing
+- **Title**: Market question as share title
+- **Description**: "{X}% chance YES • Trade on this prediction market"
+- **Image**: Market's custom image (if set)
+- **JSON-LD**: Product schema for each market
+
+#### Base SEO (index.html)
+- Added WebSite JSON-LD schema with SearchAction
+- Added Organization JSON-LD schema with logo and social links
+
+#### Files Created
+```
+src/shared/hooks/useSEO.ts
+```
+
+#### Files Modified
+```
+src/shared/hooks/index.ts (export)
+src/features/markets/pages/MarketsPage.tsx
+src/features/markets/pages/MarketDetailPage.tsx
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/create/pages/CreateMarketPage.tsx
+src/features/leaderboard/pages/LeaderboardPage.tsx
+src/features/legal/pages/TermsPage.tsx
+src/features/legal/pages/PrivacyPage.tsx
+src/features/legal/pages/HowToPlayPage.tsx
+index.html
+```
+
+---
+
 ## [0.8.2] - 2026-02-02
 
 ### Added - Chat Security Enhancements

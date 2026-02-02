@@ -10,8 +10,16 @@
 
 import { Link } from 'react-router-dom';
 import { env } from '@/shared/config/env';
+import { useSEO } from '@/shared/hooks/useSEO';
 
 export function TermsPage() {
+  // SEO: Set page title
+  useSEO({
+    title: 'Terms of Service',
+    description: 'Terms of Service for JNGLZ.FUN decentralized prediction market protocol on BNB Chain.',
+    path: '/terms',
+  });
+
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="max-w-3xl mx-auto px-4">

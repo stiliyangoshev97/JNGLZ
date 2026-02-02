@@ -9,8 +9,16 @@
 
 import { Link } from 'react-router-dom';
 import { env } from '@/shared/config/env';
+import { useSEO } from '@/shared/hooks/useSEO';
 
 export function PrivacyPage() {
+  // SEO: Set page title
+  useSEO({
+    title: 'Privacy Policy',
+    description: 'Privacy Policy for JNGLZ.FUN decentralized prediction market protocol. Learn how we handle your data.',
+    path: '/privacy',
+  });
+
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-3xl mx-auto px-4">

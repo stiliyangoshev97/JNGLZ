@@ -19,6 +19,7 @@ import { Card } from '@/shared/components/ui/Card';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import { useFocusRefetch } from '@/shared/hooks/useSmartPolling';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { getBscScanAddressUrl } from '@/shared/config/env';
 
 // Rank badge styling
@@ -57,6 +58,13 @@ function formatPnL(value: string | number): { text: string; isPositive: boolean;
 }
 
 export function LeaderboardPage() {
+  // SEO: Set page title
+  useSEO({
+    title: 'Leaderboard',
+    description: 'Top traders ranked by total P/L on JNGLZ.FUN prediction markets. See who\'s winning the jungle.',
+    path: '/leaderboard',
+  });
+
   // Predator v2: Fetch ONCE on load, no polling (leaderboard doesn't need real-time updates)
   const { data, loading, error, refetch } = useQuery<GetLeaderboardResponse>(GET_LEADERBOARD, {
     variables: { 

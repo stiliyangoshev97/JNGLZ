@@ -27,6 +27,7 @@ import { MarketCardSkeleton } from '@/shared/components/ui/Spinner';
 import { cn } from '@/shared/utils/cn';
 import type { Market } from '@/shared/schemas';
 import { useFocusRefetch, POLL_INTERVALS } from '@/shared/hooks/useSmartPolling';
+import { useSEO, getOrganizationJsonLd, getWebsiteJsonLd } from '@/shared/hooks/useSEO';
 import { HEAT_LEVELS } from '@/shared/utils/heatLevel';
 import { useMarketsModeration } from '@/features/chat';
 import { env } from '@/shared/config/env';
@@ -62,6 +63,17 @@ export function MarketsPage() {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const heatDropdownRef = useRef<HTMLDivElement>(null);
+
+  // SEO: Set page title and structured data
+  useSEO({
+    title: 'Prediction Markets',
+    description: 'Browse and trade on decentralized prediction markets. Create your own markets, trade YES/NO shares, and earn by predicting outcomes correctly.',
+    path: '/',
+    jsonLd: {
+      ...getWebsiteJsonLd(),
+      ...getOrganizationJsonLd(),
+    },
+  });
 
   // Predator v2: Fetch up to 500 markets for accurate counts
   const { data, loading, error, refetch } = useQuery<GetMarketsResponse>(GET_MARKETS, {
