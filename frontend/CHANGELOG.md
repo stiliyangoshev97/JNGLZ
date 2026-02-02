@@ -2,6 +2,39 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.7] - 2026-02-02
+
+### Improved - Portfolio Page UX Enhancements
+
+Multiple improvements to the Portfolio page for better user experience.
+
+#### Jury Fees UI Redesign
+- **Cleaner design**: Removed ugly bordered cards, now matches PENDING WITHDRAWALS style
+- **Simplified layout**: Title/description on left, claim buttons on right
+- **Hover tooltip**: Market name shown on hover over claim button
+- **BNB amount in button**: Shows estimated reward like `CLAIM (0.0062)`
+
+#### Renamed Bond Withdrawals
+- Changed "Bonds/Jury" to **"Proposal/Dispute Rewards"** in PENDING WITHDRAWALS section
+- Reflects that jury fees are now claimed separately per-market
+
+#### P/L Auto-Refresh After Claim
+- Fixed: P/L stats now update automatically after claiming winnings
+- Added `refetchEarnings()` to `handlePositionActionSuccess` callback
+- No more manual page refresh needed to see updated P/L
+
+#### GraphQL Fragment Update
+- Added `proposerBond` and `disputerBond` to `POSITION_FRAGMENT`
+- Enables accurate jury fee estimation in Portfolio page
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+src/shared/api/positions.queries.ts
+```
+
+---
+
 ## [0.8.6] - 2026-02-02
 
 ### Fixed - Tie Scenario UI (Including 0:0 Votes)
