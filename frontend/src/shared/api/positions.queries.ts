@@ -39,8 +39,10 @@ export const POSITION_FRAGMENT = gql`
       createdAt
       proposer
       proposalTimestamp
+      proposerBond
       disputer
       disputeTimestamp
+      disputerBond
       proposerVoteWeight
       disputerVoteWeight
     }

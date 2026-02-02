@@ -57,8 +57,10 @@ interface PositionWithMarket {
     createdAt?: string;
     proposer?: string;
     proposalTimestamp?: string;
+    proposerBond?: string;
     disputer?: string;
     disputeTimestamp?: string;
+    disputerBond?: string;
     heatLevel?: number;
     proposerVoteWeight?: string;
     disputerVoteWeight?: string;
@@ -138,14 +140,6 @@ export function PortfolioPage() {
     notifyOnNetworkStatusChange: false, // Prevent re-renders during poll refetches
   });
 
-  // Callback for PositionCard to trigger refetch after successful actions
-  const handlePositionActionSuccess = useCallback(() => {
-    // Wait for subgraph to index the transaction (3 seconds)
-    setTimeout(() => {
-      refetchPositions();
-    }, 3000);
-  }, [refetchPositions]);
-
   // Fetch markets created by this user
   const { data: myMarketsData, loading: myMarketsLoading } = useQuery<GetMarketsResponse>(GET_MARKETS_BY_CREATOR, {
     variables: { creator: address?.toLowerCase(), first: 50 },
@@ -181,6 +175,15 @@ export function PortfolioPage() {
     skip: !address,
     notifyOnNetworkStatusChange: false,
   });
+
+  // Callback for PositionCard to trigger refetch after successful actions
+  const handlePositionActionSuccess = useCallback(() => {
+    // Wait for subgraph to index the transaction (3 seconds)
+    setTimeout(() => {
+      refetchPositions();
+      refetchEarnings(); // Also refetch earnings to update P/L stats
+    }, 3000);
+  }, [refetchPositions, refetchEarnings]);
 
   // Get market IDs for moderation lookup (from both positions and my-markets)
   const allMarketIds = useMemo(() => {
@@ -892,7 +895,7 @@ export function PortfolioPage() {
                   <p className="text-cyber font-bold">PENDING WITHDRAWALS</p>
                   <p className="text-sm text-text-secondary">
                     {pendingBondsFormatted > 0 && (
-                      <span>Bonds/Jury: {pendingBondsFormatted.toFixed(4)} BNB</span>
+                      <span>Proposal/Dispute Rewards: {pendingBondsFormatted.toFixed(4)} BNB</span>
                     )}
                     {pendingBondsFormatted > 0 && pendingFeesFormatted > 0 && ' • '}
                     {pendingFeesFormatted > 0 && (
@@ -930,59 +933,52 @@ export function PortfolioPage() {
 
       {/* Claimable Jury Fees Banner (v3.7.0) - Per-market jury fee claims */}
       {isConnected && hasClaimableJuryFees && (
-        <section className="bg-yes/5 border-b border-yes/30 py-4">
+        <section className="bg-dark-700/50 border-b border-dark-600 py-4">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
                 <div>
-                  <p className="text-yes font-bold">⚖️ JURY FEES AVAILABLE</p>
+                  <p className="text-yes font-bold">JURY FEES AVAILABLE</p>
                   <p className="text-sm text-text-secondary">
-                    You voted correctly in {claimableJuryFeesPositions.length} disputed market{claimableJuryFeesPositions.length > 1 ? 's' : ''}. Claim your share of the loser's bond!
+                    You voted correctly in {claimableJuryFeesPositions.length} disputed market{claimableJuryFeesPositions.length > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
-              
-              {/* List of claimable jury fees */}
-              <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 {claimableJuryFeesPositions.map((pos) => {
                   const marketId = pos.market.marketId || pos.market.id;
                   const isClaiming = isClaimingJuryFees && claimingMarketId === marketId;
                   
-                  // Estimate jury fee: user's share of 50% of loser's bond
-                  // voterPool = loserBond / 2 (50% goes to voters)
-                  // userShare = voterPool * (userShares / totalWinningVotes)
+                  // Calculate estimated jury fee
                   const userShares = BigInt(pos.yesShares || '0') + BigInt(pos.noShares || '0');
                   const proposerVotes = BigInt(pos.market.proposerVoteWeight || '0');
                   const disputerVotes = BigInt(pos.market.disputerVoteWeight || '0');
                   const proposerWon = pos.market.outcome === pos.market.proposedOutcome;
                   const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
                   
+                  const proposerBond = BigInt(pos.market.proposerBond || '0');
+                  const disputerBond = BigInt(pos.market.disputerBond || '0');
+                  const loserBond = proposerWon ? disputerBond : proposerBond;
+                  const voterPool = loserBond / 2n;
+                  const estimatedJuryFee = totalWinningVotes > 0n 
+                    ? (voterPool * userShares) / totalWinningVotes 
+                    : 0n;
+                  
                   return (
-                    <div key={pos.id} className="flex items-center justify-between p-3 bg-dark-800 border border-dark-600 rounded">
-                      <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "text-sm truncate",
-                          isFieldHidden(marketId, 'name') ? "text-text-muted" : "text-white"
-                        )}>
-                          {isFieldHidden(marketId, 'name') ? '[Content Hidden by Moderator]' : pos.market.question}
-                        </p>
-                        <p className="text-xs text-text-muted">
-                          Your votes: {formatBNB(userShares)} • Total winning votes: {formatBNB(totalWinningVotes)}
-                        </p>
-                      </div>
-                      <Button
-                        variant="yes"
-                        size="sm"
-                        onClick={() => {
-                          setClaimingMarketId(marketId);
-                          claimJuryFees(BigInt(marketId));
-                        }}
-                        disabled={isClaiming}
-                        className="ml-4 whitespace-nowrap"
-                      >
-                        {isClaiming ? 'CLAIMING...' : 'CLAIM JURY FEE'}
-                      </Button>
-                    </div>
+                    <Button
+                      key={pos.id}
+                      variant="yes"
+                      size="sm"
+                      onClick={() => {
+                        setClaimingMarketId(marketId);
+                        claimJuryFees(BigInt(marketId));
+                      }}
+                      disabled={isClaiming}
+                      className="whitespace-nowrap"
+                      title={isFieldHidden(marketId, 'name') ? '[Content Hidden]' : pos.market.question}
+                    >
+                      {isClaiming ? 'CLAIMING...' : `CLAIM (${formatBNB(estimatedJuryFee)})`}
+                    </Button>
                   );
                 })}
               </div>

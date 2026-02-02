@@ -187,10 +187,16 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   );
   
   // Detect tie scenario: disputed, voting ended, equal votes, not resolved
+  // Includes 0:0 case (no one voted) - contract treats this as a tie too
   const proposerVotes = BigInt(market.proposerVoteWeight || '0');
   const disputerVotes = BigInt(market.disputerVoteWeight || '0');
   const isTie = hasDispute && now > votingWindowEnd && !isResolved && 
-    proposerVotes === disputerVotes && (proposerVotes > 0n || disputerVotes > 0n);
+    proposerVotes === disputerVotes;
+  
+  // Detect if market WAS a tie (for UI messages even after finalize cleared proposer/disputer)
+  // If disputeTimestamp exists but no proposer/disputer, and votes are equal, it was a tie
+  const wasTie = !isResolved && disputeMs > 0 && now > votingWindowEnd && 
+    !hasProposal && !hasDispute && proposerVotes === disputerVotes;
   
   // canFinalize: only if proposed side has shareholders AND not a tie (normal finalization)
   const canFinalize = hasProposal && !isResolved && proposedWinningSideHasShares && !isTie && (
@@ -419,8 +425,10 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
             <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING ENDED IN TIE</p>
             <p className="text-text-secondary text-xs mb-2">
-              The vote ended with equal support for both sides ({formatShares(proposerVotes)} votes each). 
-              When the community can't decide, nobody gets punished.
+              {proposerVotes === 0n && disputerVotes === 0n 
+                ? "No one voted during the dispute window. Without community input, the market cannot be resolved."
+                : `The vote ended with equal support for both sides (${formatShares(proposerVotes)} votes each). When the community can't decide, nobody gets punished.`
+              }
             </p>
             <div className="text-xs space-y-1 mb-2">
               <p className="text-yes">✓ Proposer bond returned (no penalty)</p>
@@ -933,12 +941,14 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {canEmergencyRefund && (
           <div className="space-y-3 border-t border-dark-600 pt-4">
             {/* Explain why refund is available */}
-            {isTie ? (
+            {(isTie || wasTie) ? (
               <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
                 <p className="text-yellow-500 font-bold mb-2">VOTING TIED - REFUND AVAILABLE</p>
                 <p className="text-text-secondary text-xs">
-                  The vote ended in an exact 50/50 tie. Since the community couldn't reach consensus, 
-                  all traders can claim a proportional refund based on their total shares.
+                  {proposerVotes === 0n && disputerVotes === 0n 
+                    ? "No one voted during the dispute window. Since the community didn't participate, all traders can claim a proportional refund."
+                    : "The vote ended in an exact 50/50 tie. Since the community couldn't reach consensus, all traders can claim a proportional refund based on their total shares."
+                  }
                 </p>
               </div>
             ) : resolutionMayHaveFailed ? (
