@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** February 2, 2026  
-> **Version:** 0.8.4
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + Supabase Chat & Moderation + SEO Optimization + **Consistent Tab Limits**)
+> **Version:** 0.8.5
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + Supabase Chat & Moderation + SEO Optimization + Consistent Tab Limits + **Network Switch**)
 
 ---
 
@@ -248,12 +248,18 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id
 # The Graph (jnglz-testnet-fresh v3.0.0)
 VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
 
-# Contract (v3.1.0)
-VITE_CONTRACT_ADDRESS=0x4C1508BA973856125a4F42c343560DB918c9EB2b
+# Network Switch (ONE variable to switch networks!)
+# true = BNB Testnet (Chain ID: 97)
+# false = BNB Mainnet (Chain ID: 56)
+VITE_IS_TESTNET=true
 
-# Chain (97 = testnet, 56 = mainnet)
-VITE_CHAIN_ID=97
-VITE_ENABLE_TESTNET=true
+# Testnet Config
+VITE_TESTNET_CONTRACT_ADDRESS=0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+VITE_TESTNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/...
+
+# Mainnet Config (fill when deploying to mainnet)
+VITE_MAINNET_CONTRACT_ADDRESS=
+VITE_MAINNET_SUBGRAPH_URL=
 
 # Admin addresses (comma-separated MultiSig signers)
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,...

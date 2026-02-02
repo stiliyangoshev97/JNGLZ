@@ -2,6 +2,53 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.5] - 2026-02-02
+
+### Added - Network Switch (Single Variable Toggle)
+
+Simplified testnet/mainnet switching to a **single environment variable**.
+
+#### New Environment Variable Structure
+```bash
+# OLD: Multiple variables to change when switching networks
+VITE_ENABLE_TESTNET=true
+VITE_CONTRACT_ADDRESS=0x...
+VITE_SUBGRAPH_URL=https://...
+VITE_CHAIN_ID=97
+
+# NEW: One master toggle, dual config
+VITE_IS_TESTNET=true                    # ← Change ONLY this!
+VITE_TESTNET_CONTRACT_ADDRESS=0x...     # Testnet config
+VITE_TESTNET_SUBGRAPH_URL=https://...
+VITE_MAINNET_CONTRACT_ADDRESS=0x...     # Mainnet config
+VITE_MAINNET_SUBGRAPH_URL=https://...
+```
+
+#### How It Works
+- `VITE_IS_TESTNET=true` → Uses testnet config (BNB Testnet, Chain ID: 97)
+- `VITE_IS_TESTNET=false` → Uses mainnet config (BNB Chain, Chain ID: 56)
+- Chain ID auto-selected based on switch (no manual VITE_CHAIN_ID needed)
+
+#### Files Modified
+```
+.env                        # Restructured with network switch
+.env.example               # Updated template
+src/shared/config/env.ts   # Auto-select based on VITE_IS_TESTNET
+src/shared/config/wagmi.ts # Changed ENABLE_TESTNET → IS_TESTNET
+PROJECT_CONTEXT.md         # Updated documentation
+.github/workflows/ci.yml   # Updated CI environment variables
+```
+
+#### Migration
+If upgrading from v0.8.4, update your `.env`:
+1. Replace `VITE_ENABLE_TESTNET` with `VITE_IS_TESTNET`
+2. Replace `VITE_CONTRACT_ADDRESS` with `VITE_TESTNET_CONTRACT_ADDRESS`
+3. Replace `VITE_SUBGRAPH_URL` with `VITE_TESTNET_SUBGRAPH_URL`
+4. Remove `VITE_CHAIN_ID` (auto-selected now)
+5. Add empty `VITE_MAINNET_*` vars for future mainnet deployment
+
+---
+
 ## [0.8.4] - 2026-02-02
 
 ### Changed - Consistent Tab Limits for Market Detail Page

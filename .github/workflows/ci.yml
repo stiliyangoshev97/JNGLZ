@@ -52,10 +52,11 @@ jobs:
         run: npm run build
         env:
           VITE_WALLETCONNECT_PROJECT_ID: "test-project-id"
-          VITE_CHAIN_ID: "97"
-          VITE_ENABLE_TESTNET: "true"
-          VITE_CONTRACT_ADDRESS: "0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30"
-          VITE_SUBGRAPH_URL: "https://gateway.thegraph.com/api/subgraphs/id/test"
+          VITE_IS_TESTNET: "true"
+          VITE_TESTNET_CONTRACT_ADDRESS: "0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30"
+          VITE_TESTNET_SUBGRAPH_URL: "https://gateway.thegraph.com/api/subgraphs/id/test"
+          VITE_MAINNET_CONTRACT_ADDRESS: ""
+          VITE_MAINNET_SUBGRAPH_URL: ""
           VITE_GRAPH_API_KEY: "test-api-key"
 
   # ============================================================================

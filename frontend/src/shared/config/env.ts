@@ -6,20 +6,11 @@
  *
  * @module shared/config/env
  *
- * VITE ENVIRONMENT VARIABLES:
- * All custom env vars must be prefixed with VITE_ to be exposed to the client.
- *
- * REQUIRED VARIABLES:
- * - VITE_WALLETCONNECT_PROJECT_ID - WalletConnect Cloud project ID
- *
- * OPTIONAL VARIABLES:
- * - VITE_SUBGRAPH_URL      - The Graph endpoint
- * - VITE_CHAIN_ID          - Default chain ID (97 for testnet, 56 for mainnet)
- * - VITE_CONTRACT_ADDRESS  - PredictionMarket contract address
+ * NETWORK SWITCH:
+ * - VITE_IS_TESTNET=true  → Uses testnet config (BNB Testnet, Chain ID: 97)
+ * - VITE_IS_TESTNET=false → Uses mainnet config (BNB Chain, Chain ID: 56)
  * 
- * NETWORK TOGGLE:
- * - VITE_ENABLE_TESTNET=true  → Shows testnet (BNB Testnet, Chain ID: 97)
- * - VITE_ENABLE_TESTNET=false → Shows mainnet only (BNB Chain, Chain ID: 56)
+ * Just change ONE variable to switch networks!
  * 
  * MAINTENANCE MODE:
  * - VITE_MAINTENANCE_MODE=true     → Blocks entire site with maintenance page
@@ -27,32 +18,37 @@
  * - VITE_MAINTENANCE_END_TIME      → Expected end time (e.g., "January 20, 2026 at 10:00 UTC")
  */
 
+// Master network switch
+const isTestnet = import.meta.env.VITE_IS_TESTNET === 'true';
+
 export const env = {
-  // Web3
-  WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
-  CHAIN_ID: Number(import.meta.env.VITE_CHAIN_ID) || 97,
+  // Network Switch
+  IS_TESTNET: isTestnet,
+  CHAIN_ID: isTestnet ? 97 : 56,
   
-  // Contract
-  CONTRACT_ADDRESS: import.meta.env.VITE_CONTRACT_ADDRESS || '',
+  // Contract Address (auto-selected based on network)
+  CONTRACT_ADDRESS: isTestnet 
+    ? import.meta.env.VITE_TESTNET_CONTRACT_ADDRESS || ''
+    : import.meta.env.VITE_MAINNET_CONTRACT_ADDRESS || '',
   
-  // The Graph
-  SUBGRAPH_URL: import.meta.env.VITE_SUBGRAPH_URL || '',
+  // Subgraph URL (auto-selected based on network)
+  SUBGRAPH_URL: isTestnet 
+    ? import.meta.env.VITE_TESTNET_SUBGRAPH_URL || ''
+    : import.meta.env.VITE_MAINNET_SUBGRAPH_URL || '',
+  
+  // The Graph API Key (shared)
   GRAPH_API_KEY: import.meta.env.VITE_GRAPH_API_KEY || '',
   
-  // Network Toggle (YES = testnet visible, NO = mainnet only)
-  // Set VITE_ENABLE_TESTNET=true for testnet, false for mainnet
-  ENABLE_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true',
+  // Web3 (shared)
+  WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
   
-  // Derived: Is this a testnet environment?
-  IS_TESTNET: import.meta.env.VITE_ENABLE_TESTNET === 'true',
-  
-  // Admin wallets (MultiSig signers)
+  // Admin wallets (MultiSig signers - shared)
   ADMIN_ADDRESSES: (import.meta.env.VITE_ADMIN_ADDRESSES || '')
     .split(',')
     .map((addr: string) => addr.trim().toLowerCase())
     .filter((addr: string) => addr.length > 0),
   
-  // Social Links
+  // Social Links (shared)
   X_URL: import.meta.env.VITE_X_URL || 'https://x.com/jnglzdotfun',
   TELEGRAM_URL: import.meta.env.VITE_TELEGRAM_URL || 'https://t.me/jnglzdotfun',
   

@@ -11,6 +11,8 @@ Please read these files to understand the project:
 7. /frontend/CHANGELOG.md - Frontend changes
 8. /PROJECT_CONTEXT_SUBGRAPH.md - Subgraph setup
 9. /subgraph/CHANGELOG.md - Subgraph changes
+10. /frontend/supabase/PROJECT_CONTEXT_SUPABASE.md - Supabase architecture
+11. /frontend/supabase/CHANGELOG.md - Supabase changes
 
 
 
