@@ -32,7 +32,7 @@ export function TermsPage() {
             TERMS OF <span className="text-cyber">SERVICE</span>
           </h1>
           <p className="text-text-muted text-xs md:text-sm mt-2 font-mono">
-            Last Updated: January 14, 2026 (v3.0 - Added UGP/Creator Liability)
+            Last Updated: February 3, 2026 (v3.1 - Fee governance clarification)
           </p>
         </div>
 
@@ -435,7 +435,9 @@ export function TermsPage() {
               </ul>
               <p className="text-xs text-text-muted mt-4">
                 Fees are non-refundable and automatically deducted by the smart contracts. 
-                Fee parameters are immutable and cannot be changed after deployment.
+                Fee parameters are enforced by the smart contracts and can only be adjusted within 
+                hardcoded limits (e.g., platform fee max 5%, creator fee max 2%, resolution fee max 1%) 
+                by the protocol's multisig governance.
               </p>
             </div>
           </section>

@@ -2,6 +2,38 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.9] - 2026-02-03
+
+### Added - Payout Preview Disclaimer for Proposer Reward
+
+Added disclaimer to payout previews explaining potential ±0.5% variance based on resolution outcome.
+
+#### Context
+When a proposer wins (either uncontested or after winning a dispute vote), they receive 0.5% of the pool as a reward. This amount is deducted from the pool before winners claim, meaning actual payouts may be slightly lower than previewed.
+
+#### Change
+Updated both payout preview locations in TradePanel:
+- "Your Position" section (existing holdings)
+- "If wins now" preview (when buying)
+
+Both now show: `"Returns change as others trade. May vary ±0.5% based on resolution."`
+
+#### Why ±0.5%?
+- If proposer wins: actual payout is ~0.5% less than shown
+- If disputer wins: actual payout matches preview exactly
+- Since we can't predict dispute outcomes, we show the variance as ±0.5%
+
+#### Files Modified
+```
+src/features/markets/components/TradePanel.tsx
+src/features/legal/pages/HowToPlayPage.tsx
+```
+
+#### Documentation Update
+Added "PAYOUT VARIANCE NOTE" box in the How to Play page, explaining that actual payouts may vary ±0.5% due to proposer rewards.
+
+---
+
 ## [0.8.8] - 2026-02-02
 
 ### Fixed - Buy Preview Payout Now Accounts for Trading Fees

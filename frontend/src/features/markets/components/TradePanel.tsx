@@ -429,7 +429,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
             {/* Returns change note */}
             {(existingPositionPayout.yesPayout > 0n || existingPositionPayout.noPayout > 0n) && (
               <p className="text-text-muted text-xs italic">
-                Returns change as others trade
+                Returns change as others trade. May vary ±0.5% based on resolution.
               </p>
             )}
           </div>
@@ -572,7 +572,7 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
                   </span>
                 </div>
                 <p className="text-text-muted text-xs italic mt-1">
-                  Returns change as others trade
+                  Returns change as others trade. May vary ±0.5% based on resolution.
                 </p>
               </div>
             )}
