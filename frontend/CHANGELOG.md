@@ -15,19 +15,19 @@ When calculating the estimated payout, the code added the full BNB amount to the
 const newPoolBalance = poolBalance + amountWei;
 ```
 
-But the pool only receives the **net** amount after the 1% trading fee (0.5% platform + 0.5% creator) is deducted.
+But the pool only receives the **net** amount after the 1.5% trading fee (1% platform + 0.5% creator) is deducted.
 
 #### Fix
 ```typescript
-// NEW - deduct 1% fee before adding to pool
-const TOTAL_FEE_BPS = 100n; // 1% = 100 basis points
+// NEW - deduct 1.5% fee before adding to pool
+const TOTAL_FEE_BPS = 150n; // 1.5% = 150 basis points
 const feeAmount = (amountWei * TOTAL_FEE_BPS) / BPS_DENOMINATOR;
 const netAmountToPool = amountWei - feeAmount;
 const newPoolBalance = poolBalance + netAmountToPool;
 ```
 
 #### Impact
-- Payout estimates are now ~1% more accurate
+- Payout estimates are now ~1.5% more accurate
 - Prevents users from seeing slightly inflated expected returns
 - Matches how the contract actually calculates pool contributions
 

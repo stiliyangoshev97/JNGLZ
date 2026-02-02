@@ -229,9 +229,9 @@ export function TradePanel({ market, yesPercent, noPercent, isActive, onTradeSuc
     
     const newShares = previewBuyData as bigint;
     
-    // Account for trading fees: 0.5% platform + 0.5% creator = 1% total (100 bps)
+    // Account for trading fees: 1% platform + 0.5% creator = 1.5% total (150 bps)
     // The pool only receives the net amount after fees are deducted
-    const TOTAL_FEE_BPS = 100n; // 1% = 100 basis points
+    const TOTAL_FEE_BPS = 150n; // 1.5% = 150 basis points
     const BPS_DENOMINATOR = 10000n;
     const feeAmount = (amountWei * TOTAL_FEE_BPS) / BPS_DENOMINATOR;
     const netAmountToPool = amountWei - feeAmount;
