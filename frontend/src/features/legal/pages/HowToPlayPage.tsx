@@ -1480,6 +1480,15 @@ export function HowToPlayPage() {
                   </p>
                 </div>
 
+                <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 text-sm">
+                  <p className="text-yellow-500 font-bold mb-1">PAYOUT VARIANCE NOTE</p>
+                  <p className="text-text-secondary">
+                    Actual payouts may vary by <span className="text-white">±0.5%</span> from previewed amounts. 
+                    When a proposer wins (no dispute, or wins the vote), they receive 0.5% of the pool as a reward, 
+                    which is deducted before winners claim. If a disputer wins, no proposer reward is deducted.
+                  </p>
+                </div>
+
                 <div className="bg-dark-900/50 p-4 border border-dark-600">
                   <p className="text-white font-bold mb-2">Example:</p>
                   <div className="text-text-secondary space-y-2">
