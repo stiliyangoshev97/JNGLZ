@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
-import { Trash2, Loader2 } from 'lucide-react'
+import { Trash2, Loader2, Crown } from 'lucide-react'
 import type { ChatMessage as ChatMessageType } from '@/lib/database.types'
 import { formatAddress } from '@/shared/utils/format'
 
@@ -7,6 +7,7 @@ interface ChatMessageProps {
   message: ChatMessageType
   isOwnMessage: boolean
   holderBadge?: 'yes' | 'no' | null
+  isCreator?: boolean
   isAdmin?: boolean
   onDelete?: () => Promise<boolean>
   isDeleting?: boolean
@@ -16,6 +17,7 @@ export function ChatMessage({
   message, 
   isOwnMessage, 
   holderBadge,
+  isCreator,
   isAdmin,
   onDelete,
   isDeleting,
@@ -30,6 +32,15 @@ export function ChatMessage({
           {formatAddress(message.sender_address)}
         </span>
         
+        {/* Creator badge - takes priority */}
+        {isCreator && (
+          <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+            <Crown className="w-3 h-3" />
+            CREATOR
+          </span>
+        )}
+        
+        {/* Holder badge - show even for creator if they have a position */}
         {holderBadge && (
           <span 
             className={`px-1.5 py-0.5 text-[10px] font-bold uppercase ${

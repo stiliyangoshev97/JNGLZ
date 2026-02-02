@@ -73,6 +73,7 @@ ADMIN_ADDRESSES=0x4Cca77...,0xC119B9...,0x6499fe...
 |--------|------|-------------|
 | wallet_address | text | Primary key |
 | last_message_at | timestamp | Last message timestamp |
+| last_message_content | text | Last message content (for spam detection) |
 
 #### `moderated_markets`
 | Column | Type | Description |

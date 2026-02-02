@@ -2,6 +2,47 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.2] - 2026-02-02
+
+### Added - Chat Security Enhancements
+
+Comprehensive security improvements for the chat system to prevent abuse.
+
+#### Holder-Only Chat
+- **Position Verification**: Only users with ≥0.001 shares can post messages
+- **Creator Privilege**: Market creators can always chat in their own markets
+- **Non-holder UX**: Shows "Holders Only - Buy YES or NO shares to join the conversation"
+- **Verification via Subgraph**: Server-side position check against on-chain data
+
+#### Message Security (Server-side)
+- **XSS Sanitization**: HTML entity escaping, zero-width char removal
+- **Link Blocking**: Messages with URLs/domains are rejected
+- **Profanity Filter**: Basic blocklist with leet-speak normalization
+- **Spam Detection**: Duplicate/similar consecutive messages rejected
+
+#### New Badges
+- **Creator Badge**: 👑 CREATOR badge (gold) for market creators
+- **Holder Badges**: 🟢 YES / 🔴 NO badges for shareholders (existing)
+
+#### Files Modified
+- `ChatTab.tsx` - Position checking, creator detection, passes userPosition/creatorAddress
+- `ChatInput.tsx` - "Holders Only" state for non-holders
+- `ChatMessage.tsx` - Creator badge display with Crown icon
+- `MarketDetailPage.tsx` - Passes creatorAddress and userPosition to ChatTab
+
+#### Files Created
+- `supabase/functions/_shared/validation.ts` - Sanitization + validation utilities
+- `supabase/migrations/001_add_spam_detection.sql` - Database migration
+
+#### Security Layers (Defense in Depth)
+1. Cloudflare Bot Protection (external)
+2. SIWE Authentication
+3. Holder Verification (economic barrier)
+4. Rate Limiting (1 msg/60s)
+5. Content Filters (links, profanity, spam)
+
+---
+
 ## [0.8.1] - 2026-02-02
 
 ### Added - Content Moderation Display

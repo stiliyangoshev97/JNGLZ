@@ -2,6 +2,41 @@
 
 All notable changes to the JNGLZ.FUN Supabase backend will be documented in this file.
 
+## [1.3.0] - 2026-02-02
+
+### Added - Chat Security Enhancements
+
+#### Server-Side Message Validation
+- **XSS Protection**: HTML entity escaping, zero-width character removal
+- **Link Blocking**: URL/domain detection rejects messages with links
+- **Profanity Filter**: Basic blocklist with leet-speak normalization
+- **Spam Detection**: Rejects duplicate/similar consecutive messages
+
+#### Holder-Only Chat
+- **Position Verification**: Verifies shares via subgraph query
+- **Minimum Shares**: Requires ≥0.001 shares to chat
+- **Creator Privilege**: Market creators can always chat in their markets
+- **Graceful Degradation**: Allows messages if subgraph unavailable
+
+#### New Badges
+- **Creator Badge**: 👑 CREATOR badge for market creators in chat
+- **Holder Badge**: 🟢 YES / 🔴 NO badges for shareholders
+
+#### Database Changes
+- Added `last_message_content` column to `chat_rate_limits` table
+
+#### New Shared Module
+- `_shared/validation.ts` - Message sanitization and validation utilities
+
+### Security Layers (Defense in Depth)
+1. Cloudflare Bot Protection (external)
+2. SIWE Authentication
+3. Holder Verification (economic barrier)
+4. Rate Limiting (1 msg/60s)
+5. Content Filters (links, profanity, spam)
+
+---
+
 ## [1.2.0] - 2026-02-02
 
 ### Added - Content Moderation Display
