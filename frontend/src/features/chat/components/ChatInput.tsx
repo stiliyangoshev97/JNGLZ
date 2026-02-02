@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { useAccount } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { Send, Loader2, Lock } from 'lucide-react'
+import { Send, Loader2, Lock, ShoppingCart } from 'lucide-react'
 
 interface ChatInputProps {
   onSend: (message: string) => Promise<boolean>
@@ -11,6 +11,8 @@ interface ChatInputProps {
   onSignIn: () => Promise<boolean>
   isSigningIn: boolean
   disabled?: boolean
+  /** Whether user can chat (has enough shares or is creator) */
+  canChat?: boolean
 }
 
 export function ChatInput({
@@ -21,6 +23,7 @@ export function ChatInput({
   onSignIn,
   isSigningIn,
   disabled,
+  canChat = true,
 }: ChatInputProps) {
   const { isConnected } = useAccount()
   const { openConnectModal } = useConnectModal()
@@ -30,7 +33,7 @@ export function ChatInput({
   
   const charCount = message.length
   const isOverLimit = charCount > 500
-  const canSend = message.trim().length > 0 && !isOverLimit && !isSending && !rateLimitSeconds && !disabled
+  const canSend = message.trim().length > 0 && !isOverLimit && !isSending && !rateLimitSeconds && !disabled && canChat
   
   // Focus input after sending
   useEffect(() => {
@@ -98,6 +101,23 @@ export function ChatInput({
     )
   }
 
+  // Not a holder - need to buy shares to chat
+  if (!canChat) {
+    return (
+      <div className="border-t border-dark-600 p-4">
+        <div className="w-full py-3 px-4 bg-dark-800 border border-dark-600 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ShoppingCart className="w-4 h-4 text-cyber" />
+            <span className="text-white font-medium">Holders Only</span>
+          </div>
+          <p className="text-xs text-text-muted">
+            Buy YES or NO shares to join the conversation
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="border-t border-dark-600 p-4">
       <div className="flex gap-2">
@@ -143,6 +163,13 @@ export function ChatInput({
           )}
         </button>
       </div>
+      
+      {/* Rate limit message */}
+      {rateLimitSeconds && rateLimitSeconds > 0 && (
+        <p className="text-xs text-yellow-400 mt-2 text-center">
+          ⏳ Rate limited - please wait {rateLimitSeconds}s before sending another message
+        </p>
+      )}
       
       {isOverLimit && (
         <p className="text-xs text-no mt-1">

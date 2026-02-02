@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useAccount } from 'wagmi'
 import { MessageSquare, Loader2, AlertCircle } from 'lucide-react'
 import { useChat } from '../hooks/useChat'
@@ -8,20 +8,66 @@ import type { Network } from '@/lib/database.types'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { env } from '@/shared/config/env'
 
+// Minimum shares required to chat (must match backend)
+const MIN_SHARES_TO_CHAT = 0.001
+
 interface ChatTabProps {
   marketId: string
   contractAddress: string
   network: Network
   /** Map of wallet address -> 'yes' | 'no' for holder badges */
   holders?: Map<string, 'yes' | 'no'>
+  /** Creator address of this market */
+  creatorAddress?: string
+  /** User's position data */
+  userPosition?: {
+    yesShares: string
+    noShares: string
+  }
 }
 
-export function ChatTab({ marketId, contractAddress, network, holders }: ChatTabProps) {
+export function ChatTab({ 
+  marketId, 
+  contractAddress, 
+  network, 
+  holders,
+  creatorAddress,
+  userPosition,
+}: ChatTabProps) {
   const { address } = useAccount()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   // Check if current user is admin
   const isAdmin = address ? env.ADMIN_ADDRESSES.includes(address.toLowerCase()) : false
+  
+  // Check if current user is the market creator
+  const isCreator = useMemo(() => {
+    if (!address || !creatorAddress) return false
+    return address.toLowerCase() === creatorAddress.toLowerCase()
+  }, [address, creatorAddress])
+  
+  // Check if user has enough shares to chat
+  const canChat = useMemo(() => {
+    // Not connected = can't chat
+    if (!address) return false
+    
+    // Creators can always chat in their own market
+    if (isCreator) return true
+    
+    // Check shares
+    if (!userPosition) return false
+    
+    const yesShares = Number(BigInt(userPosition.yesShares || '0')) / 1e18
+    const noShares = Number(BigInt(userPosition.noShares || '0')) / 1e18
+    const totalShares = yesShares + noShares
+    
+    return totalShares >= MIN_SHARES_TO_CHAT
+  }, [address, isCreator, userPosition])
+  
+  // Build holder badge map (keep original types)
+  const holderBadges = useMemo(() => {
+    return holders || new Map<string, 'yes' | 'no'>()
+  }, [holders])
   
   const {
     messages,
@@ -77,20 +123,27 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                message={msg}
-                isOwnMessage={
-                  !!address && 
-                  msg.sender_address.toLowerCase() === address.toLowerCase()
-                }
-                holderBadge={holders?.get(msg.sender_address.toLowerCase()) || null}
-                isAdmin={isAdmin}
-                onDelete={isAdmin ? () => deleteMessage(msg.id) : undefined}
-                isDeleting={isDeleting}
-              />
-            ))}
+            {messages.map((msg) => {
+              const senderAddr = msg.sender_address.toLowerCase()
+              const isMessageFromCreator = creatorAddress?.toLowerCase() === senderAddr
+              const holderBadge = holderBadges.get(senderAddr) || null
+              
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  isOwnMessage={
+                    !!address && 
+                    senderAddr === address.toLowerCase()
+                  }
+                  holderBadge={holderBadge}
+                  isCreator={isMessageFromCreator}
+                  isAdmin={isAdmin}
+                  onDelete={isAdmin ? () => deleteMessage(msg.id) : undefined}
+                  isDeleting={isDeleting}
+                />
+              )
+            })}
             <div ref={messagesEndRef} />
           </>
         )}
@@ -112,6 +165,7 @@ export function ChatTab({ marketId, contractAddress, network, holders }: ChatTab
         isAuthenticated={isAuthenticated}
         onSignIn={signIn}
         isSigningIn={isSigningIn}
+        canChat={canChat}
       />
     </div>
   )

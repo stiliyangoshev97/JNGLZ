@@ -484,6 +484,7 @@ export function MarketDetailPage() {
                   positions={positions}
                   isMarketResolved={isResolved}
                   marketId={market.marketId}
+                  creatorAddress={market.creatorAddress}
                 />
               </div>
             </div>
@@ -554,6 +555,7 @@ export function MarketDetailPage() {
               positions={positions}
               isMarketResolved={isResolved}
               marketId={market.marketId}
+              creatorAddress={market.creatorAddress}
             />
           </div>
           
@@ -720,12 +722,15 @@ function TradesAndHoldersTabs({
   positions,
   isMarketResolved,
   marketId,
+  creatorAddress,
 }: { 
   trades: Trade[]; 
   positions: HolderPosition[];
   isMarketResolved: boolean;
   marketId: string;
+  creatorAddress?: string;
 }) {
+  const { address } = useAccount()
   const [activeTab, setActiveTab] = useState<'trades' | 'realized' | 'holders' | 'chat'>('trades');
   
   // Compute network and contract address for chat
@@ -750,6 +755,17 @@ function TradesAndHoldersTabs({
     }
     return map;
   }, [positions]);
+  
+  // Get current user's position for chat eligibility
+  const userPosition = useMemo(() => {
+    if (!address) return undefined
+    const pos = positions.find(p => p.user.address.toLowerCase() === address.toLowerCase())
+    if (!pos) return undefined
+    return {
+      yesShares: pos.yesShares,
+      noShares: pos.noShares,
+    }
+  }, [positions, address])
 
   return (
     <>
@@ -815,6 +831,8 @@ function TradesAndHoldersTabs({
             contractAddress={contractAddress}
             network={network}
             holders={holdersMap}
+            creatorAddress={creatorAddress}
+            userPosition={userPosition}
           />
         )}
       </div>

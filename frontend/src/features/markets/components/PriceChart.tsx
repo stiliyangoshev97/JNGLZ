@@ -30,6 +30,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GET_MARKET_TRADES } from '@/shared/api';
 import { cn } from '@/shared/utils/cn';
+import { calculateYesPercent as calculateYesPercentBigInt } from '@/shared/utils/format';
 
 // Timeframe options in seconds
 const TIMEFRAMES = {
@@ -191,16 +192,15 @@ export function PriceChart({
   }, [filteredTrades, virtualLiquidity]);
 
   // Calculate current price from props or last chart point
+  // Use BigInt-based calculation for accuracy (matches ChanceDisplay)
   const currentYesPercent = useMemo(() => {
     if (currentYesShares && currentNoShares) {
-      const yes = parseFloat(currentYesShares) / 1e18;
-      const no = parseFloat(currentNoShares) / 1e18;
-      // Use bonding curve formula with virtual liquidity
-      return calculateYesPercent(yes, no, virtualLiquidity);
+      // Use the same BigInt calculation as the rest of the app
+      return calculateYesPercentBigInt(currentYesShares, currentNoShares, propVirtualLiquidity);
     }
     const lastPoint = chartData.points[chartData.points.length - 1];
     return lastPoint?.y || 50;
-  }, [currentYesShares, currentNoShares, chartData.points, virtualLiquidity]);
+  }, [currentYesShares, currentNoShares, chartData.points, propVirtualLiquidity]);
   
   const currentNoPercent = 100 - currentYesPercent;
 
