@@ -2,6 +2,39 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.6] - 2026-02-02
+
+### Fixed - Tie Scenario UI (Including 0:0 Votes)
+
+Fixed tie detection to properly handle the case when **no one votes** during a dispute (0:0).
+
+#### Issue
+The previous tie detection excluded 0:0 votes:
+```typescript
+// OLD - excluded 0:0 case
+const isTie = ... && proposerVotes === disputerVotes && (proposerVotes > 0n || disputerVotes > 0n);
+```
+
+The contract treats 0==0 as a tie, but the frontend didn't show the tie UI for this case.
+
+#### Fix
+```typescript
+// NEW - includes 0:0 case
+const isTie = hasDispute && now > votingWindowEnd && !isResolved && proposerVotes === disputerVotes;
+```
+
+#### Additional Improvements
+- Added `wasTie` detection for UI messages even after finalize clears proposer/disputer
+- Dynamic tie message: "No one voted" vs "50/50 tie" based on vote counts
+- Emergency refund section now properly shows tie explanation after finalization
+
+#### File Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+```
+
+---
+
 ## [0.8.5] - 2026-02-02
 
 ### Added - Network Switch (Single Variable Toggle)
