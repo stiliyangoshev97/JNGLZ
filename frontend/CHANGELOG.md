@@ -2,6 +2,40 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.4] - 2026-02-02
+
+### Changed - Consistent Tab Limits for Market Detail Page
+
+Unified all Market Detail tabs to show **20 items** for consistency and performance.
+
+#### Tab Label Updates
+| Tab | Old Label | New Label |
+|-----|-----------|-----------|
+| Trades | TRADES | RECENT TRADES |
+| Holders | HOLDERS | TOP HOLDERS |
+| P/L | P/L | P/L (unchanged) |
+
+#### Item Limits (All 20)
+| Tab | Previous Limit | New Limit |
+|-----|----------------|-----------|
+| RECENT TRADES | 20 | 20 (unchanged) |
+| TOP HOLDERS | 50 | **20** |
+| P/L | unlimited | **20** |
+
+#### Rationale
+- **Consistency**: All data tabs now show the same number of items
+- **Performance**: Reduced rendering for large markets
+- **UX**: "Top 20" is meaningful for leaderboards
+- **Chat**: Kept at 100 messages (different use case - conversation context)
+
+#### Files Modified
+```
+src/features/markets/pages/MarketDetailPage.tsx
+src/features/markets/components/TradeHistory.tsx
+```
+
+---
+
 ## [0.8.3] - 2026-02-02
 
 ### Added - SEO Optimization for Mainnet Launch

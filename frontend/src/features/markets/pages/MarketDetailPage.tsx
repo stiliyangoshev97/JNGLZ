@@ -801,7 +801,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          TRADES
+          RECENT TRADES
         </button>
         <button
           onClick={() => setActiveTab('realized')}
@@ -823,7 +823,7 @@ function TradesAndHoldersTabs({
               : "text-text-secondary hover:text-white"
           )}
         >
-          HOLDERS
+          TOP HOLDERS
         </button>
         <button
           onClick={() => setActiveTab('chat')}
@@ -864,7 +864,7 @@ function TradesAndHoldersTabs({
 /**
  * Holders table showing shareholders sorted by total shares
  */
-function HoldersTable({ positions }: { positions: HolderPosition[] }) {
+function HoldersTable({ positions, maxItems = 20 }: { positions: HolderPosition[], maxItems?: number }) {
   // Process and sort holders by total shares
   const sortedHolders = useMemo(() => {
     return positions
@@ -880,8 +880,9 @@ function HoldersTable({ positions }: { positions: HolderPosition[] }) {
         };
       })
       .filter(h => h.totalShares > 0)
-      .sort((a, b) => b.totalShares - a.totalShares);
-  }, [positions]);
+      .sort((a, b) => b.totalShares - a.totalShares)
+      .slice(0, maxItems);
+  }, [positions, maxItems]);
 
   // Get status badge based on shares
   const getStatusBadge = (totalShares: number) => {
