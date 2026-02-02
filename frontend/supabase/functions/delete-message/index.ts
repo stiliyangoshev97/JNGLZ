@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { corsHeaders, handleCors } from '../_shared/cors.ts'
+import { getCorsHeaders, handleCors } from '../_shared/cors.ts'
 import { createServiceClient } from '../_shared/supabase.ts'
 import { verifySIWE } from '../_shared/siwe.ts'
 
@@ -14,6 +14,9 @@ serve(async (req) => {
   // Handle CORS preflight
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  
+  // Get dynamic CORS headers for this request
+  const corsHeaders = getCorsHeaders(req)
 
   try {
     const body: DeleteMessageRequest = await req.json()

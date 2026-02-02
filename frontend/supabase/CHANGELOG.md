@@ -2,6 +2,31 @@
 
 All notable changes to the JNGLZ.FUN Supabase backend will be documented in this file.
 
+## [1.4.0] - 2026-02-02
+
+### Changed - CORS Security Hardening
+
+#### Dynamic Origin Validation
+- **Production + Development**: CORS now validates request origin
+- **Allowed Origins**:
+  - `https://jnglz.fun` (production)
+  - `https://www.jnglz.fun` (production)
+  - `http://localhost:*` (any port for development)
+  - `http://127.0.0.1:*` (any port for development)
+- **Blocked Origins**: All other origins are rejected
+
+#### Files Modified
+- `_shared/cors.ts` - New `getCorsHeaders(req)` function
+- `send-message/index.ts` - Uses dynamic CORS
+- `delete-message/index.ts` - Uses dynamic CORS
+- `moderate-market/index.ts` - Uses dynamic CORS
+
+#### Security Impact
+- Prevents unauthorized third-party websites from calling our Edge Functions
+- Still allows local development without configuration changes
+
+---
+
 ## [1.3.0] - 2026-02-02
 
 ### Added - Chat Security Enhancements
