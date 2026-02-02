@@ -2,6 +2,42 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.8] - 2026-02-02
+
+### Fixed - Buy Preview Payout Now Accounts for Trading Fees
+
+The "If YES/NO wins now" payout estimate in TradePanel was overstated because it didn't account for trading fees.
+
+#### Issue
+When calculating the estimated payout, the code added the full BNB amount to the pool:
+```typescript
+// OLD - didn't account for fees
+const newPoolBalance = poolBalance + amountWei;
+```
+
+But the pool only receives the **net** amount after the 1% trading fee (0.5% platform + 0.5% creator) is deducted.
+
+#### Fix
+```typescript
+// NEW - deduct 1% fee before adding to pool
+const TOTAL_FEE_BPS = 100n; // 1% = 100 basis points
+const feeAmount = (amountWei * TOTAL_FEE_BPS) / BPS_DENOMINATOR;
+const netAmountToPool = amountWei - feeAmount;
+const newPoolBalance = poolBalance + netAmountToPool;
+```
+
+#### Impact
+- Payout estimates are now ~1% more accurate
+- Prevents users from seeing slightly inflated expected returns
+- Matches how the contract actually calculates pool contributions
+
+#### File Modified
+```
+src/features/markets/components/TradePanel.tsx
+```
+
+---
+
 ## [0.8.7] - 2026-02-02
 
 ### Improved - Portfolio Page UX Enhancements
