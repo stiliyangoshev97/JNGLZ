@@ -478,7 +478,7 @@ export function HowToPlayPage() {
                 <div className="bg-yellow-500/10 p-4 border border-yellow-500">
                   <p className="text-yellow-500 font-bold mb-2">⚖️ WHAT IF THE VOTE IS A TIE?</p>
                   <p className="text-text-secondary text-sm mb-3">
-                    If the dispute vote ends in an <strong className="text-white">exact 50/50 tie</strong> (equal votes on both sides), 
+                    If the dispute vote ends in an <strong className="text-white">exact tie</strong> (equal votes on both sides, including 0:0 if nobody votes), 
                     the community couldn't reach consensus. In this case:
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm">
@@ -488,7 +488,8 @@ export function HowToPlayPage() {
                   </ul>
                   <p className="text-text-muted text-xs mt-3">
                     When the crowd can't decide, nobody gets punished. All traders can claim emergency refunds 
-                    after the 24-hour window from market expiry passes.
+                    after the 24-hour window from market expiry passes. This includes the rare case where 
+                    nobody votes during the 1-hour voting window (0:0 tie).
                   </p>
                 </div>
 
@@ -1110,9 +1111,9 @@ export function HowToPlayPage() {
                       </p>
                     </li>
                     <li>
-                      <strong className="text-warning">Voting Tie (50/50)</strong>
+                      <strong className="text-warning">Voting Tie (including 0:0)</strong>
                       <p className="ml-6 text-xs text-text-muted mt-1">
-                        Dispute vote ended in exact tie. Both bonds returned, market stays unresolved.
+                        Dispute vote ended in exact tie (equal votes or nobody voted). Both bonds returned, market stays unresolved.
                       </p>
                     </li>
                     <li>
@@ -1282,9 +1283,9 @@ export function HowToPlayPage() {
 
                     {/* Scenario 4: Tie Vote */}
                     <div className="p-3 bg-dark-800 border-l-4 border-warning">
-                      <p className="text-warning font-bold text-xs mb-1">SCENARIO 4: Voting Tie (50/50)</p>
+                      <p className="text-warning font-bold text-xs mb-1">SCENARIO 4: Voting Tie (including 0:0)</p>
                       <p className="text-text-secondary text-xs">
-                        Exact same votes on both sides → <strong className="text-white">Market NOT resolved</strong>
+                        Exact same votes on both sides (or nobody voted) → <strong className="text-white">Market NOT resolved</strong>
                       </p>
                       <ul className="list-disc list-inside text-text-muted text-xs mt-2 space-y-1">
                         <li>Both proposer and disputer get bonds returned</li>
