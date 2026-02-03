@@ -2,6 +2,94 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.16] - 2026-02-04
+
+### Fixed - P/L Discrepancy Between Portfolio and Leaderboard
+
+Fixed Trading P/L calculation in Portfolio page to match the Leaderboard (subgraph) calculation.
+
+#### The Problem
+Portfolio page showed **+0.0232 BNB** while Leaderboard showed **+0.0523 BNB** for the same user.
+
+**Root Cause:** The Portfolio page only counted Trading P/L from *closed positions* (resolved OR fully exited), while the subgraph counts Trading P/L on **every sell immediately** regardless of position state.
+
+#### Example of the Bug
+1. User buys 100 YES shares for 0.05 BNB
+2. User sells 50 YES shares for 0.08 BNB (profit!)
+3. Market still active, user holds 50 YES shares
+
+- **Subgraph (Leaderboard):** +0.055 BNB (counted immediately) ✓
+- **Portfolio (before fix):** +0.00 BNB (market not closed) ✗
+
+#### The Solution
+Updated `tradingPnl` calculation to count P/L from ALL sells immediately, matching the subgraph's approach:
+
+```tsx
+// v0.8.16: Count P/L on every sell (not just closed positions) to match leaderboard
+// Group trades by market to calculate per-market P/L using average cost basis
+const marketData = new Map<string, {...}>();
+
+trades.forEach(trade => {
+  // No longer filter by closed positions - count all trades
+  ...
+});
+```
+
+Now Portfolio and Leaderboard P/L values match.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+```
+
+---
+
+## [0.8.15] - 2026-02-04
+
+### Fixed - Instant Bond/Fee Withdrawal Updates
+
+Fixed slow UI updates after claiming bonds or creator fees in Portfolio page. The "PENDING WITHDRAWALS" banner wasn't disappearing immediately after successful withdrawal.
+
+#### The Problem
+- After clicking "CLAIM BONDS" or "CLAIM FEES", the banner stayed visible
+- Had to wait 1+ seconds for first refetch instead of immediate update
+- Contract reads (which are instant) weren't being triggered right away
+
+#### The Solution
+Added **immediate refetch** when transaction succeeds, plus extended the retry pattern to 8 seconds:
+
+```tsx
+// v0.8.15: Immediate + aggressive refetch pattern
+if (bondWithdrawn || feesWithdrawn) {
+  // Immediate refetch - contract reads are instant after tx confirms
+  refetchPending();
+  refetchEarnings();
+  
+  // Then continue with 1s, 2s, 4s, 8s for subgraph updates
+  const delays = [1000, 2000, 4000, 8000];
+  ...
+}
+```
+
+Now the pending withdrawals banner disappears instantly when the transaction confirms.
+
+### Added - Refund Amount Display in Portfolio
+
+The "CLAIM REFUND" button now shows the estimated refund amount, matching the behavior of the "CLAIM" button.
+
+**Before:** `CLAIM REFUND`
+**After:** `CLAIM REFUND (0.0150)`
+
+The refund amount is calculated as: `userShares * poolBalance / totalSupply` (user's fair share of the pool).
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/portfolio/components/PositionCard.tsx
+```
+
+---
+
 ## [0.8.14] - 2026-02-03
 
 ### Improved - Aggressive Refetch After Transactions

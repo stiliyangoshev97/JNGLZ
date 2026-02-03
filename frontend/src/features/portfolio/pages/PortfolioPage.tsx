@@ -205,79 +205,76 @@ export function PortfolioPage() {
     network,
   });
 
-  // Calculate trading P/L from sells - ONLY for closed positions (fully exited OR resolved markets)
-  // v0.7.12: Only sum P/L when position is closed to avoid misleading unrealized values
+  // Calculate trading P/L from ALL sells - updated v0.8.16 to match subgraph
+  // v0.8.16: Count P/L on every sell (not just closed positions) to match leaderboard
+  // This fixes discrepancy between Portfolio and Leaderboard P/L values
   const tradingPnl = useMemo(() => {
-    if (!tradesData?.trades || !address || !data?.positions) {
+    if (!tradesData?.trades || !address) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
     }
     
-    const positions = data.positions;
     const trades = tradesData.trades;
     const walletAddress = address.toLowerCase();
     
-    // Build a set of market IDs where user has closed positions
-    const closedMarketIds = new Set<string>();
-    positions.forEach((pos) => {
-      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
-      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
-      const isResolved = pos.market.resolved || pos.market.status === 'Resolved';
-      const fullyExited = yesShares === 0 && noShares === 0;
-      
-      if (isResolved || fullyExited) {
-        closedMarketIds.add(pos.market.id.toLowerCase());
-      }
-    });
-    
-    // Calculate trading P/L only for closed markets
-    const closedData = {
-      yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
-      no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
-    };
+    // Group trades by market to calculate per-market P/L using average cost basis
+    const marketData = new Map<string, {
+      yes: { bought: number; sold: number; sharesBought: number; sharesSold: number };
+      no: { bought: number; sold: number; sharesBought: number; sharesSold: number };
+    }>();
     
     trades.forEach(trade => {
       const tradeAddress = trade.traderAddress?.toLowerCase() || '';
-      const tradeMarketId = trade.market?.id?.toLowerCase() || '';
+      if (tradeAddress !== walletAddress) return;
       
-      // Only include trades from closed positions
-      if (tradeAddress !== walletAddress || !closedMarketIds.has(tradeMarketId)) return;
+      const marketId = trade.market?.id?.toLowerCase() || '';
+      if (!marketData.has(marketId)) {
+        marketData.set(marketId, {
+          yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+          no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+        });
+      }
       
+      const data = marketData.get(marketId)!;
       const bnbAmount = parseFloat(trade.bnbAmount || '0');
       const shares = Number(BigInt(trade.shares || '0')) / 1e18;
       const side = trade.isYes ? 'yes' : 'no';
       
       if (trade.isBuy) {
-        closedData[side].bought += bnbAmount;
-        closedData[side].sharesBought += shares;
+        data[side].bought += bnbAmount;
+        data[side].sharesBought += shares;
       } else {
-        closedData[side].sold += bnbAmount;
-        closedData[side].sharesSold += shares;
+        data[side].sold += bnbAmount;
+        data[side].sharesSold += shares;
       }
     });
     
-    const hasYesSells = closedData.yes.sharesSold > 0;
-    const hasNoSells = closedData.no.sharesSold > 0;
-    const hasSells = hasYesSells || hasNoSells;
+    // Calculate total trading P/L across all markets
+    let realizedPnlBNB = 0;
+    let totalCostBasis = 0;
+    let hasSells = false;
+    
+    marketData.forEach(data => {
+      // YES side P/L
+      if (data.yes.sharesSold > 0 && data.yes.sharesBought > 0) {
+        hasSells = true;
+        const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
+        const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
+        realizedPnlBNB += data.yes.sold - costBasisOfSold;
+        totalCostBasis += costBasisOfSold;
+      }
+      
+      // NO side P/L
+      if (data.no.sharesSold > 0 && data.no.sharesBought > 0) {
+        hasSells = true;
+        const avgCostPerShare = data.no.bought / data.no.sharesBought;
+        const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
+        realizedPnlBNB += data.no.sold - costBasisOfSold;
+        totalCostBasis += costBasisOfSold;
+      }
+    });
     
     if (!hasSells) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
-    }
-    
-    let realizedPnlBNB = 0;
-    let totalCostBasis = 0;
-    
-    if (hasYesSells && closedData.yes.sharesBought > 0) {
-      const avgCostPerShare = closedData.yes.bought / closedData.yes.sharesBought;
-      const costBasisOfSold = avgCostPerShare * closedData.yes.sharesSold;
-      realizedPnlBNB += closedData.yes.sold - costBasisOfSold;
-      totalCostBasis += costBasisOfSold;
-    }
-    
-    if (hasNoSells && closedData.no.sharesBought > 0) {
-      const avgCostPerShare = closedData.no.bought / closedData.no.sharesBought;
-      const costBasisOfSold = avgCostPerShare * closedData.no.sharesSold;
-      realizedPnlBNB += closedData.no.sold - costBasisOfSold;
-      totalCostBasis += costBasisOfSold;
     }
     
     const realizedPnlPercent = totalCostBasis > 0 
@@ -285,7 +282,7 @@ export function PortfolioPage() {
       : 0;
     
     return { realizedPnlBNB, realizedPnlPercent, hasSells };
-  }, [tradesData?.trades, address, data?.positions]);
+  }, [tradesData?.trades, address]);
 
   // Calculate Resolution P/L (NET: claims - netCostBasis for resolved positions only)
   // netCostBasis = totalInvested - totalReturned (what's still "at risk" after sells)
@@ -385,17 +382,22 @@ export function PortfolioPage() {
   const juryRefetchRef = useRef<NodeJS.Timeout[]>([]);
 
   // Aggressive refetch after bond/fee withdrawal
+  // v0.8.15: Added immediate refetch + extended delays for faster UI update
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
       // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       
+      // Immediate refetch - contract reads should be instant after tx confirms
+      refetchPending();
+      refetchEarnings();
+      
       // Clear any pending timeouts
       withdrawalRefetchRef.current.forEach(clearTimeout);
       withdrawalRefetchRef.current = [];
       
-      // Aggressive refetch at 1s, 2s, 4s
-      const delays = [1000, 2000, 4000];
+      // Aggressive refetch at 1s, 2s, 4s, 8s (for subgraph earnings update)
+      const delays = [1000, 2000, 4000, 8000];
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           refetchPending();
@@ -418,17 +420,23 @@ export function PortfolioPage() {
   }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
   // Aggressive refetch after jury fees claim
+  // v0.8.15: Added immediate refetch + extended delays
   useEffect(() => {
     if (juryFeesClaimed) {
       // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       
+      // Immediate refetch
+      refetchClaimableJuryFees();
+      refetchEarnings();
+      refetchPositions();
+      
       // Clear any pending timeouts
       juryRefetchRef.current.forEach(clearTimeout);
       juryRefetchRef.current = [];
       
-      // Aggressive refetch at 1s, 2s, 4s
-      const delays = [1000, 2000, 4000];
+      // Aggressive refetch at 1s, 2s, 4s, 8s
+      const delays = [1000, 2000, 4000, 8000];
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           refetchClaimableJuryFees();

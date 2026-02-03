@@ -368,6 +368,15 @@ export function PositionCard({
     return grossPayout - resolutionFee;
   }, [canClaim, canClaimAfterFinalize, market.outcome, position.yesShares, position.noShares, marketYesSupply, marketNoSupply, poolBalance]);
 
+  // Calculate estimated emergency refund amount (v0.8.15)
+  // Emergency refund = user's fair share of pool: userShares * poolBalance / totalSupply
+  const estimatedRefundAmount = useMemo(() => {
+    if (!canEmergencyRefund || marketTotalSupply === 0n) return 0n;
+    const userSharesBigInt = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
+    if (userSharesBigInt === 0n) return 0n;
+    return (userSharesBigInt * poolBalance) / marketTotalSupply;
+  }, [canEmergencyRefund, position.yesShares, position.noShares, poolBalance, marketTotalSupply]);
+
   // Determine market phase for display
   const getMarketPhase = (): { 
     status: string; 
@@ -761,7 +770,7 @@ export function PositionCard({
                   REFUNDING...
                 </span>
               ) : (
-                'CLAIM REFUND'
+                `CLAIM REFUND (${formatBNB(estimatedRefundAmount)})`
               )}
             </Button>
           ) : canClaim || canClaimAfterFinalize ? (
