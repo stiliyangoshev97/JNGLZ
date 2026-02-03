@@ -15,8 +15,8 @@ interface ChatTabProps {
   marketId: string
   contractAddress: string
   network: Network
-  /** Map of wallet address -> 'yes' | 'no' for holder badges */
-  holders?: Map<string, 'yes' | 'no'>
+  /** Map of wallet address -> 'yes' | 'no' | 'both' for holder badges */
+  holders?: Map<string, 'yes' | 'no' | 'both'>
   /** Creator address of this market */
   creatorAddress?: string
   /** User's position data */
@@ -66,7 +66,7 @@ export function ChatTab({
   
   // Build holder badge map (keep original types)
   const holderBadges = useMemo(() => {
-    return holders || new Map<string, 'yes' | 'no'>()
+    return holders || new Map<string, 'yes' | 'no' | 'both'>()
   }, [holders])
   
   const {

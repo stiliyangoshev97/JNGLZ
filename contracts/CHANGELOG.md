@@ -5,6 +5,32 @@ All notable changes to the PredictionMarket smart contracts will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.3] - 2026-02-04 - TieFinalized Event
+
+### Deployed
+- **Network:** BNB Testnet (Chain ID: 97)
+- **Address:** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
+- **Block:** 88286466
+- **BscScan:** https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
+- **Verified:** ✅ Yes
+
+### Added
+- **`TieFinalized` event** - Emitted in `_returnBondsOnTie()` when voting ends in a tie or winning side is empty
+- Enables subgraph to detect when `proposer` and `disputer` are cleared to `address(0)`
+- Fixes UI bug where "FINALIZE TIE" button keeps showing instead of "CLAIM REFUND" after tie finalization
+
+### Changed
+- `_returnBondsOnTie()` function signature now accepts `marketId` parameter for event emission
+- Updated two call sites in `finalizeMarket()` to pass `marketId`
+
+### Technical Details
+The root cause was that `_returnBondsOnTie()` cleared `market.proposer` and `market.disputer` to `address(0)` but emitted no event. The subgraph had no way to detect this state change, causing:
+- Stale `proposer` address in subgraph
+- `emergencyRefundBlockedByProposal` stayed `true` (thought proposal still existed)
+- Users couldn't see "CLAIM REFUND" button after tie finalization
+
+---
+
 ## [3.8.2] - 2026-01-23 - Bug Fixes Deployment
 
 ### Deployed

@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** February 2, 2026  
-> **Version:** 0.8.8
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + Supabase Chat & Moderation + SEO Optimization + Consistent Tab Limits + Network Switch + Tie Scenario UI Fix + Portfolio UX Improvements + **Buy Preview Fee Fix**)
+> **Last Updated:** February 4, 2026  
+> **Version:** 0.8.18
+> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + Supabase Chat & Moderation + SEO Optimization + Consistent Tab Limits + Network Switch + Tie Scenario UI Fix + Portfolio UX Improvements + Buy Preview Fee Fix + **Chat & Holder Badge Fixes**)
 
 ---
 
@@ -26,22 +26,22 @@
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
 |------|-------|
-| PredictionMarket (v3.8.2) | `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30` |
+| PredictionMarket (v3.8.3) | `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf` |
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
-| BscScan | https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30 |
+| BscScan | https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf |
 
 ### Subgraph (The Graph)
 | Item | Value |
 |------|-------|
-| Studio URL (v3.0.0) | `https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0` |
+| Studio URL (v5.2.0) | `https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0` |
 | Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC` |
-| Version | v3.0.0 (jnglz-testnet-fresh - Contract v3.8.2) |
+| Version | v5.2.0 (jnglz-testnet-fresh - Contract v3.8.3) |
 | Rate Limit | Higher limits via Gateway (published) |
 
 ### Environment Variables (.env)
 ```env
-# BNB Testnet (v3.8.2)
-VITE_CONTRACT_ADDRESS=0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+# BNB Testnet (v3.8.3)
+VITE_CONTRACT_ADDRESS=0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
 VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
 VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_CHAIN_ID=97
@@ -254,7 +254,7 @@ VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3D
 VITE_IS_TESTNET=true
 
 # Testnet Config
-VITE_TESTNET_CONTRACT_ADDRESS=0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+VITE_TESTNET_CONTRACT_ADDRESS=0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
 VITE_TESTNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/...
 
 # Mainnet Config (fill when deploying to mainnet)

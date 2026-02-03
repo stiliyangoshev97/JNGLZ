@@ -2,6 +2,50 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.2.0] - 2026-02-04 - TieFinalized Event Handler 🔄
+
+### Problem
+When a disputed market ended in a **tie vote**, the contract's `_returnBondsOnTie()` function:
+1. Returned bonds to proposer and disputer
+2. Cleared `proposer` and `disputer` to `address(0)`
+3. But **emitted no event** for the subgraph to detect
+
+This caused the subgraph to stay stale - still showing the old proposer/disputer addresses, which made the frontend display "FINALIZE" button instead of "CLAIM REFUND" button.
+
+### Solution
+**Contract v3.8.3** added a new `TieFinalized(uint256 indexed marketId)` event that's emitted after bonds are returned and addresses are cleared.
+
+**Subgraph v5.2.0** adds:
+1. `TieFinalized` event to ABI
+2. `handleTieFinalized()` handler that clears `proposer` and `disputer` on the Market entity
+
+### Changes
+
+#### abis/PredictionMarket.json
+- Added `TieFinalized` event declaration
+
+#### subgraph.yaml
+- Already had `TieFinalized` handler entry (lines 83-85)
+
+#### mapping.ts
+- Added import for `TieFinalized` event (already present at line 17)
+- Added `handleTieFinalized()` function that:
+  - Loads Market entity by marketId
+  - Sets `proposer = null` and `disputer = null`
+  - Saves the entity
+
+### Contract Update
+- **Old Contract (v3.8.2):** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **New Contract (v3.8.3):** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
+- Updated `subgraph.yaml` contract address
+
+### Impact
+- ✅ Tie finalization now correctly updates subgraph state
+- ✅ Frontend shows "CLAIM REFUND" button after tie finalization
+- ✅ Market entity accurately reflects on-chain state
+
+---
+
 ## [5.1.0] - 2026-01-26 - Loser Resolution P/L Fix 🎯
 
 ### Problem

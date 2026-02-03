@@ -238,8 +238,9 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   // Can emergency refund: basic conditions + not blocked by active proposal (unless paused)
   const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded && !emergencyRefundBlockedByProposal;
   
-  // Show "waiting for emergency refund" when market stuck but 24h not passed yet
-  const isWaitingForEmergencyRefund = isExpired && !isResolved && now <= emergencyRefundTime && totalShares > 0n && !hasEmergencyRefunded;
+  // v0.8.17: Show emergency refund info to ALL users (market state is relevant info)
+  // The claim button is only shown to participants (totalShares > 0n)
+  const showEmergencyRefundInfo = isExpired && !isResolved && now <= emergencyRefundTime;
   
   // Detect "Resolution Failed" scenario:
   // - Has proposal (or dispute)
@@ -1215,7 +1216,8 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         )}
 
         {/* Resolution Cutoff Period - Less than 2h before emergency refund, only new proposals blocked */}
-        {isInResolutionCutoff && !isOneSidedMarket && totalShares > 0n && !hasEmergencyRefunded && !hasProposal && (
+        {/* v0.8.17: Show to ALL users (not just participants) - market state is relevant info */}
+        {isInResolutionCutoff && !isOneSidedMarket && !hasEmergencyRefunded && !hasProposal && (
           <div className="p-3 bg-dark-800 border border-orange-500/30 text-center">
             <p className="text-orange-400 font-bold text-sm mb-2">PROPOSAL WINDOW CLOSED</p>
             <p className="text-text-secondary text-xs mb-3">
@@ -1225,14 +1227,18 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               <p className="text-text-muted text-xs">Emergency refund unlocks in:</p>
               <p className="text-cyber font-mono text-2xl mt-1">{formatTimeLeft(emergencyRefundTime)}</p>
             </div>
-            <p className="text-text-muted text-xs mt-3">
-              You'll be able to claim a proportional refund based on your {formatShares(totalShares)} shares
-            </p>
+            {/* Only show shares info for participants */}
+            {totalShares > 0n && (
+              <p className="text-text-muted text-xs mt-3">
+                You'll be able to claim a proportional refund based on your {formatShares(totalShares)} shares
+              </p>
+            )}
           </div>
         )}
 
         {/* Waiting for Emergency Refund - Show when resolution is stuck (but NOT in cutoff period which has its own section) */}
-        {isWaitingForEmergencyRefund && !canPropose && !canDispute && !canVote && !canFinalize && !isOneSidedMarket && !isInResolutionCutoff && (resolutionMayHaveFailed || isTie || !hasProposal) && (
+        {/* v0.8.17: Show to ALL users using showEmergencyRefundInfo, shares info only for participants */}
+        {showEmergencyRefundInfo && !canPropose && !canDispute && !canVote && !canFinalize && !isOneSidedMarket && !isInResolutionCutoff && (resolutionMayHaveFailed || isTie || wasTie || !hasProposal) && (
           <div className="p-3 bg-dark-800 border border-cyber/30 text-center">
             {resolutionMayHaveFailed ? (
               <>
@@ -1242,7 +1248,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                   Emergency refund will be available soon.
                 </p>
               </>
-            ) : isTie ? (
+            ) : (isTie || wasTie) ? (
               <>
                 <p className="text-yellow-500 font-bold text-sm mb-2">VOTING TIED</p>
                 <p className="text-text-secondary text-xs mb-3">
@@ -1261,9 +1267,12 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               <p className="text-text-muted text-xs">Emergency refund unlocks in:</p>
               <p className="text-cyber font-mono text-2xl mt-1">{formatTimeLeft(emergencyRefundTime)}</p>
             </div>
-            <p className="text-text-muted text-xs mt-3">
-              You'll be able to claim a proportional refund based on your {formatShares(totalShares)} shares
-            </p>
+            {/* Only show shares info for participants */}
+            {totalShares > 0n && !hasEmergencyRefunded && (
+              <p className="text-text-muted text-xs mt-3">
+                You'll be able to claim a proportional refund based on your {formatShares(totalShares)} shares
+              </p>
+            )}
           </div>
         )}
 

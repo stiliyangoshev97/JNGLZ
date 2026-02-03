@@ -11,7 +11,7 @@ import { env } from './env';
 
 /**
  * PredictionMarket Contract Address
- * v3.8.2 - Bug Fixes Deployment
+ * v3.8.3 - TieFinalized event for subgraph sync
  */
 export const PREDICTION_MARKET_ADDRESS = env.CONTRACT_ADDRESS as `0x${string}`;
 
@@ -348,6 +348,13 @@ export const PREDICTION_MARKET_ABI = [
       { name: 'marketId', type: 'uint256', indexed: true },
       { name: 'proposer', type: 'address', indexed: true },
       { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'TieFinalized',
+    type: 'event',
+    inputs: [
+      { name: 'marketId', type: 'uint256', indexed: true },
     ],
   },
 ] as const;

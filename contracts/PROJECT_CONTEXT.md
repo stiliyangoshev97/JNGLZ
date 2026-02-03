@@ -1,12 +1,12 @@
 # 📋 JNGLZ.FUN - Contracts Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** January 23, 2026  
-> **Status:** ✅ Smart Contracts v3.8.2 DEPLOYED + Security Review Complete
+> **Last Updated:** February 4, 2026  
+> **Status:** ✅ Smart Contracts v3.8.3 DEPLOYED + Security Review Complete
 
 ---
 
-## 🔒 Security Review (January 23, 2026)
+## 🔒 Security Review (February 4, 2026)
 
 **Slither Analysis:** 34 findings | **Tests:** 214 passing | **Critical Issues:** 0
 
@@ -17,7 +17,7 @@
 | `createMarketAndBuy()` | ✅ SECURE | Bug #1 fixed - now charges creator fee |
 | `proposeOutcome()` | ✅ SECURE | One-sided market check, cutoff window |
 | `dispute()` | ✅ SECURE | 30-min window, 2x bond requirement |
-| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check |
+| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check, TieFinalized event |
 | `claim()` | ✅ SECURE | emergencyRefunded flag prevents double-spend |
 | `emergencyRefund()` | ✅ SECURE | Proportional calculation, pool/supply decremented |
 
@@ -25,13 +25,13 @@
 - ✅ Leftover shares after liquidity drain → Emergency refund works proportionally
 - ✅ New buyer after partial seller → Fair distribution (fees go to pool)
 - ✅ One-sided market → Proposals blocked, emergency refund available
-- ✅ Tie vote → Bonds returned, proposer cleared, refund enabled
+- ✅ Tie vote → Bonds returned, proposer cleared, TieFinalized event emitted, refund enabled
 
 ---
 
-## ✅ Resolved Issues (January 23, 2026)
+## ✅ Resolved Issues (February 4, 2026)
 
-> **Branch:** `fix/pool-balance-tracking`  
+> **Branch:** `fix/tie-finalization-event`  
 > **Test File:** `test/AMMBugInvestigation.t.sol` (7 tests document behaviors)
 
 | # | Issue | Location | Severity | Status |
@@ -41,6 +41,7 @@
 | 3 | Partial sell may exhaust pool | Contract (`sellYes`/`sellNo`) | ℹ️ Info | Expected Behavior |
 | 4 | Trade event emits gross for buy, net for sell | Contract (`emit Trade`) | 🟡 Medium | ✅ **FIXED in v3.8.2** |
 | 5 | Subgraph assumes 1.5% fee for all buys | Subgraph (`mapping.ts`) | 🟡 Medium | ✅ **FIXED in v4.0.0** |
+| 6 | No event when tie clears proposer/disputer | Contract (`_returnBondsOnTie`) | 🟡 Medium | ✅ **FIXED in v3.8.3** |
 
 ### ✅ Bug #1 - Missing Creator Fee (FIXED in v3.8.2)
 - `createMarketAndBuy()` now charges 1.5% total (1% platform + 0.5% creator)
@@ -71,14 +72,15 @@ After investigation, the sell formula behavior is **intentional and correct** fo
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v3.8.2** | ✅ **DEPLOYED** | Bug Fixes: Creator Fee in createMarketAndBuy, Trade Event Consistency |
+| **v3.8.3** | ✅ **DEPLOYED** | TieFinalized event for subgraph sync |
+| v3.8.2 | ⚠️ DEPRECATED | Bug Fixes: Creator Fee in createMarketAndBuy, Trade Event Consistency |
 | v3.8.1 | ⚠️ DEPRECATED | Contract Size Optimization - Consolidated Governance Functions |
 | v3.8.0 | ❌ NOT DEPLOYED | Contract exceeded EVM size limit (26,340 > 24,576 bytes) |
 | v3.7.0 | ⚠️ DEPRECATED | Jury Fees Pull Pattern + SweepFunds REMOVED |
 | v3.6.2 | ⚠️ DEPRECATED | One-Sided Market & Emergency Bypass Fixes - **HAS GAS GRIEFING BUG** |
 
-### Current Deployment (v3.8.2)
-- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+### Current Deployment (v3.8.3)
+- **Address:** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
 - **Network:** BNB Testnet (Chain ID: 97)
 - **Block:** 86129412
 - **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`

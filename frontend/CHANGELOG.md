@@ -2,6 +2,77 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.18] - 2026-02-04
+
+### Fixed - Chat & Holder Badge Improvements
+
+#### Chat Fixes
+- **JWT Auth Fix**: Deployed Edge Function with `--no-verify-jwt` to work with new Supabase publishable key format (`sb_publishable_*`). SIWE authentication still provides security.
+- **Profanity Filter Fix**: Removed aggressive substring matching that was blocking innocent words like "message" and "another". Now only matches exact words.
+- **Both Sides Badge**: Users holding both YES and NO shares now see both 🟢 YES and 🔴 NO badges in chat instead of just one.
+
+#### Holders Tab Improvements  
+- **BOTH Label**: When a holder owns shares on both sides, display "BOTH" in purple instead of confusing "Y:2 N:2" format.
+- Consistent with chat badge behavior.
+
+#### Files Modified
+```
+src/features/chat/components/ChatMessage.tsx     # Added 'both' badge support
+src/features/chat/components/ChatTab.tsx         # Updated type to include 'both'
+src/features/markets/pages/MarketDetailPage.tsx  # Updated holdersMap + holders tab display
+supabase/functions/_shared/validation.ts         # Fixed profanity filter
+supabase/functions/send-message/index.ts         # Updated subgraph URL env var names
+```
+
+---
+
+## [0.8.17] - 2026-02-04
+
+### Fixed - Emergency Refund Timer Visible to All Users
+
+Fixed Market Details page to show emergency refund information to ALL users, not just participants.
+
+#### The Problem
+Non-participants viewing an expired market without a proposal saw only "RESOLUTION AWAITING" with no additional context. Participants saw the countdown timer and refund information.
+
+**Before (non-participant):**
+```
+RESOLUTION
+AWAITING
+```
+
+**Before (participant):**
+```
+RESOLUTION
+AWAITING
+PROPOSAL WINDOW CLOSED
+No resolution was proposed in time. Emergency refund will be available soon.
+Emergency refund unlocks in: 26m 27s
+You'll be able to claim a proportional refund based on your 242.07 shares
+```
+
+#### The Solution
+- Show emergency refund timer and status to ALL users (market state is relevant info)
+- Only show "your shares" and claim button to actual participants
+
+**After (non-participant):**
+```
+RESOLUTION
+AWAITING
+PROPOSAL WINDOW CLOSED
+No resolution was proposed in time. Emergency refund will be available soon.
+Emergency refund unlocks in: 26m 27s
+```
+
+**After (participant):** Same as before, includes shares info
+
+#### Files Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+```
+
+---
+
 ## [0.8.16] - 2026-02-04
 
 ### Fixed - P/L Discrepancy Between Portfolio and Leaderboard
