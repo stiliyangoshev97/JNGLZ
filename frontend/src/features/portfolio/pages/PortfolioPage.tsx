@@ -1413,6 +1413,11 @@ export function PortfolioPage() {
                   const juryFeePos = claimableJuryFeesPositions.find(p => p.id === position.id);
                   const isJuryFeePosition = !!juryFeePos;
                   
+                  // v3.7.2 FIX: Only show jury fee button when in 'jury' or 'all' action filter
+                  // This prevents jury fee button from overriding claim button in CLAIM tab
+                  const shouldShowJuryFeeAction = isJuryFeePosition && 
+                    (filterBy !== 'needs-action' || actionFilter === 'jury' || actionFilter === 'all');
+                  
                   // Calculate jury fee amount if applicable
                   let estimatedJuryFee = 0n;
                   if (isJuryFeePosition) {
@@ -1441,11 +1446,12 @@ export function PortfolioPage() {
                       onActionSuccess={handlePositionActionSuccess}
                       isNameHidden={isFieldHidden(marketId, 'name')}
                       isImageHidden={isFieldHidden(marketId, 'image')}
-                      // Jury fee props (v3.7.1)
-                      juryFeeClaimable={isJuryFeePosition}
+                      // Jury fee props (v3.7.1, fixed v3.7.2)
+                      // Only pass juryFeeClaimable when appropriate for the current action filter
+                      juryFeeClaimable={shouldShowJuryFeeAction}
                       estimatedJuryFee={estimatedJuryFee}
                       isClaimingJuryFees={isClaimingJuryFees && claimingMarketId === marketId}
-                      onClaimJuryFees={isJuryFeePosition ? () => {
+                      onClaimJuryFees={shouldShowJuryFeeAction ? () => {
                         setClaimingMarketId(marketId);
                         claimJuryFees(BigInt(marketId));
                       } : undefined}

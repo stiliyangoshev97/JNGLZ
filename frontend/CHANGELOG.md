@@ -2,6 +2,38 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.13] - 2026-02-03
+
+### Fixed - Action Tab Button Filtering for Jury Fees vs Claim Winnings
+
+Fixed a bug where the JURY FEES button would appear instead of the CLAIM WINNINGS button in the Portfolio page's NEEDS ACTIONS section when a user had both pending actions.
+
+#### The Bug
+When a user had both:
+1. Winnings to claim (winning shares)
+2. Jury fees to claim (voted for winning side)
+
+The card would always show the JURY FEE button because it had highest priority in the button chain, regardless of which action tab was selected.
+
+#### The Fix
+- Button priority now respects the active action filter tab
+- When `actionFilter === 'claim'`, the claim winnings button shows (jury fee button hidden)
+- When `actionFilter === 'jury'`, the jury fee button shows
+- When `actionFilter === 'all'` or not in needs-action tab, jury fee button takes priority (original behavior)
+
+```tsx
+// NEW: Only show jury fee action when appropriate for current filter
+const shouldShowJuryFeeAction = isJuryFeePosition && 
+  (filterBy !== 'needs-action' || actionFilter === 'jury' || actionFilter === 'all');
+```
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+```
+
+---
+
 ## [0.8.12] - 2026-02-03
 
 ### Improved - Jury Fees Integrated into Action Tab + Consistent Card Layout
