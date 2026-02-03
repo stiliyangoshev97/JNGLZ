@@ -176,14 +176,8 @@ export function PortfolioPage() {
     notifyOnNetworkStatusChange: false,
   });
 
-  // Callback for PositionCard to trigger refetch after successful actions
-  const handlePositionActionSuccess = useCallback(() => {
-    // Wait for subgraph to index the transaction (3 seconds)
-    setTimeout(() => {
-      refetchPositions();
-      refetchEarnings(); // Also refetch earnings to update P/L stats
-    }, 3000);
-  }, [refetchPositions, refetchEarnings]);
+  // Refs for aggressive refetch timeouts (used in handlePositionActionSuccess)
+  const refetchTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   // Get market IDs for moderation lookup (from both positions and my-markets)
   const allMarketIds = useMemo(() => {
@@ -420,6 +414,32 @@ export function PortfolioPage() {
       return () => clearTimeout(timer);
     }
   }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, queryClient, resetJuryFeesClaim]);
+
+  // Callback for PositionCard to trigger refetch after successful actions
+  // Aggressive refetch pattern: 1s, 2s, 4s, 8s to catch subgraph indexing faster
+  const handlePositionActionSuccess = useCallback(() => {
+    // Clear any pending timeouts
+    refetchTimeoutsRef.current.forEach(clearTimeout);
+    refetchTimeoutsRef.current = [];
+    
+    // Aggressive refetch at 1s, 2s, 4s, 8s
+    const delays = [1000, 2000, 4000, 8000];
+    delays.forEach((delay) => {
+      const timeout = setTimeout(() => {
+        refetchPositions();
+        refetchEarnings();
+        refetchClaimableJuryFees();
+      }, delay);
+      refetchTimeoutsRef.current.push(timeout);
+    });
+  }, [refetchPositions, refetchEarnings, refetchClaimableJuryFees]);
+  
+  // Cleanup refetch timeouts on unmount
+  useEffect(() => {
+    return () => {
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;

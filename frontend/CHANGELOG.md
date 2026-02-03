@@ -2,6 +2,45 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.14] - 2026-02-03
+
+### Improved - Aggressive Refetch After Transactions
+
+Fixed slow UI updates after successful transactions (claim, finalize, propose, dispute, vote, refund). Previously relied on 3-second single refetch which often wasn't enough for subgraph indexing.
+
+#### The Problem
+After successful transactions:
+- UI waited 3 seconds before single refetch
+- Subgraph often hadn't indexed yet
+- Buttons remained visible for 10-60+ seconds
+- Users had to manually refresh the page
+
+#### The Solution
+Implemented exponential backoff refetch pattern: 1s, 2s, 4s, 8s
+
+```tsx
+// Aggressive refetch pattern
+const delays = [1000, 2000, 4000, 8000];
+delays.forEach((delay) => {
+  setTimeout(() => {
+    refetchPosition();
+    onActionSuccess?.();
+  }, delay);
+});
+```
+
+This ensures the UI catches the subgraph update as soon as it's indexed, typically within 1-4 seconds.
+
+#### Files Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+src/features/portfolio/pages/PortfolioPage.tsx
+src/shared/hooks/useSmartPolling.ts (added useAggressiveRefetch hook)
+src/shared/hooks/index.ts (exported new hook)
+```
+
+---
+
 ## [0.8.13] - 2026-02-03
 
 ### Fixed - Action Tab Button Filtering for Jury Fees vs Claim Winnings

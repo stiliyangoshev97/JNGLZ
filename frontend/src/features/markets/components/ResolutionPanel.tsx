@@ -11,7 +11,7 @@
  * @module features/markets/components/ResolutionPanel
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
@@ -108,17 +108,34 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   const { claim, isPending: isClaiming, isConfirming: isConfirmingClaim, isSuccess: claimSuccess } = useClaim();
   const { emergencyRefund, isPending: isRefunding, isConfirming: isConfirmingRefund, isSuccess: refundSuccess } = useEmergencyRefund();
 
-  // Trigger refetch when any action succeeds
+  // Aggressive refetch: refs to store timeouts for cleanup
+  const refetchTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Trigger aggressive refetch when any action succeeds
+  // Pattern: refetch at 1s, 2s, 4s, 8s to catch subgraph indexing
   useEffect(() => {
     if (proposeSuccess || disputeSuccess || voteSuccess || finalizeSuccess || claimSuccess || refundSuccess) {
       // Immediately refetch position from contract (instant update)
       refetchPosition();
-      // Wait for subgraph to index (3 seconds), then refetch market data
-      const timer = setTimeout(() => {
-        onActionSuccess?.();
-      }, 3000);
-      return () => clearTimeout(timer);
+      
+      // Clear any pending timeouts
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+      refetchTimeoutsRef.current = [];
+      
+      // Aggressive refetch pattern: 1s, 2s, 4s, 8s
+      const delays = [1000, 2000, 4000, 8000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchPosition();
+          onActionSuccess?.();
+        }, delay);
+        refetchTimeoutsRef.current.push(timeout);
+      });
     }
+    
+    return () => {
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+    };
   }, [proposeSuccess, disputeSuccess, voteSuccess, finalizeSuccess, claimSuccess, refundSuccess, onActionSuccess, refetchPosition]);
 
   // Calculate timestamps

@@ -64,6 +64,7 @@ export {
   useMarketPollInterval,
   useImmediateRefetch,
   useTradeRefetch,
+  useAggressiveRefetch,
   getMarketTemperature,
   getTemperatureInterval,
   POLL_INTERVALS,
