@@ -2,6 +2,38 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.12] - 2026-02-03
+
+### Improved - Jury Fees Integrated into Action Tab + Consistent Card Layout
+
+Moved jury fee claims from a separate banner to the "ACTION" tab in Portfolio. Also fixed card height inconsistency by ensuring each card has exactly ONE action button.
+
+#### Changes
+- Added `JURY` filter button in Action tab sub-filters (cyan colored)
+- Jury fee positions now appear in the Action tab grid using regular PositionCard
+- **ONE button per card**: Jury fee claim is now part of the main button chain, not an extra button
+- Removed "Est. payout" and "Refund" text below buttons that caused inconsistent card heights
+- Action count now includes jury fees: `ACTION (5)` when you have 3 regular actions + 2 jury fees
+- Removed the old banner that showed multiple claim buttons stacked
+
+#### Button Priority (top to bottom)
+1. CLAIM JURY FEE (cyan, if jury fee claimable) - **highest priority**
+2. ✓ CLAIMED (disabled, if shares already claimed)
+3. CLAIM REFUND (if emergency refund available)
+4. CLAIM (green, if has winning shares)
+5. FINALIZE (yellow, if needs finalization)
+6. VIEW MARKET (default)
+
+> **Note**: Jury fee claim takes priority because a user may have already claimed their winning shares but still have jury fees to claim from voting correctly in a disputed market.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/portfolio/components/PositionCard.tsx
+```
+
+---
+
 ## [0.8.11] - 2026-02-03
 
 ### Fixed - P/L Tab Now Shows Losers After Resolution

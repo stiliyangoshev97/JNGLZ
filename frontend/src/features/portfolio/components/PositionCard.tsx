@@ -69,6 +69,11 @@ interface PositionCardProps {
   onActionSuccess?: () => void; // Callback when claim/refund/finalize succeeds
   isNameHidden?: boolean;
   isImageHidden?: boolean;
+  // v3.7.1: Jury fee claiming support
+  juryFeeClaimable?: boolean;
+  estimatedJuryFee?: bigint;
+  isClaimingJuryFees?: boolean;
+  onClaimJuryFees?: () => void;
 }
 
 /**
@@ -156,7 +161,18 @@ function calculateMarketRealizedPnl(
   return { realizedPnlBNB, realizedPnlPercent, hasSells, isFullyExited };
 }
 
-export function PositionCard({ position, trades = [], onActionSuccess, isNameHidden = false, isImageHidden = false }: PositionCardProps) {
+export function PositionCard({ 
+  position, 
+  trades = [], 
+  onActionSuccess, 
+  isNameHidden = false, 
+  isImageHidden = false,
+  // v3.7.1: Jury fee claiming
+  juryFeeClaimable = false,
+  estimatedJuryFee = 0n,
+  isClaimingJuryFees = false,
+  onClaimJuryFees,
+}: PositionCardProps) {
   const { address } = useAccount();
   const market = position.market;
   
@@ -314,12 +330,6 @@ export function PositionCard({ position, trades = [], onActionSuccess, isNameHid
   const marketNoSupply = BigInt(market.noShares || '0');
   const marketTotalSupply = marketYesSupply + marketNoSupply;
   const poolBalance = BigInt(market.poolBalance || '0');
-  
-  // Calculate refund value: (userShares * poolBalance) / totalSupply
-  const userSharesBigInt = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
-  const estimatedRefund = marketTotalSupply > 0n 
-    ? (userSharesBigInt * poolBalance) / marketTotalSupply 
-    : 0n;
   
   // Check if this is a one-sided market (only YES or only NO holders)
   const isOneSidedMarket = marketTotalSupply > 0n && (marketYesSupply === 0n || marketNoSupply === 0n);
@@ -685,11 +695,30 @@ export function PositionCard({ position, trades = [], onActionSuccess, isNameHid
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions - ONE button only */}
       <div className="mt-auto space-y-2">
         <div className="flex gap-2">
-          {/* Already claimed */}
-          {alreadyClaimed ? (
+          {/* Jury Fee Claim - HIGHEST priority for jury positions (v3.7.1) */}
+          {/* This comes first because jury fees can be claimed even after shares are claimed */}
+          {juryFeeClaimable && onClaimJuryFees ? (
+            <Button 
+              variant="cyber" 
+              size="sm" 
+              className="flex-1 !bg-cyan-500/20 !border-cyan-500 !text-cyan-400 hover:!bg-cyan-500 hover:!text-black"
+              onClick={onClaimJuryFees}
+              disabled={isClaimingJuryFees}
+            >
+              {isClaimingJuryFees ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  CLAIMING...
+                </span>
+              ) : (
+                `CLAIM JURY FEE (${formatBNB(estimatedJuryFee)})`
+              )}
+            </Button>
+          ) : alreadyClaimed ? (
+            /* Already claimed shares */
             <Button 
               variant="yes" 
               size="sm" 
@@ -783,34 +812,6 @@ export function PositionCard({ position, trades = [], onActionSuccess, isNameHid
             </Link>
           )}
         </div>
-        {/* Show refund value when emergency refund is available */}
-        {canEmergencyRefund && estimatedRefund > 0n && (
-          <div className="text-center text-xs">
-            <span className="text-text-muted">Refund: </span>
-            <span className="text-cyber font-mono font-bold">{formatBNB(estimatedRefund)} BNB</span>
-          </div>
-        )}
-        {/* Show payout estimate when can claim */}
-        {(canClaim || canClaimAfterFinalize) && !alreadyClaimed && (() => {
-          const winningSharesBigInt = market.outcome 
-            ? BigInt(position.yesShares || '0') 
-            : BigInt(position.noShares || '0');
-          const totalWinningShares = market.outcome ? marketYesSupply : marketNoSupply;
-          if (totalWinningShares > 0n && winningSharesBigInt > 0n) {
-            const grossPayout = (winningSharesBigInt * poolBalance) / totalWinningShares;
-            // Apply 0.3% resolution fee (same as contract)
-            const resolutionFee = (grossPayout * 30n) / 10000n;
-            const netPayout = grossPayout - resolutionFee;
-            return (
-              <div className="text-center text-xs">
-                <span className="text-text-muted">Est. payout: </span>
-                <span className="text-yes font-mono font-bold">{formatBNB(netPayout)} BNB</span>
-                <span className="text-text-muted ml-1">(after 0.3% fee)</span>
-              </div>
-            );
-          }
-          return null;
-        })()}
       </div>
     </Card>
   );

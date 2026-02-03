@@ -93,7 +93,7 @@ type FilterOption = 'all' | 'needs-action' | 'active' | 'awaiting-resolution' | 
 type ViewMode = 'positions' | 'my-markets';
 
 // Action types for positions
-type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'none';
+type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'jury' | 'none';
 
 // Sub-filters for PENDING tab (resolution stages)
 type PendingSubFilter = 'all' | 'awaiting' | 'proposed' | 'disputed' | 'finalizing';
@@ -383,8 +383,6 @@ export function PortfolioPage() {
     });
   }, [claimableJuryFeesData?.positions]);
   
-  const hasClaimableJuryFees = claimableJuryFeesPositions.length > 0;
-  
   const queryClient = useQueryClient();
 
   // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
@@ -598,16 +596,19 @@ export function PortfolioPage() {
     return categories;
   }, [positions]);
 
-  // Count actions by type for sub-filters
+  // Count actions by type for sub-filters (v3.7.1: Added jury)
   const actionCounts = useMemo(() => {
-    const counts = { claim: 0, vote: 0, refund: 0, finalize: 0 };
+    const counts = { claim: 0, vote: 0, refund: 0, finalize: 0, jury: claimableJuryFeesPositions.length };
     categorizedPositions.needsAction.forEach((pos) => {
       if (pos.action in counts) {
         counts[pos.action as keyof typeof counts]++;
       }
     });
     return counts;
-  }, [categorizedPositions.needsAction]);
+  }, [categorizedPositions.needsAction, claimableJuryFeesPositions.length]);
+
+  // Total needs-action count (includes jury fees from separate query)
+  const totalNeedsActionCount = categorizedPositions.needsAction.length + claimableJuryFeesPositions.length;
 
   // Count pending sub-categories
   const pendingSubCounts = useMemo(() => ({
@@ -617,17 +618,21 @@ export function PortfolioPage() {
     finalizing: categorizedPositions.pendingSub.finalizing.length,
   }), [categorizedPositions]);
 
-  // Filter positions based on selection
+  // Filter positions based on selection (v3.7.1: Added jury fees to needs-action)
   const filteredPositions = useMemo(() => {
     let result: PositionWithMarket[];
     
     switch (filterBy) {
       case 'needs-action':
         // Apply sub-filter if selected
-        if (actionFilter !== 'all') {
+        if (actionFilter === 'jury') {
+          // Jury fees come from separate query
+          result = claimableJuryFeesPositions;
+        } else if (actionFilter !== 'all') {
           result = categorizedPositions.needsAction.filter(pos => pos.action === actionFilter);
         } else {
-          result = categorizedPositions.needsAction;
+          // "All" includes both regular actions AND jury fees
+          result = [...categorizedPositions.needsAction, ...claimableJuryFeesPositions];
         }
         break;
       case 'active':
@@ -660,7 +665,7 @@ export function PortfolioPage() {
     }
     
     return result;
-  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions, heatLevelFilter]);
+  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions, heatLevelFilter, claimableJuryFeesPositions]);
 
   // Sort positions
   const sortedPositions = useMemo(() => {
@@ -931,62 +936,6 @@ export function PortfolioPage() {
         </section>
       )}
 
-      {/* Claimable Jury Fees Banner (v3.7.0) - Per-market jury fee claims */}
-      {isConnected && hasClaimableJuryFees && (
-        <section className="bg-dark-700/50 border-b border-dark-600 py-4">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-yes font-bold">JURY FEES AVAILABLE</p>
-                  <p className="text-sm text-text-secondary">
-                    You voted correctly in {claimableJuryFeesPositions.length} disputed market{claimableJuryFeesPositions.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                {claimableJuryFeesPositions.map((pos) => {
-                  const marketId = pos.market.marketId || pos.market.id;
-                  const isClaiming = isClaimingJuryFees && claimingMarketId === marketId;
-                  
-                  // Calculate estimated jury fee
-                  const userShares = BigInt(pos.yesShares || '0') + BigInt(pos.noShares || '0');
-                  const proposerVotes = BigInt(pos.market.proposerVoteWeight || '0');
-                  const disputerVotes = BigInt(pos.market.disputerVoteWeight || '0');
-                  const proposerWon = pos.market.outcome === pos.market.proposedOutcome;
-                  const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
-                  
-                  const proposerBond = BigInt(pos.market.proposerBond || '0');
-                  const disputerBond = BigInt(pos.market.disputerBond || '0');
-                  const loserBond = proposerWon ? disputerBond : proposerBond;
-                  const voterPool = loserBond / 2n;
-                  const estimatedJuryFee = totalWinningVotes > 0n 
-                    ? (voterPool * userShares) / totalWinningVotes 
-                    : 0n;
-                  
-                  return (
-                    <Button
-                      key={pos.id}
-                      variant="yes"
-                      size="sm"
-                      onClick={() => {
-                        setClaimingMarketId(marketId);
-                        claimJuryFees(BigInt(marketId));
-                      }}
-                      disabled={isClaiming}
-                      className="whitespace-nowrap"
-                      title={isFieldHidden(marketId, 'name') ? '[Content Hidden]' : pos.market.question}
-                    >
-                      {isClaiming ? 'CLAIMING...' : `CLAIM (${formatBNB(estimatedJuryFee)})`}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* View Mode Tabs */}
       <section className="border-b border-dark-600">
         <div className="max-w-7xl mx-auto px-4">
@@ -1046,15 +995,15 @@ export function PortfolioPage() {
                   className={cn(
                     "text-sm font-bold pb-1 transition-colors flex items-center gap-1 whitespace-nowrap",
                     filterBy === 'needs-action' 
-                      ? categorizedPositions.needsAction.length > 0
+                      ? totalNeedsActionCount > 0
                         ? "text-status-disputed border-b-2 border-status-disputed"
                         : "text-cyber border-b-2 border-cyber"
-                      : categorizedPositions.needsAction.length > 0
+                      : totalNeedsActionCount > 0
                         ? "text-status-disputed/80 hover:text-status-disputed animate-pulse"
                         : "text-text-secondary hover:text-white"
                   )}
                 >
-                  ACTION ({categorizedPositions.needsAction.length})
+                  ACTION ({totalNeedsActionCount})
                 </button>
                 
                 {/* ACTIVE - Positions in live markets */}
@@ -1327,6 +1276,20 @@ export function PortfolioPage() {
                   >
                     REFUND ({actionCounts.refund})
                   </button>
+                  <button 
+                    onClick={() => setActionFilter('jury')}
+                    disabled={actionCounts.jury === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'jury' 
+                        ? "bg-cyan-500/20 text-cyan-400" 
+                        : actionCounts.jury > 0
+                          ? "text-cyan-400/70 hover:text-cyan-400 hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    JURY ({actionCounts.jury})
+                  </button>
                   </div>
                 </div>
               )}
@@ -1445,16 +1408,50 @@ export function PortfolioPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedPositions.map((position) => (
-                  <PositionCard 
-                    key={position.id} 
-                    position={position} 
-                    trades={tradesData?.trades || []}
-                    onActionSuccess={handlePositionActionSuccess}
-                    isNameHidden={isFieldHidden(position.market.marketId || '', 'name')}
-                    isImageHidden={isFieldHidden(position.market.marketId || '', 'image')}
-                  />
-                ))}
+                {paginatedPositions.map((position) => {
+                  // Check if this is a jury fee position (v3.7.1)
+                  const juryFeePos = claimableJuryFeesPositions.find(p => p.id === position.id);
+                  const isJuryFeePosition = !!juryFeePos;
+                  
+                  // Calculate jury fee amount if applicable
+                  let estimatedJuryFee = 0n;
+                  if (isJuryFeePosition) {
+                    const userShares = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
+                    const proposerVotes = BigInt(position.market.proposerVoteWeight || '0');
+                    const disputerVotes = BigInt(position.market.disputerVoteWeight || '0');
+                    const proposerWon = position.market.outcome === position.market.proposedOutcome;
+                    const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
+                    
+                    const proposerBond = BigInt(position.market.proposerBond || '0');
+                    const disputerBond = BigInt(position.market.disputerBond || '0');
+                    const loserBond = proposerWon ? disputerBond : proposerBond;
+                    const voterPool = loserBond / 2n;
+                    estimatedJuryFee = totalWinningVotes > 0n 
+                      ? (voterPool * userShares) / totalWinningVotes 
+                      : 0n;
+                  }
+                  
+                  const marketId = position.market.marketId || position.market.id;
+                  
+                  return (
+                    <PositionCard 
+                      key={position.id} 
+                      position={position} 
+                      trades={tradesData?.trades || []}
+                      onActionSuccess={handlePositionActionSuccess}
+                      isNameHidden={isFieldHidden(marketId, 'name')}
+                      isImageHidden={isFieldHidden(marketId, 'image')}
+                      // Jury fee props (v3.7.1)
+                      juryFeeClaimable={isJuryFeePosition}
+                      estimatedJuryFee={estimatedJuryFee}
+                      isClaimingJuryFees={isClaimingJuryFees && claimingMarketId === marketId}
+                      onClaimJuryFees={isJuryFeePosition ? () => {
+                        setClaimingMarketId(marketId);
+                        claimJuryFees(BigInt(marketId));
+                      } : undefined}
+                    />
+                  );
+                })}
               </div>
               
               {/* Infinite scroll sentinel + load more info */}
