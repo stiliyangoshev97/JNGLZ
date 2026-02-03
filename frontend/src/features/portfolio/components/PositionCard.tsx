@@ -354,6 +354,20 @@ export function PositionCard({
   // After we finalize locally, show claim button (user has shares)
   const canClaimAfterFinalize = isFinalizeSuccess && (hasYes || hasNo) && !alreadyClaimed;
   
+  // Calculate estimated claim payout (v0.8.12)
+  const estimatedClaimPayout = useMemo(() => {
+    if (!canClaim && !canClaimAfterFinalize) return 0n;
+    const winningSharesBigInt = market.outcome 
+      ? BigInt(position.yesShares || '0') 
+      : BigInt(position.noShares || '0');
+    const totalWinningShares = market.outcome ? marketYesSupply : marketNoSupply;
+    if (totalWinningShares === 0n || winningSharesBigInt === 0n) return 0n;
+    const grossPayout = (winningSharesBigInt * poolBalance) / totalWinningShares;
+    // Apply 0.3% resolution fee (same as contract)
+    const resolutionFee = (grossPayout * 30n) / 10000n;
+    return grossPayout - resolutionFee;
+  }, [canClaim, canClaimAfterFinalize, market.outcome, position.yesShares, position.noShares, marketYesSupply, marketNoSupply, poolBalance]);
+
   // Determine market phase for display
   const getMarketPhase = (): { 
     status: string; 
@@ -770,7 +784,7 @@ export function PositionCard({
                   CLAIMING...
                 </span>
               ) : (
-                'CLAIM'
+                `CLAIM (${formatBNB(estimatedClaimPayout)})`
               )}
             </Button>
           ) : canFinalize && (hasYes || hasNo) ? (
