@@ -6,13 +6,14 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
 ### Improved - Aggressive Refetch After Transactions
 
-Fixed slow UI updates after successful transactions (claim, finalize, propose, dispute, vote, refund). Previously relied on 3-second single refetch which often wasn't enough for subgraph indexing.
+Fixed slow UI updates after successful transactions (claim, finalize, propose, dispute, vote, refund, withdraw bonds/fees, claim jury fees). Previously relied on 3-second single refetch which often wasn't enough for subgraph indexing.
 
 #### The Problem
 After successful transactions:
 - UI waited 3 seconds before single refetch
 - Subgraph often hadn't indexed yet
 - Buttons remained visible for 10-60+ seconds
+- Portfolio stats (POSITIONS, INVESTED, P/L, DISPUTES, etc.) took too long to update
 - Users had to manually refresh the page
 
 #### The Solution
@@ -23,13 +24,23 @@ Implemented exponential backoff refetch pattern: 1s, 2s, 4s, 8s
 const delays = [1000, 2000, 4000, 8000];
 delays.forEach((delay) => {
   setTimeout(() => {
-    refetchPosition();
-    onActionSuccess?.();
+    refetchPositions();
+    refetchEarnings();
+    refetchTrades();
+    refetchClaimableJuryFees();
+    refetchPending();
   }, delay);
 });
 ```
 
 This ensures the UI catches the subgraph update as soon as it's indexed, typically within 1-4 seconds.
+
+#### All Data Now Fast-Updates
+- Position cards (claim/finalize/refund buttons)
+- Portfolio stats header (POSITIONS, INVESTED, TOTAL P/L)
+- Resolution earnings (PROPOSER, DISPUTES, JURY, CREATOR)
+- Pending withdrawals banner
+- Jury fees claimable list
 
 #### Files Modified
 ```

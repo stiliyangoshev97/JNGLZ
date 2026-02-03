@@ -161,7 +161,8 @@ export function PortfolioPage() {
 
   // Fetch user's trade history for realized P/L calculation
   // Predator v2: NO POLLING - trades are historical data, fetch ONCE on load
-  const { data: tradesData } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
+  // v0.8.14: Added refetch for aggressive updates after transactions
+  const { data: tradesData, refetch: refetchTrades } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
     variables: { trader: address?.toLowerCase(), first: 500 },
     skip: !address,
     // NO pollInterval - trades history doesn't need real-time updates
@@ -379,48 +380,87 @@ export function PortfolioPage() {
   
   const queryClient = useQueryClient();
 
-  // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
+  // Refs for withdrawal/jury fee refetch timeouts
+  const withdrawalRefetchRef = useRef<NodeJS.Timeout[]>([]);
+  const juryRefetchRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Aggressive refetch after bond/fee withdrawal
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
-      // Refetch pending amounts to update the UI
-      refetchPending();
-      // Refetch earnings to update the totals
-      refetchEarnings();
-      // Invalidate balance queries so Header updates
+      // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
-      // Reset the mutation state after a short delay so the banner can disappear
-      const timer = setTimeout(() => {
+      
+      // Clear any pending timeouts
+      withdrawalRefetchRef.current.forEach(clearTimeout);
+      withdrawalRefetchRef.current = [];
+      
+      // Aggressive refetch at 1s, 2s, 4s
+      const delays = [1000, 2000, 4000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchPending();
+          refetchEarnings();
+        }, delay);
+        withdrawalRefetchRef.current.push(timeout);
+      });
+      
+      // Reset the mutation state after short delay
+      const resetTimer = setTimeout(() => {
         if (bondWithdrawn) resetBondWithdraw();
         if (feesWithdrawn) resetFeesWithdraw();
       }, 500);
-      return () => clearTimeout(timer);
+      
+      return () => {
+        clearTimeout(resetTimer);
+        withdrawalRefetchRef.current.forEach(clearTimeout);
+      };
     }
   }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
-  // Refetch jury fees after successful claim (v3.7.0)
+  // Aggressive refetch after jury fees claim
   useEffect(() => {
     if (juryFeesClaimed) {
-      // Refetch claimable jury fees list
-      refetchClaimableJuryFees();
-      // Refetch earnings to update totals
-      refetchEarnings();
-      // Invalidate balance queries so Header updates
+      // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
-      // Reset state
-      const timer = setTimeout(() => {
+      
+      // Clear any pending timeouts
+      juryRefetchRef.current.forEach(clearTimeout);
+      juryRefetchRef.current = [];
+      
+      // Aggressive refetch at 1s, 2s, 4s
+      const delays = [1000, 2000, 4000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchClaimableJuryFees();
+          refetchEarnings();
+          refetchPositions();
+        }, delay);
+        juryRefetchRef.current.push(timeout);
+      });
+      
+      // Reset state after short delay
+      const resetTimer = setTimeout(() => {
         resetJuryFeesClaim();
         setClaimingMarketId(null);
       }, 500);
-      return () => clearTimeout(timer);
+      
+      return () => {
+        clearTimeout(resetTimer);
+        juryRefetchRef.current.forEach(clearTimeout);
+      };
     }
-  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, queryClient, resetJuryFeesClaim]);
+  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
 
   // Callback for PositionCard to trigger refetch after successful actions
   // Aggressive refetch pattern: 1s, 2s, 4s, 8s to catch subgraph indexing faster
+  // v0.8.14: Now also refetches trades for P/L stats update
   const handlePositionActionSuccess = useCallback(() => {
     // Clear any pending timeouts
     refetchTimeoutsRef.current.forEach(clearTimeout);
     refetchTimeoutsRef.current = [];
+    
+    // Invalidate balance queries so Header updates immediately
+    queryClient.invalidateQueries({ queryKey: ['balance'] });
     
     // Aggressive refetch at 1s, 2s, 4s, 8s
     const delays = [1000, 2000, 4000, 8000];
@@ -428,11 +468,13 @@ export function PortfolioPage() {
       const timeout = setTimeout(() => {
         refetchPositions();
         refetchEarnings();
+        refetchTrades(); // For P/L stats
         refetchClaimableJuryFees();
+        refetchPending(); // For pending withdrawals banner
       }, delay);
       refetchTimeoutsRef.current.push(timeout);
     });
-  }, [refetchPositions, refetchEarnings, refetchClaimableJuryFees]);
+  }, [refetchPositions, refetchEarnings, refetchTrades, refetchClaimableJuryFees, refetchPending, queryClient]);
   
   // Cleanup refetch timeouts on unmount
   useEffect(() => {
