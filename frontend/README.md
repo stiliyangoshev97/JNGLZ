@@ -33,12 +33,28 @@ npm run preview
 Create a `.env` file in the root:
 
 ```env
-# BNB Testnet (v3.4.1)
-VITE_CONTRACT_ADDRESS=0x4e20Df1772D972f10E9604e7e9C775B1ae897464
-VITE_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/21Mbjuj7SdV8YmHYaZ56Z17hVSgJBBgcDkKFceNjeDpn
-VITE_CHAIN_ID=97
+# Network Switch (true = testnet, false = mainnet)
+VITE_IS_TESTNET=true
+
+# BNB Testnet (v3.8.3)
+VITE_TESTNET_CONTRACT_ADDRESS=0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
+VITE_TESTNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
+
+# BNB Mainnet (not deployed yet)
+VITE_MAINNET_CONTRACT_ADDRESS=
+VITE_MAINNET_SUBGRAPH_URL=
+
+# Shared Config
+VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
 VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
+
+# Supabase (Chat & Moderation)
+VITE_SUPABASE_URL=https://rbizamxghqaqskvdjfrg.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+
+# Maintenance Mode
+VITE_MAINTENANCE_MODE=false
 ```
 
 ---

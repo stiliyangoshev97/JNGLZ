@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { ChatMessage, Network } from '@/lib/database.types'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 interface SendMessageParams {
   message: string
@@ -76,6 +77,8 @@ export async function sendChatMessage(params: SendMessageParams): Promise<SendMe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify(params),
     })

@@ -115,18 +115,12 @@ export function containsProfanity(message: string): string | null {
   const normalizedMessage = normalizeLeetspeak(message);
   const words = normalizedMessage.split(/\s+/);
   
-  // Check each word and substrings
+  // Check each word for exact matches only (no substring matching)
   for (const badWord of PROFANITY_LIST) {
     const normalizedBadWord = normalizeLeetspeak(badWord);
     
     // Check if any word matches exactly
     if (words.includes(normalizedBadWord)) {
-      return badWord;
-    }
-    
-    // Check if message contains the bad word as a substring
-    // (handles things like "f u c k" or combined words)
-    if (normalizedMessage.includes(normalizedBadWord)) {
       return badWord;
     }
   }
@@ -217,7 +211,7 @@ export function validateMessage(message: string, lastMessage: string | null): st
     return 'Links are not allowed in chat';
   }
   
-  // Check for profanity
+  // Check for profanity (exact word matches only)
   const profanity = containsProfanity(message);
   if (profanity) {
     return 'Message contains inappropriate content';

@@ -758,20 +758,19 @@ function TradesAndHoldersTabs({
   const network: Network = env.IS_TESTNET ? 'bnb-testnet' : 'bnb-mainnet';
   const contractAddress = env.CONTRACT_ADDRESS;
   
-  // Compute holders map for chat badges (address -> 'yes' | 'no')
+  // Compute holders map for chat badges (address -> 'yes' | 'no' | 'both')
   const holdersMap = useMemo(() => {
-    const map = new Map<string, 'yes' | 'no'>();
+    const map = new Map<string, 'yes' | 'no' | 'both'>();
     for (const pos of positions) {
       const yesShares = BigInt(pos.yesShares || '0');
       const noShares = BigInt(pos.noShares || '0');
-      // Determine primary position
-      if (yesShares > noShares) {
-        map.set(pos.user.address.toLowerCase(), 'yes');
-      } else if (noShares > yesShares) {
-        map.set(pos.user.address.toLowerCase(), 'no');
+      // Check if user holds both sides
+      if (yesShares > 0n && noShares > 0n) {
+        map.set(pos.user.address.toLowerCase(), 'both');
       } else if (yesShares > 0n) {
-        // Equal but non-zero, default to yes
         map.set(pos.user.address.toLowerCase(), 'yes');
+      } else if (noShares > 0n) {
+        map.set(pos.user.address.toLowerCase(), 'no');
       }
     }
     return map;
@@ -950,10 +949,7 @@ function HoldersTable({ positions, maxItems = 20 }: { positions: HolderPosition[
               {/* Side */}
               <div className="w-20 text-center flex justify-center gap-1">
                 {hasYes && hasNo ? (
-                  <>
-                    <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
-                    <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
-                  </>
+                  <span className="text-purple-400 text-xs font-bold px-1.5 py-0.5 bg-purple-400/20 rounded">BOTH</span>
                 ) : hasYes ? (
                   <span className="text-yes text-xs font-bold">YES</span>
                 ) : (
@@ -990,10 +986,7 @@ function HoldersTable({ positions, maxItems = 20 }: { positions: HolderPosition[
               <div className="flex items-center justify-between mt-1.5 ml-8">
                 <div className="flex gap-1">
                   {hasYes && hasNo ? (
-                    <>
-                      <span className="text-yes text-xs px-1 bg-yes/20 rounded">Y:{holder.yesShares.toFixed(0)}</span>
-                      <span className="text-no text-xs px-1 bg-no/20 rounded">N:{holder.noShares.toFixed(0)}</span>
-                    </>
+                    <span className="text-purple-400 text-xs font-bold px-1.5 py-0.5 bg-purple-400/20 rounded">BOTH</span>
                   ) : hasYes ? (
                     <span className="text-yes text-xs font-bold px-1.5 py-0.5 bg-yes/20 rounded">YES</span>
                   ) : (

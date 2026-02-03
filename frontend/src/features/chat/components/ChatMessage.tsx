@@ -6,7 +6,7 @@ import { formatAddress } from '@/shared/utils/format'
 interface ChatMessageProps {
   message: ChatMessageType
   isOwnMessage: boolean
-  holderBadge?: 'yes' | 'no' | null
+  holderBadge?: 'yes' | 'no' | 'both' | null
   isCreator?: boolean
   isAdmin?: boolean
   onDelete?: () => Promise<boolean>
@@ -41,7 +41,16 @@ export function ChatMessage({
         )}
         
         {/* Holder badge - show even for creator if they have a position */}
-        {holderBadge && (
+        {holderBadge === 'both' ? (
+          <>
+            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-yes/20 text-yes">
+              🟢 YES
+            </span>
+            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-no/20 text-no">
+              🔴 NO
+            </span>
+          </>
+        ) : holderBadge && (
           <span 
             className={`px-1.5 py-0.5 text-[10px] font-bold uppercase ${
               holderBadge === 'yes' 

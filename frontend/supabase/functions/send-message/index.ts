@@ -20,8 +20,8 @@ interface SendMessageRequest {
 
 // Subgraph endpoints for position verification
 const SUBGRAPH_URLS: Record<string, string> = {
-  'bnb-testnet': Deno.env.get('SUBGRAPH_URL_TESTNET') || 'https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0',
-  'bnb-mainnet': Deno.env.get('SUBGRAPH_URL_MAINNET') || '',
+  'bnb-testnet': Deno.env.get('VITE_TESTNET_SUBGRAPH_URL') || '',
+  'bnb-mainnet': Deno.env.get('VITE_MAINNET_SUBGRAPH_URL') || '',
 }
 
 /**

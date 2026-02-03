@@ -2,6 +2,30 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.18] - 2026-02-04
+
+### Fixed - Chat & Holder Badge Improvements
+
+#### Chat Fixes
+- **JWT Auth Fix**: Deployed Edge Function with `--no-verify-jwt` to work with new Supabase publishable key format (`sb_publishable_*`). SIWE authentication still provides security.
+- **Profanity Filter Fix**: Removed aggressive substring matching that was blocking innocent words like "message" and "another". Now only matches exact words.
+- **Both Sides Badge**: Users holding both YES and NO shares now see both 🟢 YES and 🔴 NO badges in chat instead of just one.
+
+#### Holders Tab Improvements  
+- **BOTH Label**: When a holder owns shares on both sides, display "BOTH" in purple instead of confusing "Y:2 N:2" format.
+- Consistent with chat badge behavior.
+
+#### Files Modified
+```
+src/features/chat/components/ChatMessage.tsx     # Added 'both' badge support
+src/features/chat/components/ChatTab.tsx         # Updated type to include 'both'
+src/features/markets/pages/MarketDetailPage.tsx  # Updated holdersMap + holders tab display
+supabase/functions/_shared/validation.ts         # Fixed profanity filter
+supabase/functions/send-message/index.ts         # Updated subgraph URL env var names
+```
+
+---
+
 ## [0.8.17] - 2026-02-04
 
 ### Fixed - Emergency Refund Timer Visible to All Users
