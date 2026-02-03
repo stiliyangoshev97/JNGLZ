@@ -1067,14 +1067,66 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                     <p className="text-text-muted text-[10px]">votes</p>
                   </div>
                 </div>
+                
+                {/* Earnings Breakdown for Disputed Market */}
+                {(() => {
+                  const pBond = proposerBondFromMarket;
+                  const dBond = market.disputerBond ? BigInt(market.disputerBond) : 0n;
+                  const BOND_WINNER_SHARE_BPS = 5000n;
+                  const BPS_DENOMINATOR = 10000n;
+                  const proposerWon = proposerVotes >= disputerVotes;
+                  
+                  if (proposerWon) {
+                    // Proposer won: bond back + 50% disputer bond + pool reward
+                    const bondWinnings = (dBond * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR;
+                    const proposerProfit = bondWinnings + estimatedReward;
+                    
+                    return (
+                      <div className="mt-3 pt-3 border-t border-dark-500 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Proposer earned:</span>
+                          <span className="text-yes font-mono">+{formatBNB(proposerProfit)} BNB</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Disputer lost:</span>
+                          <span className="text-no font-mono">-{formatBNB(dBond)} BNB</span>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // Disputer won: bond back + 50% proposer bond (no pool reward)
+                    const bondWinnings = (pBond * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR;
+                    const disputerProfit = bondWinnings;
+                    
+                    return (
+                      <div className="mt-3 pt-3 border-t border-dark-500 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Disputer earned:</span>
+                          <span className="text-yes font-mono">+{formatBNB(disputerProfit)} BNB</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Proposer lost:</span>
+                          <span className="text-no font-mono">-{formatBNB(pBond)} BNB</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
               </>
             )}
             
-            {/* No dispute - uncontested */}
+            {/* No dispute - uncontested: Show proposer earnings */}
             {(!market.disputer || market.disputer === '0x0000000000000000000000000000000000000000') && (
-              <p className="text-text-muted text-xs italic">
-                Proposal was uncontested (no dispute filed)
-              </p>
+              <div className="space-y-2">
+                <p className="text-text-muted text-xs italic mb-2">
+                  Proposal was uncontested (no dispute filed)
+                </p>
+                <div className="flex justify-between text-xs pt-2 border-t border-dark-500">
+                  <span className="text-text-muted">Proposer earned:</span>
+                  <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
+                </div>
+                <p className="text-text-muted text-[10px] italic">(0.5% pool reward)</p>
+              </div>
             )}
           </div>
         )}

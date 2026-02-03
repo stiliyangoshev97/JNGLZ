@@ -46,6 +46,9 @@ After a market is resolved, the Resolution Panel now displays a "RESOLUTION HIST
 - **Proposer address** with CREATOR badge if applicable
 - **Disputer address** (if market was disputed) with CREATOR badge if applicable
 - **Vote results** with visual indicator of who won (checkmark + green highlight)
+- **Earnings breakdown** showing how much proposer/disputer won or lost:
+  - Disputed: "Proposer earned: +X BNB" / "Disputer lost: -Y BNB" (or vice versa)
+  - Uncontested: "Proposer earned: +X BNB (0.5% pool reward)"
 - **"Uncontested"** note if no dispute was filed
 
 Previously this information disappeared after finalization, making it hard to see how the market was resolved.
