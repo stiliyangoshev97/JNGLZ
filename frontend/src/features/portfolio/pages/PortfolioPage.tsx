@@ -93,7 +93,7 @@ type FilterOption = 'all' | 'needs-action' | 'active' | 'awaiting-resolution' | 
 type ViewMode = 'positions' | 'my-markets';
 
 // Action types for positions
-type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'none';
+type PositionAction = 'vote' | 'claim' | 'refund' | 'finalize' | 'trade' | 'jury' | 'none';
 
 // Sub-filters for PENDING tab (resolution stages)
 type PendingSubFilter = 'all' | 'awaiting' | 'proposed' | 'disputed' | 'finalizing';
@@ -161,7 +161,8 @@ export function PortfolioPage() {
 
   // Fetch user's trade history for realized P/L calculation
   // Predator v2: NO POLLING - trades are historical data, fetch ONCE on load
-  const { data: tradesData } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
+  // v0.8.14: Added refetch for aggressive updates after transactions
+  const { data: tradesData, refetch: refetchTrades } = useQuery<GetUserTradesResponse>(GET_USER_TRADES, {
     variables: { trader: address?.toLowerCase(), first: 500 },
     skip: !address,
     // NO pollInterval - trades history doesn't need real-time updates
@@ -176,14 +177,8 @@ export function PortfolioPage() {
     notifyOnNetworkStatusChange: false,
   });
 
-  // Callback for PositionCard to trigger refetch after successful actions
-  const handlePositionActionSuccess = useCallback(() => {
-    // Wait for subgraph to index the transaction (3 seconds)
-    setTimeout(() => {
-      refetchPositions();
-      refetchEarnings(); // Also refetch earnings to update P/L stats
-    }, 3000);
-  }, [refetchPositions, refetchEarnings]);
+  // Refs for aggressive refetch timeouts (used in handlePositionActionSuccess)
+  const refetchTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   // Get market IDs for moderation lookup (from both positions and my-markets)
   const allMarketIds = useMemo(() => {
@@ -210,79 +205,76 @@ export function PortfolioPage() {
     network,
   });
 
-  // Calculate trading P/L from sells - ONLY for closed positions (fully exited OR resolved markets)
-  // v0.7.12: Only sum P/L when position is closed to avoid misleading unrealized values
+  // Calculate trading P/L from ALL sells - updated v0.8.16 to match subgraph
+  // v0.8.16: Count P/L on every sell (not just closed positions) to match leaderboard
+  // This fixes discrepancy between Portfolio and Leaderboard P/L values
   const tradingPnl = useMemo(() => {
-    if (!tradesData?.trades || !address || !data?.positions) {
+    if (!tradesData?.trades || !address) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
     }
     
-    const positions = data.positions;
     const trades = tradesData.trades;
     const walletAddress = address.toLowerCase();
     
-    // Build a set of market IDs where user has closed positions
-    const closedMarketIds = new Set<string>();
-    positions.forEach((pos) => {
-      const yesShares = Number(BigInt(pos.yesShares || '0')) / 1e18;
-      const noShares = Number(BigInt(pos.noShares || '0')) / 1e18;
-      const isResolved = pos.market.resolved || pos.market.status === 'Resolved';
-      const fullyExited = yesShares === 0 && noShares === 0;
-      
-      if (isResolved || fullyExited) {
-        closedMarketIds.add(pos.market.id.toLowerCase());
-      }
-    });
-    
-    // Calculate trading P/L only for closed markets
-    const closedData = {
-      yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
-      no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
-    };
+    // Group trades by market to calculate per-market P/L using average cost basis
+    const marketData = new Map<string, {
+      yes: { bought: number; sold: number; sharesBought: number; sharesSold: number };
+      no: { bought: number; sold: number; sharesBought: number; sharesSold: number };
+    }>();
     
     trades.forEach(trade => {
       const tradeAddress = trade.traderAddress?.toLowerCase() || '';
-      const tradeMarketId = trade.market?.id?.toLowerCase() || '';
+      if (tradeAddress !== walletAddress) return;
       
-      // Only include trades from closed positions
-      if (tradeAddress !== walletAddress || !closedMarketIds.has(tradeMarketId)) return;
+      const marketId = trade.market?.id?.toLowerCase() || '';
+      if (!marketData.has(marketId)) {
+        marketData.set(marketId, {
+          yes: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+          no: { bought: 0, sold: 0, sharesBought: 0, sharesSold: 0 },
+        });
+      }
       
+      const data = marketData.get(marketId)!;
       const bnbAmount = parseFloat(trade.bnbAmount || '0');
       const shares = Number(BigInt(trade.shares || '0')) / 1e18;
       const side = trade.isYes ? 'yes' : 'no';
       
       if (trade.isBuy) {
-        closedData[side].bought += bnbAmount;
-        closedData[side].sharesBought += shares;
+        data[side].bought += bnbAmount;
+        data[side].sharesBought += shares;
       } else {
-        closedData[side].sold += bnbAmount;
-        closedData[side].sharesSold += shares;
+        data[side].sold += bnbAmount;
+        data[side].sharesSold += shares;
       }
     });
     
-    const hasYesSells = closedData.yes.sharesSold > 0;
-    const hasNoSells = closedData.no.sharesSold > 0;
-    const hasSells = hasYesSells || hasNoSells;
+    // Calculate total trading P/L across all markets
+    let realizedPnlBNB = 0;
+    let totalCostBasis = 0;
+    let hasSells = false;
+    
+    marketData.forEach(data => {
+      // YES side P/L
+      if (data.yes.sharesSold > 0 && data.yes.sharesBought > 0) {
+        hasSells = true;
+        const avgCostPerShare = data.yes.bought / data.yes.sharesBought;
+        const costBasisOfSold = avgCostPerShare * data.yes.sharesSold;
+        realizedPnlBNB += data.yes.sold - costBasisOfSold;
+        totalCostBasis += costBasisOfSold;
+      }
+      
+      // NO side P/L
+      if (data.no.sharesSold > 0 && data.no.sharesBought > 0) {
+        hasSells = true;
+        const avgCostPerShare = data.no.bought / data.no.sharesBought;
+        const costBasisOfSold = avgCostPerShare * data.no.sharesSold;
+        realizedPnlBNB += data.no.sold - costBasisOfSold;
+        totalCostBasis += costBasisOfSold;
+      }
+    });
     
     if (!hasSells) {
       return { realizedPnlBNB: 0, realizedPnlPercent: 0, hasSells: false };
-    }
-    
-    let realizedPnlBNB = 0;
-    let totalCostBasis = 0;
-    
-    if (hasYesSells && closedData.yes.sharesBought > 0) {
-      const avgCostPerShare = closedData.yes.bought / closedData.yes.sharesBought;
-      const costBasisOfSold = avgCostPerShare * closedData.yes.sharesSold;
-      realizedPnlBNB += closedData.yes.sold - costBasisOfSold;
-      totalCostBasis += costBasisOfSold;
-    }
-    
-    if (hasNoSells && closedData.no.sharesBought > 0) {
-      const avgCostPerShare = closedData.no.bought / closedData.no.sharesBought;
-      const costBasisOfSold = avgCostPerShare * closedData.no.sharesSold;
-      realizedPnlBNB += closedData.no.sold - costBasisOfSold;
-      totalCostBasis += costBasisOfSold;
     }
     
     const realizedPnlPercent = totalCostBasis > 0 
@@ -290,7 +282,7 @@ export function PortfolioPage() {
       : 0;
     
     return { realizedPnlBNB, realizedPnlPercent, hasSells };
-  }, [tradesData?.trades, address, data?.positions]);
+  }, [tradesData?.trades, address]);
 
   // Calculate Resolution P/L (NET: claims - netCostBasis for resolved positions only)
   // netCostBasis = totalInvested - totalReturned (what's still "at risk" after sells)
@@ -383,45 +375,121 @@ export function PortfolioPage() {
     });
   }, [claimableJuryFeesData?.positions]);
   
-  const hasClaimableJuryFees = claimableJuryFeesPositions.length > 0;
-  
   const queryClient = useQueryClient();
 
-  // Refetch pending withdrawals and invalidate balance queries after successful withdrawal
+  // Refs for withdrawal/jury fee refetch timeouts
+  const withdrawalRefetchRef = useRef<NodeJS.Timeout[]>([]);
+  const juryRefetchRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Aggressive refetch after bond/fee withdrawal
+  // v0.8.15: Added immediate refetch + extended delays for faster UI update
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
-      // Refetch pending amounts to update the UI
-      refetchPending();
-      // Refetch earnings to update the totals
-      refetchEarnings();
-      // Invalidate balance queries so Header updates
+      // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
-      // Reset the mutation state after a short delay so the banner can disappear
-      const timer = setTimeout(() => {
+      
+      // Immediate refetch - contract reads should be instant after tx confirms
+      refetchPending();
+      refetchEarnings();
+      
+      // Clear any pending timeouts
+      withdrawalRefetchRef.current.forEach(clearTimeout);
+      withdrawalRefetchRef.current = [];
+      
+      // Aggressive refetch at 1s, 2s, 4s, 8s (for subgraph earnings update)
+      const delays = [1000, 2000, 4000, 8000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchPending();
+          refetchEarnings();
+        }, delay);
+        withdrawalRefetchRef.current.push(timeout);
+      });
+      
+      // Reset the mutation state after short delay
+      const resetTimer = setTimeout(() => {
         if (bondWithdrawn) resetBondWithdraw();
         if (feesWithdrawn) resetFeesWithdraw();
       }, 500);
-      return () => clearTimeout(timer);
+      
+      return () => {
+        clearTimeout(resetTimer);
+        withdrawalRefetchRef.current.forEach(clearTimeout);
+      };
     }
   }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
-  // Refetch jury fees after successful claim (v3.7.0)
+  // Aggressive refetch after jury fees claim
+  // v0.8.15: Added immediate refetch + extended delays
   useEffect(() => {
     if (juryFeesClaimed) {
-      // Refetch claimable jury fees list
-      refetchClaimableJuryFees();
-      // Refetch earnings to update totals
-      refetchEarnings();
-      // Invalidate balance queries so Header updates
+      // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
-      // Reset state
-      const timer = setTimeout(() => {
+      
+      // Immediate refetch
+      refetchClaimableJuryFees();
+      refetchEarnings();
+      refetchPositions();
+      
+      // Clear any pending timeouts
+      juryRefetchRef.current.forEach(clearTimeout);
+      juryRefetchRef.current = [];
+      
+      // Aggressive refetch at 1s, 2s, 4s, 8s
+      const delays = [1000, 2000, 4000, 8000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchClaimableJuryFees();
+          refetchEarnings();
+          refetchPositions();
+        }, delay);
+        juryRefetchRef.current.push(timeout);
+      });
+      
+      // Reset state after short delay
+      const resetTimer = setTimeout(() => {
         resetJuryFeesClaim();
         setClaimingMarketId(null);
       }, 500);
-      return () => clearTimeout(timer);
+      
+      return () => {
+        clearTimeout(resetTimer);
+        juryRefetchRef.current.forEach(clearTimeout);
+      };
     }
-  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, queryClient, resetJuryFeesClaim]);
+  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
+
+  // Callback for PositionCard to trigger refetch after successful actions
+  // Aggressive refetch pattern: 1s, 2s, 4s, 8s to catch subgraph indexing faster
+  // v0.8.14: Now also refetches trades for P/L stats update
+  const handlePositionActionSuccess = useCallback(() => {
+    // Clear any pending timeouts
+    refetchTimeoutsRef.current.forEach(clearTimeout);
+    refetchTimeoutsRef.current = [];
+    
+    // Invalidate balance queries so Header updates immediately
+    queryClient.invalidateQueries({ queryKey: ['balance'] });
+    
+    // Aggressive refetch at 1s, 2s, 4s, 8s
+    const delays = [1000, 2000, 4000, 8000];
+    delays.forEach((delay) => {
+      const timeout = setTimeout(() => {
+        refetchPositions();
+        refetchEarnings();
+        refetchTrades(); // For P/L stats
+        refetchClaimableJuryFees();
+        refetchPending(); // For pending withdrawals banner
+      }, delay);
+      refetchTimeoutsRef.current.push(timeout);
+    });
+  }, [refetchPositions, refetchEarnings, refetchTrades, refetchClaimableJuryFees, refetchPending, queryClient]);
+  
+  // Cleanup refetch timeouts on unmount
+  useEffect(() => {
+    return () => {
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Format pending amounts
   const pendingBondsFormatted = pendingBonds ? parseFloat(formatEther(pendingBonds)) : 0;
@@ -598,16 +666,19 @@ export function PortfolioPage() {
     return categories;
   }, [positions]);
 
-  // Count actions by type for sub-filters
+  // Count actions by type for sub-filters (v3.7.1: Added jury)
   const actionCounts = useMemo(() => {
-    const counts = { claim: 0, vote: 0, refund: 0, finalize: 0 };
+    const counts = { claim: 0, vote: 0, refund: 0, finalize: 0, jury: claimableJuryFeesPositions.length };
     categorizedPositions.needsAction.forEach((pos) => {
       if (pos.action in counts) {
         counts[pos.action as keyof typeof counts]++;
       }
     });
     return counts;
-  }, [categorizedPositions.needsAction]);
+  }, [categorizedPositions.needsAction, claimableJuryFeesPositions.length]);
+
+  // Total needs-action count (includes jury fees from separate query)
+  const totalNeedsActionCount = categorizedPositions.needsAction.length + claimableJuryFeesPositions.length;
 
   // Count pending sub-categories
   const pendingSubCounts = useMemo(() => ({
@@ -617,17 +688,21 @@ export function PortfolioPage() {
     finalizing: categorizedPositions.pendingSub.finalizing.length,
   }), [categorizedPositions]);
 
-  // Filter positions based on selection
+  // Filter positions based on selection (v3.7.1: Added jury fees to needs-action)
   const filteredPositions = useMemo(() => {
     let result: PositionWithMarket[];
     
     switch (filterBy) {
       case 'needs-action':
         // Apply sub-filter if selected
-        if (actionFilter !== 'all') {
+        if (actionFilter === 'jury') {
+          // Jury fees come from separate query
+          result = claimableJuryFeesPositions;
+        } else if (actionFilter !== 'all') {
           result = categorizedPositions.needsAction.filter(pos => pos.action === actionFilter);
         } else {
-          result = categorizedPositions.needsAction;
+          // "All" includes both regular actions AND jury fees
+          result = [...categorizedPositions.needsAction, ...claimableJuryFeesPositions];
         }
         break;
       case 'active':
@@ -660,7 +735,7 @@ export function PortfolioPage() {
     }
     
     return result;
-  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions, heatLevelFilter]);
+  }, [filterBy, actionFilter, pendingSubFilter, positions, categorizedPositions, heatLevelFilter, claimableJuryFeesPositions]);
 
   // Sort positions
   const sortedPositions = useMemo(() => {
@@ -931,62 +1006,6 @@ export function PortfolioPage() {
         </section>
       )}
 
-      {/* Claimable Jury Fees Banner (v3.7.0) - Per-market jury fee claims */}
-      {isConnected && hasClaimableJuryFees && (
-        <section className="bg-dark-700/50 border-b border-dark-600 py-4">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-yes font-bold">JURY FEES AVAILABLE</p>
-                  <p className="text-sm text-text-secondary">
-                    You voted correctly in {claimableJuryFeesPositions.length} disputed market{claimableJuryFeesPositions.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                {claimableJuryFeesPositions.map((pos) => {
-                  const marketId = pos.market.marketId || pos.market.id;
-                  const isClaiming = isClaimingJuryFees && claimingMarketId === marketId;
-                  
-                  // Calculate estimated jury fee
-                  const userShares = BigInt(pos.yesShares || '0') + BigInt(pos.noShares || '0');
-                  const proposerVotes = BigInt(pos.market.proposerVoteWeight || '0');
-                  const disputerVotes = BigInt(pos.market.disputerVoteWeight || '0');
-                  const proposerWon = pos.market.outcome === pos.market.proposedOutcome;
-                  const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
-                  
-                  const proposerBond = BigInt(pos.market.proposerBond || '0');
-                  const disputerBond = BigInt(pos.market.disputerBond || '0');
-                  const loserBond = proposerWon ? disputerBond : proposerBond;
-                  const voterPool = loserBond / 2n;
-                  const estimatedJuryFee = totalWinningVotes > 0n 
-                    ? (voterPool * userShares) / totalWinningVotes 
-                    : 0n;
-                  
-                  return (
-                    <Button
-                      key={pos.id}
-                      variant="yes"
-                      size="sm"
-                      onClick={() => {
-                        setClaimingMarketId(marketId);
-                        claimJuryFees(BigInt(marketId));
-                      }}
-                      disabled={isClaiming}
-                      className="whitespace-nowrap"
-                      title={isFieldHidden(marketId, 'name') ? '[Content Hidden]' : pos.market.question}
-                    >
-                      {isClaiming ? 'CLAIMING...' : `CLAIM (${formatBNB(estimatedJuryFee)})`}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* View Mode Tabs */}
       <section className="border-b border-dark-600">
         <div className="max-w-7xl mx-auto px-4">
@@ -1046,15 +1065,15 @@ export function PortfolioPage() {
                   className={cn(
                     "text-sm font-bold pb-1 transition-colors flex items-center gap-1 whitespace-nowrap",
                     filterBy === 'needs-action' 
-                      ? categorizedPositions.needsAction.length > 0
+                      ? totalNeedsActionCount > 0
                         ? "text-status-disputed border-b-2 border-status-disputed"
                         : "text-cyber border-b-2 border-cyber"
-                      : categorizedPositions.needsAction.length > 0
+                      : totalNeedsActionCount > 0
                         ? "text-status-disputed/80 hover:text-status-disputed animate-pulse"
                         : "text-text-secondary hover:text-white"
                   )}
                 >
-                  ACTION ({categorizedPositions.needsAction.length})
+                  ACTION ({totalNeedsActionCount})
                 </button>
                 
                 {/* ACTIVE - Positions in live markets */}
@@ -1327,6 +1346,20 @@ export function PortfolioPage() {
                   >
                     REFUND ({actionCounts.refund})
                   </button>
+                  <button 
+                    onClick={() => setActionFilter('jury')}
+                    disabled={actionCounts.jury === 0}
+                    className={cn(
+                      "text-xs font-mono px-2 py-1 rounded transition-colors",
+                      actionFilter === 'jury' 
+                        ? "bg-cyan-500/20 text-cyan-400" 
+                        : actionCounts.jury > 0
+                          ? "text-cyan-400/70 hover:text-cyan-400 hover:bg-dark-600"
+                          : "text-text-muted/50 cursor-not-allowed"
+                    )}
+                  >
+                    JURY ({actionCounts.jury})
+                  </button>
                   </div>
                 </div>
               )}
@@ -1445,16 +1478,56 @@ export function PortfolioPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedPositions.map((position) => (
-                  <PositionCard 
-                    key={position.id} 
-                    position={position} 
-                    trades={tradesData?.trades || []}
-                    onActionSuccess={handlePositionActionSuccess}
-                    isNameHidden={isFieldHidden(position.market.marketId || '', 'name')}
-                    isImageHidden={isFieldHidden(position.market.marketId || '', 'image')}
-                  />
-                ))}
+                {paginatedPositions.map((position) => {
+                  // Check if this is a jury fee position (v3.7.1)
+                  const juryFeePos = claimableJuryFeesPositions.find(p => p.id === position.id);
+                  const isJuryFeePosition = !!juryFeePos;
+                  
+                  // v3.7.2 FIX: Only show jury fee button when in 'jury' or 'all' action filter
+                  // This prevents jury fee button from overriding claim button in CLAIM tab
+                  const shouldShowJuryFeeAction = isJuryFeePosition && 
+                    (filterBy !== 'needs-action' || actionFilter === 'jury' || actionFilter === 'all');
+                  
+                  // Calculate jury fee amount if applicable
+                  let estimatedJuryFee = 0n;
+                  if (isJuryFeePosition) {
+                    const userShares = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
+                    const proposerVotes = BigInt(position.market.proposerVoteWeight || '0');
+                    const disputerVotes = BigInt(position.market.disputerVoteWeight || '0');
+                    const proposerWon = position.market.outcome === position.market.proposedOutcome;
+                    const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
+                    
+                    const proposerBond = BigInt(position.market.proposerBond || '0');
+                    const disputerBond = BigInt(position.market.disputerBond || '0');
+                    const loserBond = proposerWon ? disputerBond : proposerBond;
+                    const voterPool = loserBond / 2n;
+                    estimatedJuryFee = totalWinningVotes > 0n 
+                      ? (voterPool * userShares) / totalWinningVotes 
+                      : 0n;
+                  }
+                  
+                  const marketId = position.market.marketId || position.market.id;
+                  
+                  return (
+                    <PositionCard 
+                      key={position.id} 
+                      position={position} 
+                      trades={tradesData?.trades || []}
+                      onActionSuccess={handlePositionActionSuccess}
+                      isNameHidden={isFieldHidden(marketId, 'name')}
+                      isImageHidden={isFieldHidden(marketId, 'image')}
+                      // Jury fee props (v3.7.1, fixed v3.7.2)
+                      // Only pass juryFeeClaimable when appropriate for the current action filter
+                      juryFeeClaimable={shouldShowJuryFeeAction}
+                      estimatedJuryFee={estimatedJuryFee}
+                      isClaimingJuryFees={isClaimingJuryFees && claimingMarketId === marketId}
+                      onClaimJuryFees={shouldShowJuryFeeAction ? () => {
+                        setClaimingMarketId(marketId);
+                        claimJuryFees(BigInt(marketId));
+                      } : undefined}
+                    />
+                  );
+                })}
               </div>
               
               {/* Infinite scroll sentinel + load more info */}

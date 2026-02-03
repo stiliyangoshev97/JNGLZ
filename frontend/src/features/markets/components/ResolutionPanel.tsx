@@ -11,7 +11,7 @@
  * @module features/markets/components/ResolutionPanel
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { Button } from '@/shared/components/ui/Button';
 import { Spinner } from '@/shared/components/ui/Spinner';
@@ -108,17 +108,34 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
   const { claim, isPending: isClaiming, isConfirming: isConfirmingClaim, isSuccess: claimSuccess } = useClaim();
   const { emergencyRefund, isPending: isRefunding, isConfirming: isConfirmingRefund, isSuccess: refundSuccess } = useEmergencyRefund();
 
-  // Trigger refetch when any action succeeds
+  // Aggressive refetch: refs to store timeouts for cleanup
+  const refetchTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Trigger aggressive refetch when any action succeeds
+  // Pattern: refetch at 1s, 2s, 4s, 8s to catch subgraph indexing
   useEffect(() => {
     if (proposeSuccess || disputeSuccess || voteSuccess || finalizeSuccess || claimSuccess || refundSuccess) {
       // Immediately refetch position from contract (instant update)
       refetchPosition();
-      // Wait for subgraph to index (3 seconds), then refetch market data
-      const timer = setTimeout(() => {
-        onActionSuccess?.();
-      }, 3000);
-      return () => clearTimeout(timer);
+      
+      // Clear any pending timeouts
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+      refetchTimeoutsRef.current = [];
+      
+      // Aggressive refetch pattern: 1s, 2s, 4s, 8s
+      const delays = [1000, 2000, 4000, 8000];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          refetchPosition();
+          onActionSuccess?.();
+        }, delay);
+        refetchTimeoutsRef.current.push(timeout);
+      });
     }
+    
+    return () => {
+      refetchTimeoutsRef.current.forEach(clearTimeout);
+    };
   }, [proposeSuccess, disputeSuccess, voteSuccess, finalizeSuccess, claimSuccess, refundSuccess, onActionSuccess, refetchPosition]);
 
   // Calculate timestamps
@@ -853,12 +870,80 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               {hasDispute ? 'Voting ended. Finalize to settle the market.' : 'Dispute window ended. Finalize to confirm the outcome.'}
             </p>
             
-            {/* Proposer reward info */}
-            {estimatedReward > 0n && (
-              <div className="text-xs text-text-muted">
-                Proposer will receive <span className="text-yes font-mono">{formatBNB(estimatedReward)} BNB</span> reward
-              </div>
-            )}
+            {/* Proposer/Disputer reward breakdown */}
+            {(() => {
+              // Get bond values
+              const proposerBond = proposerBondFromMarket;
+              const disputerBondValue = market.disputerBond ? BigInt(market.disputerBond) : 0n;
+              
+              // Determine winner based on vote counts (proposer wins if proposerVotes >= disputerVotes)
+              const proposerWins = !hasDispute || proposerVotes >= disputerVotes;
+              
+              // Bond winner share is 50% (5000 bps)
+              const BOND_WINNER_SHARE_BPS = 5000n;
+              const BPS_DENOMINATOR = 10000n;
+              
+              if (proposerWins) {
+                // Proposer wins: bond back + 50% disputer bond (if disputed) + pool reward
+                const bondShare = hasDispute ? (disputerBondValue * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR : 0n;
+                const totalToProposer = proposerBond + bondShare + estimatedReward;
+                
+                return (
+                  <div className="p-3 bg-dark-800 border border-dark-600 space-y-2">
+                    <p className="text-xs font-bold text-white mb-2">PROPOSER RECEIVES:</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Bond returned:</span>
+                        <span className="font-mono text-white">{formatBNB(proposerBond)} BNB</span>
+                      </div>
+                      {hasDispute && bondShare > 0n && (
+                        <div className="flex justify-between">
+                          <span className="text-text-muted">50% of disputer bond:</span>
+                          <span className="font-mono text-yes">+{formatBNB(bondShare)} BNB</span>
+                        </div>
+                      )}
+                      {estimatedReward > 0n && (
+                        <div className="flex justify-between">
+                          <span className="text-text-muted">Pool reward (0.5%):</span>
+                          <span className="font-mono text-yes">+{formatBNB(estimatedReward)} BNB</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-dark-500 pt-1 mt-1">
+                        <span className="text-white font-bold">Total:</span>
+                        <span className="font-mono text-yes font-bold">{formatBNB(totalToProposer)} BNB</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else {
+                // Disputer wins: bond back + 50% proposer bond (no pool reward)
+                const bondShare = (proposerBond * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR;
+                const totalToDisputer = disputerBondValue + bondShare;
+                
+                return (
+                  <div className="p-3 bg-dark-800 border border-dark-600 space-y-2">
+                    <p className="text-xs font-bold text-white mb-2">DISPUTER RECEIVES:</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Bond returned:</span>
+                        <span className="font-mono text-white">{formatBNB(disputerBondValue)} BNB</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">50% of proposer bond:</span>
+                        <span className="font-mono text-yes">+{formatBNB(bondShare)} BNB</span>
+                      </div>
+                      <div className="flex justify-between border-t border-dark-500 pt-1 mt-1">
+                        <span className="text-white font-bold">Total:</span>
+                        <span className="font-mono text-yes font-bold">{formatBNB(totalToDisputer)} BNB</span>
+                      </div>
+                    </div>
+                    <p className="text-text-muted text-xs italic mt-2">
+                      Note: Disputer does not receive pool reward.
+                    </p>
+                  </div>
+                );
+              }
+            })()}
             
             <Button
               variant="cyber"
@@ -934,6 +1019,132 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="p-3 bg-dark-800 border border-dark-600 text-center">
             <p className="text-yes font-bold">✓ CLAIMED</p>
             <p className="text-text-muted text-xs mt-1">You have already claimed your winnings</p>
+          </div>
+        )}
+
+        {/* Resolution History - Show proposer/disputer info after market is resolved */}
+        {isResolved && market.proposer && (
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
+            <p className="text-text-muted font-bold text-xs mb-3">RESOLUTION HISTORY</p>
+            
+            {/* Proposer Info */}
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-text-muted text-xs">Proposed by:</span>
+              <div className="flex items-center gap-2">
+                <AddressDisplay address={market.proposer} truncateLength={4} />
+                {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                  <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                )}
+              </div>
+            </div>
+            
+            {/* Disputer Info (if disputed) */}
+            {market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000' && (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-text-muted text-xs">Disputed by:</span>
+                  <div className="flex items-center gap-2">
+                    <AddressDisplay address={market.disputer} truncateLength={4} />
+                    {market.disputer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                      <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Vote Results */}
+                <div className="grid grid-cols-2 gap-2 text-center mt-3 pt-3 border-t border-dark-500">
+                  <div className={cn(
+                    "p-2 border",
+                    proposerVotes >= disputerVotes 
+                      ? "border-yes/50 bg-yes/10" 
+                      : "border-dark-500 bg-dark-700"
+                  )}>
+                    <p className={cn(
+                      "font-bold text-xs mb-1",
+                      proposerVotes >= disputerVotes ? "text-yes" : "text-text-muted"
+                    )}>
+                      PROPOSER {proposerVotes >= disputerVotes && "✓"}
+                    </p>
+                    <p className="text-white font-mono">{formatShares(proposerVotes)}</p>
+                    <p className="text-text-muted text-[10px]">votes</p>
+                  </div>
+                  <div className={cn(
+                    "p-2 border",
+                    disputerVotes > proposerVotes 
+                      ? "border-yes/50 bg-yes/10" 
+                      : "border-dark-500 bg-dark-700"
+                  )}>
+                    <p className={cn(
+                      "font-bold text-xs mb-1",
+                      disputerVotes > proposerVotes ? "text-yes" : "text-text-muted"
+                    )}>
+                      DISPUTER {disputerVotes > proposerVotes && "✓"}
+                    </p>
+                    <p className="text-white font-mono">{formatShares(disputerVotes)}</p>
+                    <p className="text-text-muted text-[10px]">votes</p>
+                  </div>
+                </div>
+                
+                {/* Earnings Breakdown for Disputed Market */}
+                {(() => {
+                  const pBond = proposerBondFromMarket;
+                  const dBond = market.disputerBond ? BigInt(market.disputerBond) : 0n;
+                  const BOND_WINNER_SHARE_BPS = 5000n;
+                  const BPS_DENOMINATOR = 10000n;
+                  const proposerWon = proposerVotes >= disputerVotes;
+                  
+                  if (proposerWon) {
+                    // Proposer won: bond back + 50% disputer bond + pool reward
+                    const bondWinnings = (dBond * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR;
+                    const proposerProfit = bondWinnings + estimatedReward;
+                    
+                    return (
+                      <div className="mt-3 pt-3 border-t border-dark-500 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Proposer earned:</span>
+                          <span className="text-yes font-mono">+{formatBNB(proposerProfit)} BNB</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Disputer lost:</span>
+                          <span className="text-no font-mono">-{formatBNB(dBond)} BNB</span>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // Disputer won: bond back + 50% proposer bond (no pool reward)
+                    const bondWinnings = (pBond * BOND_WINNER_SHARE_BPS) / BPS_DENOMINATOR;
+                    const disputerProfit = bondWinnings;
+                    
+                    return (
+                      <div className="mt-3 pt-3 border-t border-dark-500 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Disputer earned:</span>
+                          <span className="text-yes font-mono">+{formatBNB(disputerProfit)} BNB</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Proposer lost:</span>
+                          <span className="text-no font-mono">-{formatBNB(pBond)} BNB</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+              </>
+            )}
+            
+            {/* No dispute - uncontested: Show proposer earnings */}
+            {(!market.disputer || market.disputer === '0x0000000000000000000000000000000000000000') && (
+              <div className="space-y-2">
+                <p className="text-text-muted text-xs italic mb-2">
+                  Proposal was uncontested (no dispute filed)
+                </p>
+                <div className="flex justify-between text-xs pt-2 border-t border-dark-500">
+                  <span className="text-text-muted">Proposer earned:</span>
+                  <span className="text-yes font-mono">+{formatBNB(estimatedReward)} BNB</span>
+                </div>
+                <p className="text-text-muted text-[10px] italic">(0.5% pool reward)</p>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,8 +1,90 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** January 31, 2026  
+> **Last Updated:** February 3, 2026  
 > **Status:** Smart Contracts ✅ v3.8.2 DEPLOYED | Subgraph ✅ v5.1.0 | Frontend ✅ v0.7.46  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🔴 CONTRACT FIX NEEDED: Tie Finalization Event Missing
+
+**Discovered:** February 3, 2026  
+**Status:** Requires new contract deployment  
+**Severity:** MEDIUM (UI bug, funds not at risk)
+
+### The Issue
+
+When a disputed market ends in a tie (equal votes or 0:0), calling `finalizeMarket()` triggers `_returnBondsOnTie()` which:
+1. Returns proposer bond ✓
+2. Returns disputer bond ✓
+3. Clears `market.proposer = address(0)` ✓
+4. Clears `market.disputer = address(0)` ✓
+5. **Does NOT emit an event** ✗
+
+Because no event is emitted, the subgraph never learns that `proposer` and `disputer` were cleared. This causes:
+- UI shows stale `proposer` address from subgraph
+- `emergencyRefundBlockedByProposal` stays `true` (thinks proposal still exists)
+- User cannot see "CLAIM REFUND" button after tie finalization
+- Requires page refresh + subgraph resync (which never happens without event)
+
+### Contract Fix Required
+
+In `PredictionMarket.sol`, add a new event and emit it in `_returnBondsOnTie()`:
+
+```solidity
+// Add event declaration
+event TieFinalized(uint256 indexed marketId);
+
+// In _returnBondsOnTie() function, add at the end:
+emit TieFinalized(marketId);
+```
+
+**Note:** The function signature needs to change to accept `marketId`:
+```solidity
+function _returnBondsOnTie(uint256 marketId, Market storage market) internal {
+    // ... existing code ...
+    emit TieFinalized(marketId);
+}
+```
+
+And update the two call sites in `finalizeMarket()` to pass `marketId`.
+
+### Subgraph Update Required
+
+After contract deployment, update subgraph to handle `TieFinalized` event:
+```typescript
+export function handleTieFinalized(event: TieFinalized): void {
+  let market = Market.load(event.params.marketId.toString());
+  if (market) {
+    market.proposer = null;
+    market.disputer = null;
+    market.save();
+  }
+}
+```
+
+### Workaround (Frontend - Option B)
+
+Until new contract is deployed, frontend can use logic-based detection:
+```typescript
+// If tie scenario + 24h passed → don't block refund based on stale subgraph proposer data
+const tieWasFinalized = disputeMs > 0 && 
+  now > votingWindowEnd && 
+  proposerVotes === disputerVotes && 
+  now > emergencyRefundTime;
+
+const emergencyRefundBlockedByProposal = !contractPaused && hasProposer && !tieWasFinalized;
+```
+
+**Risk:** Minimal - if logic is wrong, tx reverts with ~$0.01 gas loss. Contract protects funds.
+
+### Files Affected
+
+- `contracts/src/PredictionMarket.sol` - Add event + emit
+- `subgraph/src/mapping.ts` - Handle new event
+- `subgraph/subgraph.yaml` - Add event handler
+- `frontend/src/features/markets/components/ResolutionPanel.tsx` - Workaround
+- `frontend/src/features/portfolio/components/PositionCard.tsx` - Workaround
 
 ---
 

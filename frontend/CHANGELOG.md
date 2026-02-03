@@ -2,6 +2,301 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.16] - 2026-02-04
+
+### Fixed - P/L Discrepancy Between Portfolio and Leaderboard
+
+Fixed Trading P/L calculation in Portfolio page to match the Leaderboard (subgraph) calculation.
+
+#### The Problem
+Portfolio page showed **+0.0232 BNB** while Leaderboard showed **+0.0523 BNB** for the same user.
+
+**Root Cause:** The Portfolio page only counted Trading P/L from *closed positions* (resolved OR fully exited), while the subgraph counts Trading P/L on **every sell immediately** regardless of position state.
+
+#### Example of the Bug
+1. User buys 100 YES shares for 0.05 BNB
+2. User sells 50 YES shares for 0.08 BNB (profit!)
+3. Market still active, user holds 50 YES shares
+
+- **Subgraph (Leaderboard):** +0.055 BNB (counted immediately) ✓
+- **Portfolio (before fix):** +0.00 BNB (market not closed) ✗
+
+#### The Solution
+Updated `tradingPnl` calculation to count P/L from ALL sells immediately, matching the subgraph's approach:
+
+```tsx
+// v0.8.16: Count P/L on every sell (not just closed positions) to match leaderboard
+// Group trades by market to calculate per-market P/L using average cost basis
+const marketData = new Map<string, {...}>();
+
+trades.forEach(trade => {
+  // No longer filter by closed positions - count all trades
+  ...
+});
+```
+
+Now Portfolio and Leaderboard P/L values match.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+```
+
+---
+
+## [0.8.15] - 2026-02-04
+
+### Fixed - Instant Bond/Fee Withdrawal Updates
+
+Fixed slow UI updates after claiming bonds or creator fees in Portfolio page. The "PENDING WITHDRAWALS" banner wasn't disappearing immediately after successful withdrawal.
+
+#### The Problem
+- After clicking "CLAIM BONDS" or "CLAIM FEES", the banner stayed visible
+- Had to wait 1+ seconds for first refetch instead of immediate update
+- Contract reads (which are instant) weren't being triggered right away
+
+#### The Solution
+Added **immediate refetch** when transaction succeeds, plus extended the retry pattern to 8 seconds:
+
+```tsx
+// v0.8.15: Immediate + aggressive refetch pattern
+if (bondWithdrawn || feesWithdrawn) {
+  // Immediate refetch - contract reads are instant after tx confirms
+  refetchPending();
+  refetchEarnings();
+  
+  // Then continue with 1s, 2s, 4s, 8s for subgraph updates
+  const delays = [1000, 2000, 4000, 8000];
+  ...
+}
+```
+
+Now the pending withdrawals banner disappears instantly when the transaction confirms.
+
+### Added - Refund Amount Display in Portfolio
+
+The "CLAIM REFUND" button now shows the estimated refund amount, matching the behavior of the "CLAIM" button.
+
+**Before:** `CLAIM REFUND`
+**After:** `CLAIM REFUND (0.0150)`
+
+The refund amount is calculated as: `userShares * poolBalance / totalSupply` (user's fair share of the pool).
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/portfolio/components/PositionCard.tsx
+```
+
+---
+
+## [0.8.14] - 2026-02-03
+
+### Improved - Aggressive Refetch After Transactions
+
+Fixed slow UI updates after successful transactions (claim, finalize, propose, dispute, vote, refund, withdraw bonds/fees, claim jury fees). Previously relied on 3-second single refetch which often wasn't enough for subgraph indexing.
+
+#### The Problem
+After successful transactions:
+- UI waited 3 seconds before single refetch
+- Subgraph often hadn't indexed yet
+- Buttons remained visible for 10-60+ seconds
+- Portfolio stats (POSITIONS, INVESTED, P/L, DISPUTES, etc.) took too long to update
+- Users had to manually refresh the page
+
+#### The Solution
+Implemented exponential backoff refetch pattern: 1s, 2s, 4s, 8s
+
+```tsx
+// Aggressive refetch pattern
+const delays = [1000, 2000, 4000, 8000];
+delays.forEach((delay) => {
+  setTimeout(() => {
+    refetchPositions();
+    refetchEarnings();
+    refetchTrades();
+    refetchClaimableJuryFees();
+    refetchPending();
+  }, delay);
+});
+```
+
+This ensures the UI catches the subgraph update as soon as it's indexed, typically within 1-4 seconds.
+
+#### All Data Now Fast-Updates
+- Position cards (claim/finalize/refund buttons)
+- Portfolio stats header (POSITIONS, INVESTED, TOTAL P/L)
+- Resolution earnings (PROPOSER, DISPUTES, JURY, CREATOR)
+- Pending withdrawals banner
+- Jury fees claimable list
+
+#### Files Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+src/features/portfolio/pages/PortfolioPage.tsx
+src/shared/hooks/useSmartPolling.ts (added useAggressiveRefetch hook)
+src/shared/hooks/index.ts (exported new hook)
+```
+
+---
+
+## [0.8.13] - 2026-02-03
+
+### Fixed - Action Tab Button Filtering for Jury Fees vs Claim Winnings
+
+Fixed a bug where the JURY FEES button would appear instead of the CLAIM WINNINGS button in the Portfolio page's NEEDS ACTIONS section when a user had both pending actions.
+
+#### The Bug
+When a user had both:
+1. Winnings to claim (winning shares)
+2. Jury fees to claim (voted for winning side)
+
+The card would always show the JURY FEE button because it had highest priority in the button chain, regardless of which action tab was selected.
+
+#### The Fix
+- Button priority now respects the active action filter tab
+- When `actionFilter === 'claim'`, the claim winnings button shows (jury fee button hidden)
+- When `actionFilter === 'jury'`, the jury fee button shows
+- When `actionFilter === 'all'` or not in needs-action tab, jury fee button takes priority (original behavior)
+
+```tsx
+// NEW: Only show jury fee action when appropriate for current filter
+const shouldShowJuryFeeAction = isJuryFeePosition && 
+  (filterBy !== 'needs-action' || actionFilter === 'jury' || actionFilter === 'all');
+```
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+```
+
+---
+
+## [0.8.12] - 2026-02-03
+
+### Improved - Jury Fees Integrated into Action Tab + Consistent Card Layout
+
+Moved jury fee claims from a separate banner to the "ACTION" tab in Portfolio. Also fixed card height inconsistency by ensuring each card has exactly ONE action button.
+
+#### Changes
+- Added `JURY` filter button in Action tab sub-filters (cyan colored)
+- Jury fee positions now appear in the Action tab grid using regular PositionCard
+- **ONE button per card**: Jury fee claim is now part of the main button chain, not an extra button
+- Removed "Est. payout" and "Refund" text below buttons that caused inconsistent card heights
+- Action count now includes jury fees: `ACTION (5)` when you have 3 regular actions + 2 jury fees
+- Removed the old banner that showed multiple claim buttons stacked
+
+#### Button Priority (top to bottom)
+1. CLAIM JURY FEE (cyan, if jury fee claimable) - **highest priority**
+2. ✓ CLAIMED (disabled, if shares already claimed)
+3. CLAIM REFUND (if emergency refund available)
+4. CLAIM (green, if has winning shares)
+5. FINALIZE (yellow, if needs finalization)
+6. VIEW MARKET (default)
+
+> **Note**: Jury fee claim takes priority because a user may have already claimed their winning shares but still have jury fees to claim from voting correctly in a disputed market.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx
+src/features/portfolio/components/PositionCard.tsx
+```
+
+---
+
+## [0.8.11] - 2026-02-03
+
+### Fixed - P/L Tab Now Shows Losers After Resolution
+
+The P/L tab was not showing Resolution P/L for losers because they can't claim (and the skip condition only allowed claimed positions or trading exits).
+
+#### The Bug
+```tsx
+// OLD: Skipped losers who bought but never sold
+if (!hasYesSells && !hasNoSells && !hasClaimed) return;
+```
+
+Losers:
+- Can't claim (no winning shares)
+- May not have any sells (held till resolution)
+- Were skipped even though subgraph sets their `realizedPnL` on resolution
+
+#### The Fix
+```tsx
+// NEW: Also include positions with resolution P/L (losers have it set on resolution)
+if (!hasYesSells && !hasNoSells && !hasClaimed && resolutionPnL === null) return;
+```
+
+Now losers appear in P/L tab with their negative Resolution P/L (e.g., `-0.0098 BNB`).
+
+#### Also Updated
+- Empty state message: "Appears when traders exit or claim" → "Appears when traders exit or market resolves"
+
+#### File Modified
+```
+src/features/markets/components/TradeHistory.tsx
+```
+
+---
+
+## [0.8.10] - 2026-02-03
+
+### Improved - Resolution Panel Proposer/Disputer Reward Breakdown
+
+The finalize section now shows a complete breakdown of what the winner receives, not just the pool reward.
+
+#### Before
+```
+Proposer will receive 0.0001 BNB reward
+```
+
+#### After (Proposer Wins)
+```
+PROPOSER RECEIVES:
+Bond returned:           0.0050 BNB
+50% of disputer bond:   +0.0050 BNB
+Pool reward (0.5%):     +0.0001 BNB
+─────────────────────────────────────
+Total:                   0.0101 BNB
+```
+
+#### After (Disputer Wins)
+```
+DISPUTER RECEIVES:
+Bond returned:           0.0100 BNB
+50% of proposer bond:   +0.0025 BNB
+─────────────────────────────────────
+Total:                   0.0125 BNB
+
+Note: Disputer does not receive pool reward.
+```
+
+#### Why This Matters
+- Users now see the FULL picture before finalizing
+- Previously only showed the 0.5% pool reward (~0.0001 BNB)
+- Missed the bond return + 50% of loser's bond (often 100x the pool reward!)
+- Improves transparency about resolution economics
+
+### Added - Resolution History After Finalization
+
+After a market is resolved, the Resolution Panel now displays a "RESOLUTION HISTORY" section showing:
+- **Proposer address** with CREATOR badge if applicable
+- **Disputer address** (if market was disputed) with CREATOR badge if applicable
+- **Vote results** with visual indicator of who won (checkmark + green highlight)
+- **Earnings breakdown** showing how much proposer/disputer won or lost:
+  - Disputed: "Proposer earned: +X BNB" / "Disputer lost: -Y BNB" (or vice versa)
+  - Uncontested: "Proposer earned: +X BNB (0.5% pool reward)"
+- **"Uncontested"** note if no dispute was filed
+
+Previously this information disappeared after finalization, making it hard to see how the market was resolved.
+
+#### File Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+```
+
+---
+
 ## [0.8.9] - 2026-02-03
 
 ### Added - Payout Preview Disclaimer for Proposer Reward

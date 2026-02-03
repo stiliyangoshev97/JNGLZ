@@ -219,8 +219,9 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false, 
       // v5.1.0: realizedPnL is now set for BOTH winners (on claim) AND losers (on resolution)
       const resolutionPnL = position?.realizedPnL ? parseFloat(position.realizedPnL) : null;
 
-      // Skip if no sells AND no claims
-      if (!hasYesSells && !hasNoSells && !hasClaimed) return;
+      // Skip if no sells AND no claims AND no resolution P/L
+      // This ensures losers (who can't claim but have realizedPnL set on resolution) are included
+      if (!hasYesSells && !hasNoSells && !hasClaimed && resolutionPnL === null) return;
 
       // Calculate trading P/L when:
       // 1. Fully exited via trading (0 shares remaining), OR
@@ -328,7 +329,7 @@ export function RealizedPnl({ trades, positions = [], isMarketResolved = false, 
       <div className="h-full flex items-center justify-center p-8">
         <div className="text-center">
           <p className="text-text-muted font-mono">NO P/L DATA YET</p>
-          <p className="text-text-muted text-xs mt-1">Appears when traders exit or claim</p>
+          <p className="text-text-muted text-xs mt-1">Appears when traders exit or market resolves</p>
         </div>
       </div>
     );

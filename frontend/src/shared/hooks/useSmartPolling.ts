@@ -282,6 +282,43 @@ export function useTradeRefetch(refetchFn: () => void) {
 }
 
 /**
+ * Aggressive refetch hook for after transactions
+ * Retries multiple times to catch subgraph indexing
+ * Pattern: 1s, 2s, 4s, 8s (exponential backoff up to 4 attempts)
+ * 
+ * @param refetchFn - Function to call to refetch data
+ * @param maxRetries - Maximum number of retry attempts (default: 4)
+ */
+export function useAggressiveRefetch(refetchFn: () => void | Promise<unknown>, maxRetries = 4) {
+  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  const triggerRefetch = useCallback(() => {
+    // Clear any pending timeouts
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+
+    // Schedule exponential backoff refetches: 1s, 2s, 4s, 8s
+    const delays = [1000, 2000, 4000, 8000].slice(0, maxRetries);
+    
+    delays.forEach((delay) => {
+      const timeout = setTimeout(() => {
+        refetchFn();
+      }, delay);
+      timeoutsRef.current.push(timeout);
+    });
+  }, [refetchFn, maxRetries]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  return { triggerRefetch };
+}
+
+/**
  * Calculate daily query budget based on polling intervals
  * Updated for Predator v2 intervals
  */
