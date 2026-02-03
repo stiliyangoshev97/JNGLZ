@@ -2,6 +2,61 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.10] - 2026-02-03
+
+### Improved - Resolution Panel Proposer/Disputer Reward Breakdown
+
+The finalize section now shows a complete breakdown of what the winner receives, not just the pool reward.
+
+#### Before
+```
+Proposer will receive 0.0001 BNB reward
+```
+
+#### After (Proposer Wins)
+```
+PROPOSER RECEIVES:
+Bond returned:           0.0050 BNB
+50% of disputer bond:   +0.0050 BNB
+Pool reward (0.5%):     +0.0001 BNB
+─────────────────────────────────────
+Total:                   0.0101 BNB
+```
+
+#### After (Disputer Wins)
+```
+DISPUTER RECEIVES:
+Bond returned:           0.0100 BNB
+50% of proposer bond:   +0.0025 BNB
+─────────────────────────────────────
+Total:                   0.0125 BNB
+
+Note: Disputer does not receive pool reward.
+```
+
+#### Why This Matters
+- Users now see the FULL picture before finalizing
+- Previously only showed the 0.5% pool reward (~0.0001 BNB)
+- Missed the bond return + 50% of loser's bond (often 100x the pool reward!)
+- Improves transparency about resolution economics
+
+### Added - Resolution History After Finalization
+
+After a market is resolved, the Resolution Panel now displays a "RESOLUTION HISTORY" section showing:
+- **Proposer address** with CREATOR badge if applicable
+- **Disputer address** (if market was disputed) with CREATOR badge if applicable
+- **Vote results** with visual indicator of who won (checkmark + green highlight)
+- **"Uncontested"** note if no dispute was filed
+
+Previously this information disappeared after finalization, making it hard to see how the market was resolved.
+
+#### File Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+```
+
+---
+
 ## [0.8.9] - 2026-02-03
 
 ### Added - Payout Preview Disclaimer for Proposer Reward
