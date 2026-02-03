@@ -2,6 +2,41 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.11] - 2026-02-03
+
+### Fixed - P/L Tab Now Shows Losers After Resolution
+
+The P/L tab was not showing Resolution P/L for losers because they can't claim (and the skip condition only allowed claimed positions or trading exits).
+
+#### The Bug
+```tsx
+// OLD: Skipped losers who bought but never sold
+if (!hasYesSells && !hasNoSells && !hasClaimed) return;
+```
+
+Losers:
+- Can't claim (no winning shares)
+- May not have any sells (held till resolution)
+- Were skipped even though subgraph sets their `realizedPnL` on resolution
+
+#### The Fix
+```tsx
+// NEW: Also include positions with resolution P/L (losers have it set on resolution)
+if (!hasYesSells && !hasNoSells && !hasClaimed && resolutionPnL === null) return;
+```
+
+Now losers appear in P/L tab with their negative Resolution P/L (e.g., `-0.0098 BNB`).
+
+#### Also Updated
+- Empty state message: "Appears when traders exit or claim" → "Appears when traders exit or market resolves"
+
+#### File Modified
+```
+src/features/markets/components/TradeHistory.tsx
+```
+
+---
+
 ## [0.8.10] - 2026-02-03
 
 ### Improved - Resolution Panel Proposer/Disputer Reward Breakdown
