@@ -1,7 +1,7 @@
-# Security Analysis: PredictionMarket.sol v3.8.2
+# Security Analysis: PredictionMarket.sol v3.8.3
 
-**Date:** January 23, 2026  
-**Version:** v3.8.2  
+**Date:** February 4, 2026  
+**Version:** v3.8.3  
 **Analyst:** GitHub Copilot  
 **Status:** ✅ ALL VULNERABILITIES FIXED
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Version 3.8.2 fixes fee calculation and event emission bugs discovered during pool balance investigation:
+Version 3.8.3 adds the `TieFinalized` event to fix subgraph sync issues after tie finalization:
 
 | Version | Changes | Tests |
 |---------|---------|-------|
@@ -19,25 +19,60 @@ Version 3.8.2 fixes fee calculation and event emission bugs discovered during po
 | v3.7.0 | Jury fees Pull Pattern (O(n) → O(1)), **SweepFunds REMOVED** | 191 |
 | v3.8.0 | Individual propose functions for governance UX | 191 |
 | v3.8.1 | Contract size optimization - consolidated governance | 214 |
-| **v3.8.2** | **Bug fixes: creator fee in createMarketAndBuy, Trade event consistency** | **214** |
+| v3.8.2 | Bug fixes: creator fee in createMarketAndBuy, Trade event consistency | 214 |
+| **v3.8.3** | **TieFinalized event for subgraph sync** | **214** |
 
 **All 214 tests passing. Contract deployed to BNB Testnet.**
 
-### v3.8.2 Bug Fixes
+### v3.8.3 Changes
 
-| Bug | Severity | Issue | Fix |
-|-----|----------|-------|-----|
-| #1 | 🔴 HIGH | `createMarketAndBuy()` missing creator fee | Added creator fee calculation + Pull Pattern credit |
-| #4 | 🟡 MEDIUM | BUY events emit gross, SELL emit net | All Trade events now emit NET BNB |
+| Change | Severity | Description |
+|--------|----------|-------------|
+| `TieFinalized` event | 🟡 MEDIUM | Emitted when tie clears proposer/disputer, enables subgraph to sync state |
+| `_returnBondsOnTie()` signature | ℹ️ Info | Now accepts `marketId` for event emission |
 
 ### Current Deployment
-- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+- **Address:** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+- **BscScan:** https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
 
 ---
 
-## Part 0: v3.8.2 Security Considerations
+## Part 0: v3.8.3 Security Considerations
+
+### TieFinalized Event Addition
+
+**Issue:** When voting ended in a tie (or winning side was empty), `_returnBondsOnTie()` cleared `market.proposer` and `market.disputer` to `address(0)` but emitted no event. The subgraph had no way to detect this state change.
+
+**Impact:** 
+- UI showed stale `proposer` address from subgraph
+- `emergencyRefundBlockedByProposal` stayed `true` (thought proposal still existed)
+- User couldn't see "CLAIM REFUND" button after tie finalization
+- Required page refresh that never helped (subgraph was stale)
+
+**Fix Applied:**
+```solidity
+// Added event declaration
+event TieFinalized(uint256 indexed marketId);
+
+// Updated function signature
+function _returnBondsOnTie(uint256 marketId, Market storage market) internal {
+    // ... existing bond return logic ...
+    
+    // v3.6.2 FIX: Clear proposer/disputer so emergency refund is not blocked
+    market.proposer = address(0);
+    market.disputer = address(0);
+
+    // v3.8.3: Emit event so subgraph can update state
+    emit TieFinalized(marketId);
+}
+```
+
+**Security Impact:** None - this is a pure event emission addition. No state changes, no fund flows affected. The function already cleared proposer/disputer, this just notifies the subgraph.
+
+---
+
+## Part 0.5: v3.8.2 Security Considerations
 
 ### Bug #1: Missing Creator Fee in createMarketAndBuy()
 

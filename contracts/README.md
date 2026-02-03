@@ -7,7 +7,7 @@
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-green)]()
-[![Version](https://img.shields.io/badge/version-v3.8.2-blue)]()
+[![Version](https://img.shields.io/badge/version-v3.8.3-blue)]()
 
 ---
 
@@ -15,11 +15,11 @@
 
 | Network | Address | Status |
 |---------|---------|--------|
-| **BNB Testnet** | [`0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`](https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30) | ✅ Verified |
+| **BNB Testnet** | [`0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`](https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf) | ✅ Verified |
 
 ---
 
-## ⚠️ CRITICAL: v3.8.2 Required
+## ⚠️ CRITICAL: v3.8.3 Required
 
 **Previous versions have critical bugs.** See [CHANGELOG.md](CHANGELOG.md) for details.
 
@@ -37,7 +37,33 @@
 | v3.7.0 | ⚠️ DEPRECATED | **SweepFunds removed, jury fees Pull Pattern** |
 | v3.8.0 | ❌ NOT DEPLOYED | **Contract size exceeded EVM limit (26,340 > 24,576 bytes)** |
 | v3.8.1 | ⚠️ DEPRECATED | **Missing creator fee in createMarketAndBuy(), inconsistent Trade events** |
-| **v3.8.2** | ✅ **DEPLOYED** | **Bug fixes: creator fee, Trade event consistency** |
+| v3.8.2 | ⚠️ DEPRECATED | **No event when tie clears proposer/disputer (subgraph desync)** |
+| **v3.8.3** | ✅ **DEPLOYED** | **TieFinalized event for subgraph sync** |
+
+---
+
+## 🆕 v3.8.3: TieFinalized Event
+
+**Released:** February 4, 2026
+
+### What's New
+
+**TieFinalized Event** - When voting ends in a tie (equal votes or 0:0), the contract now emits a `TieFinalized(marketId)` event after clearing `proposer` and `disputer` to `address(0)`.
+
+This enables the subgraph to detect the state change and update accordingly, fixing the UI bug where "FINALIZE TIE" button kept showing instead of "CLAIM REFUND".
+
+### Changes
+
+```solidity
+// New event
+event TieFinalized(uint256 indexed marketId);
+
+// Updated function signature
+function _returnBondsOnTie(uint256 marketId, Market storage market) internal {
+    // ... existing bond return logic ...
+    emit TieFinalized(marketId);
+}
+```
 
 ---
 

@@ -1,22 +1,24 @@
 # Security Audit Report: PredictionMarket.sol
 
 **Contract:** PredictionMarket.sol  
-**Version:** v3.8.2  
-**Audit Date:** January 23, 2026  
+**Version:** v3.8.3  
+**Audit Date:** February 4, 2026  
 **Auditor:** Internal Review + Slither Static Analysis  
 **Solidity Version:** 0.8.24  
 **Status:** ✅ DEPLOYED
 
-### Current Deployment (v3.8.2)
-- **Address:** `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30`
+### Current Deployment (v3.8.3)
+- **Address:** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
 - **Network:** BNB Testnet (Chain ID: 97)
-- **Block:** 86129412
-- **TX:** `0x866350d8b5a1762c4f2552d1f48a566982e069dff6065e6cf79083b275b274aa`
-- **BscScan:** https://testnet.bscscan.com/address/0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30
+- **Block:** 88286466
+- **BscScan:** https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
 - **Verified:** ✅ Yes
-- **Contract Size:** 23,316 bytes (1,260 bytes margin under 24KB limit)
 
-### v3.8.2 Bug Fixes
+### v3.8.3 Changes
+- **TieFinalized event:** Emitted when tie clears proposer/disputer, enables subgraph sync
+- **`_returnBondsOnTie()` signature:** Now accepts `marketId` for event emission
+
+### v3.8.2 Bug Fixes (carried forward)
 - **Bug #1 FIXED:** `createMarketAndBuy()` now charges 1.5% fee (was only 1%)
 - **Bug #4 FIXED:** Trade events now consistently emit NET BNB (after fees)
 
@@ -70,7 +72,7 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 
 ---
 
-## v3.8.2 Post-Deployment Security Review (January 23, 2026)
+## v3.8.3 Post-Deployment Security Review (February 4, 2026)
 
 ### Functions Reviewed
 
@@ -82,14 +84,15 @@ The PredictionMarket contract implements a decentralized binary prediction marke
 | `proposeOutcome()` | ✅ SECURE | One-sided market check, cutoff window |
 | `dispute()` | ✅ SECURE | 30-min window, 2x bond requirement |
 | `vote()` | ✅ SECURE | Share-weighted, no double voting |
-| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check |
+| `finalizeMarket()` | ✅ SECURE | Empty winner side safety check, TieFinalized event |
+| `_returnBondsOnTie()` | ✅ SECURE | Returns bonds, clears proposer/disputer, emits TieFinalized |
 | `claim()` | ✅ SECURE | emergencyRefunded flag prevents double-spend |
 | `emergencyRefund()` | ✅ SECURE | Proportional calculation, pool/supply decremented |
 | `claimJuryFees()` | ✅ SECURE | Pull Pattern, O(1) gas |
 | `withdrawBond()` | ✅ SECURE | Pull Pattern, CEI compliant |
 | `withdrawCreatorFees()` | ✅ SECURE | Pull Pattern, CEI compliant |
 
-### Slither Analysis (v3.8.2)
+### Slither Analysis (v3.8.3)
 
 **Run Date:** January 23, 2026  
 **Findings:** 34 results

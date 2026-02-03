@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title PredictionMarket
- * @author Junkie.Fun
+ * @author JNGLZ.FUN
  * @notice Decentralized prediction market with bonding curve pricing and Street Consensus resolution
  * @dev Uses linear constant sum bonding curve: P(YES) + P(NO) = UNIT_PRICE (0.01 BNB)
  *      Virtual liquidity is configurable per market via Heat Levels
  *      Street Consensus: Bettors vote on outcomes, weighted by share ownership
  *      3-of-3 MultiSig for all governance actions
- * @custom:version 3.6.2 - One-sided market + emergency refund bypass fixes
+ * @custom:version 3.8.3 - TieFinalized event for subgraph sync
  */
 contract PredictionMarket is ReentrancyGuard {
     // ============ Constants ============
@@ -270,6 +270,8 @@ contract PredictionMarket is ReentrancyGuard {
     );
 
     event MarketResolutionFailed(uint256 indexed marketId, string reason);
+
+    event TieFinalized(uint256 indexed marketId);
 
     event Claimed(
         uint256 indexed marketId,
@@ -1064,7 +1066,7 @@ contract PredictionMarket is ReentrancyGuard {
             // Check for tie (exact same votes = emergency refund scenario)
             if (market.yesVotes == market.noVotes) {
                 // Tie: return all bonds and allow emergency refund
-                _returnBondsOnTie(market);
+                _returnBondsOnTie(marketId, market);
                 // Don't resolve - market stays stuck, emergency refund available
                 return;
             }
@@ -1079,7 +1081,7 @@ contract PredictionMarket is ReentrancyGuard {
                 : market.noSupply;
             if (winningSupply == 0) {
                 // No winners possible - return bonds and allow emergency refund
-                _returnBondsOnTie(market);
+                _returnBondsOnTie(marketId, market);
                 emit MarketResolutionFailed(
                     marketId,
                     "No holders on winning side"
@@ -1118,8 +1120,13 @@ contract PredictionMarket is ReentrancyGuard {
      * @notice Internal function to return bonds when voting is a tie
      * @dev Uses Pull Pattern - credits to pendingWithdrawals instead of immediate transfers
      *      v3.6.2: Also clears proposer/disputer so emergency refund is not blocked
+     * @param marketId The ID of the market (for event emission)
+     * @param market The market storage reference
      */
-    function _returnBondsOnTie(Market storage market) internal {
+    function _returnBondsOnTie(
+        uint256 marketId,
+        Market storage market
+    ) internal {
         // Return proposer bond (Pull Pattern)
         if (market.proposalBond > 0) {
             uint256 proposerBondAmount = market.proposalBond;
@@ -1149,6 +1156,9 @@ contract PredictionMarket is ReentrancyGuard {
         // v3.6.2 FIX: Clear proposer/disputer so emergency refund is not blocked
         market.proposer = address(0);
         market.disputer = address(0);
+
+        // v3.8.3: Emit event so subgraph can update state
+        emit TieFinalized(marketId);
     }
 
     /**

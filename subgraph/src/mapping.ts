@@ -13,6 +13,7 @@ import {
   VoteCast,
   MarketResolved,
   MarketResolutionFailed,
+  TieFinalized,
   Claimed,
   EmergencyRefunded,
   BondDistributed,
@@ -1077,4 +1078,24 @@ export function handleCreatorFeesClaimed(event: CreatorFeesClaimed): void {
   user.pendingCreatorFees = user.pendingCreatorFees.minus(claimAmount);
   user.totalCreatorFeesEarned = user.totalCreatorFeesEarned.plus(claimAmount);
   user.save();
+}
+
+/**
+ * Handle TieFinalized event
+ * Clears proposer and disputer when a disputed market ends in a tie
+ * v3.8.3: New event emitted by _returnBondsOnTie()
+ */
+export function handleTieFinalized(event: TieFinalized): void {
+  let marketId = event.params.marketId.toString();
+  let market = Market.load(marketId);
+
+  if (market == null) {
+    return;
+  }
+
+  // Clear proposer and disputer since bonds were returned
+  market.proposer = null;
+  market.disputer = null;
+
+  market.save();
 }
