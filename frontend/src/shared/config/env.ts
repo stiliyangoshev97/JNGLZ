@@ -36,14 +36,18 @@ export const env = {
     ? import.meta.env.VITE_TESTNET_SUBGRAPH_URL || ''
     : import.meta.env.VITE_MAINNET_SUBGRAPH_URL || '',
   
-  // The Graph API Key (shared)
-  GRAPH_API_KEY: import.meta.env.VITE_GRAPH_API_KEY || '',
+  // The Graph API Key (auto-selected based on network)
+  GRAPH_API_KEY: isTestnet
+    ? import.meta.env.VITE_TESTNET_GRAPH_API_KEY || ''
+    : import.meta.env.VITE_MAINNET_GRAPH_API_KEY || '',
   
   // Web3 (shared)
   WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '',
   
-  // Admin wallets (MultiSig signers - shared)
-  ADMIN_ADDRESSES: (import.meta.env.VITE_ADMIN_ADDRESSES || '')
+  // Admin wallets (MultiSig signers - auto-selected based on network)
+  ADMIN_ADDRESSES: (isTestnet
+    ? import.meta.env.VITE_TESTNET_ADMIN_ADDRESSES || ''
+    : import.meta.env.VITE_MAINNET_ADMIN_ADDRESSES || '')
     .split(',')
     .map((addr: string) => addr.trim().toLowerCase())
     .filter((addr: string) => addr.length > 0),
