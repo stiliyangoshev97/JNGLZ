@@ -8,6 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { env, getBscScanAddressUrl, getNetworkName } from '@/shared/config/env';
 import { useSEO } from '@/shared/hooks/useSEO';
 
 export function HowToPlayPage() {
@@ -1961,6 +1962,38 @@ export function HowToPlayPage() {
             </div>
           </section>
 
+        </div>
+
+        {/* Smart Contract Info */}
+        <div className="bg-dark-800 border border-cyber/30 p-4 md:p-6 mt-8 md:mt-12">
+          <h3 className="text-lg font-bold text-white mb-4">SMART CONTRACT</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            All JNGLZ.FUN markets operate through verified, immutable smart contracts on BNB Chain:
+          </p>
+          <div className="font-mono text-sm space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-text-muted">Network:</span>
+              <span className="text-cyber">{getNetworkName()}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-text-muted">Contract Address:</span>
+              <a 
+                href={getBscScanAddressUrl(env.CONTRACT_ADDRESS)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-cyber hover:underline break-all text-xs"
+              >
+                {env.CONTRACT_ADDRESS}
+              </a>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-text-muted">Version:</span>
+              <span className="text-white">v3.8.3</span>
+            </div>
+          </div>
+          <p className="text-xs text-text-muted mt-3">
+            Verify the contract source code on BscScan. All transactions are publicly visible.
+          </p>
         </div>
 
         {/* Footer - Bridge to Legal */}

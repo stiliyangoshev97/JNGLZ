@@ -2,6 +2,53 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.23] - 2026-02-05
+
+### Added - Sentry Error Tracking
+
+#### Sentry Integration
+- **Feature**: Added Sentry SDK for error tracking and monitoring.
+- **Package**: `@sentry/react` installed for React-specific error boundary and context.
+- **Configuration**: New `src/shared/config/sentry.ts` module with:
+  - Auto-initialization in production (skipped in dev or without DSN)
+  - Environment detection (testnet vs mainnet)
+  - Release tracking with app version
+  - Performance monitoring (10% sample rate)
+  - Session replay (10% sessions, 100% on errors)
+  - Smart error filtering (ignores wallet rejections, network errors, browser extensions)
+  - Wallet address redaction in breadcrumbs for privacy
+
+#### User Context Tracking
+- **Feature**: Wallet address synced with Sentry user context via `useSentryUser` hook.
+- **Privacy**: Only shortened address stored (e.g., `0x1234...abcd`).
+- **Integration**: Added to `RootLayout` to track connected users.
+
+#### ErrorBoundary Integration
+- **Feature**: Non-chunk errors automatically reported to Sentry.
+- **Smart**: Chunk loading errors (post-deployment) NOT reported (expected behavior).
+
+#### Environment Variables
+```env
+VITE_SENTRY_DSN=        # Your Sentry DSN (leave empty to disable)
+VITE_APP_VERSION=0.8.23 # For release tracking
+```
+
+#### Files Created
+```
+src/shared/config/sentry.ts           # Sentry configuration & helpers
+src/shared/hooks/useSentryUser.ts     # Wallet context sync hook
+```
+
+#### Files Modified
+```
+src/main.tsx                          # Initialize Sentry before React
+src/shared/components/ErrorBoundary.tsx   # Report errors to Sentry
+src/router/RootLayout.tsx             # Add useSentryUser hook
+frontend/.env                         # Add SENTRY_DSN config
+```
+
+---
+
 ## [0.8.22] - 2026-02-05
 
 ### Fixed - Portfolio Stats Not Updating After Claims

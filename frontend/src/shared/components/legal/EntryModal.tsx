@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
+import { env, getBscScanAddressUrl, getNetworkName } from '@/shared/config/env';
 
 const ENTRY_ACCEPTED_KEY = 'junkie_entry_accepted';
 const ENTRY_ACCEPTED_VERSION = '3.0'; // v3.0 = Added UGP/Creator Liability disclaimer, fixed JNGLZ.FUN coloring
@@ -215,6 +216,36 @@ export function EntryModal() {
               <strong className="text-warning">Jury fees</strong> (from disputes) are <strong className="text-white">SEPARATE</strong> → come from the loser's forfeited bond, NOT from the 0.3% resolution fee.
             </p>
           </div>
+        </div>
+
+        {/* Smart Contract Section */}
+        <div className="px-6 py-4 border-b border-dark-600 bg-cyber/5">
+          <h3 className="text-sm font-bold text-white mb-2">SMART CONTRACT</h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-text-muted">Network:</span>
+              <span className="font-mono text-cyber">{getNetworkName()}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-text-muted">Contract Address:</span>
+              <a 
+                href={getBscScanAddressUrl(env.CONTRACT_ADDRESS)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-mono text-cyber hover:underline break-all text-[10px]"
+              >
+                {env.CONTRACT_ADDRESS}
+              </a>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-text-muted">Version:</span>
+              <span className="font-mono text-white">v3.8.3</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-text-muted mt-2">
+            All transactions are executed directly on the blockchain via this verified smart contract.
+            You can view and verify the contract source code on BscScan.
+          </p>
         </div>
 
         {/* Market Rules Section */}

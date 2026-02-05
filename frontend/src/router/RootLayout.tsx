@@ -12,10 +12,14 @@ import { Header } from './Header';
 import { WrongNetworkModal, WrongNetworkBanner, ScrollToTop } from '@/shared/components';
 import { EntryModal, CookieBanner } from '@/shared/components/legal';
 import { useChainValidation } from '@/shared/hooks/useChainValidation';
+import { useSentryUser } from '@/shared/hooks/useSentryUser';
 import { env } from '@/shared/config/env';
 
 export function RootLayout() {
   const { isWrongNetwork } = useChainValidation();
+  
+  // Sync wallet address with Sentry user context
+  useSentryUser();
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col overflow-x-hidden">

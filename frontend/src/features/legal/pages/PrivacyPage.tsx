@@ -8,7 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
-import { env } from '@/shared/config/env';
+import { env, getBscScanAddressUrl, getNetworkName } from '@/shared/config/env';
 import { useSEO } from '@/shared/hooks/useSEO';
 
 export function PrivacyPage() {
@@ -255,6 +255,42 @@ export function PrivacyPage() {
                 <li>X: <a href={env.X_URL} className="text-cyber hover:underline" target="_blank" rel="noopener noreferrer">@jnglzdotfun</a></li>
                 <li>Telegram: <a href={env.TELEGRAM_URL} className="text-cyber hover:underline" target="_blank" rel="noopener noreferrer">t.me/jnglzdotfun</a></li>
               </ul>
+            </div>
+          </section>
+
+          {/* Smart Contract Info */}
+          <section>
+            <h2 className="text-xl font-bold text-white border-l-4 border-cyber pl-4 mb-4">
+              12. SMART CONTRACT
+            </h2>
+            <div className="text-text-secondary space-y-4 pl-4">
+              <p>
+                For transparency, here are the verified smart contract details where all protocol interactions occur:
+              </p>
+              <div className="bg-dark-800 border border-cyber/30 p-4 font-mono text-sm space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Network:</span>
+                  <span className="text-cyber">{getNetworkName()}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-text-muted">Contract Address:</span>
+                  <a 
+                    href={getBscScanAddressUrl(env.CONTRACT_ADDRESS)} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-cyber hover:underline break-all text-xs"
+                  >
+                    {env.CONTRACT_ADDRESS}
+                  </a>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Version:</span>
+                  <span className="text-white">v3.8.3</span>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted">
+                All on-chain data is publicly visible and can be verified on BscScan.
+              </p>
             </div>
           </section>
         </div>
