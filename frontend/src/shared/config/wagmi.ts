@@ -21,11 +21,14 @@ import { env } from './env';
 
 /**
  * BNB Chain configuration
- * - Mainnet (56) for production
- * - Testnet (97) for development
+ * Only one network is available based on environment:
+ * - VITE_IS_TESTNET=true  → Only Testnet (97)
+ * - VITE_IS_TESTNET=false → Only Mainnet (56)
+ * 
+ * This prevents users from switching to the wrong network.
  */
 const chains = env.IS_TESTNET 
-  ? [bscTestnet, bsc] as const
+  ? [bscTestnet] as const
   : [bsc] as const;
 
 /**

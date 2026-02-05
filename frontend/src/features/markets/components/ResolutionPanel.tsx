@@ -441,7 +441,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {/* Tie Warning + Finalize Tie Button */}
         {isTie && !canEmergencyRefund && (
           <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
-            <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING ENDED IN TIE</p>
+            <p className="text-yellow-500 font-bold mb-2">VOTING ENDED IN TIE</p>
             <p className="text-text-secondary text-xs mb-2">
               {proposerVotes === 0n && disputerVotes === 0n 
                 ? "No one voted during the dispute window. Without community input, the market cannot be resolved."
@@ -1212,6 +1212,24 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="p-3 bg-dark-800 border border-dark-600 text-center">
             <p className="text-yes font-bold">✓ REFUNDED</p>
             <p className="text-text-muted text-xs mt-1">You have already claimed your emergency refund</p>
+          </div>
+        )}
+
+        {/* TIE Info for Non-Holders (after 24h passed) - They can't refund but should see what happened */}
+        {(isTie || wasTie) && now > emergencyRefundTime && !isResolved && totalShares === 0n && !hasEmergencyRefunded && (
+          <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
+            <p className="text-yellow-500 font-bold mb-2">VOTING ENDED IN TIE</p>
+            <p className="text-text-secondary text-xs mb-3">
+              {proposerVotes === 0n && disputerVotes === 0n 
+                ? "No one voted during the dispute window. Since the community couldn't reach consensus, this market is unresolved."
+                : "The vote ended with equal support for both sides. Since the community couldn't reach consensus, this market is unresolved."
+              }
+            </p>
+            <div className="text-xs space-y-1 text-text-muted">
+              <p>• Proposer and disputer bonds were returned</p>
+              <p>• Shareholders can claim emergency refunds</p>
+              <p className="text-text-muted/70 italic mt-2">You didn't participate in this market</p>
+            </div>
           </div>
         )}
 

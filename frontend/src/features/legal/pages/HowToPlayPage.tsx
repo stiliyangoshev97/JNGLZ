@@ -479,17 +479,46 @@ export function HowToPlayPage() {
                   <p className="text-yellow-500 font-bold mb-2">⚖️ WHAT IF THE VOTE IS A TIE?</p>
                   <p className="text-text-secondary text-sm mb-3">
                     If the dispute vote ends in an <strong className="text-white">exact tie</strong> (equal votes on both sides, including 0:0 if nobody votes), 
-                    the community couldn't reach consensus. In this case:
+                    the community couldn't reach consensus. Here's what happens:
                   </p>
-                  <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm">
-                    <li><span className="text-yes">✓</span> <strong className="text-white">Proposer's bond is returned</strong> (no penalty)</li>
-                    <li><span className="text-yes">✓</span> <strong className="text-white">Disputer's bond is returned</strong> (no penalty)</li>
-                    <li><span className="text-cyber">⏳</span> <strong className="text-white">Emergency refund activates</strong> for all traders</li>
-                  </ul>
-                  <p className="text-text-muted text-xs mt-3">
-                    When the crowd can't decide, nobody gets punished. All traders can claim emergency refunds 
-                    after the 24-hour window from market expiry passes. This includes the rare case where 
-                    nobody votes during the 1-hour voting window (0:0 tie).
+                  
+                  {/* TIE OUTCOME - BONDS */}
+                  <div className="mb-4">
+                    <p className="text-white font-bold text-sm mb-2">1. Bonds Are Returned</p>
+                    <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm ml-2">
+                      <li><span className="text-yes">✓</span> <strong className="text-white">Proposer's bond returned</strong> (no penalty)</li>
+                      <li><span className="text-yes">✓</span> <strong className="text-white">Disputer's bond returned</strong> (no penalty)</li>
+                      <li><span className="text-cyber">📥</span> Bonds credited to your wallet — claim via <strong className="text-white">Portfolio → Withdraw</strong></li>
+                    </ul>
+                  </div>
+                  
+                  {/* TIE OUTCOME - MARKET RESETS */}
+                  <div className="mb-4 bg-dark-900/50 p-3 border border-dark-600">
+                    <p className="text-white font-bold text-sm mb-2">2. Market Resets — Community Gets Another Chance!</p>
+                    <p className="text-text-secondary text-sm mb-2">
+                      After a TIE, the market goes back to <strong className="text-cyber">"Expired"</strong> status (not resolved). 
+                      This means <strong className="text-white">anyone can propose again</strong> and the resolution process restarts!
+                    </p>
+                    <div className="font-mono text-xs text-text-muted mt-2 p-2 bg-dark-800">
+                      TIE → Finalize → Bonds returned → Market resets → New proposal allowed → Cycle repeats
+                    </div>
+                  </div>
+                  
+                  {/* TIE OUTCOME - TIMELINE */}
+                  <div className="mb-4">
+                    <p className="text-white font-bold text-sm mb-2">3. Timeline & Cutoff</p>
+                    <ul className="list-disc list-inside space-y-1 text-text-secondary text-sm ml-2">
+                      <li><span className="text-yes">✓</span> TIE before 22h → <strong className="text-white">New proposal allowed</strong>, resolution retries</li>
+                      <li><span className="text-orange-400">⏰</span> TIE after 22h → <strong className="text-white">No new proposals</strong> (2h cutoff active)</li>
+                      <li><span className="text-cyber">⏳</span> After 24h → <strong className="text-white">Emergency refund</strong> for all traders</li>
+                    </ul>
+                  </div>
+                  
+                  <p className="text-text-muted text-xs mt-3 border-t border-dark-600 pt-3">
+                    <strong className="text-yellow-500">Why this design?</strong> A single TIE doesn't kill the market — 
+                    the community gets multiple chances to reach consensus. If consensus is truly impossible 
+                    (multiple TIEs), the 22h cutoff ensures the market eventually reaches the emergency refund 
+                    path. Nobody gets stuck.
                   </p>
                 </div>
 
@@ -1694,6 +1723,39 @@ export function HowToPlayPage() {
                         <p className="text-text-secondary text-xs">Market wasn't resolved, capital returned proportionally</p>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* P/L Accuracy Disclaimer */}
+                <div className="bg-dark-900/50 p-5 border border-text-muted">
+                  <p className="text-text-secondary font-bold mb-3 flex items-center gap-2">
+                    ⚠️ P/L ACCURACY DISCLAIMER
+                  </p>
+                  <p className="text-text-secondary mb-3">
+                    The P/L values displayed on JNGLZ are <strong className="text-white">estimates based on indexed blockchain data</strong>. 
+                    In some edge cases, displayed values may not be 100% accurate due to:
+                  </p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-1 mb-4">
+                    <li>Blockchain indexing delays (subgraph may lag behind actual chain state)</li>
+                    <li>Complex scenarios involving emergency refunds + partial sells</li>
+                    <li>Rounding in fee calculations and share distributions</li>
+                    <li>Edge cases in AMM bonding curve math</li>
+                  </ul>
+                  <div className="bg-dark-800 p-4 border border-dark-600">
+                    <p className="text-white font-bold text-xs mb-2">🔍 VERIFY ON BSCSCAN</p>
+                    <p className="text-text-secondary text-xs">
+                      If you believe your P/L is incorrect, you can always verify your actual transactions on{' '}
+                      <a 
+                        href="https://bscscan.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-cyber hover:underline"
+                      >
+                        BscScan
+                      </a>
+                      . Search for your wallet address and review the actual BNB amounts sent and received 
+                      from the JNGLZ contract. <strong className="text-white">The blockchain is the source of truth</strong>.
+                    </p>
                   </div>
                 </div>
 

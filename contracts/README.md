@@ -2398,6 +2398,84 @@ The `finalizeMarket()` function can only be called after the appropriate waiting
 
 **Key insight:** You cannot finalize during the proposal's dispute window (30 min) OR during the voting window (1 hour). Both waiting periods must complete before finalization is allowed.
 
+### TIE Behavior: Community Gets Multiple Chances
+
+When a disputed market's vote ends in a **TIE** (equal votes on both sides, including 0:0 if nobody votes), the contract implements an elegant retry mechanism:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        TIE RESOLUTION FLOW                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   VOTING ENDS IN TIE (yesVotes == noVotes)                              │
+│        │                                                                 │
+│        ▼                                                                 │
+│   ┌─────────────────────────────────────────────┐                       │
+│   │  FINALIZE TIE                               │                       │
+│   │  • Proposer bond returned (Pull Pattern)    │                       │
+│   │  • Disputer bond returned (Pull Pattern)    │                       │
+│   │  • market.proposer = address(0)             │                       │
+│   │  • market.disputer = address(0)             │                       │
+│   │  • market.resolved stays FALSE              │                       │
+│   │  • TieFinalized event emitted               │                       │
+│   └─────────────────────────────────────────────┘                       │
+│        │                                                                 │
+│        ▼                                                                 │
+│   Market goes back to "Expired" status!                                 │
+│        │                                                                 │
+│        ├─────────────────────┬──────────────────────────┐               │
+│        ▼                     ▼                          ▼               │
+│   ┌─────────────┐     ┌──────────────┐         ┌───────────────┐       │
+│   │ BEFORE 22h  │     │ AFTER 22h    │         │ AFTER 24h     │       │
+│   │ CUTOFF      │     │ CUTOFF       │         │               │       │
+│   │             │     │              │         │               │       │
+│   │ Anyone can  │     │ No new       │         │ Emergency     │       │
+│   │ propose     │     │ proposals    │         │ refund        │       │
+│   │ again!      │     │ allowed      │         │ available     │       │
+│   │             │     │              │         │               │       │
+│   │ Cycle       │     │ Wait for     │         │ All traders   │       │
+│   │ repeats     │     │ 24h refund   │         │ get funds     │       │
+│   └─────────────┘     └──────────────┘         └───────────────┘       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**What this means:**
+
+| Scenario | Outcome |
+|----------|---------|
+| TIE at T=5h | New proposal allowed → Resolution can retry |
+| TIE at T=15h | New proposal allowed → Resolution can retry |
+| TIE at T=21h | New proposal allowed → Resolution can retry (tight window) |
+| TIE at T=23h | No new proposals (past 22h cutoff) → Emergency refund at 24h |
+| Multiple TIEs | Community keeps retrying until consensus or 22h cutoff |
+
+**Why this is great:**
+
+1. **No Wasted Markets** - A single TIE doesn't kill the market; community gets another shot
+2. **Built-in Escalation** - Multiple TIEs mean strong disagreement → eventually goes to refund
+3. **Guaranteed Resolution** - 22h cutoff ensures every market reaches a final state
+4. **Bond Safety** - TIE = no penalty for either side (both bonds returned)
+
+**Pull Pattern for Bond Returns:**
+
+When a TIE occurs, bonds are credited to `pendingWithdrawals[address]` instead of being sent directly. Users must call `withdrawBond()` to claim their returned bonds:
+
+```solidity
+// After TIE finalize, both proposer and disputer can call:
+function withdrawBond() external returns (uint256 amount);
+```
+
+**Timeline Protection:**
+
+```
+0h ────────── 22h ────────── 24h
+[Proposals OK]  [Cutoff]     [Emergency Refund]
+     ↓
+   TIE? → Reset → Try again (if before 22h)
+                 └─────────→ Refund path (if after 22h)
+```
+
 ---
 
 ## 📚 Contract Functions
