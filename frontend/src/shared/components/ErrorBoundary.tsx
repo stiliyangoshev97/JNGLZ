@@ -41,7 +41,10 @@ function isChunkLoadError(error: unknown): boolean {
       message.includes('loading chunk') ||
       message.includes('loading css chunk') ||
       message.includes('dynamically imported module') ||
-      message.includes('failed to load')
+      message.includes('failed to load') ||
+      message.includes('text/html') ||
+      message.includes('mime type') ||
+      message.includes('is not a valid javascript')
     );
   }
   return false;
