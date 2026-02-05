@@ -986,7 +986,7 @@ export function PortfolioPage() {
               {/* Creator Fees (separate) */}
               <StatBox 
                 label="CREATOR" 
-                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(4)} BNB` : '—'}
+                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(5)} BNB` : '—'}
                 color={earnings.creator > 0 ? 'cyber' : undefined}
                 subtext="0.5% of trades"
               />
@@ -2019,20 +2019,18 @@ function MyMarketCard({ market, isNameHidden = false, isImageHidden = false }: M
           {!market.imageUrl && (
             <div className="flex items-center justify-between mt-3">
               <Badge variant={badgeInfo.variant}>{badgeInfo.text}</Badge>
-              <span className="text-xs text-text-muted font-mono">
-                {market.totalTrades} trades
-              </span>
             </div>
           )}
           
-          {/* Trade count (if has image) */}
-          {market.imageUrl && (
-            <div className="flex justify-end mt-2">
-              <span className="text-xs text-text-muted font-mono">
-                {market.totalTrades} trades
-              </span>
-            </div>
-          )}
+          {/* Market ID and Trade count row */}
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-text-muted font-mono">
+              #{market.marketId || market.id}
+            </span>
+            <span className="text-xs text-text-muted font-mono">
+              {market.totalTrades} trades
+            </span>
+          </div>
           
           {/* Stats */}
           <div className="border-t border-dark-600 pt-3 mt-auto grid grid-cols-3 gap-2">
@@ -2045,8 +2043,8 @@ function MyMarketCard({ market, isNameHidden = false, isImageHidden = false }: M
               <p className="text-sm font-mono text-white">{totalVolume.toFixed(3)} BNB</p>
             </div>
             <div>
-              <p className="text-xs text-text-muted">CREATOR FEES</p>
-              <p className="text-sm font-mono text-cyber">{creatorEarnings.toFixed(4)} BNB</p>
+              <p className="text-xs text-text-muted">EST. FEES</p>
+              <p className="text-sm font-mono text-cyber">{creatorEarnings.toFixed(5)} BNB</p>
             </div>
           </div>
         </div>

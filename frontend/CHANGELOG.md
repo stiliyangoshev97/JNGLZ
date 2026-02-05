@@ -2,6 +2,31 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.20] - 2026-02-05
+
+### Fixed - Portfolio Page Creator Fees & MY MARKETS Display
+
+#### Creator Fees Decimal Precision Fix
+- **Root Cause**: `.toFixed(4)` was rounding 0.00005 BNB to either 0.0001 (round up) or 0.0000 (round down), causing inconsistent display between portfolio header and MY MARKETS card.
+- **Fix**: Changed both displays to use `.toFixed(5)` for accurate representation of small creator fee amounts.
+- **Portfolio Header**: CREATOR stat now shows `+0.00005 BNB` correctly (was showing `+0.0001 BNB`).
+- **MY MARKETS Card**: Creator fees now show `0.00005 BNB` correctly (was showing `0.0000 BNB`).
+
+#### MY MARKETS Card Improvements
+- **Market ID Added**: Each market card now displays `#<marketId>` on the left side, same row as trades count. Format: `#2 · 1 trades`.
+- **Label Changed**: "CREATOR FEES" renamed to "EST. FEES" to clarify it's an estimate based on volume × 0.5%.
+
+#### Jury Fees Claim - Optimistic UI
+- **Instant Feedback**: When claiming jury fees, the market card disappears immediately from the claimable list instead of waiting 4-11 seconds for subgraph to index.
+- **Implementation**: Added `optimisticClaimedJuryFees` state to track claimed market IDs locally and filter them out before subgraph updates.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx   # All fixes above
+```
+
+---
+
 ## [0.8.19] - 2026-02-05
 
 ### Improved - Mainnet Preparation & UX Polish
@@ -40,31 +65,6 @@ src/features/portfolio/pages/PortfolioPage.tsx   # Split pending withdrawals int
 - **Both Sides Badge**: Users holding both YES and NO shares now see both 🟢 YES and 🔴 NO badges in chat instead of just one.
 
 #### Holders Tab Improvements  
-- **BOTH Label**: When a holder owns shares on both sides, display "BOTH" in purple instead of confusing "Y:2 N:2" format.
-- Consistent with chat badge behavior.
-
-#### Files Modified
-```
-src/features/chat/components/ChatMessage.tsx     # Added 'both' badge support
-src/features/chat/components/ChatTab.tsx         # Updated type to include 'both'
-src/features/markets/pages/MarketDetailPage.tsx  # Updated holdersMap + holders tab display
-supabase/functions/_shared/validation.ts         # Fixed profanity filter
-supabase/functions/send-message/index.ts         # Updated subgraph URL env var names
-```
-
----
-
-## [0.8.17] - 2026-02-04
-
-### Fixed - Emergency Refund Timer Visible to All Users
-
-Fixed Market Details page to show emergency refund information to ALL users, not just participants.
-
-#### The Problem
-Non-participants viewing an expired market without a proposal saw only "RESOLUTION AWAITING" with no additional context. Participants saw the countdown timer and refund information.
-
-**Before (non-participant):**
-```
 RESOLUTION
 AWAITING
 ```
