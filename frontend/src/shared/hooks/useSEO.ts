@@ -22,7 +22,7 @@ const SITE_CONFIG = {
   defaultTitle: 'JNGLZ.FUN | Decentralized Prediction Markets on BNB Chain',
   defaultDescription: 'Create and trade on prediction markets with BNB. Anyone can launch markets, trade YES/NO shares, and win by being right. No middlemen, no oracles - just Street Consensus.',
   baseUrl: 'https://jnglz.fun',
-  defaultImage: 'https://jnglz.fun/og-image.png',
+  defaultImage: 'https://jnglz.fun/og-image.jpg',
   twitterHandle: '@jnglzdotfun',
   themeColor: '#00f0ff',
 };
