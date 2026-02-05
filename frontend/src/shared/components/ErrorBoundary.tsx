@@ -26,6 +26,7 @@
 import { useRouteError, isRouteErrorResponse, Link } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { env } from '@/shared/config/env';
+import { captureError } from '@/shared/config/sentry';
 
 /**
  * Checks if the error is related to chunk/module loading failures.
@@ -113,6 +114,14 @@ export function ErrorBoundary() {
       : 'An unexpected error occurred';
 
   const errorStack = error instanceof Error ? error.stack : undefined;
+
+  // Report non-chunk errors to Sentry
+  if (error instanceof Error) {
+    captureError(error, { 
+      source: 'ErrorBoundary',
+      isRouteError: isRouteErrorResponse(error),
+    });
+  }
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
