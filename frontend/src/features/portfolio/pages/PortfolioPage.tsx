@@ -988,43 +988,50 @@ export function PortfolioPage() {
       {isConnected && hasPendingWithdrawals && (
         <section className="bg-dark-700/50 border-b border-dark-600 py-4">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-cyber font-bold">PENDING WITHDRAWALS</p>
-                  <p className="text-sm text-text-secondary">
-                    {pendingBondsFormatted > 0 && (
-                      <span>Proposal/Dispute Rewards: {pendingBondsFormatted.toFixed(4)} BNB</span>
-                    )}
-                    {pendingBondsFormatted > 0 && pendingFeesFormatted > 0 && ' • '}
-                    {pendingFeesFormatted > 0 && (
-                      <span>Creator Fees: {pendingFeesFormatted.toFixed(4)} BNB</span>
-                    )}
-                  </p>
+            <p className="text-cyber font-bold mb-3">PENDING WITHDRAWALS</p>
+            <div className="flex flex-col gap-3">
+              {/* Row 1: Proposal/Dispute Rewards (Bonds) */}
+              {pendingBondsFormatted > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-dark-600/50 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Proposal/Dispute Rewards</p>
+                    <p className="text-xs text-text-secondary">Earned from successful market resolutions</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-cyber font-bold w-24 text-right">{pendingBondsFormatted.toFixed(4)} BNB</span>
+                    <Button 
+                      variant="cyber" 
+                      size="sm"
+                      className="w-28"
+                      onClick={() => withdrawBond()}
+                      disabled={isWithdrawingBond}
+                    >
+                      {isWithdrawingBond ? 'CLAIMING...' : 'CLAIM'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                {pendingBondsFormatted > 0 && (
-                  <Button 
-                    variant="cyber" 
-                    size="sm"
-                    onClick={() => withdrawBond()}
-                    disabled={isWithdrawingBond}
-                  >
-                    {isWithdrawingBond ? 'WITHDRAWING...' : `CLAIM BONDS (${pendingBondsFormatted.toFixed(4)})`}
-                  </Button>
-                )}
-                {pendingFeesFormatted > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => withdrawCreatorFees()}
-                    disabled={isWithdrawingFees}
-                  >
-                    {isWithdrawingFees ? 'WITHDRAWING...' : `CLAIM FEES (${pendingFeesFormatted.toFixed(4)})`}
-                  </Button>
-                )}
-              </div>
+              )}
+              {/* Row 2: Creator Fees */}
+              {pendingFeesFormatted > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-dark-600/50 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Creator Fees</p>
+                    <p className="text-xs text-text-secondary">Trading fees from markets you created</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-yes font-bold w-24 text-right">{pendingFeesFormatted.toFixed(4)} BNB</span>
+                    <Button 
+                      variant="yes" 
+                      size="sm"
+                      className="w-28"
+                      onClick={() => withdrawCreatorFees()}
+                      disabled={isWithdrawingFees}
+                    >
+                      {isWithdrawingFees ? 'CLAIMING...' : 'CLAIM'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

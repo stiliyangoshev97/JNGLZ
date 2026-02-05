@@ -2,6 +2,34 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.19] - 2026-02-05
+
+### Improved - Mainnet Preparation & UX Polish
+
+#### Network Switch Restriction
+- **Single Network Mode**: Changed wagmi config to only show testnet when `VITE_IS_TESTNET=true` and only mainnet when `false`. Previously testnet mode showed both networks, which could confuse users.
+
+#### Dynamic Countdown Timers
+- **MarketCard**: Added `useState` + `useEffect` with 1-second interval so countdown timers on market cards update live instead of only on re-render/poll.
+- **MarketDetailPage**: Already had dynamic countdown from previous session.
+
+#### Portfolio Page - Pending Withdrawals UX
+- **Split Layout**: Separated "Proposal/Dispute Rewards" and "Creator Fees" into distinct rows with clear descriptions:
+  - Row 1: "Proposal/Dispute Rewards" - "Earned from successful market resolutions"
+  - Row 2: "Creator Fees" - "Trading fees from markets you created"
+- **Consistent Buttons**: Both buttons now say "CLAIM" (since the descriptions explain what's being claimed)
+- **Fixed Widths**: Amount spans (`w-24`) and buttons (`w-28`) have fixed widths for alignment
+- **Visual Distinction**: Rewards use cyber color, Creator Fees use green (yes variant)
+
+#### Files Modified
+```
+src/shared/config/wagmi.ts                       # Single network based on IS_TESTNET
+src/features/markets/components/MarketCard.tsx   # Dynamic countdown with useState/useEffect
+src/features/portfolio/pages/PortfolioPage.tsx   # Split pending withdrawals into 2 rows
+```
+
+---
+
 ## [0.8.18] - 2026-02-04
 
 ### Fixed - Chat & Holder Badge Improvements

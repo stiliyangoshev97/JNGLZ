@@ -8,11 +8,12 @@
  * - Heat bar for liquidity
  * - Hype flash animation on trade
  * - React.memo for performance optimization in lists
+ * - Dynamic countdown timer (updates every second)
  *
  * @module features/markets/components/MarketCard
  */
 
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/shared/components/ui/Card';
 import { CompactChance } from '@/shared/components/ui/ChanceDisplay';
@@ -33,6 +34,16 @@ interface MarketCardProps {
 }
 
 function MarketCardComponent({ market, className, isNameHidden = false, isImageHidden = false }: MarketCardProps) {
+  // Dynamic time state for live countdown (updates every second)
+  const [now, setNow] = useState(Date.now());
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Calculate YES price percentage using bonding curve formula (with market's virtual liquidity)
   // For resolved markets, show 100%/0% based on outcome
   const yesPercent = market.resolved
@@ -41,10 +52,9 @@ function MarketCardComponent({ market, className, isNameHidden = false, isImageH
 
   // Calculate time remaining
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
-  const now = Date.now();
   const expiryMs = expirationTimestamp * 1000;
   const isExpired = expiryMs < now;
-  const timeRemaining = formatTimeRemaining(expirationTimestamp);
+  const timeRemaining = formatTimeRemaining(expirationTimestamp, now);
 
   // Emergency refund eligibility (24h after expiry, not resolved)
   const EMERGENCY_REFUND_DELAY = 24 * 60 * 60 * 1000; // 24 hours
