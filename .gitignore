@@ -10,6 +10,12 @@
 ExampleProject/
 
 # ============================================
+# Private Study/Work Notes (Keep Local)
+# ============================================
+INTERVIEWS.md
+AI-PROMPTS.txt
+
+# ============================================
 # Environment & Secrets (ALL FOLDERS)
 # ============================================
 .env
