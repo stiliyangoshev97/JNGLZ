@@ -1,12 +1,28 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** February 5, 2026  
-> **Status:** Smart Contracts ✅ v3.8.3 DEPLOYED | Subgraph ✅ v5.2.0 | Frontend ✅ v0.8.21  
+> **Status:** 🚀 **MAINNET LIVE** | Smart Contracts ✅ v3.8.3 | Subgraph ✅ v5.2.0 | Frontend ✅ v0.8.21  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
-## 🚀 MAINNET DEPLOYMENT CHECKLIST
+## 🎉 MAINNET DEPLOYMENT COMPLETE - February 5, 2026
+
+### Summary
+| Component | Network | Address/URL | Status |
+|-----------|---------|-------------|--------|
+| **Contract** | BNB Mainnet | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` | ✅ Verified |
+| **Subgraph** | BNB Chain | `jnglz-mainnet` v5.2.0 | ✅ Indexed |
+| **Frontend** | Production | jnglz.fun | ✅ Live |
+
+### Links
+- **BscScan:** https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+- **Subgraph:** https://thegraph.com/studio/subgraph/jnglz-mainnet
+- **Gateway:** `https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF`
+
+---
+
+## ✅ MAINNET DEPLOYMENT CHECKLIST (COMPLETED)
 
 ### Phase 1: Smart Contract Deployment (BNB Mainnet) ✅ COMPLETE
 
@@ -62,115 +78,36 @@
 
 ---
 
-### Phase 2: Subgraph Deployment (Multi-Network Setup)
+### Phase 2: Subgraph Deployment (Multi-Network Setup) ✅ COMPLETE
 
-**Goal:** Use the SAME subgraph codebase for both testnet and mainnet with network-specific configs.
+**Deployed:** February 5, 2026
+
+**Mainnet Subgraph Details:**
+- **Name:** `jnglz-mainnet`
+- **Version:** v5.2.0
+- **Network:** BNB Chain (bsc)
+- **Gateway URL:** `https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF`
+- **Studio URL:** https://thegraph.com/studio/subgraph/jnglz-mainnet
 
 **Architecture:**
 ```
 subgraph/
-├── subgraph.yaml          # Template (DO NOT DEPLOY DIRECTLY)
+├── subgraph.yaml          # Config (uses --network flag)
 ├── networks.json          # Network-specific addresses & start blocks
-├── config/
-│   ├── testnet.json       # Testnet config
-│   └── mainnet.json       # Mainnet config
 ```
 
-**Steps:**
-
-1. **Create Network Configuration Files**
-
-   Create `subgraph/networks.json`:
-   ```json
-   {
-     "chapel": {
-       "PredictionMarket": {
-         "address": "0xC97FB434B79e6c643e0320fa802B515CedBA95Bf",
-         "startBlock": 86465841
-       }
-     },
-     "bsc": {
-       "PredictionMarket": {
-         "address": "<MAINNET_CONTRACT_ADDRESS>",
-         "startBlock": <MAINNET_DEPLOY_BLOCK>
-       }
-     }
-   }
-   ```
-
-2. **Update `subgraph.yaml` to Use Mustache Templates**
-   
-   Change hardcoded values to template variables:
-   ```yaml
-   network: {{network}}
-   source:
-     address: "{{address}}"
-     startBlock: {{startBlock}}
-   ```
-
-3. **Update `package.json` Scripts**
-   ```json
-   {
-     "scripts": {
-       "codegen": "graph codegen",
-       "build": "graph build",
-       "prepare:testnet": "mustache config/testnet.json subgraph.template.yaml > subgraph.yaml",
-       "prepare:mainnet": "mustache config/mainnet.json subgraph.template.yaml > subgraph.yaml",
-       "deploy:testnet": "npm run prepare:testnet && graph deploy --studio jnglz-testnet-fresh",
-       "deploy:mainnet": "npm run prepare:mainnet && graph deploy --studio jnglz-mainnet"
-     }
-   }
-   ```
-
-   **Alternative (Simpler - Graph CLI built-in):**
-   ```json
-   {
-     "scripts": {
-       "deploy:testnet": "graph deploy --studio jnglz-testnet-fresh --network chapel",
-       "deploy:mainnet": "graph deploy --studio jnglz-mainnet --network bsc"
-     }
-   }
-   ```
-   With `--network` flag, Graph CLI reads from `networks.json` automatically!
-
-4. **Create Mainnet Subgraph in The Graph Studio**
-   - [ ] Go to https://thegraph.com/studio/
-   - [ ] Create new subgraph: `jnglz-mainnet`
-   - [ ] Select network: BNB Chain (bsc)
-   - [ ] Get deployment key
-
-5. **Deploy to Mainnet**
-   ```bash
-   cd subgraph
-   
-   # Authenticate (if needed)
-   graph auth --studio <DEPLOY_KEY>
-   
-   # Deploy mainnet subgraph
-   npm run deploy:mainnet
-   # OR with manual network flag:
-   graph deploy --studio jnglz-mainnet --network bsc
-   ```
-
-6. **Publish Mainnet Subgraph**
-   - [ ] In Studio, publish subgraph to decentralized network
-   - [ ] Note the Gateway URL for frontend
-
-7. **Update Documentation**
-   - [ ] `PROJECT_CONTEXT_SUBGRAPH.md` - Add mainnet info
-   - [ ] `subgraph/README.md` - Document multi-network deployment
-
-**Future Updates (Both Networks):**
+**Deploy Commands:**
 ```bash
-# Update testnet
+# Testnet
 npm run deploy:testnet
-# Update mainnet
+
+# Mainnet  
 npm run deploy:mainnet
 ```
 
 ---
 
-### Phase 3: Frontend Configuration
+### Phase 3: Frontend Configuration ✅ COMPLETE
 
 **Goal:** Flip `VITE_IS_TESTNET=false` and add mainnet config.
 
