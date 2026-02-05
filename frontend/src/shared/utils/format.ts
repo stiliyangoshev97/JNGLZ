@@ -388,9 +388,10 @@ export function formatError(error: Error | null | undefined): string {
     return 'Transaction failed - the contract rejected this action';
   }
   
-  // If message is very long (raw error), truncate it
+  // If message is very long (raw error), log it and truncate
   if (message.length > 100) {
-    return 'Transaction failed - please try again';
+    console.error('[formatError] Full error message:', message);
+    return 'Transaction failed - please try again (check console for details)';
   }
   
   // Return original message if none of the above
