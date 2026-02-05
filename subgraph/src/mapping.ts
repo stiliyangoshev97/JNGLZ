@@ -558,21 +558,27 @@ export function handleVoteCast(event: VoteCast): void {
   vote.market = marketId;
   vote.voter = user.id;
   vote.voterAddress = event.params.voter;
-  vote.supportedProposer = event.params.outcome; // true = for proposer
+  
+  // Determine if voter supports proposer or disputer
+  // event.params.outcome = true means voting for YES, false means voting for NO
+  // If vote matches proposer's proposed outcome, they support the proposer
+  // If vote differs from proposer's proposed outcome, they support the disputer
+  let supportsProposer = (event.params.outcome == market.proposedOutcome);
+  vote.supportedProposer = supportsProposer;
   vote.weight = event.params.weight;
   vote.timestamp = event.block.timestamp;
   vote.txHash = event.transaction.hash;
   vote.blockNumber = event.block.number;
   vote.save();
 
-  // Update market voting tallies
-  if (event.params.outcome) {
-    // Voted for proposer
+  // Update market voting tallies based on who the voter supports
+  if (supportsProposer) {
+    // Voted for proposer's outcome
     market.proposerVoteWeight = market.proposerVoteWeight.plus(
       event.params.weight
     );
   } else {
-    // Voted for disputer
+    // Voted for disputer's outcome (opposite of proposer)
     market.disputerVoteWeight = market.disputerVoteWeight.plus(
       event.params.weight
     );
@@ -583,7 +589,7 @@ export function handleVoteCast(event: VoteCast): void {
   // Update position voting status
   let position = getOrCreatePosition(marketId, event.params.voter);
   position.hasVoted = true;
-  position.votedForProposer = event.params.outcome;
+  position.votedForProposer = supportsProposer;
   position.save();
 }
 

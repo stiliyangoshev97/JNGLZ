@@ -486,25 +486,48 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           </div>
         )}
 
-        {/* Status Display */}
+        {/* Status Display - Proposer & Disputer Outcomes */}
         {hasProposal && !isResolved && !resolutionMayHaveFailed && (
-          <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
-            <div className="flex justify-between mb-2">
-              <span className="text-text-muted">Proposed Outcome:</span>
-              <span className={market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold'}>
-                {market.proposedOutcome ? 'YES' : 'NO'}
-              </span>
-            </div>
-            {/* Proposer Address */}
-            <div className="flex justify-between items-center">
-              <span className="text-text-muted">Proposed by:</span>
-              <div className="flex items-center gap-2">
-                <AddressDisplay address={market.proposer || ''} truncateLength={4} />
-                {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
-                  <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
-                )}
+          <div className="p-3 bg-dark-800 border border-dark-600 text-sm space-y-3">
+            {/* Proposer Info */}
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-text-muted">Proposer says:</span>
+                <span className={market.proposedOutcome ? 'text-yes font-bold' : 'text-no font-bold'}>
+                  {market.proposedOutcome ? 'YES' : 'NO'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-text-muted text-xs">Address:</span>
+                <div className="flex items-center gap-2">
+                  <AddressDisplay address={market.proposer || ''} truncateLength={4} />
+                  {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                    <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                  )}
+                </div>
               </div>
             </div>
+            
+            {/* Disputer Info (if disputed) */}
+            {hasDispute && (
+              <div className="pt-3 border-t border-dark-500">
+                <div className="flex justify-between mb-1">
+                  <span className="text-text-muted">Disputer says:</span>
+                  <span className={market.proposedOutcome ? 'text-no font-bold' : 'text-yes font-bold'}>
+                    {market.proposedOutcome ? 'NO' : 'YES'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted text-xs">Address:</span>
+                  <div className="flex items-center gap-2">
+                    <AddressDisplay address={market.disputer || ''} truncateLength={4} />
+                    {market.disputer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                      <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -805,22 +828,37 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               </div>
               
               {/* Potential Earnings Calculation */}
-              <div className="bg-dark-900/50 p-2 rounded border border-dark-600 mb-2">
-                <p className="text-text-muted text-xs mb-1">Potential Jury Fee (if you vote with winners):</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-text-secondary text-xs">Prize Pool:</span>
-                  <span className="text-white font-mono">{formatBNB(disputeBond)} BNB</span>
-                </div>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-text-secondary text-xs">Your Est. Share:</span>
-                  <span className="text-yes font-mono font-bold">
-                    ~{formatBNB(marketTotalSupply > 0n ? (totalShares * disputeBond) / marketTotalSupply : 0n)} BNB
-                  </span>
-                </div>
-                <p className="text-text-muted text-[10px] mt-1">
-                  * Actual earnings depend on total winning votes
-                </p>
-              </div>
+              {(() => {
+                // Jury fees pool = 50% of the loser's bond
+                // Since we don't know who will win during voting, show both scenarios
+                const disputerBondValue = market.disputerBond ? BigInt(market.disputerBond) : disputeBond;
+                const juryPoolIfProposerWins = disputerBondValue / 2n; // 50% of disputer bond
+                const juryPoolIfDisputerWins = proposerBondFromMarket / 2n; // 50% of proposer bond
+                
+                // Use the smaller pool for conservative estimate
+                const conservativePool = juryPoolIfProposerWins < juryPoolIfDisputerWins 
+                  ? juryPoolIfProposerWins 
+                  : juryPoolIfDisputerWins;
+                
+                return (
+                  <div className="bg-dark-900/50 p-2 rounded border border-dark-600 mb-2">
+                    <p className="text-text-muted text-xs mb-1">Potential Jury Fee (if you vote with winners):</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-secondary text-xs">Prize Pool (50% loser bond):</span>
+                      <span className="text-white font-mono">~{formatBNB(conservativePool)} BNB</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-text-secondary text-xs">Your Est. Share:</span>
+                      <span className="text-yes font-mono font-bold">
+                        ~{formatBNB(marketTotalSupply > 0n ? (totalShares * conservativePool) / marketTotalSupply : 0n)} BNB
+                      </span>
+                    </div>
+                    <p className="text-text-muted text-[10px] mt-1">
+                      * Pool = 50% of loser's bond, split among winning voters
+                    </p>
+                  </div>
+                );
+              })()}
               
               <p className="text-text-muted text-xs">
                 Vote for the <strong className="text-white">CORRECT outcome</strong>, not your position. Your weight = ALL shares (YES + NO).
@@ -878,6 +916,8 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
               const disputerBondValue = market.disputerBond ? BigInt(market.disputerBond) : 0n;
               
               // Determine winner based on vote counts (proposer wins if proposerVotes >= disputerVotes)
+              // Note: For pre-finalization preview, we must use vote tallies since market.outcome isn't set yet.
+              // After subgraph fix is deployed and reindexed, vote tallies will be accurate.
               const proposerWins = !hasDispute || proposerVotes >= disputerVotes;
               
               // Bond winner share is 50% (5000 bps)
@@ -1028,63 +1068,87 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
           <div className="p-3 bg-dark-800 border border-dark-600 text-sm">
             <p className="text-text-muted font-bold text-xs mb-3">RESOLUTION HISTORY</p>
             
-            {/* Proposer Info */}
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-text-muted text-xs">Proposed by:</span>
-              <div className="flex items-center gap-2">
-                <AddressDisplay address={market.proposer} truncateLength={4} />
-                {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
-                  <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
-                )}
+            {/* Proposer Info with Outcome */}
+            <div className="mb-3">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-text-muted text-xs">Proposer said:</span>
+                <span className={market.proposedOutcome ? 'text-yes font-bold text-xs' : 'text-no font-bold text-xs'}>
+                  {market.proposedOutcome ? 'YES' : 'NO'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-text-muted text-xs">Address:</span>
+                <div className="flex items-center gap-2">
+                  <AddressDisplay address={market.proposer} truncateLength={4} />
+                  {market.proposer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                    <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                  )}
+                </div>
               </div>
             </div>
             
-            {/* Disputer Info (if disputed) */}
+            {/* Disputer Info with Outcome (if disputed) */}
             {market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000' && (
               <>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-text-muted text-xs">Disputed by:</span>
-                  <div className="flex items-center gap-2">
-                    <AddressDisplay address={market.disputer} truncateLength={4} />
-                    {market.disputer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
-                      <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
-                    )}
+                <div className="mb-3 pt-3 border-t border-dark-500">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-text-muted text-xs">Disputer said:</span>
+                    <span className={market.proposedOutcome ? 'text-no font-bold text-xs' : 'text-yes font-bold text-xs'}>
+                      {market.proposedOutcome ? 'NO' : 'YES'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-text-muted text-xs">Address:</span>
+                    <div className="flex items-center gap-2">
+                      <AddressDisplay address={market.disputer} truncateLength={4} />
+                      {market.disputer?.toLowerCase() === market.creatorAddress?.toLowerCase() && (
+                        <Badge variant="admin" className="text-[10px] px-1.5 py-0.5">CREATOR</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
-                {/* Vote Results */}
-                <div className="grid grid-cols-2 gap-2 text-center mt-3 pt-3 border-t border-dark-500">
-                  <div className={cn(
-                    "p-2 border",
-                    proposerVotes >= disputerVotes 
-                      ? "border-yes/50 bg-yes/10" 
-                      : "border-dark-500 bg-dark-700"
-                  )}>
-                    <p className={cn(
-                      "font-bold text-xs mb-1",
-                      proposerVotes >= disputerVotes ? "text-yes" : "text-text-muted"
-                    )}>
-                      PROPOSER {proposerVotes >= disputerVotes && "✓"}
-                    </p>
-                    <p className="text-white font-mono">{formatShares(proposerVotes)}</p>
-                    <p className="text-text-muted text-[10px]">votes</p>
-                  </div>
-                  <div className={cn(
-                    "p-2 border",
-                    disputerVotes > proposerVotes 
-                      ? "border-yes/50 bg-yes/10" 
-                      : "border-dark-500 bg-dark-700"
-                  )}>
-                    <p className={cn(
-                      "font-bold text-xs mb-1",
-                      disputerVotes > proposerVotes ? "text-yes" : "text-text-muted"
-                    )}>
-                      DISPUTER {disputerVotes > proposerVotes && "✓"}
-                    </p>
-                    <p className="text-white font-mono">{formatShares(disputerVotes)}</p>
-                    <p className="text-text-muted text-[10px]">votes</p>
-                  </div>
-                </div>
+                {/* Vote Results - determine winner by comparing outcome vs proposedOutcome */}
+                {/* This is more reliable than vote tallies which may be corrupted in subgraph */}
+                {(() => {
+                  // True winner: if final outcome matches what proposer said, proposer won
+                  const proposerActuallyWon = market.outcome === market.proposedOutcome;
+                  
+                  return (
+                    <div className="grid grid-cols-2 gap-2 text-center mt-3 pt-3 border-t border-dark-500">
+                      <div className={cn(
+                        "p-2 border",
+                        proposerActuallyWon 
+                          ? "border-yes/50 bg-yes/10" 
+                          : "border-dark-500 bg-dark-700"
+                      )}>
+                        <p className={cn(
+                          "font-bold text-xs mb-1",
+                          proposerActuallyWon ? "text-yes" : "text-text-muted"
+                        )}>
+                          PROPOSER {proposerActuallyWon && "✓"}
+                        </p>
+                        <p className="text-white font-mono">{formatShares(proposerVotes)}</p>
+                        <p className="text-text-muted text-[10px]">votes</p>
+                      </div>
+                      <div className={cn(
+                        "p-2 border",
+                        !proposerActuallyWon 
+                          ? "border-yes/50 bg-yes/10" 
+                          : "border-dark-500 bg-dark-700"
+                      )}>
+                        <p className={cn(
+                          "font-bold text-xs mb-1",
+                          !proposerActuallyWon ? "text-yes" : "text-text-muted"
+                        )}>
+                          DISPUTER {!proposerActuallyWon && "✓"}
+                        </p>
+                        <p className="text-white font-mono">{formatShares(disputerVotes)}</p>
+                        <p className="text-text-muted text-[10px]">votes</p>
+                      </div>
+                    </div>
+                  );
+                })()}
                 
                 {/* Earnings Breakdown for Disputed Market */}
                 {(() => {
@@ -1092,7 +1156,8 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
                   const dBond = market.disputerBond ? BigInt(market.disputerBond) : 0n;
                   const BOND_WINNER_SHARE_BPS = 5000n;
                   const BPS_DENOMINATOR = 10000n;
-                  const proposerWon = proposerVotes >= disputerVotes;
+                  // Determine winner by outcome comparison, not vote tallies (which may be corrupted)
+                  const proposerWon = market.outcome === market.proposedOutcome;
                   
                   if (proposerWon) {
                     // Proposer won: bond back + 50% disputer bond + pool reward
