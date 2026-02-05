@@ -2,6 +2,26 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.21] - 2026-02-05
+
+### Fixed - Jury Fees Stat Optimistic UI
+
+#### JURY Stat Instant Update
+- **Problem**: After claiming jury fees, the JURY stat in portfolio header didn't update until page refresh (subgraph indexing delay of 4-11+ seconds).
+- **Solution**: Added optimistic UI for JURY stat - immediately adds claimed amount to display while subgraph indexes.
+- **Implementation**: 
+  - Added `optimisticJuryEarnings` state to track claimed amounts
+  - Calculates jury fee amount same way as PositionCard (using bond/vote data)
+  - Clears optimistic state once subgraph catches up (detects when `totalJuryFeesEarned` increases)
+- **Result**: JURY stat updates instantly after successful claim, consistent with market card disappearing instantly.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx   # Optimistic JURY stat
+```
+
+---
+
 ## [0.8.20] - 2026-02-05
 
 ### Fixed - Portfolio Page Creator Fees & MY MARKETS Display
