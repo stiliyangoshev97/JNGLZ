@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: PredictionMarket
-    network: chapel # BNB Testnet (BSC Testnet)
+    network: bsc
     source:
-      address: "0xC97FB434B79e6c643e0320fa802B515CedBA95Bf"
       abi: PredictionMarket
-      startBlock: 86465841
+      address: "0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528"
+      startBlock: 79457714
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -36,15 +36,11 @@ dataSources:
         - name: PredictionMarket
           file: ./abis/PredictionMarket.json
       eventHandlers:
-        # Market Lifecycle (v3.1.0 - added heatLevel and virtualLiquidity)
-        - event: MarketCreated(indexed uint256,indexed address,string,uint256,uint8,uint256)
+        - event: MarketCreated(indexed uint256,indexed
+            address,string,uint256,uint8,uint256)
           handler: handleMarketCreated
-
-        # Trading
         - event: Trade(indexed uint256,indexed address,bool,bool,uint256,uint256)
           handler: handleTrade
-
-        # Street Consensus Resolution (v3.1.0 - removed proofLink from OutcomeProposed)
         - event: OutcomeProposed(indexed uint256,indexed address,bool,uint256)
           handler: handleOutcomeProposed
         - event: ProposalDisputed(indexed uint256,indexed address,uint256)
@@ -53,36 +49,22 @@ dataSources:
           handler: handleVoteCast
         - event: MarketResolved(indexed uint256,bool,bool)
           handler: handleMarketResolved
-
-        # Payouts
         - event: Claimed(indexed uint256,indexed address,uint256)
           handler: handleClaimed
         - event: EmergencyRefunded(indexed uint256,indexed address,uint256)
           handler: handleEmergencyRefunded
-
-        # Bond Distribution (optional - for analytics)
         - event: BondDistributed(indexed uint256,indexed address,uint256,uint256)
           handler: handleBondDistributed
-
-        # Proposer Rewards (v3.3.0 - new ProposerRewardPaid)
         - event: ProposerRewardPaid(indexed uint256,indexed address,uint256)
           handler: handleProposerRewardPaid
-
-        # Jury Fees Pull Pattern (v3.7.0 - replaces JuryFeeDistributed)
         - event: JuryFeesPoolCreated(indexed uint256,uint256)
           handler: handleJuryFeesPoolCreated
         - event: JuryFeesClaimed(indexed uint256,indexed address,uint256)
           handler: handleJuryFeesClaimed
-
-        # Market Resolution Failed (v3.7.0 - optional analytics)
         - event: MarketResolutionFailed(indexed uint256,string)
           handler: handleMarketResolutionFailed
-
-        # Tie Resolution (v3.8.3 - clears proposer/disputer on tie)
         - event: TieFinalized(indexed uint256)
           handler: handleTieFinalized
-
-        # Pull Pattern Events (v3.4.0)
         - event: WithdrawalCredited(indexed address,uint256,string)
           handler: handleWithdrawalCredited
         - event: WithdrawalClaimed(indexed address,uint256)
