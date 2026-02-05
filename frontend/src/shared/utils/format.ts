@@ -207,10 +207,11 @@ export function formatRelativeTime(timestamp: number): string {
 /**
  * Format time remaining as countdown
  * @param timestamp - Unix timestamp in seconds (expiry time)
+ * @param currentTime - Optional current time in milliseconds (for live countdown)
  * @returns Countdown string like "2d 5h 30m" or "EXPIRED"
  */
-export function formatTimeRemaining(timestamp: number): string {
-  const now = Math.floor(Date.now() / 1000);
+export function formatTimeRemaining(timestamp: number, currentTime?: number): string {
+  const now = currentTime ? Math.floor(currentTime / 1000) : Math.floor(Date.now() / 1000);
   const diff = timestamp - now;
 
   if (diff <= 0) return 'EXPIRED';

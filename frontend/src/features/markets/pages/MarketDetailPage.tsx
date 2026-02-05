@@ -77,6 +77,17 @@ export function MarketDetailPage() {
   const [disconnectedTime, setDisconnectedTime] = useState<number | null>(null);
   const lastGoodMarketRef = useRef<GetMarketResponse['market'] | null>(null);
   
+  // Live-updating "now" for countdown timer
+  const [now, setNow] = useState(Date.now());
+  
+  // Update "now" every second for live countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
   // Check if current user is admin
   const isAdmin = address ? env.ADMIN_ADDRESSES.includes(address.toLowerCase()) : false;
   
@@ -325,10 +336,10 @@ export function MarketDetailPage() {
     ? (market.outcome ? 0 : 100)
     : calculateNoPercent(market.yesShares, market.noShares, market.virtualLiquidity);
 
-  // Time calculations
+  // Time calculations (using live-updating "now" for dynamic countdown)
   const expirationTimestamp = Number(market.expiryTimestamp); // Unix timestamp in seconds
-  const isExpired = expirationTimestamp * 1000 < Date.now();
-  const timeRemaining = formatTimeRemaining(expirationTimestamp);
+  const isExpired = expirationTimestamp * 1000 < now;
+  const timeRemaining = formatTimeRemaining(expirationTimestamp, now);
 
   // Status
   const isActive = market.status === 'Active' && !isExpired;
