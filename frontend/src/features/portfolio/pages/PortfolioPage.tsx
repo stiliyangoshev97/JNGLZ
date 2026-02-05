@@ -584,6 +584,20 @@ export function PortfolioPage() {
       const votingWindowEnd = disputeMs + VOTING_WINDOW;
       const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
       
+      // TIE detection: disputed market with equal votes after voting window
+      // Includes 0:0 case (no one voted) - contract treats this as a tie too
+      const proposerVotes = BigInt(market.proposerVoteWeight || '0');
+      const disputerVotes = BigInt(market.disputerVoteWeight || '0');
+      const isTie = hasDispute && now > votingWindowEnd && !isResolved && 
+        proposerVotes === disputerVotes;
+      
+      // canFinalizeTie: for ties, finalizeMarket() MUST be called to return bonds and clear proposer
+      // This enables emergency refund afterward (contract clears market.proposer on tie)
+      const canFinalizeTie = isTie && hasProposal && hasShares;
+      
+      // Emergency refund is BLOCKED if a proposal exists (must finalize first)
+      const emergencyRefundBlockedByProposal = hasProposal;
+      
       // Check if eligible for emergency refund (24h+ expired, not resolved, OR one-sided market after 24h)
       const isUnresolved = isExpired && !isResolved && now > emergencyRefundTime;
       
@@ -610,15 +624,24 @@ export function PortfolioPage() {
         return;
       }
       
-      // 3. Can emergency refund (expired 24h+, not resolved, has shares, not refunded)
+      // 3. TIE market needs finalize BEFORE refund is possible
+      // Must come before refund check since proposal blocks refund
+      if (canFinalizeTie) {
+        categories.needsAction.push({ ...pos, action: 'finalize' });
+        categories.awaitingResolution.push(pos);
+        subCategorizePending(pos, market);
+        return;
+      }
+      
+      // 4. Can emergency refund (expired 24h+, not resolved, has shares, not refunded, no proposal blocking)
       // Also includes one-sided markets after 24h (they cannot finalize)
-      if (isUnresolved && hasShares && !alreadyRefunded) {
+      if (isUnresolved && hasShares && !alreadyRefunded && !emergencyRefundBlockedByProposal) {
         categories.needsAction.push({ ...pos, action: 'refund' });
         categories.unresolved.push(pos);
         return;
       }
       
-      // 3b. One-sided market waiting for 24h refund (not yet unresolved but cannot finalize)
+      // 4b. One-sided market waiting for 24h refund (not yet unresolved but cannot finalize)
       if (isOneSidedMarket && isExpired && !isResolved && hasShares && !alreadyRefunded) {
         // One-sided markets cannot finalize, they wait for emergency refund
         // If 24h hasn't passed, just show them as awaiting resolution
@@ -627,9 +650,10 @@ export function PortfolioPage() {
         return;
       }
       
-      // 4. Can finalize (proposal/voting window ended, not resolved, has shares, NOT one-sided)
+      // 5. Can finalize (proposal/voting window ended, not resolved, has shares, NOT one-sided, NOT tie)
       // One-sided markets cannot be finalized - they can only get emergency refund
-      const canFinalize = hasProposal && !isResolved && hasShares && !isOneSidedMarket && (
+      // Tie markets are handled separately by canFinalizeTie above
+      const canFinalize = hasProposal && !isResolved && hasShares && !isOneSidedMarket && !isTie && (
         (hasDispute && now > votingWindowEnd) || 
         (!hasDispute && now > disputeWindowEnd)
       );
@@ -640,13 +664,13 @@ export function PortfolioPage() {
         return;
       }
       
-      // 5. Active - market still open for trading and user has shares
+      // 6. Active - market still open for trading and user has shares
       if (!isExpired && hasShares) {
         categories.active.push(pos);
         return;
       }
       
-      // 6. Categorize remaining positions
+      // 7. Categorize remaining positions
       if (isResolved) {
         // Already resolved (claimed, lost, or no shares left)
         categories.resolved.push(pos);

@@ -441,7 +441,7 @@ export function ResolutionPanel({ market, onActionSuccess }: ResolutionPanelProp
         {/* Tie Warning + Finalize Tie Button */}
         {isTie && !canEmergencyRefund && (
           <div className="p-3 bg-dark-800 border border-yellow-500/50 text-sm">
-            <p className="text-yellow-500 font-bold mb-2">⚖️ VOTING ENDED IN TIE</p>
+            <p className="text-yellow-500 font-bold mb-2">VOTING ENDED IN TIE</p>
             <p className="text-text-secondary text-xs mb-2">
               {proposerVotes === 0n && disputerVotes === 0n 
                 ? "No one voted during the dispute window. Without community input, the market cannot be resolved."

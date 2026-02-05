@@ -167,7 +167,7 @@ export function ChatInput({
       {/* Rate limit message */}
       {rateLimitSeconds && rateLimitSeconds > 0 && (
         <p className="text-xs text-yellow-400 mt-2 text-center">
-          ⏳ Rate limited - please wait {rateLimitSeconds}s before sending another message
+          Please wait {rateLimitSeconds}s before sending another message
         </p>
       )}
       

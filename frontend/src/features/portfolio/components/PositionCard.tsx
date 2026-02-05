@@ -42,6 +42,8 @@ interface PositionWithMarket {
     proposalTimestamp?: string;
     disputer?: string;
     disputeTimestamp?: string;
+    proposerVoteWeight?: string;
+    disputerVoteWeight?: string;
     creatorAddress?: string;
     virtualLiquidity?: string;
     heatLevel?: number;
@@ -308,8 +310,6 @@ export function PositionCard({
   const alreadyRefunded = position.emergencyRefunded || isRefundSuccess;
   const emergencyRefundTime = expiryMs + EMERGENCY_REFUND_DELAY;
   const totalShares = yesShares + noShares;
-  // Can claim emergency refund if: expired, not resolved, 24h passed, has shares, not already refunded
-  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0 && !alreadyRefunded;
   
   // Proposal and dispute status
   const proposalMs = market.proposalTimestamp ? Number(market.proposalTimestamp) * 1000 : 0;
@@ -317,10 +317,29 @@ export function PositionCard({
   const hasProposal = market.proposer && market.proposer !== '0x0000000000000000000000000000000000000000';
   const hasDispute = market.disputer && market.disputer !== '0x0000000000000000000000000000000000000000';
   
+  // TIE detection: disputed market with equal votes after voting window
+  // Includes 0:0 case (no one voted) - contract treats this as a tie too
+  const proposerVotes = BigInt(market.proposerVoteWeight || '0');
+  const disputerVotes = BigInt(market.disputerVoteWeight || '0');
+  const votingWindowEnd = disputeMs + VOTING_WINDOW;
+  const isTie = hasDispute && now > votingWindowEnd && !isResolvedFromData && 
+    proposerVotes === disputerVotes;
+  
+  // canFinalizeTie: for ties, finalizeMarket() MUST be called to return bonds and clear proposer
+  // This enables emergency refund afterward (contract clears market.proposer on tie)
+  const canFinalizeTie = isTie && hasProposal;
+  
+  // Emergency refund is BLOCKED if a proposal exists (unless contract is paused)
+  // Must finalize first (which either resolves market OR clears proposal on tie/empty-side)
+  const emergencyRefundBlockedByProposal = hasProposal;
+  
+  // Can claim emergency refund if: expired, not resolved, 24h passed, has shares, not already refunded,
+  // AND not blocked by active proposal
+  const canEmergencyRefund = isExpired && !isResolved && now > emergencyRefundTime && totalShares > 0 && !alreadyRefunded && !emergencyRefundBlockedByProposal;
+  
   // Time windows
   const creatorPriorityEnd = expiryMs + CREATOR_PRIORITY_WINDOW;
   const disputeWindowEnd = proposalMs + DISPUTE_WINDOW;
-  const votingWindowEnd = disputeMs + VOTING_WINDOW;
   
   // Check if user is creator
   const isCreator = address?.toLowerCase() === market.creatorAddress?.toLowerCase();
@@ -339,11 +358,12 @@ export function PositionCard({
     market.proposedOutcome ? marketYesSupply > 0n : marketNoSupply > 0n
   );
   
-  // Can finalize when: has proposal, not resolved (from data), proposed side has shares, NOT one-sided, and either:
+  // Can finalize when: has proposal, not resolved (from data), proposed side has shares, NOT one-sided, NOT a tie, and either:
   // - No dispute AND dispute window ended
   // - Has dispute AND voting window ended
   // One-sided markets cannot finalize - they can only get emergency refund after 24h
-  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && proposedWinningSideHasShares && !isOneSidedMarket && (
+  // Tie markets use canFinalizeTie instead (just returns bonds, doesn't resolve)
+  const canFinalize = hasProposal && !isResolvedFromData && !isFinalizeSuccess && proposedWinningSideHasShares && !isOneSidedMarket && !isTie && (
     (hasDispute && now > votingWindowEnd) || 
     (!hasDispute && now > disputeWindowEnd)
   );
@@ -446,6 +466,10 @@ export function PositionCard({
       // In voting window
       if (now < votingWindowEnd) {
         return { status: 'VOTING', badge: 'disputed', action: 'VIEW MARKET' };
+      }
+      // Voting ended - check if it's a TIE
+      if (isTie) {
+        return { status: 'TIE - NEEDS FINALIZE', badge: 'disputed', action: 'FINALIZE TIE' };
       }
       // Voting ended, needs finalization
       return { status: 'READY TO FINALIZE', badge: 'whale', action: 'FINALIZE' };
@@ -750,8 +774,31 @@ export function PositionCard({
             >
               ✓ CLAIMED
             </Button>
+          ) : canFinalizeTie && (hasYes || hasNo) ? (
+            /* TIE market - needs finalize to return bonds and enable refund */
+            <Button 
+              variant="cyber" 
+              size="sm" 
+              className="flex-1 !bg-orange-500/20 !border-orange-500 !text-orange-500 hover:!bg-orange-500 hover:!text-black"
+              onClick={handleFinalize}
+              disabled={isFinalizePending || isFinalizeConfirming}
+            >
+              {isFinalizePending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  CONFIRM...
+                </span>
+              ) : isFinalizeConfirming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  FINALIZING...
+                </span>
+              ) : (
+                'FINALIZE TIE'
+              )}
+            </Button>
           ) : canEmergencyRefund ? (
-            /* Can claim emergency refund - 24h passed, no resolution */
+            /* Can claim emergency refund - 24h passed, no resolution, no proposal blocking */
             <Button 
               variant="ghost" 
               size="sm" 
