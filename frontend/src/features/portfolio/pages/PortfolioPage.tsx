@@ -352,6 +352,9 @@ export function PortfolioPage() {
   const { claimJuryFees, isPending: isClaimingJuryFees, isSuccess: juryFeesClaimed, reset: resetJuryFeesClaim } = useClaimJuryFees();
   const [claimingMarketId, setClaimingMarketId] = useState<string | null>(null);
   
+  // Optimistic UI: Track claimed jury fee market IDs locally (instant hide before subgraph indexes)
+  const [optimisticClaimedJuryFees, setOptimisticClaimedJuryFees] = useState<Set<string>>(new Set());
+  
   // Query for positions with claimable jury fees
   const { data: claimableJuryFeesData, refetch: refetchClaimableJuryFees } = useQuery<{ positions: PositionWithMarket[] }>(GET_CLAIMABLE_JURY_FEES, {
     variables: { user: address?.toLowerCase() },
@@ -361,9 +364,13 @@ export function PortfolioPage() {
   
   // Calculate claimable jury fees positions
   // User voted for the winning side if: votedForProposer AND proposer won, OR !votedForProposer AND disputer won
+  // v0.8.20: Added optimistic filtering - hide immediately after claim before subgraph indexes
   const claimableJuryFeesPositions = useMemo(() => {
     if (!claimableJuryFeesData?.positions) return [];
     return claimableJuryFeesData.positions.filter(pos => {
+      // Optimistic UI: Skip if we just claimed this one (before subgraph updates)
+      if (optimisticClaimedJuryFees.has(pos.market.id)) return false;
+      
       if (!pos.market.resolved || !pos.hasVoted || pos.juryFeesClaimed) return false;
       // Determine if user voted for the winning side
       // proposedOutcome was what the proposer proposed
@@ -373,7 +380,7 @@ export function PortfolioPage() {
       const userVotedForWinner = pos.votedForProposer ? proposerWon : !proposerWon;
       return userVotedForWinner;
     });
-  }, [claimableJuryFeesData?.positions]);
+  }, [claimableJuryFeesData?.positions, optimisticClaimedJuryFees]);
   
   const queryClient = useQueryClient();
 
@@ -421,8 +428,12 @@ export function PortfolioPage() {
 
   // Aggressive refetch after jury fees claim
   // v0.8.15: Added immediate refetch + extended delays
+  // v0.8.20: Added optimistic UI - instantly hide claimed market
   useEffect(() => {
-    if (juryFeesClaimed) {
+    if (juryFeesClaimed && claimingMarketId) {
+      // Optimistic UI: Immediately hide this market from jury fees list
+      setOptimisticClaimedJuryFees(prev => new Set([...prev, claimingMarketId]));
+      
       // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       
@@ -457,7 +468,7 @@ export function PortfolioPage() {
         juryRefetchRef.current.forEach(clearTimeout);
       };
     }
-  }, [juryFeesClaimed, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
+  }, [juryFeesClaimed, claimingMarketId, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
 
   // Callback for PositionCard to trigger refetch after successful actions
   // Aggressive refetch pattern: 1s, 2s, 4s, 8s to catch subgraph indexing faster
@@ -975,7 +986,7 @@ export function PortfolioPage() {
               {/* Creator Fees (separate) */}
               <StatBox 
                 label="CREATOR" 
-                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(4)} BNB` : '—'}
+                value={earnings.creator > 0 ? `+${earnings.creator.toFixed(5)} BNB` : '—'}
                 color={earnings.creator > 0 ? 'cyber' : undefined}
                 subtext="0.5% of trades"
               />
@@ -2008,20 +2019,18 @@ function MyMarketCard({ market, isNameHidden = false, isImageHidden = false }: M
           {!market.imageUrl && (
             <div className="flex items-center justify-between mt-3">
               <Badge variant={badgeInfo.variant}>{badgeInfo.text}</Badge>
-              <span className="text-xs text-text-muted font-mono">
-                {market.totalTrades} trades
-              </span>
             </div>
           )}
           
-          {/* Trade count (if has image) */}
-          {market.imageUrl && (
-            <div className="flex justify-end mt-2">
-              <span className="text-xs text-text-muted font-mono">
-                {market.totalTrades} trades
-              </span>
-            </div>
-          )}
+          {/* Market ID and Trade count row */}
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-text-muted font-mono">
+              #{market.marketId || market.id}
+            </span>
+            <span className="text-xs text-text-muted font-mono">
+              {market.totalTrades} trades
+            </span>
+          </div>
           
           {/* Stats */}
           <div className="border-t border-dark-600 pt-3 mt-auto grid grid-cols-3 gap-2">
@@ -2034,8 +2043,8 @@ function MyMarketCard({ market, isNameHidden = false, isImageHidden = false }: M
               <p className="text-sm font-mono text-white">{totalVolume.toFixed(3)} BNB</p>
             </div>
             <div>
-              <p className="text-xs text-text-muted">CREATOR FEES</p>
-              <p className="text-sm font-mono text-cyber">{creatorEarnings.toFixed(4)} BNB</p>
+              <p className="text-xs text-text-muted">EST. FEES</p>
+              <p className="text-sm font-mono text-cyber">{creatorEarnings.toFixed(5)} BNB</p>
             </div>
           </div>
         </div>
