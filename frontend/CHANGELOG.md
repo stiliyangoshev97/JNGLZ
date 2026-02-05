@@ -2,6 +2,31 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.22] - 2026-02-05
+
+### Fixed - Portfolio Stats Not Updating After Claims
+
+#### Root Cause
+- **Bug**: After claiming creator fees, jury fees, or bonds, the portfolio stats (CREATOR, JURY, etc.) would not update until page refresh.
+- **Root Cause**: The useEffect cleanup function was canceling all scheduled refetch timeouts when the mutation state was reset after 500ms.
+- **Flow**: `feesWithdrawn=true` → schedule 10 refetches → reset after 500ms → cleanup cancels all timeouts → no polling happens!
+
+#### Fix
+- **Solution**: Delay the mutation reset to AFTER all polling completes (21 seconds instead of 500ms).
+- **Applied to**: Bond/fee withdrawal effect AND jury fees claim effect.
+- **Result**: Stats now reliably update within 2-20 seconds after claiming (depending on subgraph indexing speed).
+
+#### More Aggressive Polling After Claims
+- Refetch every 2s for 20s (delays: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20s)
+- Applied to: Bond/fee withdrawals, jury fees claims, position actions
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx   # Fixed cleanup timing bug
+```
+
+---
+
 ## [0.8.21] - 2026-02-05
 
 ### Fixed - Jury Fees Stat Optimistic UI

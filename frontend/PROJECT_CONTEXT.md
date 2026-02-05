@@ -2,8 +2,8 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** February 5, 2026  
-> **Version:** 0.8.19
-> **Status:** Phase 2+ Complete (Contract Integration + UX Polish + Predator Polling v2.1 + Optimistic Updates + Pull Pattern + Error Formatting + Realized P/L + Portfolio Refactor + Badge Consistency + PENDING Sub-Filters + Resolution Economics + Fee Transparency + P/L Closed Positions Only + Legal Pages Overhaul + EEA/MiCA Compliance + Creator Liability + ScrollToTop + Price Impact Documentation + Portfolio Heat Badges + Leaderboard Fixes + UI Cleanup v3 + Mobile Optimization + SEO + Security + Vercel Deployment + One-Sided Market Fixes + Portfolio Sorting/Filtering + MarketDetailPage Layout Fix + Maintenance Mode + Branding Update + CI/CD Pipeline + v3.6.1 Contract Integration + Reconnect Stability + Portfolio Earnings Display + Explore Before Connect UX + ABI Mismatch Fix + TradePanel UX Improvements + Documentation Overhaul + Cross-Direction Sell Fix + Creator Priority Window UI + Proposer/Disputer Display + Trading & Resolution P/L Split + Payout Color Fix + Position Refresh Fix + Negative NetCostBasis Fix + Trading P/L After Resolution + Loser Resolution P/L Display Fix + Mobile Holders Table Fix + Live Question Counter + Portfolio Market ID + Image Compression + P/L Documentation + Refund Disclaimer + Market Not Found Anti-Drain + Supabase Chat & Moderation + SEO Optimization + Consistent Tab Limits + Network Switch + Tie Scenario UI Fix + Portfolio UX Improvements + Buy Preview Fee Fix + Chat & Holder Badge Fixes + **Mainnet Prep & UX Polish**)
+> **Version:** 0.8.22
+> **Status:** 🚀 **MAINNET LIVE** (v3.8.3 Contract + v5.2.0 Subgraph)
 
 ---
 
@@ -21,7 +21,32 @@
 
 ---
 
-## 🚀 Testnet Configuration
+## 🚀 Mainnet Configuration (PRODUCTION - LIVE)
+
+### Contract (BNB Mainnet - Chain ID: 56)
+| Item | Value |
+|------|-------|
+| PredictionMarket (v3.8.3) | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` |
+| Treasury | `0xaCaD82a7F17f4f4a2f229EF11D5128f07d71D4f2` |
+| Deployed Block | 79457714 |
+| BscScan | https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528 |
+
+### MultiSig Signers (Mainnet)
+- Signer 1: `0x89b1163c90c22775ea45F69607d933618ccFCE3C`
+- Signer 2: `0x841528d507D91eabB924b48A45E32edC8A723f4b`
+- Signer 3: `0x792C04Eea5D788D2B5C22F76F5C33a982f786116`
+
+### Subgraph (Mainnet - v5.2.0)
+| Item | Value |
+|------|-------|
+| Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF` |
+| Subgraph Name | `jnglz-mainnet` |
+| Network | BNB Chain (bsc) |
+| Version | v5.2.0 |
+
+---
+
+## 🧪 Testnet Configuration
 
 ### Contract (BNB Testnet - Chain ID: 97)
 | Item | Value |
@@ -30,13 +55,12 @@
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
 | BscScan | https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf |
 
-### Subgraph (The Graph)
+### Subgraph (The Graph - v5.2.0)
 | Item | Value |
 |------|-------|
-| Studio URL (v5.2.0) | `https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0` |
 | Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC` |
-| Version | v5.2.0 (jnglz-testnet-fresh - Contract v3.8.3) |
-| Rate Limit | Higher limits via Gateway (published) |
+| Subgraph Name | `jnglz-testnet-fresh` |
+| Version | v5.2.0 |
 
 ### Environment Variables (.env)
 ```env

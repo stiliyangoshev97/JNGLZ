@@ -34,20 +34,20 @@ Create a `.env` file in the root:
 
 ```env
 # Network Switch (true = testnet, false = mainnet)
-VITE_IS_TESTNET=true
+VITE_IS_TESTNET=false  # Set to false for mainnet!
 
 # BNB Testnet (v3.8.3)
 VITE_TESTNET_CONTRACT_ADDRESS=0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
 VITE_TESTNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
+VITE_TESTNET_GRAPH_API_KEY=<your-testnet-api-key>
 
-# BNB Mainnet (not deployed yet)
-VITE_MAINNET_CONTRACT_ADDRESS=
-VITE_MAINNET_SUBGRAPH_URL=
+# BNB Mainnet (v3.8.3) - LIVE!
+VITE_MAINNET_CONTRACT_ADDRESS=0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+VITE_MAINNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF
+VITE_MAINNET_GRAPH_API_KEY=<your-mainnet-api-key>
 
 # Shared Config
-VITE_GRAPH_API_KEY=<your-graph-api-key>
 VITE_WALLETCONNECT_PROJECT_ID=<your-project-id>
-VITE_ADMIN_ADDRESSES=0x4Cca77ba15B0D85d7B733E0838a429E7bEF42DD2,0xC119B9152afcC5f40C019aABd78A312d37C63926,0x6499fe8016cE2C2d3a21d08c3016345Edf3467F1
 
 # Supabase (Chat & Moderation)
 VITE_SUPABASE_URL=https://rbizamxghqaqskvdjfrg.supabase.co

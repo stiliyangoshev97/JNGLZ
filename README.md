@@ -101,12 +101,19 @@ JunkieDotFun/
 
 ## 🚀 Deployments
 
-### BNB Testnet (Current)
+### BNB Mainnet (Production) 🔥
 
 | Component | Address/URL | Status |
 |-----------|-------------|--------|
-| **Contract (v3.5.0)** | [`0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8`](https://testnet.bscscan.com/address/0x8e6c4437CAE7b9B78C593778cCfBD7C595Ce74a8) | ✅ Live |
-| **Subgraph (v3.0.0)** | [The Graph Studio](https://thegraph.com/studio/subgraph/jnglz-testnet-fresh) | ✅ Live |
+| **Contract (v3.8.3)** | [`0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`](https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528) | ✅ Live |
+| **Subgraph** | Coming Soon | 🔄 Deploying |
+
+### BNB Testnet
+
+| Component | Address/URL | Status |
+|-----------|-------------|--------|
+| **Contract (v3.8.3)** | [`0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`](https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf) | ✅ Live |
+| **Subgraph (v5.2.0)** | [The Graph Studio](https://thegraph.com/studio/subgraph/jnglz-testnet-fresh) | ✅ Live |
 
 ---
 

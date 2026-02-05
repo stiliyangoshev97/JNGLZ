@@ -1,0 +1,14 @@
+{
+  "chapel": {
+    "PredictionMarket": {
+      "address": "0xC97FB434B79e6c643e0320fa802B515CedBA95Bf",
+      "startBlock": 86465841
+    }
+  },
+  "bsc": {
+    "PredictionMarket": {
+      "address": "0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528",
+      "startBlock": 79457714
+    }
+  }
+}

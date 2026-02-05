@@ -1,14 +1,39 @@
 # 📋 JNGLZ.FUN - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** February 4, 2026  
-> **Status:** ✅ Deployed (jnglz-testnet-fresh v5.2.0 - TieFinalized Event Handler)
+> **Last Updated:** February 5, 2026  
+> **Status:** 🚀 **MAINNET LIVE** (v5.2.0) | ✅ Testnet Deployed (v5.2.0)
 
 ---
 
 ## 🎯 Subgraph Overview
 
 The subgraph indexes all on-chain events from the **PredictionMarket** contract and provides a GraphQL API for the frontend. This **replaces a traditional backend** - no Express/MongoDB needed.
+
+---
+
+## 🚀 Mainnet Configuration (PRODUCTION - LIVE)
+
+### Contract Details (Mainnet)
+- **Address:** `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`
+- **Version:** v3.8.3 (TieFinalized event for subgraph sync)
+- **Network:** BNB Mainnet (Chain ID: 56)
+- **Start Block:** 79457714
+- **BscScan:** https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+
+### GraphQL Endpoint (Mainnet)
+```
+https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF
+```
+
+### API Key (Mainnet)
+- **Key:** `5ac137b1b0ebe0c119882481923fe843`
+- **Subgraph Name:** `jnglz-mainnet`
+- **Version:** v5.2.0
+
+---
+
+## 🧪 Testnet Configuration
 
 ### GraphQL Endpoint (Production Gateway)
 ```
@@ -20,7 +45,7 @@ https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H
 https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 ```
 
-### API Key
+### API Key (Testnet)
 - **Key:** `bd58484c1566274066b1453e52043443`
 - **Whitelisted Domains:** `localhost`, `jnglz.fun`
 - **Rate Limit:** 100,000 queries/month
@@ -31,11 +56,6 @@ https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 - **Network:** BNB Testnet (Chapel, Chain ID: 97)
 - **Start Block:** 86465841
 - **BscScan:** https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf
-
-### Mainnet (Pending)
-- **Address:** TBD (deploy after testnet validation)
-- **Network:** BNB Mainnet (Chain ID: 56)
-- **Start Block:** TBD
 
 ---
 
@@ -50,10 +70,10 @@ https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 | Build | ✅ 100% | Compiles successfully |
 | Testnet Deployment | ✅ 100% | v5.2.0 - Contract v3.8.3 |
 | Gateway Published | ✅ 100% | Live on decentralized network |
-| Mainnet Subgraph | ⬜ 0% | After testnet validation |
-| Mainnet Deployment | ⬜ 0% | After mainnet contract deploy |
+| **Mainnet Contract** | ✅ 100% | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` |
+| **Mainnet Subgraph** | ✅ 100% | `jnglz-mainnet` v5.2.0 deployed! |
 
-**Overall Progress: 100%** ✅
+**Overall Progress: 100%** - 🎉 Fully deployed to mainnet!
 
 ---
 
