@@ -1726,6 +1726,39 @@ export function HowToPlayPage() {
                   </div>
                 </div>
 
+                {/* P/L Accuracy Disclaimer */}
+                <div className="bg-dark-900/50 p-5 border border-text-muted">
+                  <p className="text-text-secondary font-bold mb-3 flex items-center gap-2">
+                    ⚠️ P/L ACCURACY DISCLAIMER
+                  </p>
+                  <p className="text-text-secondary mb-3">
+                    The P/L values displayed on JNGLZ are <strong className="text-white">estimates based on indexed blockchain data</strong>. 
+                    In some edge cases, displayed values may not be 100% accurate due to:
+                  </p>
+                  <ul className="list-disc list-inside text-text-secondary text-xs space-y-1 mb-4">
+                    <li>Blockchain indexing delays (subgraph may lag behind actual chain state)</li>
+                    <li>Complex scenarios involving emergency refunds + partial sells</li>
+                    <li>Rounding in fee calculations and share distributions</li>
+                    <li>Edge cases in AMM bonding curve math</li>
+                  </ul>
+                  <div className="bg-dark-800 p-4 border border-dark-600">
+                    <p className="text-white font-bold text-xs mb-2">🔍 VERIFY ON BSCSCAN</p>
+                    <p className="text-text-secondary text-xs">
+                      If you believe your P/L is incorrect, you can always verify your actual transactions on{' '}
+                      <a 
+                        href="https://bscscan.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-cyber hover:underline"
+                      >
+                        BscScan
+                      </a>
+                      . Search for your wallet address and review the actual BNB amounts sent and received 
+                      from the JNGLZ contract. <strong className="text-white">The blockchain is the source of truth</strong>.
+                    </p>
+                  </div>
+                </div>
+
               </div>
             </div>
           </section>
