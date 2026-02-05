@@ -14,7 +14,7 @@ import { useAccount } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@apollo/client/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS, GET_CLAIMABLE_JURY_FEES } from '@/shared/api';
+import { GET_USER_POSITIONS, GET_MARKETS_BY_CREATOR, GET_USER_TRADES, GET_USER_EARNINGS, GET_CLAIMABLE_JURY_FEES, GET_JURY_FEES_POOLS } from '@/shared/api';
 import type { GetUserPositionsResponse, GetMarketsResponse, GetUserTradesResponse, GetUserEarningsResponse } from '@/shared/api';
 import { PositionCard } from '../components';
 import { Card } from '@/shared/components/ui/Card';
@@ -358,6 +358,40 @@ export function PortfolioPage() {
     skip: !address,
     notifyOnNetworkStatusChange: false,
   });
+  
+  // v0.8.24 FIX: Get actual jury fees pools from subgraph instead of calculating from bonds
+  // This fixes the incorrect jury fee estimation bug where UI showed inflated amounts
+  const juryFeesMarketIds = useMemo(() => {
+    if (!claimableJuryFeesData?.positions) return [];
+    return claimableJuryFeesData.positions.map(pos => pos.market.id);
+  }, [claimableJuryFeesData?.positions]);
+  
+  // Query jury fees pools for markets with claimable jury fees
+  const { data: juryFeesPoolsData } = useQuery<{ 
+    juryFeesPools: Array<{ 
+      id: string; 
+      market: { id: string; marketId: string }; 
+      amount: string; 
+    }> 
+  }>(GET_JURY_FEES_POOLS, {
+    variables: { marketIds: juryFeesMarketIds },
+    skip: juryFeesMarketIds.length === 0,
+    notifyOnNetworkStatusChange: false,
+  });
+  
+  // Create a map of marketId -> actual pool amount (in wei)
+  const juryFeesPoolsMap = useMemo(() => {
+    const map: Record<string, bigint> = {};
+    if (juryFeesPoolsData?.juryFeesPools) {
+      for (const pool of juryFeesPoolsData.juryFeesPools) {
+        // Convert from decimal string (e.g., "0.0003") to wei
+        const amountInEther = parseFloat(pool.amount);
+        const amountInWei = BigInt(Math.floor(amountInEther * 1e18));
+        map[pool.market.id] = amountInWei;
+      }
+    }
+    return map;
+  }, [juryFeesPoolsData?.juryFeesPools]);
   
   // Calculate claimable jury fees positions
   // User voted for the winning side if: votedForProposer AND proposer won, OR !votedForProposer AND disputer won
@@ -1528,6 +1562,7 @@ export function PortfolioPage() {
                     (filterBy !== 'needs-action' || actionFilter === 'jury' || actionFilter === 'all');
                   
                   // Calculate jury fee amount if applicable
+                  // v0.8.24 FIX: Use actual jury fees pool from subgraph instead of calculating from bonds
                   let estimatedJuryFee = 0n;
                   if (isJuryFeePosition) {
                     const userShares = BigInt(position.yesShares || '0') + BigInt(position.noShares || '0');
@@ -1536,13 +1571,21 @@ export function PortfolioPage() {
                     const proposerWon = position.market.outcome === position.market.proposedOutcome;
                     const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
                     
-                    const proposerBond = BigInt(position.market.proposerBond || '0');
-                    const disputerBond = BigInt(position.market.disputerBond || '0');
-                    const loserBond = proposerWon ? disputerBond : proposerBond;
-                    const voterPool = loserBond / 2n;
-                    estimatedJuryFee = totalWinningVotes > 0n 
-                      ? (voterPool * userShares) / totalWinningVotes 
-                      : 0n;
+                    // Use actual pool from subgraph (accurate) instead of calculating from bonds (inaccurate)
+                    const actualPool = juryFeesPoolsMap[position.market.id];
+                    if (actualPool !== undefined && totalWinningVotes > 0n) {
+                      // Calculate user's share of the actual pool
+                      estimatedJuryFee = (actualPool * userShares) / totalWinningVotes;
+                    } else {
+                      // Fallback to old calculation if pool not found (shouldn't happen)
+                      const proposerBond = BigInt(position.market.proposerBond || '0');
+                      const disputerBond = BigInt(position.market.disputerBond || '0');
+                      const loserBond = proposerWon ? disputerBond : proposerBond;
+                      const voterPool = loserBond / 2n;
+                      estimatedJuryFee = totalWinningVotes > 0n 
+                        ? (voterPool * userShares) / totalWinningVotes 
+                        : 0n;
+                    }
                   }
                   
                   const marketId = position.market.marketId || position.market.id;

@@ -43,6 +43,7 @@ export {
   GET_TOP_YES_HOLDERS,
   GET_TOP_NO_HOLDERS,
   GET_CLAIMABLE_JURY_FEES,
+  GET_JURY_FEES_POOLS,
 } from './positions.queries';
 
 // Stats queries

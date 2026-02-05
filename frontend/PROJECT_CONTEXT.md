@@ -1,9 +1,9 @@
 # 📋 JNGLZ.FUN - Frontend Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** February 5, 2026  
-> **Version:** 0.8.22
-> **Status:** 🚀 **MAINNET LIVE** (v3.8.3 Contract + v5.2.0 Subgraph)
+> **Last Updated:** February 6, 2026  
+> **Version:** 0.8.25
+> **Status:** 🚀 **MAINNET LIVE** (v3.8.3 Contract + v5.2.1 Subgraph)
 
 ---
 
@@ -36,13 +36,13 @@
 - Signer 2: `0x841528d507D91eabB924b48A45E32edC8A723f4b`
 - Signer 3: `0x792C04Eea5D788D2B5C22F76F5C33a982f786116`
 
-### Subgraph (Mainnet - v5.2.0)
+### Subgraph (Mainnet - v5.2.1)
 | Item | Value |
 |------|-------|
 | Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF` |
 | Subgraph Name | `jnglz-mainnet` |
 | Network | BNB Chain (bsc) |
-| Version | v5.2.0 |
+| Version | v5.2.1 |
 
 ---
 
@@ -55,12 +55,12 @@
 | Treasury | `0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413` |
 | BscScan | https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf |
 
-### Subgraph (The Graph - v5.2.0)
+### Subgraph (The Graph - v5.0.0)
 | Item | Value |
 |------|-------|
 | Gateway URL | `https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC` |
 | Subgraph Name | `jnglz-testnet-fresh` |
-| Version | v5.2.0 |
+| Version | v5.0.0 |
 
 ### Environment Variables (.env)
 ```env
@@ -335,9 +335,26 @@ import { ApolloProvider } from '@apollo/client/react';
 - **Problem**: Frontend ABI had `dispute(marketId, proofLink)` but contract only takes `marketId`
 - **Solution**: Fixed ABI in `contracts.ts`, removed proofLink from `useDispute` hook
 
+### 6. Resolution Panel Winner Display (FIXED in v0.8.25)
+- **Problem**: UI showed "Disputer ✓" when proposer actually won - occurred due to subgraph vote tracking bug
+- **Root cause**: Subgraph was tracking votes by "YES/NO" instead of "Proposer/Disputer" side, causing inverted tallies when proposer proposed NO
+- **Solution**: Changed winner determination from comparing vote tallies (`proposerVotes >= disputerVotes`) to comparing outcomes (`market.outcome === market.proposedOutcome`)
+- **Key insight**: Contract works correctly; it determines winner by `yesVotes > noVotes`, then checks if `proposedOutcome == votedOutcome`. The UI fix ensures correct display regardless of subgraph data accuracy.
+
+### 7. Jury Fee Pool Estimation (FIXED in v0.8.25)
+- **Problem**: JURY DUTY section showed full `disputeBond` as Prize Pool instead of correct 50% of loser's bond
+- **Root cause**: Misunderstanding of fee distribution - jury gets 50% of the LOSING side's bond, not the dispute bond
+- **Solution**: Calculate both possible pools (if proposer wins: 50% of disputer bond; if disputer wins: 50% of proposer bond) and show the conservative estimate (smaller of the two)
+
 ---
 
-## 🆕 Recent Changes (v0.7.32 - v0.7.34)
+## 🆕 Recent Changes (v0.8.25)
+
+### v0.8.25 - Resolution Panel Fixes
+- **Fixed** winner display in Resolution History - was showing wrong winner due to subgraph vote tracking bug
+- **Fixed** Earnings Breakdown - now correctly identifies proposer vs disputer as winner
+- **Fixed** JURY DUTY Prize Pool estimation - now shows conservative 50% of loser's bond instead of full dispute bond
+- **Technical**: Changed from vote tally comparison to outcome comparison (`market.outcome === market.proposedOutcome`)
 
 ### v0.7.34 - Cross-Direction Sell Fix
 - **Fixed** transaction failures when switching between YES/NO after partial sells

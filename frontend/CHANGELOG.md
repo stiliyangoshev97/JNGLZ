@@ -2,6 +2,90 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.25] - 2026-02-05
+
+### Fixed - Resolution Panel Winner Display & Jury Fee Estimation
+
+#### Issue 1: Incorrect Winner Display in Resolution History
+- **Bug**: Resolution History showed "Disputer ✓" as winner even when proposer actually won.
+- **Cause**: UI relied on `proposerVotes >= disputerVotes` from subgraph, which was inverted due to subgraph vote tracking bug (when proposer proposed NO).
+- **Impact**: Users saw wrong winner displayed, causing confusion about who received the bonds.
+
+#### Fix 1: Determine Winner from Outcome Comparison
+- **Solution**: Changed winner determination to compare `market.outcome === market.proposedOutcome`.
+- **Logic**: If final outcome matches what proposer said → proposer won. If different → disputer won.
+- **Benefit**: Works correctly regardless of subgraph vote tracking data accuracy.
+
+```typescript
+// Before (buggy - relied on potentially corrupted vote tallies):
+const proposerWon = proposerVotes >= disputerVotes;
+
+// After (correct - uses actual finalized outcome):
+const proposerActuallyWon = market.outcome === market.proposedOutcome;
+```
+
+#### Issue 2: Inflated Jury Fee Pool Estimate
+- **Bug**: JURY DUTY section showed full `disputeBond` as Prize Pool instead of  50% of loser's bond.
+- **Cause**: Used wrong value for pool estimation during voting.
+- **Impact**: Users saw inflated potential earnings.
+
+#### Fix 2: Conservative Jury Pool Estimate
+- **Solution**: Calculate both possible pools (50% of each party's bond) and show the smaller one.
+- **Logic**: Since we don't know who will win during voting, show conservative estimate.
+
+```typescript
+const juryPoolIfProposerWins = disputerBondValue / 2n;
+const juryPoolIfDisputerWins = proposerBondFromMarket / 2n;
+const conservativePool = min(juryPoolIfProposerWins, juryPoolIfDisputerWins);
+```
+
+#### Files Modified
+```
+src/features/markets/components/ResolutionPanel.tsx
+- Resolution History: Now determines winner from outcome comparison
+- Earnings Breakdown: Uses correct winner determination  
+- JURY DUTY section: Shows conservative 50% pool estimate
+- Added clarifying comments about subgraph data reliability
+```
+
+#### Related: Subgraph Fix v5.2.1
+This frontend fix works around a critical subgraph bug that has now been fixed and redeployed:
+- Subgraph `handleVoteCast` was incorrectly mapping votes when proposer proposed NO
+- Vote tallies (`proposerVoteWeight`/`disputerVoteWeight`) were inverted for affected markets
+- After subgraph reindex, vote tallies will be accurate, but this UI fix ensures correct display regardless
+
+---
+
+## [0.8.24] - 2026-02-05
+
+### Fixed - Jury Fees Pool Estimation Bug
+
+#### Issue
+- **Bug**: Jury fee claim button showed inflated estimate (e.g., 0.0050 BNB) while actual pool was much smaller (e.g., 0.0003 BNB).
+- **Cause**: Frontend calculated jury fee from bond values stored in subgraph, but those values don't reflect the actual `juryFeesPool` created by the contract.
+- **Impact**: Users saw incorrect estimates but claims still worked (just received the actual, smaller amount).
+
+#### Fix
+- **Solution**: Query actual `JuryFeesPool` entity from subgraph instead of calculating from bonds.
+- **New Query**: Added `GET_JURY_FEES_POOLS` GraphQL query to fetch actual pool amounts.
+- **Calculation**: Now uses `(actualPool * userShares) / totalWinningVotes` for accurate estimates.
+- **Fallback**: Old calculation retained as fallback if pool data not yet indexed.
+
+#### Files Modified
+```
+src/shared/api/positions.queries.ts   # Added GET_JURY_FEES_POOLS query
+src/shared/api/index.ts               # Export new query
+src/features/portfolio/pages/PortfolioPage.tsx  # Use actual pool for estimation
+```
+
+#### Technical Details
+- The `JuryFeesPool` entity is created by `JuryFeesPoolCreated` event when market is finalized
+- Contains the actual `amount` distributed to winning voters
+- Frontend now queries this entity for all markets with claimable jury fees
+- Creates a `juryFeesPoolsMap` mapping marketId -> actual pool amount (in wei)
+
+---
+
 ## [0.8.23] - 2026-02-05
 
 ### Added - Sentry Error Tracking
@@ -1000,60 +1084,6 @@ If YES wins now:
 ~1.9850 BNB
 Returns change as others trade
 ```
-
-Users can easily calculate profit: `payout - investment`. The multiplier added confusion without adding value.
-
-#### Files Changed
-- `TradePanel.tsx` - Removed multiplier display and calculation from buyPreviewPayout
-
----
-
-## [0.7.48] - 2026-01-31
-
-### Fixed - Portfolio Header Resolution P/L Double-Counting Bug
-
-#### The Issue
-The Portfolio page header was showing incorrect Total P/L. Specifically, Resolution P/L was showing a value (e.g., +0.0258 BNB) when no markets had actually been resolved. This caused the Total P/L to be inflated.
-
-**Example:**
-- Header showed: `Total P/L: +0.0500 BNB (T: +0.0243 | R: +0.0258)`
-- Individual markets showed: Trading: +0.0243, Resolution: +0.0000
-- Leaderboard (correct): +0.0243 BNB
-
-#### Root Cause
-When a user sells shares at a profit greater than their original investment, `netCostBasis` becomes negative (e.g., invested 0.1 BNB, returned 0.1258 BNB → netCostBasis = -0.0258).
-
-In `PositionCard.tsx`, this was handled correctly:
-```tsx
-const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
-```
-
-But in `PortfolioPage.tsx`, the clamping was missing:
-```tsx
-const netCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');  // ❌ No clamping
-resolutionPnl += claimed - netCostBasis;  // 0 - (-0.0258) = +0.0258 ❌
-```
-
-This caused trading profits to be double-counted as resolution P/L.
-
-#### The Fix
-Added the same clamping logic to `PortfolioPage.tsx`:
-```tsx
-const rawNetCostBasis = parseFloat(pos.netCostBasis || pos.totalInvested || '0');
-const netCostBasis = Math.max(0, rawNetCostBasis);  // ✅ Clamped to 0
-```
-
-Now when netCostBasis is negative (profitable exit), resolution P/L correctly shows 0.
-
-#### Files Changed
-- `PortfolioPage.tsx` - Added `Math.max(0, rawNetCostBasis)` clamping in resolutionStats calculation
-
----
-
-## [0.7.47] - 2026-01-31
-
-### Added - Comprehensive P/L Documentation in How To Play
-
 #### The Issue
 Users were confused about how P/L is calculated, especially the difference between Trading P/L and Resolution P/L, and edge cases involving emergency refunds.
 

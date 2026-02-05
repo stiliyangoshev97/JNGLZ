@@ -1,8 +1,8 @@
 # 📋 JNGLZ.FUN - Subgraph Project Context
 
 > Quick reference for AI assistants and developers.  
-> **Last Updated:** February 5, 2026  
-> **Status:** 🚀 **MAINNET LIVE** (v5.2.0) | ✅ Testnet Deployed (v5.2.0)
+> **Last Updated:** February 6, 2026  
+> **Status:** 🚀 **MAINNET LIVE** (v5.2.1) | ✅ Testnet Deployed (v5.0.0)
 
 ---
 
@@ -29,7 +29,7 @@ https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRE
 ### API Key (Mainnet)
 - **Key:** `5ac137b1b0ebe0c119882481923fe843`
 - **Subgraph Name:** `jnglz-mainnet`
-- **Version:** v5.2.0
+- **Version:** v5.2.1
 
 ---
 
@@ -42,13 +42,14 @@ https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H
 
 ### GraphQL Endpoint (Studio - Development)
 ```
-https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
+https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.0.0
 ```
 
 ### API Key (Testnet)
 - **Key:** `bd58484c1566274066b1453e52043443`
 - **Whitelisted Domains:** `localhost`, `jnglz.fun`
 - **Rate Limit:** 100,000 queries/month
+- **Studio Auth Key:** `e9ed5063e6fb357b5f03a23ed18e33b3`
 
 ### Contract Details (Testnet)
 - **Address:** `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`
@@ -64,14 +65,14 @@ https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 | Component | Progress | Notes |
 |-----------|----------|-------|
 | Schema Definition | ✅ 100% | v5.1.0 - Includes positionIds for loser P/L tracking |
-| Subgraph Config | ✅ 100% | v5.2.0 - TieFinalized handler added |
+| Subgraph Config | ✅ 100% | v5.2.1 - TieFinalized handler + vote tracking fix |
 | Mappings | ✅ 100% | All event handlers including TieFinalized |
 | Codegen | ✅ 100% | Types generated |
 | Build | ✅ 100% | Compiles successfully |
-| Testnet Deployment | ✅ 100% | v5.2.0 - Contract v3.8.3 |
+| Testnet Deployment | ✅ 100% | v5.0.0 - Contract v3.8.3 |
 | Gateway Published | ✅ 100% | Live on decentralized network |
 | **Mainnet Contract** | ✅ 100% | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` |
-| **Mainnet Subgraph** | ✅ 100% | `jnglz-mainnet` v5.2.0 deployed! |
+| **Mainnet Subgraph** | ✅ 100% | `jnglz-mainnet` v5.2.1 deployed! |
 
 **Overall Progress: 100%** - 🎉 Fully deployed to mainnet!
 
@@ -95,6 +96,45 @@ When experiencing persistent sync issues on Graph Studio:
 3. Delete/unpublish the old problematic subgraph
 
 > 📚 **See:** [`SUBGRAPH_DEPLOYMENT_RULES.md`](./SUBGRAPH_DEPLOYMENT_RULES.md) for comprehensive deployment guidelines to avoid these issues on mainnet.
+
+---
+
+## ⚠️ Important: Vote Tracking Bug (Fixed in v5.2.1)
+
+### The Problem (Feb 6, 2026)
+Resolution Panel UI showed wrong winner - "Disputer ✓" when proposer actually won.
+
+### Root Cause
+Subgraph was tracking votes by **YES/NO** instead of **Proposer/Disputer** side:
+- Contract stores `proposedOutcome` (YES or NO)
+- When jury votes YES, subgraph incremented `yesVotes`
+- But if proposer proposed NO, a YES vote means "I disagree with proposer" (supports disputer)
+- Result: Vote tallies were semantically inverted when `proposedOutcome = NO`
+
+### The Fix (v5.2.1)
+Changed vote tracking to be relative to proposer's position:
+```typescript
+// OLD (wrong):
+market.proposerVotes = market.yesVotes;  // Always linked YES to proposer
+
+// NEW (correct):
+if (market.proposedOutcome == true) {
+  // Proposer proposed YES, so YES votes support proposer
+  market.proposerVotes = market.yesVotes;
+  market.disputerVotes = market.noVotes;
+} else {
+  // Proposer proposed NO, so NO votes support proposer
+  market.proposerVotes = market.noVotes;
+  market.disputerVotes = market.yesVotes;
+}
+```
+
+### Frontend Mitigation (v0.8.25)
+Even with subgraph fix, frontend now determines winner by comparing final outcomes:
+```typescript
+// Robust check that works regardless of vote tally accuracy
+const proposerWon = market.outcome === market.proposedOutcome;
+```
 
 ---
 

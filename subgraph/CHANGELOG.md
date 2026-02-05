@@ -2,6 +2,39 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.2.1] - 2026-02-05 - 🐛 Critical Vote Tracking Fix
+
+### Bug Fix
+**CRITICAL:** Fixed incorrect vote tracking in `handleVoteCast` that caused proposer/disputer votes to be swapped when proposer proposed NO.
+
+**Root Cause:**
+The previous code incorrectly assumed `event.params.outcome = true` always meant "supporting the proposer":
+```typescript
+// WRONG - this only works when proposer proposed YES
+vote.supportedProposer = event.params.outcome;
+```
+
+**The Fix:**
+Now correctly compares the voter's chosen outcome with the proposer's proposed outcome:
+```typescript
+// CORRECT - compare vote outcome with proposer's proposal
+let supportsProposer = (event.params.outcome == market.proposedOutcome);
+vote.supportedProposer = supportsProposer;
+```
+
+**Impact:**
+- Affected markets where proposer proposed NO
+- Vote tallies were inverted (proposer votes counted as disputer votes and vice versa)
+- Frontend displayed wrong winner in Resolution History
+- **Requires subgraph redeployment and reindexing to fix historical data**
+
+### Changed
+- `handleVoteCast`: Now correctly determines voter support based on outcome comparison
+- `Vote.supportedProposer`: Now accurately reflects whether voter supported proposer
+- `Position.votedForProposer`: Now accurately reflects voter's support
+
+---
+
 ## [5.2.0-mainnet] - 2026-02-05 - 🚀 Mainnet Deployment
 
 ### Mainnet Launch

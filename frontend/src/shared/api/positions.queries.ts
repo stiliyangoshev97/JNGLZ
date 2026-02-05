@@ -219,3 +219,25 @@ export const GET_CLAIMABLE_JURY_FEES = gql`
     }
   }
 `;
+
+/**
+ * Get jury fees pools for specific markets (v0.8.24)
+ * Used to get the actual pool amount instead of calculating from bonds
+ * This fixes the incorrect jury fee estimation bug
+ */
+export const GET_JURY_FEES_POOLS = gql`
+  query GetJuryFeesPools($marketIds: [String!]!) {
+    juryFeesPools(
+      first: 100
+      where: { market_in: $marketIds }
+    ) {
+      id
+      market {
+        id
+        marketId
+      }
+      amount
+      timestamp
+    }
+  }
+`;
