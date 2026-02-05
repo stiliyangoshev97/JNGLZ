@@ -1,29 +1,37 @@
 # JNGLZ.FUN - Master TODO
 
 > **Last Updated:** February 5, 2026  
-> **Status:** Smart Contracts ✅ v3.8.3 DEPLOYED | Subgraph ✅ v5.2.0 | Frontend ✅ v0.8.19  
+> **Status:** Smart Contracts ✅ v3.8.3 DEPLOYED | Subgraph ✅ v5.2.0 | Frontend ✅ v0.8.21  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
 
 ---
 
 ## 🚀 MAINNET DEPLOYMENT CHECKLIST
 
-### Phase 1: Smart Contract Deployment (BNB Mainnet)
+### Phase 1: Smart Contract Deployment (BNB Mainnet) ✅ COMPLETE
 
 **Prerequisites:**
-- [ ] Sufficient BNB in deployer wallet for gas (~0.05 BNB)
-- [ ] Private key for deployment ready
-- [ ] BscScan API key for verification
+- [x] Sufficient BNB in deployer wallet for gas (~0.05 BNB)
+- [x] Private key for deployment ready
+- [x] BscScan API key for verification
+
+**Deployment Details (February 5, 2026):**
+- **Contract Address:** `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`
+- **Transaction:** `0xf1925fcd99204307f5b7fd8fc62e8502c3203e75b84e63e75e3fd19064f2faa2`
+- **Block:** 79457714
+- **Gas Used:** 5,542,344 (0.0002771172 BNB)
+- **BscScan:** https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+- **Verified:** ✅ Yes
 
 **Steps:**
 
-1. **Update Foundry Config for Mainnet**
+1. ~~**Update Foundry Config for Mainnet**~~ ✅
    ```bash
    cd contracts
    # Check foundry.toml has mainnet RPC
    ```
 
-2. **Deploy Contract to Mainnet**
+2. ~~**Deploy Contract to Mainnet**~~ ✅
    ```bash
    # Set environment variables
    export PRIVATE_KEY=<your-deployer-private-key>
@@ -37,20 +45,20 @@
      -vvvv
    ```
 
-3. **Record Deployment Details**
-   - [ ] Contract address
-   - [ ] Transaction hash
-   - [ ] Block number
-   - [ ] Verify on BscScan
+3. ~~**Record Deployment Details**~~ ✅
+   - [x] Contract address
+   - [x] Transaction hash
+   - [x] Block number
+   - [x] Verify on BscScan
 
-4. **Update `DeployedContracts.txt`**
-   - [ ] Add BNB Mainnet section with contract details
-   - [ ] Include treasury address (same or new?)
-   - [ ] Include MultiSig signers
+4. ~~**Update `DeployedContracts.txt`**~~ ✅
+   - [x] Add BNB Mainnet section with contract details
+   - [x] Include treasury address (same or new?)
+   - [x] Include MultiSig signers
 
-5. **Update `contracts/README.md`**
-   - [ ] Add mainnet deployment info
-   - [ ] Update deployment addresses table
+5. ~~**Update `contracts/README.md`**~~ ✅
+   - [x] Add mainnet deployment info
+   - [x] Update deployment addresses table
 
 ---
 
@@ -268,10 +276,11 @@ If issues arise on mainnet:
 
 ---
 
-## 🔴 CONTRACT FIX NEEDED: Tie Finalization Event Missing
+## ✅ COMPLETED: Tie Finalization Event Fix
 
 **Discovered:** February 3, 2026  
-**Status:** Requires new contract deployment  
+**Fixed:** February 4, 2026  
+**Status:** ✅ Deployed - Contract v3.8.3 + Subgraph v5.2.0  
 **Severity:** MEDIUM (UI bug, funds not at risk)
 
 ### The Issue

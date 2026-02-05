@@ -1,8 +1,35 @@
 # ============================================
 # JNGLZ.FUN - Deployed Contracts
 # ============================================
-# Last Updated: January 23, 2026
+# Last Updated: February 5, 2026
 # ============================================
+
+## BNB MAINNET (Chain ID: 56) 🚀 PRODUCTION
+## ============================================
+
+### PredictionMarket Contract (v3.8.3) ✅ LIVE
+- **Address**: 0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+- **BscScan**: https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528
+- **Verified**: ✅ Yes
+- **Deployed**: February 5, 2026
+- **Block**: 79457714
+- **Transaction**: 0xf1925fcd99204307f5b7fd8fc62e8502c3203e75b84e63e75e3fd19064f2faa2
+- **Gas Used**: 5,542,344 (0.0002771172 BNB)
+- **MultiSig Signers**:
+  - Signer 1: 0x89b1163c90c22775ea45F69607d933618ccFCE3C
+  - Signer 2: 0x841528d507D91eabB924b48A45E32edC8A723f4b
+  - Signer 3: 0x792C04Eea5D788D2B5C22F76F5C33a982f786116
+- **Treasury**: 0xaCaD82a7F17f4f4a2f229EF11D5128f07d71D4f2
+- **Features**: 
+  - ✅ TieFinalized event for proper subgraph sync
+  - ✅ All v3.8.2 bug fixes included
+  - 5 Heat Levels (CRACK, HIGH, PRO, APEX, CORE)
+  - Pull Pattern, ReplaceSigner (2-of-3), Sweep Protection
+  - Proposer Rewards (0.5%), Street Consensus Resolution
+  - Fee Structure: 1% platform + 0.5% creator + 0.3% resolution
+- **Tests**: 214 passing
+
+---
 
 ## BNB TESTNET (Chain ID: 97)
 ## ============================================
@@ -104,12 +131,6 @@
 ### Treasury
 - **Address**: 0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
 - **BscScan**: https://testnet.bscscan.com/address/0xc21Ca5BA47cF1C485DE33b26D9Da3d10ACcDa413
-
-## ============================================
-## BNB MAINNET (Chain ID: 56)
-## ============================================
-
-Not deployed yet.
 
 ## ============================================
 ## Deployment History

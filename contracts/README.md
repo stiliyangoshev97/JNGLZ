@@ -6,15 +6,16 @@
 [![Tests](https://img.shields.io/badge/tests-214%20passing-brightgreen)]()
 [![Solidity](https://img.shields.io/badge/solidity-0.8.24-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Testnet](https://img.shields.io/badge/BNB%20Testnet-deployed-green)]()
+[![Mainnet](https://img.shields.io/badge/BNB%20Mainnet-deployed-green)]()
 [![Version](https://img.shields.io/badge/version-v3.8.3-blue)]()
 
 ---
 
-## 🚀 Current Deployment
+## 🚀 Current Deployments
 
 | Network | Address | Status |
 |---------|---------|--------|
+| **BNB Mainnet** | [`0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`](https://bscscan.com/address/0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528) | ✅ Verified |
 | **BNB Testnet** | [`0xC97FB434B79e6c643e0320fa802B515CedBA95Bf`](https://testnet.bscscan.com/address/0xC97FB434B79e6c643e0320fa802B515CedBA95Bf) | ✅ Verified |
 
 ---
