@@ -1,8 +1,270 @@
 # JNGLZ.FUN - Master TODO
 
-> **Last Updated:** February 3, 2026  
-> **Status:** Smart Contracts ✅ v3.8.2 DEPLOYED | Subgraph ✅ v5.1.0 | Frontend ✅ v0.7.46  
+> **Last Updated:** February 5, 2026  
+> **Status:** Smart Contracts ✅ v3.8.3 DEPLOYED | Subgraph ✅ v5.2.0 | Frontend ✅ v0.8.19  
 > **Stack:** React 19 + Vite + Wagmi v3 + Foundry + The Graph
+
+---
+
+## 🚀 MAINNET DEPLOYMENT CHECKLIST
+
+### Phase 1: Smart Contract Deployment (BNB Mainnet)
+
+**Prerequisites:**
+- [ ] Sufficient BNB in deployer wallet for gas (~0.05 BNB)
+- [ ] Private key for deployment ready
+- [ ] BscScan API key for verification
+
+**Steps:**
+
+1. **Update Foundry Config for Mainnet**
+   ```bash
+   cd contracts
+   # Check foundry.toml has mainnet RPC
+   ```
+
+2. **Deploy Contract to Mainnet**
+   ```bash
+   # Set environment variables
+   export PRIVATE_KEY=<your-deployer-private-key>
+   export BSCSCAN_API_KEY=<your-bscscan-api-key>
+   
+   # Deploy and verify
+   forge script script/Deploy.s.sol:DeployScript \
+     --rpc-url https://bsc-dataseed.binance.org \
+     --broadcast \
+     --verify \
+     -vvvv
+   ```
+
+3. **Record Deployment Details**
+   - [ ] Contract address
+   - [ ] Transaction hash
+   - [ ] Block number
+   - [ ] Verify on BscScan
+
+4. **Update `DeployedContracts.txt`**
+   - [ ] Add BNB Mainnet section with contract details
+   - [ ] Include treasury address (same or new?)
+   - [ ] Include MultiSig signers
+
+5. **Update `contracts/README.md`**
+   - [ ] Add mainnet deployment info
+   - [ ] Update deployment addresses table
+
+---
+
+### Phase 2: Subgraph Deployment (Multi-Network Setup)
+
+**Goal:** Use the SAME subgraph codebase for both testnet and mainnet with network-specific configs.
+
+**Architecture:**
+```
+subgraph/
+├── subgraph.yaml          # Template (DO NOT DEPLOY DIRECTLY)
+├── networks.json          # Network-specific addresses & start blocks
+├── config/
+│   ├── testnet.json       # Testnet config
+│   └── mainnet.json       # Mainnet config
+```
+
+**Steps:**
+
+1. **Create Network Configuration Files**
+
+   Create `subgraph/networks.json`:
+   ```json
+   {
+     "chapel": {
+       "PredictionMarket": {
+         "address": "0xC97FB434B79e6c643e0320fa802B515CedBA95Bf",
+         "startBlock": 86465841
+       }
+     },
+     "bsc": {
+       "PredictionMarket": {
+         "address": "<MAINNET_CONTRACT_ADDRESS>",
+         "startBlock": <MAINNET_DEPLOY_BLOCK>
+       }
+     }
+   }
+   ```
+
+2. **Update `subgraph.yaml` to Use Mustache Templates**
+   
+   Change hardcoded values to template variables:
+   ```yaml
+   network: {{network}}
+   source:
+     address: "{{address}}"
+     startBlock: {{startBlock}}
+   ```
+
+3. **Update `package.json` Scripts**
+   ```json
+   {
+     "scripts": {
+       "codegen": "graph codegen",
+       "build": "graph build",
+       "prepare:testnet": "mustache config/testnet.json subgraph.template.yaml > subgraph.yaml",
+       "prepare:mainnet": "mustache config/mainnet.json subgraph.template.yaml > subgraph.yaml",
+       "deploy:testnet": "npm run prepare:testnet && graph deploy --studio jnglz-testnet-fresh",
+       "deploy:mainnet": "npm run prepare:mainnet && graph deploy --studio jnglz-mainnet"
+     }
+   }
+   ```
+
+   **Alternative (Simpler - Graph CLI built-in):**
+   ```json
+   {
+     "scripts": {
+       "deploy:testnet": "graph deploy --studio jnglz-testnet-fresh --network chapel",
+       "deploy:mainnet": "graph deploy --studio jnglz-mainnet --network bsc"
+     }
+   }
+   ```
+   With `--network` flag, Graph CLI reads from `networks.json` automatically!
+
+4. **Create Mainnet Subgraph in The Graph Studio**
+   - [ ] Go to https://thegraph.com/studio/
+   - [ ] Create new subgraph: `jnglz-mainnet`
+   - [ ] Select network: BNB Chain (bsc)
+   - [ ] Get deployment key
+
+5. **Deploy to Mainnet**
+   ```bash
+   cd subgraph
+   
+   # Authenticate (if needed)
+   graph auth --studio <DEPLOY_KEY>
+   
+   # Deploy mainnet subgraph
+   npm run deploy:mainnet
+   # OR with manual network flag:
+   graph deploy --studio jnglz-mainnet --network bsc
+   ```
+
+6. **Publish Mainnet Subgraph**
+   - [ ] In Studio, publish subgraph to decentralized network
+   - [ ] Note the Gateway URL for frontend
+
+7. **Update Documentation**
+   - [ ] `PROJECT_CONTEXT_SUBGRAPH.md` - Add mainnet info
+   - [ ] `subgraph/README.md` - Document multi-network deployment
+
+**Future Updates (Both Networks):**
+```bash
+# Update testnet
+npm run deploy:testnet
+# Update mainnet
+npm run deploy:mainnet
+```
+
+---
+
+### Phase 3: Frontend Configuration
+
+**Goal:** Flip `VITE_IS_TESTNET=false` and add mainnet config.
+
+**Steps:**
+
+1. **Update `.env` File**
+   ```bash
+   # Change master toggle
+   VITE_IS_TESTNET=false
+   
+   # Add mainnet config
+   VITE_MAINNET_CONTRACT_ADDRESS=<MAINNET_CONTRACT_ADDRESS>
+   VITE_MAINNET_SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/<MAINNET_SUBGRAPH_ID>
+   ```
+
+2. **Update `.env.example`** (if exists)
+   - [ ] Add mainnet placeholders
+   - [ ] Document the switch
+
+3. **Update Vercel Environment Variables**
+   - [ ] Go to Vercel dashboard → Project → Settings → Environment Variables
+   - [ ] Add/update:
+     - `VITE_IS_TESTNET=false`
+     - `VITE_MAINNET_CONTRACT_ADDRESS=<address>`
+     - `VITE_MAINNET_SUBGRAPH_URL=<url>`
+
+4. **Test Locally First**
+   ```bash
+   cd frontend
+   npm run dev
+   # Verify connects to mainnet
+   # Verify contract reads work
+   # Verify subgraph queries work
+   ```
+
+5. **Deploy to Production**
+   ```bash
+   # If auto-deploy on push:
+   git push origin main
+   
+   # Or manual deploy:
+   vercel --prod
+   ```
+
+---
+
+### Phase 4: Post-Deployment Verification
+
+1. **Contract Verification**
+   - [ ] Check BscScan mainnet - contract verified
+   - [ ] Test basic read functions (getMarket, etc.)
+   - [ ] Verify MultiSig setup correct
+
+2. **Subgraph Verification**
+   - [ ] Query endpoint returns data
+   - [ ] Indexing status healthy
+   - [ ] No sync errors
+
+3. **Frontend Verification**
+   - [ ] Site loads on mainnet
+   - [ ] Wallet connects to BNB mainnet (not testnet)
+   - [ ] Markets page loads (empty initially)
+   - [ ] Create market works
+   - [ ] Trade works
+
+4. **Update Documentation**
+   - [ ] `DeployedContracts.txt` - Complete mainnet section
+   - [ ] `PROJECT_CONTEXT.md` (frontend) - Add mainnet info
+   - [ ] `README.md` (root) - Update status
+
+---
+
+### Quick Reference: Deployment Commands
+
+```bash
+# ===== SMART CONTRACT =====
+cd contracts
+forge script script/Deploy.s.sol:DeployScript \
+  --rpc-url https://bsc-dataseed.binance.org \
+  --broadcast --verify -vvvv
+
+# ===== SUBGRAPH =====
+cd subgraph
+# After setting up networks.json:
+graph deploy --studio jnglz-mainnet --network bsc
+
+# ===== FRONTEND =====
+cd frontend
+# Update .env with VITE_IS_TESTNET=false
+npm run build
+# Deploy via Vercel or git push
+```
+
+---
+
+### Rollback Plan
+
+If issues arise on mainnet:
+
+1. **Frontend:** Change `VITE_IS_TESTNET=true` in Vercel → redeploy
+2. **Subgraph:** Cannot rollback, but can pause by not publishing
+3. **Contract:** Cannot rollback, but can pause via MultiSig if needed
 
 ---
 
