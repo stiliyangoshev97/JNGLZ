@@ -39,14 +39,6 @@ export function useCreateMarket() {
     heatLevel: number; // 0=CRACK, 1=HIGH, 2=PRO
     creationFee?: bigint; // Usually 0
   }) => {
-    // Debug: Log contract address to help diagnose production issues
-    console.log('[createMarket] Contract address:', PREDICTION_MARKET_ADDRESS);
-    console.log('[createMarket] Params:', {
-      question: params.question.slice(0, 50) + '...',
-      expiryTimestamp: params.expiryTimestamp.toString(),
-      heatLevel: params.heatLevel,
-    });
-    
     writeContract({
       address: PREDICTION_MARKET_ADDRESS,
       abi: PREDICTION_MARKET_ABI,
