@@ -4,29 +4,25 @@ All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
 ## [0.8.22] - 2026-02-05
 
-### Changed - Portfolio Page Polling Strategy
+### Fixed - Portfolio Stats Not Updating After Claims
 
-#### Removed Optimistic UI for Jury Fees
-- **Problem**: Optimistic UI added complexity and potential for state inconsistencies.
-- **Solution**: Replaced optimistic UI with more aggressive polling after ALL claim actions.
-- **Removed**:
-  - `optimisticClaimedJuryFees` state (instant hide of claimed jury fee cards)
-  - `optimisticJuryEarnings` state (instant JURY stat update)
-  - Optimistic filtering in `claimableJuryFeesPositions` useMemo
-  - Optimistic clear useEffect
+#### Root Cause
+- **Bug**: After claiming creator fees, jury fees, or bonds, the portfolio stats (CREATOR, JURY, etc.) would not update until page refresh.
+- **Root Cause**: The useEffect cleanup function was canceling all scheduled refetch timeouts when the mutation state was reset after 500ms.
+- **Flow**: `feesWithdrawn=true` → schedule 10 refetches → reset after 500ms → cleanup cancels all timeouts → no polling happens!
+
+#### Fix
+- **Solution**: Delay the mutation reset to AFTER all polling completes (21 seconds instead of 500ms).
+- **Applied to**: Bond/fee withdrawal effect AND jury fees claim effect.
+- **Result**: Stats now reliably update within 2-20 seconds after claiming (depending on subgraph indexing speed).
 
 #### More Aggressive Polling After Claims
-- **Previous**: Refetch at 1s, 2s, 4s, 8s (exponential backoff)
-- **New**: Refetch every 2s for 20s (delays: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20s)
-- **Applied to**:
-  - Bond/fee withdrawals
-  - Jury fees claims
-  - Position actions (claim winnings, emergency refund, etc.)
-- **Result**: More reliable updates without optimistic state complexity. Stats update within 2-4 seconds of subgraph indexing.
+- Refetch every 2s for 20s (delays: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20s)
+- Applied to: Bond/fee withdrawals, jury fees claims, position actions
 
 #### Files Modified
 ```
-src/features/portfolio/pages/PortfolioPage.tsx   # Polling strategy changes
+src/features/portfolio/pages/PortfolioPage.tsx   # Fixed cleanup timing bug
 ```
 
 ---

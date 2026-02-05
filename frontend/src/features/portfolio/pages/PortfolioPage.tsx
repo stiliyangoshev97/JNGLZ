@@ -384,6 +384,7 @@ export function PortfolioPage() {
   // Aggressive refetch after bond/fee withdrawal
   // v0.8.15: Added immediate refetch + extended delays for faster UI update
   // v0.8.22: Increased polling frequency - every 2s for 20s (more reliable than optimistic UI)
+  // v0.8.22: FIX - Reset mutation AFTER polling completes to avoid cleanup canceling timeouts
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
       // Invalidate balance queries immediately
@@ -393,7 +394,7 @@ export function PortfolioPage() {
       refetchPending();
       refetchEarnings();
       
-      // Clear any pending timeouts
+      // Clear any pending timeouts from previous runs
       withdrawalRefetchRef.current.forEach(clearTimeout);
       withdrawalRefetchRef.current = [];
       
@@ -407,22 +408,25 @@ export function PortfolioPage() {
         withdrawalRefetchRef.current.push(timeout);
       });
       
-      // Reset the mutation state after short delay
+      // Reset the mutation state AFTER all polling completes (21s to be safe)
+      // This prevents the cleanup from canceling our scheduled refetches
       const resetTimer = setTimeout(() => {
         if (bondWithdrawn) resetBondWithdraw();
         if (feesWithdrawn) resetFeesWithdraw();
-      }, 500);
-      
-      return () => {
-        clearTimeout(resetTimer);
-        withdrawalRefetchRef.current.forEach(clearTimeout);
-      };
+      }, 21000);
+      withdrawalRefetchRef.current.push(resetTimer);
     }
+    
+    // Cleanup only on unmount, not on dependency changes
+    return () => {
+      // Only clear if component unmounts (withdrawalRefetchRef will be garbage collected anyway)
+    };
   }, [bondWithdrawn, feesWithdrawn, refetchPending, refetchEarnings, queryClient, resetBondWithdraw, resetFeesWithdraw]);
 
   // Aggressive refetch after jury fees claim
   // v0.8.15: Added immediate refetch + extended delays
   // v0.8.22: Removed optimistic UI - now just uses aggressive polling every 2s for 20s
+  // v0.8.22: FIX - Reset mutation AFTER polling completes to avoid cleanup canceling timeouts
   useEffect(() => {
     if (juryFeesClaimed && claimingMarketId) {
       // Invalidate balance queries immediately
@@ -433,7 +437,7 @@ export function PortfolioPage() {
       refetchEarnings();
       refetchPositions();
       
-      // Clear any pending timeouts
+      // Clear any pending timeouts from previous runs
       juryRefetchRef.current.forEach(clearTimeout);
       juryRefetchRef.current = [];
       
@@ -448,17 +452,19 @@ export function PortfolioPage() {
         juryRefetchRef.current.push(timeout);
       });
       
-      // Reset state after short delay
+      // Reset state AFTER all polling completes (21s to be safe)
+      // This prevents the cleanup from canceling our scheduled refetches
       const resetTimer = setTimeout(() => {
         resetJuryFeesClaim();
         setClaimingMarketId(null);
-      }, 500);
-      
-      return () => {
-        clearTimeout(resetTimer);
-        juryRefetchRef.current.forEach(clearTimeout);
-      };
+      }, 21000);
+      juryRefetchRef.current.push(resetTimer);
     }
+    
+    // Cleanup only on unmount
+    return () => {
+      // Only clear if component unmounts
+    };
   }, [juryFeesClaimed, claimingMarketId, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
 
   // Callback for PositionCard to trigger refetch after successful actions
