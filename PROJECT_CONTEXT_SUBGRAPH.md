@@ -2,7 +2,7 @@
 
 > Quick reference for AI assistants and developers.  
 > **Last Updated:** February 5, 2026  
-> **Status:** ✅ Testnet Deployed (v5.2.0) | 🔄 Mainnet Pending
+> **Status:** 🚀 **MAINNET LIVE** (v5.2.0) | ✅ Testnet Deployed (v5.2.0)
 
 ---
 
@@ -12,7 +12,7 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 ---
 
-## 🚀 Mainnet Configuration (PRODUCTION)
+## 🚀 Mainnet Configuration (PRODUCTION - LIVE)
 
 ### Contract Details (Mainnet)
 - **Address:** `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`
@@ -23,8 +23,13 @@ The subgraph indexes all on-chain events from the **PredictionMarket** contract 
 
 ### GraphQL Endpoint (Mainnet)
 ```
-Coming soon - jnglz-mainnet subgraph deployment pending
+https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF
 ```
+
+### API Key (Mainnet)
+- **Key:** `5ac137b1b0ebe0c119882481923fe843`
+- **Subgraph Name:** `jnglz-mainnet`
+- **Version:** v5.2.0
 
 ---
 
@@ -40,7 +45,7 @@ https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H
 https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 ```
 
-### API Key
+### API Key (Testnet)
 - **Key:** `bd58484c1566274066b1453e52043443`
 - **Whitelisted Domains:** `localhost`, `jnglz.fun`
 - **Rate Limit:** 100,000 queries/month
@@ -66,9 +71,9 @@ https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 | Testnet Deployment | ✅ 100% | v5.2.0 - Contract v3.8.3 |
 | Gateway Published | ✅ 100% | Live on decentralized network |
 | **Mainnet Contract** | ✅ 100% | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` |
-| **Mainnet Subgraph** | 🔄 Pending | Next step: Deploy jnglz-mainnet |
+| **Mainnet Subgraph** | ✅ 100% | `jnglz-mainnet` v5.2.0 deployed! |
 
-**Overall Progress: 90%** - Mainnet subgraph deployment pending
+**Overall Progress: 100%** - 🎉 Fully deployed to mainnet!
 
 ---
 

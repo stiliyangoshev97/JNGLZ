@@ -4,24 +4,31 @@ Indexes the PredictionMarket contract on BNB Chain and provides a GraphQL API fo
 
 ## 📊 Quick Stats
 
-| Metric | Value |
-|--------|-------|
-| Status | ✅ Deployed (jnglz-testnet-fresh v3.0.0) |
-| Network | BNB Testnet (Chapel) |
-| Contract | `0x0A5E9e7dC7e78aE1dD0bB93891Ce9E8345779A30` |
-| Start Block | 86129412 |
-| Entities | 11 (Market, Trade, User, Position, Vote, Claim, EmergencyRefund, GlobalStats, JuryFeesPool, JuryFeesClaim, MarketResolutionFailure) |
+| Metric | Mainnet | Testnet |
+|--------|---------|---------|
+| Status | ✅ **LIVE** (v5.2.0) | ✅ Deployed (v5.2.0) |
+| Network | BNB Chain (56) | BNB Testnet (97) |
+| Contract | `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528` | `0xC97FB434B79e6c643e0320fa802B515CedBA95Bf` |
+| Start Block | 79457714 | 86465841 |
+| Entities | 11 | 11 |
 
-## 🔗 GraphQL Endpoint
+## 🔗 GraphQL Endpoints
 
-**Gateway (Production):**
+### Mainnet (PRODUCTION)
+**Gateway:**
+```
+https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF
+```
+
+### Testnet
+**Gateway:**
 ```
 https://gateway.thegraph.com/api/subgraphs/id/3XxbwnAdLjsRWR3DeKJFbjjnahwMuDiG5H5qMuriDGcC
 ```
 
 **Studio:**
 ```
-https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v3.0.0
+https://api.studio.thegraph.com/query/1722665/jnglz-testnet-fresh/v5.2.0
 ```
 
 **Studio Dashboard:** https://thegraph.com/studio/subgraph/jnglz-testnet-fresh

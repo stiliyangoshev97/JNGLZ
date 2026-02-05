@@ -2,6 +2,35 @@
 
 All notable changes to the JNGLZ.FUN frontend will be documented in this file.
 
+## [0.8.22] - 2026-02-05
+
+### Changed - Portfolio Page Polling Strategy
+
+#### Removed Optimistic UI for Jury Fees
+- **Problem**: Optimistic UI added complexity and potential for state inconsistencies.
+- **Solution**: Replaced optimistic UI with more aggressive polling after ALL claim actions.
+- **Removed**:
+  - `optimisticClaimedJuryFees` state (instant hide of claimed jury fee cards)
+  - `optimisticJuryEarnings` state (instant JURY stat update)
+  - Optimistic filtering in `claimableJuryFeesPositions` useMemo
+  - Optimistic clear useEffect
+
+#### More Aggressive Polling After Claims
+- **Previous**: Refetch at 1s, 2s, 4s, 8s (exponential backoff)
+- **New**: Refetch every 2s for 20s (delays: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20s)
+- **Applied to**:
+  - Bond/fee withdrawals
+  - Jury fees claims
+  - Position actions (claim winnings, emergency refund, etc.)
+- **Result**: More reliable updates without optimistic state complexity. Stats update within 2-4 seconds of subgraph indexing.
+
+#### Files Modified
+```
+src/features/portfolio/pages/PortfolioPage.tsx   # Polling strategy changes
+```
+
+---
+
 ## [0.8.21] - 2026-02-05
 
 ### Fixed - Jury Fees Stat Optimistic UI

@@ -352,11 +352,6 @@ export function PortfolioPage() {
   const { claimJuryFees, isPending: isClaimingJuryFees, isSuccess: juryFeesClaimed, reset: resetJuryFeesClaim } = useClaimJuryFees();
   const [claimingMarketId, setClaimingMarketId] = useState<string | null>(null);
   
-  // Optimistic UI: Track claimed jury fee market IDs locally (instant hide before subgraph indexes)
-  const [optimisticClaimedJuryFees, setOptimisticClaimedJuryFees] = useState<Set<string>>(new Set());
-  // Optimistic UI: Track claimed jury fee amount for instant stat update
-  const [optimisticJuryEarnings, setOptimisticJuryEarnings] = useState<number>(0);
-  
   // Query for positions with claimable jury fees
   const { data: claimableJuryFeesData, refetch: refetchClaimableJuryFees } = useQuery<{ positions: PositionWithMarket[] }>(GET_CLAIMABLE_JURY_FEES, {
     variables: { user: address?.toLowerCase() },
@@ -366,13 +361,9 @@ export function PortfolioPage() {
   
   // Calculate claimable jury fees positions
   // User voted for the winning side if: votedForProposer AND proposer won, OR !votedForProposer AND disputer won
-  // v0.8.20: Added optimistic filtering - hide immediately after claim before subgraph indexes
   const claimableJuryFeesPositions = useMemo(() => {
     if (!claimableJuryFeesData?.positions) return [];
     return claimableJuryFeesData.positions.filter(pos => {
-      // Optimistic UI: Skip if we just claimed this one (before subgraph updates)
-      if (optimisticClaimedJuryFees.has(pos.market.id)) return false;
-      
       if (!pos.market.resolved || !pos.hasVoted || pos.juryFeesClaimed) return false;
       // Determine if user voted for the winning side
       // proposedOutcome was what the proposer proposed
@@ -382,7 +373,7 @@ export function PortfolioPage() {
       const userVotedForWinner = pos.votedForProposer ? proposerWon : !proposerWon;
       return userVotedForWinner;
     });
-  }, [claimableJuryFeesData?.positions, optimisticClaimedJuryFees]);
+  }, [claimableJuryFeesData?.positions]);
   
   const queryClient = useQueryClient();
 
@@ -392,6 +383,7 @@ export function PortfolioPage() {
 
   // Aggressive refetch after bond/fee withdrawal
   // v0.8.15: Added immediate refetch + extended delays for faster UI update
+  // v0.8.22: Increased polling frequency - every 2s for 20s (more reliable than optimistic UI)
   useEffect(() => {
     if (bondWithdrawn || feesWithdrawn) {
       // Invalidate balance queries immediately
@@ -405,8 +397,8 @@ export function PortfolioPage() {
       withdrawalRefetchRef.current.forEach(clearTimeout);
       withdrawalRefetchRef.current = [];
       
-      // Aggressive refetch at 1s, 2s, 4s, 8s (for subgraph earnings update)
-      const delays = [1000, 2000, 4000, 8000];
+      // Aggressive refetch every 2s for 20s to catch subgraph indexing
+      const delays = [2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000];
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           refetchPending();
@@ -430,35 +422,9 @@ export function PortfolioPage() {
 
   // Aggressive refetch after jury fees claim
   // v0.8.15: Added immediate refetch + extended delays
-  // v0.8.20: Added optimistic UI - instantly hide claimed market + update JURY stat
+  // v0.8.22: Removed optimistic UI - now just uses aggressive polling every 2s for 20s
   useEffect(() => {
     if (juryFeesClaimed && claimingMarketId) {
-      // Optimistic UI: Immediately hide this market from jury fees list
-      setOptimisticClaimedJuryFees(prev => new Set([...prev, claimingMarketId]));
-      
-      // Optimistic UI: Calculate the claimed jury fee amount and add to JURY stat
-      const claimedPosition = claimableJuryFeesPositions.find(p => p.market.marketId === claimingMarketId);
-      if (claimedPosition) {
-        // Calculate jury fee same way as PositionCard
-        const userShares = BigInt(claimedPosition.yesShares || '0') + BigInt(claimedPosition.noShares || '0');
-        const proposerVotes = BigInt(claimedPosition.market.proposerVoteWeight || '0');
-        const disputerVotes = BigInt(claimedPosition.market.disputerVoteWeight || '0');
-        const proposerWon = claimedPosition.market.outcome === claimedPosition.market.proposedOutcome;
-        const totalWinningVotes = proposerWon ? proposerVotes : disputerVotes;
-        
-        const proposerBond = BigInt(claimedPosition.market.proposerBond || '0');
-        const disputerBond = BigInt(claimedPosition.market.disputerBond || '0');
-        const loserBond = proposerWon ? disputerBond : proposerBond;
-        const voterPool = loserBond / 2n;
-        const estimatedJuryFeeWei = totalWinningVotes > 0n 
-          ? (voterPool * userShares) / totalWinningVotes 
-          : 0n;
-        
-        // Convert from wei to BNB
-        const claimedAmountBNB = Number(estimatedJuryFeeWei) / 1e18;
-        setOptimisticJuryEarnings(prev => prev + claimedAmountBNB);
-      }
-      
       // Invalidate balance queries immediately
       queryClient.invalidateQueries({ queryKey: ['balance'] });
       
@@ -471,8 +437,8 @@ export function PortfolioPage() {
       juryRefetchRef.current.forEach(clearTimeout);
       juryRefetchRef.current = [];
       
-      // Aggressive refetch at 1s, 2s, 4s, 8s
-      const delays = [1000, 2000, 4000, 8000];
+      // Aggressive refetch every 2s for 20s to catch subgraph indexing
+      const delays = [2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000];
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           refetchClaimableJuryFees();
@@ -493,11 +459,11 @@ export function PortfolioPage() {
         juryRefetchRef.current.forEach(clearTimeout);
       };
     }
-  }, [juryFeesClaimed, claimingMarketId, claimableJuryFeesPositions, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
+  }, [juryFeesClaimed, claimingMarketId, refetchClaimableJuryFees, refetchEarnings, refetchPositions, queryClient, resetJuryFeesClaim]);
 
   // Callback for PositionCard to trigger refetch after successful actions
-  // Aggressive refetch pattern: 1s, 2s, 4s, 8s to catch subgraph indexing faster
   // v0.8.14: Now also refetches trades for P/L stats update
+  // v0.8.22: More aggressive polling - every 2s for 20s to catch subgraph indexing faster
   const handlePositionActionSuccess = useCallback(() => {
     // Clear any pending timeouts
     refetchTimeoutsRef.current.forEach(clearTimeout);
@@ -506,8 +472,8 @@ export function PortfolioPage() {
     // Invalidate balance queries so Header updates immediately
     queryClient.invalidateQueries({ queryKey: ['balance'] });
     
-    // Aggressive refetch at 1s, 2s, 4s, 8s
-    const delays = [1000, 2000, 4000, 8000];
+    // Aggressive refetch every 2s for 20s to catch subgraph indexing
+    const delays = [2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000];
     delays.forEach((delay) => {
       const timeout = setTimeout(() => {
         refetchPositions();
@@ -533,31 +499,16 @@ export function PortfolioPage() {
   const hasPendingWithdrawals = pendingBondsFormatted > 0 || pendingFeesFormatted > 0;
 
   // Parse resolution earnings (v3.6.1)
-  // v0.8.21: Added optimistic jury earnings for instant stat update
   const earnings = useMemo(() => {
     const user = earningsData?.user;
     const proposer = parseFloat(user?.totalProposerRewardsEarned || '0');
     const disputes = parseFloat(user?.totalBondEarnings || '0');
-    const juryFromSubgraph = parseFloat(user?.totalJuryFeesEarned || '0');
-    const jury = juryFromSubgraph + optimisticJuryEarnings; // Add optimistic amount
+    const jury = parseFloat(user?.totalJuryFeesEarned || '0');
     const creator = parseFloat(user?.totalCreatorFeesEarned || '0');
     const totalResolution = proposer + disputes + jury; // Excludes creator fees
     const hasEarnings = proposer > 0 || disputes > 0 || jury > 0 || creator > 0;
     return { proposer, disputes, jury, creator, totalResolution, hasEarnings };
-  }, [earningsData, optimisticJuryEarnings]);
-
-  // Clear optimistic jury earnings once subgraph has caught up
-  // (when subgraph jury earnings increases, we can clear our optimistic addition)
-  const prevJuryEarningsRef = useRef<number>(0);
-  useEffect(() => {
-    const currentJuryFromSubgraph = parseFloat(earningsData?.user?.totalJuryFeesEarned || '0');
-    if (currentJuryFromSubgraph > prevJuryEarningsRef.current && optimisticJuryEarnings > 0) {
-      // Subgraph has updated, clear optimistic state
-      setOptimisticJuryEarnings(0);
-      setOptimisticClaimedJuryFees(new Set());
-    }
-    prevJuryEarningsRef.current = currentJuryFromSubgraph;
-  }, [earningsData?.user?.totalJuryFeesEarned, optimisticJuryEarnings]);
+  }, [earningsData]);
 
   // Only show loading on initial load, not polls
   const isInitialLoading = loading && !data?.positions;

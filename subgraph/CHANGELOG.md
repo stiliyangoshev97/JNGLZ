@@ -2,6 +2,38 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.2.0-mainnet] - 2026-02-05 - 🚀 Mainnet Deployment
+
+### Mainnet Launch
+Deployed `jnglz-mainnet` subgraph to The Graph Studio and published to the decentralized network.
+
+### Configuration
+- **Subgraph Name:** `jnglz-mainnet`
+- **Network:** BNB Chain (bsc)
+- **Contract:** `0xA482Ac7acbf846F2DAEE8b8dF3D7e77F85CC7528`
+- **Start Block:** 79457714
+- **Version:** v5.2.0
+
+### GraphQL Endpoint
+```
+https://gateway.thegraph.com/api/subgraphs/id/E8nw4Nv6aboBwyQErLYGJNo5hRogZAvsRESwTVBbkDQF
+```
+
+### Multi-Network Setup
+Added `networks.json` for easy deployment to different networks:
+```json
+{
+  "chapel": { "PredictionMarket": { "address": "...", "startBlock": 86465841 } },
+  "bsc": { "PredictionMarket": { "address": "...", "startBlock": 79457714 } }
+}
+```
+
+### Deployment Commands
+- `npm run deploy:testnet` - Deploy to jnglz-testnet-fresh
+- `npm run deploy:mainnet` - Deploy to jnglz-mainnet
+
+---
+
 ## [5.2.0] - 2026-02-04 - TieFinalized Event Handler 🔄
 
 ### Problem
