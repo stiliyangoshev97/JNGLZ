@@ -2,6 +2,36 @@
 
 All notable changes to the subgraph will be documented here.
 
+## [5.2.2] - 2026-02-06 - 🐛 Pool Balance Dust Fix
+
+### Bug Fix
+**Fixed:** Pool balance showing residual "dust" (0.3% of volume) after all claims in resolved markets.
+
+**Root Cause:**
+The `handleClaimed` function was subtracting the **net** claim amount (after 0.3% resolution fee) from `poolBalance`, but the smart contract subtracts the **gross** amount (before fee). This left 0.3% of total volume as phantom "dust" in the pool display.
+
+**Example:**
+- Market volume: 0.1476 BNB
+- After all claims, pool showed: 0.0004 BNB (exactly 0.3% of volume)
+- Contract balance: 0 BNB ✅
+
+**The Fix:**
+```typescript
+// Before (wrong): subtract net amount
+market.poolBalance = market.poolBalance.minus(claimAmountWei);
+
+// After (correct): calculate gross from net, then subtract
+let grossAmountWei = claimAmountWei.times(BPS_DENOMINATOR).div(BPS_DENOMINATOR.minus(RESOLUTION_FEE_BPS));
+market.poolBalance = market.poolBalance.minus(grossAmountWei);
+```
+
+### Changed
+- Added `RESOLUTION_FEE_BPS` constant (30 bps = 0.3%)
+- `handleClaimed`: Now calculates gross payout before subtracting from pool
+- Pool balance now correctly reaches 0 after all claims
+
+---
+
 ## [5.2.1] - 2026-02-05 - 🐛 Critical Vote Tracking Fix
 
 ### Bug Fix

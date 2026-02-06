@@ -56,6 +56,7 @@ const ZERO_BD = BigDecimal.fromString("0");
 // Fee constants (must match contract: platformFeeBps=100 + creatorFeeBps=50 = 150 bps = 1.5%)
 // v3.8.2: BUY events now emit net BNB (after fees), so fee calculation only needed for SELL
 const TOTAL_FEE_BPS = BigInt.fromI32(150); // 1.5% total fee
+const RESOLUTION_FEE_BPS = BigInt.fromI32(30); // 0.3% resolution fee on claims
 const BPS_DENOMINATOR = BigInt.fromI32(10000);
 
 // ============================================
@@ -754,16 +755,17 @@ export function handleClaimed(event: Claimed): void {
   // Claims drain the pool - subtract the claimed amount
   let market = Market.load(marketId);
   if (market != null) {
-    // The event emits the net amount after 0.3% resolution fee
-    // But pool loses the gross amount (bnbOut + fee)
-    // grossPayout = claimAmount * 10000 / 9970 (inverse of 0.3% fee)
-    // However, for simplicity and since resolution fee is small, we use the event amount
-    // The pool is being drained anyway on resolution
+    // v5.2.2 FIX: The event emits the net amount after 0.3% resolution fee
+    // But the contract subtracts the GROSS amount from poolBalance
+    // grossPayout = netPayout * 10000 / (10000 - 30) = netPayout * 10000 / 9970
     let claimAmountWei = event.params.amount;
-    if (market.poolBalance.gt(claimAmountWei)) {
-      market.poolBalance = market.poolBalance.minus(claimAmountWei);
-    } else {
+    let grossAmountWei = claimAmountWei.times(BPS_DENOMINATOR).div(BPS_DENOMINATOR.minus(RESOLUTION_FEE_BPS));
+    
+    // Clamp to prevent negative balance from rounding
+    if (grossAmountWei.gt(market.poolBalance)) {
       market.poolBalance = ZERO_BI;
+    } else {
+      market.poolBalance = market.poolBalance.minus(grossAmountWei);
     }
     market.save();
   }
